@@ -118,6 +118,92 @@ To suppress a finding, use a line-level directive with justification:
 
 A bare `nolint` without a reason is itself a lint failure.
 
+## Commit messages
+
+We follow [Conventional Commits 1.0](https://www.conventionalcommits.org/en/v1.0.0/):
+
+```
+<type>(<optional-scope>): <imperative subject, <=72 chars, no period>
+
+<body explaining WHY, wrapped at 72 chars>
+
+<footer: Refs / BREAKING CHANGE / Closes>
+```
+
+### Types
+
+`feat`, `fix`, `docs`, `refactor`, `test`, `build`, `ci`, `chore`, `perf`, `style`, `revert`.
+
+### Scopes
+
+Optional but encouraged. Useful values for this repo:
+
+| Scope | When to use |
+|---|---|
+| `cli` | cobra commands, flags, exit codes |
+| `core` | shared types (`Finding`, `Resource`, `Check`, etc.) |
+| `engine` | orchestrator, parallel execution |
+| `collectors/do` | DigitalOcean collector |
+| `collectors/linux` | Linux SSH collector |
+| `collectors/<provider>` | future providers |
+| `reporters/<fmt>` | JSON, HTML, SARIF, OCSF, evidence pack |
+| `frameworks/<id>` | SOC 2, ISO 27001, CIS v8 mappings |
+| `config` | viper config loader, schema |
+| `state` | drift/diff store |
+| `notify` | Slack/webhook/PR sinks |
+| `build` | Makefile, build system |
+| `deps` | dependency updates |
+| `ci` | GitHub Actions workflows |
+| `docs` | use `docs:` type without scope for top-level docs; `docs(dev):` for this file, etc. |
+
+### Rules
+
+- **Subject:** imperative mood ("add" not "added"), lowercase first letter, no trailing period, ≤72 chars.
+- **Body:** explain *why*, not *what*. The diff shows the what.
+- **Body lines wrap at 72 chars.**
+- **Reference ADRs** in the footer: `Refs: ADR-001`.
+- **Reference issues** in the footer: `Closes #42`.
+- **Breaking changes:** add `!` after type/scope (e.g. `feat(cli)!: ...`) **and** include a `BREAKING CHANGE:` footer with the migration path.
+
+### Examples
+
+```
+feat(collectors/do): add Spaces public-ACL check
+
+Detects Spaces buckets with non-private ACL. First check that exercises
+the cross-resource graph: a bucket's CDN association is read from the
+related CDN node, not re-fetched.
+
+Refs: ADR-001
+```
+
+```
+fix(engine): bound goroutine fan-out by max_parallel
+
+Previously the engine spawned one goroutine per check per resource;
+with 500 resources and 30 checks this burned 15k goroutines. Now
+bounded by providers.linux.ssh.max_parallel (default 16).
+
+Closes #14
+```
+
+```
+docs: clarify evidence-pack redaction default
+```
+
+```
+feat(cli)!: rename --frameworks to --framework
+
+The CLI flag accepts a single framework now; multi-framework selection
+moves to the config file. Aligns with the --severity flag convention.
+
+BREAKING CHANGE: --frameworks=soc2,cis-v8 must become --framework=soc2
+in CLI invocations. For multi-framework runs, set the list in
+compliancekit.yaml under top-level `frameworks`.
+```
+
+A commit-msg hook to enforce this format will land at v0.5 alongside CONTRIBUTING.md. Until then, the convention is honor-based; PRs that don't follow it will be asked to amend.
+
 ## Continuous integration
 
 `.github/workflows/ci.yaml` runs on every push and PR:
