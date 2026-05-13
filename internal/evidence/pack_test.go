@@ -406,6 +406,47 @@ func TestGenerate_WritesMappingCSV(t *testing.T) {
 	}
 }
 
+func TestGenerate_WritesSummaryHTML(t *testing.T) {
+	dir := t.TempDir()
+	out := filepath.Join(dir, "pack")
+
+	findings := []core.Finding{
+		mkFinding("do-droplet-no-firewall", "droplet-1", core.StatusFail, core.SeverityHigh),
+		mkFinding("do-droplet-no-firewall", "droplet-2", core.StatusPass, core.SeverityHigh),
+	}
+	res, err := Generate(context.Background(), findings, Options{
+		OutDir:    out,
+		Period:    "2026-Q2",
+		Generated: time.Date(2026, 5, 13, 0, 0, 0, 0, time.UTC),
+	})
+	if err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+	if res.SummaryHTMLPath == "" {
+		t.Fatal("SummaryHTMLPath empty")
+	}
+	// G304: TempDir.
+	//nolint:gosec
+	data, err := os.ReadFile(res.SummaryHTMLPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	body := string(data)
+	for _, want := range []string{
+		"<!doctype html>",
+		"compliancekit evidence pack",
+		"Period: <strong>2026-Q2</strong>",
+		"SOC 2 Trust Services Criteria",
+		"ISO/IEC 27001:2022 Annex A",
+		"control-mapping.csv",
+		`href="soc2/`, // relative link to a control dir
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("summary.html missing %q", want)
+		}
+	}
+}
+
 func TestDefaultPeriod(t *testing.T) {
 	cases := []struct {
 		month time.Month

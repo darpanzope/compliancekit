@@ -154,6 +154,13 @@ func Generate(_ context.Context, findings []core.Finding, opts Options) (Result,
 	result.MappingCSVPath = mappingPath
 	result.FilesWritten++
 
+	summaryPath, err := writeSummaryHTML(abs, &result, opts)
+	if err != nil {
+		return Result{}, err
+	}
+	result.SummaryHTMLPath = summaryPath
+	result.FilesWritten++
+
 	manifestPath, err := WriteManifest(abs)
 	if err != nil {
 		return Result{}, err
