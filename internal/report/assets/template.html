@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>compliancekit scan report</title>
+<style>
+:root {
+  --bg: #0f1115;
+  --panel: #1a1d23;
+  --panel-2: #232830;
+  --border: #2f3641;
+  --text: #e7e9ee;
+  --muted: #8a93a3;
+  --accent: #5b8def;
+
+  --sev-critical: #ff5252;
+  --sev-high:     #ff8a3d;
+  --sev-medium:   #ffce47;
+  --sev-low:      #74c2ff;
+  --sev-info:     #8a93a3;
+
+  --status-pass:  #6bdf8e;
+  --status-fail:  #ff5252;
+  --status-skip:  #8a93a3;
+  --status-error: #ff8a3d;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  padding: 0 24px 64px;
+}
+header.report-head {
+  padding: 32px 0 16px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 24px;
+}
+header.report-head h1 {
+  margin: 0 0 8px;
+  font-size: 22px;
+  letter-spacing: -0.01em;
+}
+header.report-head .meta {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.counts {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.counts li {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 14px;
+  display: flex;
+  flex-direction: column;
+  min-width: 80px;
+}
+.counts .label {
+  font-size: 11px;
+  text-transform: uppercase;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+}
+.counts .value {
+  font-size: 20px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.counts li.critical .value { color: var(--sev-critical); }
+.counts li.high     .value { color: var(--sev-high); }
+.counts li.medium   .value { color: var(--sev-medium); }
+.counts li.low      .value { color: var(--sev-low); }
+.counts li.info     .value { color: var(--sev-info); }
+
+nav.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  align-items: center;
+  margin-bottom: 24px;
+}
+nav.controls input[type=search] {
+  flex: 1;
+  min-width: 200px;
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 14px;
+  font-family: inherit;
+}
+nav.controls input[type=search]:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+nav.controls button {
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 13px;
+  cursor: pointer;
+  font-family: inherit;
+}
+nav.controls button.off { opacity: 0.4; text-decoration: line-through; }
+nav.controls button[data-sev="critical"] { color: var(--sev-critical); border-color: var(--sev-critical); }
+nav.controls button[data-sev="high"]     { color: var(--sev-high);     border-color: var(--sev-high); }
+nav.controls button[data-sev="medium"]   { color: var(--sev-medium);   border-color: var(--sev-medium); }
+nav.controls button[data-sev="low"]      { color: var(--sev-low);      border-color: var(--sev-low); }
+nav.controls button[data-sev="info"]     { color: var(--sev-info);     border-color: var(--sev-info); }
+
+section.severity-section {
+  margin-bottom: 32px;
+}
+section.severity-section h2 {
+  font-size: 16px;
+  margin: 0 0 12px;
+  padding: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+section.severity-section.critical h2 { color: var(--sev-critical); }
+section.severity-section.high     h2 { color: var(--sev-high); }
+section.severity-section.medium   h2 { color: var(--sev-medium); }
+section.severity-section.low      h2 { color: var(--sev-low); }
+section.severity-section.info     h2 { color: var(--sev-info); }
+
+article.finding {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+article.finding header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 12px;
+  margin-bottom: 6px;
+}
+article.finding .check-id {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+  font-weight: 600;
+}
+article.finding .resource {
+  color: var(--muted);
+  font-size: 13px;
+}
+article.finding .resource .name {
+  color: var(--text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+article.finding .status-badge {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+}
+article.finding[data-status="fail"]  .status-badge { color: var(--status-fail); }
+article.finding[data-status="error"] .status-badge { color: var(--status-error); }
+article.finding[data-status="pass"]  .status-badge { color: var(--status-pass); }
+article.finding[data-status="skip"]  .status-badge { color: var(--status-skip); }
+article.finding .message {
+  margin: 4px 0 0;
+}
+article.finding details {
+  margin-top: 12px;
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
+article.finding details summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 13px;
+  user-select: none;
+}
+article.finding details summary:hover { color: var(--text); }
+article.finding .field-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  margin: 10px 0 4px;
+}
+article.finding .remediation,
+article.finding .description {
+  font-size: 13px;
+  background: var(--panel-2);
+  border-radius: 4px;
+  padding: 8px 12px;
+  white-space: pre-wrap;
+}
+article.finding ul.frameworks {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+article.finding ul.frameworks li {
+  font-size: 13px;
+  padding: 4px 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--muted);
+}
+article.finding ul.frameworks li strong {
+  color: var(--text);
+  font-weight: 600;
+  margin-right: 8px;
+}
+
+.empty {
+  text-align: center;
+  color: var(--muted);
+  padding: 64px 0;
+}
+.empty p { margin: 4px 0; }
+
+footer.report-foot {
+  margin-top: 48px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 12px;
+  text-align: center;
+}
+</style>
+</head>
+<body>
+
+<header class="report-head">
+  <h1>compliancekit scan report</h1>
+  <div class="meta">Generated {{.Generated}} &middot; {{.TotalCount}} findings ({{.ActionableCount}} actionable)</div>
+  <ul class="counts">
+    <li class="critical"><span class="label">Critical</span><span class="value">{{.Counts.critical}}</span></li>
+    <li class="high"><span class="label">High</span><span class="value">{{.Counts.high}}</span></li>
+    <li class="medium"><span class="label">Medium</span><span class="value">{{.Counts.medium}}</span></li>
+    <li class="low"><span class="label">Low</span><span class="value">{{.Counts.low}}</span></li>
+    <li class="info"><span class="label">Info</span><span class="value">{{.Counts.info}}</span></li>
+  </ul>
+</header>
+
+<nav class="controls">
+  <input type="search" id="search" placeholder="Filter findings by text...">
+  <button data-sev="critical">Critical</button>
+  <button data-sev="high">High</button>
+  <button data-sev="medium">Medium</button>
+  <button data-sev="low">Low</button>
+  <button data-sev="info">Info</button>
+</nav>
+
+<main id="findings">
+{{- if not .HasFindings }}
+<div class="empty">
+  <p>No findings.</p>
+  <p>Either everything passed, or the scan emitted no actionable results.</p>
+</div>
+{{- end }}
+{{- range .Sections }}
+{{- if .Findings }}
+<section class="severity-section {{.SeverityClass}}" data-sev="{{.SeverityClass}}">
+  <h2>{{.SeverityName}} ({{len .Findings}})</h2>
+  {{- range .Findings }}
+  <article class="finding" data-sev="{{.SeverityClass}}" data-status="{{.Status}}">
+    <header>
+      <span class="check-id">{{.CheckID}}</span>
+      <span class="resource">on <span class="name">{{.ResourceName}}</span>{{if .ResourceType}} <small>({{.ResourceType}})</small>{{end}}</span>
+      <span class="status-badge">{{.Status}}</span>
+    </header>
+    {{if .Message}}<p class="message">{{.Message}}</p>{{end}}
+    {{if or .Description .Remediation .Frameworks}}
+    <details>
+      <summary>Details</summary>
+      {{if .Title}}<p class="field-label">Title</p><p>{{.Title}}</p>{{end}}
+      {{if .Description}}<p class="field-label">Description</p><div class="description">{{.Description}}</div>{{end}}
+      {{if .Remediation}}<p class="field-label">Remediation</p><div class="remediation">{{.Remediation}}</div>{{end}}
+      {{if .Frameworks}}
+      <p class="field-label">Frameworks</p>
+      <ul class="frameworks">
+        {{- range .Frameworks }}
+        <li><strong>{{.FrameworkName}} {{.ControlID}}</strong> {{.ControlName}}</li>
+        {{- end }}
+      </ul>
+      {{end}}
+    </details>
+    {{end}}
+  </article>
+  {{- end }}
+</section>
+{{- end }}
+{{- end }}
+</main>
+
+<footer class="report-foot">
+  Rendered by compliancekit. <a href="https://github.com/darpanzope/compliancekit" style="color: var(--muted);">github.com/darpanzope/compliancekit</a>
+</footer>
+
+<script>
+(function () {
+  // Severity filter pills toggle whole sections off / on.
+  document.querySelectorAll('nav.controls button[data-sev]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      btn.classList.toggle('off');
+      var sev = btn.getAttribute('data-sev');
+      document.querySelectorAll('section.severity-section[data-sev="' + sev + '"]').forEach(function (s) {
+        s.hidden = btn.classList.contains('off');
+      });
+    });
+  });
+
+  // Text search hides individual findings whose visible text doesn't match.
+  var search = document.getElementById('search');
+  if (search) {
+    search.addEventListener('input', function () {
+      var q = search.value.toLowerCase().trim();
+      document.querySelectorAll('article.finding').forEach(function (f) {
+        if (!q) {
+          f.hidden = false;
+          return;
+        }
+        f.hidden = !f.textContent.toLowerCase().includes(q);
+      });
+    });
+  }
+})();
+</script>
+
+</body>
+</html>
