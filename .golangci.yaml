@@ -68,6 +68,7 @@ linters-settings:
       - ocsf
       - oscal
       - rego
+      - mitre
 
   gocyclo:
     # Cyclomatic complexity threshold. 15 is permissive; 10 is strict.

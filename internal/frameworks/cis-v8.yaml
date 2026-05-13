@@ -1,0 +1,126 @@
+# CIS Controls v8
+# Source: Center for Internet Security, Critical Security Controls v8
+# This file lists the subset referenced by compliancekit checks; the
+# full catalog spans 18 Controls with 153 safeguards across IG1 / IG2 / IG3.
+
+id: cis-v8
+name: CIS Controls v8
+version: "8"
+description: |
+  CIS Controls v8 is a prescriptive, prioritized set of cyber defense
+  best practices that mitigate the most common attacks against
+  systems and networks. Safeguards are organized into 18 Controls;
+  each safeguard is assigned to one of three Implementation Groups
+  (IG1 / IG2 / IG3) based on enterprise resources and risk profile.
+url: https://www.cisecurity.org/controls/v8
+
+controls:
+  "1.1":
+    name: Establish and Maintain Detailed Enterprise Asset Inventory
+    description: |
+      Establish and maintain an accurate, detailed, and up-to-date
+      inventory of all enterprise assets with the potential to store
+      or process data.
+
+  "3.3":
+    name: Configure Data Access Control Lists
+    description: |
+      Configure data access control lists based on a user's need to
+      know. Apply data access control lists, also known as access
+      permissions, to local and remote file systems, databases, and
+      applications.
+
+  "4.1":
+    name: Establish and Maintain a Secure Configuration Process
+    description: |
+      Establish and maintain a secure configuration process for
+      enterprise assets and software. Address configuration drift
+      through automated detection and remediation.
+
+  "4.4":
+    name: Implement and Manage a Firewall on Servers
+    description: |
+      Implement and manage a host-based firewall or port-filtering
+      tool on servers, with a default-deny rule that drops all
+      traffic except those services and ports that are explicitly
+      allowed.
+
+  "5.1":
+    name: Establish and Maintain an Inventory of Accounts
+    description: |
+      Establish and maintain an inventory of all accounts managed
+      in the enterprise, including both user and administrator
+      accounts.
+
+  "5.2":
+    name: Use Unique Passwords
+    description: |
+      Use unique passwords for all enterprise assets. Best practice
+      implementation includes a minimum of 8 characters for accounts
+      with MFA enabled and 14 characters for accounts without MFA.
+
+  "5.4":
+    name: Restrict Administrator Privileges to Dedicated Accounts
+    description: |
+      Restrict administrator privileges to dedicated administrator
+      accounts on enterprise assets. Conduct general computing
+      activities, such as internet browsing and email, from the
+      user's primary, non-privileged account.
+
+  "6.5":
+    name: Require MFA for Administrative Access
+    description: |
+      Require MFA for all administrative access accounts on
+      enterprise assets, whether managed on-site or through a
+      third-party provider.
+
+  "6.8":
+    name: Define and Maintain Role-Based Access Control
+    description: |
+      Define and maintain role-based access control by determining
+      and documenting the access rights necessary for each role in
+      the enterprise to successfully carry out its assigned duties.
+
+  "7.5":
+    name: Perform Automated Vulnerability Scans of Internal Enterprise Assets
+    description: |
+      Perform automated vulnerability scans of internal enterprise
+      assets on a quarterly or more frequent basis. Conduct both
+      authenticated and unauthenticated scans, using a SCAP-compliant
+      vulnerability scanning tool.
+
+  "8.5":
+    name: Collect Detailed Audit Logs
+    description: |
+      Configure detailed audit logging for enterprise assets
+      containing sensitive data. Include event source, date,
+      username, timestamp, source addresses, destination addresses,
+      and other useful elements that could assist in a forensic
+      investigation.
+
+  "8.10":
+    name: Retain Audit Logs
+    description: |
+      Retain audit logs across enterprise assets for a minimum of
+      90 days.
+
+  "11.2":
+    name: Perform Automated Backups
+    description: |
+      Perform automated backups of in-scope enterprise assets. Run
+      backups weekly, or more frequently, based on the sensitivity
+      of the data.
+
+  "12.2":
+    name: Establish and Maintain a Secure Network Architecture
+    description: |
+      Establish and maintain a secure network architecture. A secure
+      network architecture must address segmentation, least
+      privilege, and availability, at a minimum.
+
+  "3.10":
+    name: Encrypt Sensitive Data in Transit
+    description: |
+      Encrypt sensitive data in transit. Example implementations
+      can include: Transport Layer Security (TLS) and Open Secure
+      Shell (OpenSSH).
