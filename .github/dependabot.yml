@@ -1,0 +1,54 @@
+# Dependabot configuration. Schedules dependency-update PRs across the
+# two ecosystems this repo uses. Both groups are conservative -- weekly
+# cadence, capped open PRs -- so the maintainer's inbox stays manageable.
+#
+# Reference: https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+
+version: 2
+
+updates:
+  # Go module dependencies (everything in go.mod).
+  - package-ecosystem: gomod
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "08:00"
+      timezone: UTC
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "build(deps)"
+      include: scope
+    labels:
+      - dependencies
+      - go
+    groups:
+      # Group godo + transitive deps so DO SDK updates land as one PR.
+      digitalocean:
+        patterns:
+          - "github.com/digitalocean/*"
+      # Group hashicorp libs (godo transitively pulls go-retryablehttp /
+      # go-cleanhttp / go-hclog).
+      hashicorp:
+        patterns:
+          - "github.com/hashicorp/*"
+      # Group cobra + viper + their transitive set.
+      spf13:
+        patterns:
+          - "github.com/spf13/*"
+
+  # GitHub Actions versions in .github/workflows/*.yaml.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "08:00"
+      timezone: UTC
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "ci(deps)"
+      include: scope
+    labels:
+      - dependencies
+      - ci
