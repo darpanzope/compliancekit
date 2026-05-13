@@ -61,15 +61,25 @@ func (c *Collector) Name() string { return providerName }
 // A failure in any sub-collector aborts Collect -- partial data would
 // produce misleading findings (e.g. "droplet has no firewall" when in
 // fact firewalls just failed to list).
+//
+// After collection, droplet -> firewall edges are populated so
+// cross-resource checks (no-firewall, ssh-from-any) can traverse the
+// graph via ResourceGraph.Related without re-querying the API.
 func (c *Collector) Collect(ctx context.Context) ([]core.Resource, error) {
-	var resources []core.Resource
-
 	droplets, err := c.collectDroplets(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("droplets: %w", err)
 	}
-	resources = append(resources, droplets...)
+	firewalls, err := c.collectFirewalls(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("firewalls: %w", err)
+	}
 
+	linkDropletsToFirewalls(droplets, firewalls)
+
+	resources := make([]core.Resource, 0, len(droplets)+len(firewalls))
+	resources = append(resources, droplets...)
+	resources = append(resources, firewalls...)
 	return resources, nil
 }
 

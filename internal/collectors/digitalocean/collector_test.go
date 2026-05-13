@@ -16,7 +16,8 @@ var _ core.Collector = (*Collector)(nil)
 
 func TestCollector_Collect_Droplets(t *testing.T) {
 	server := newFixtureServer(t, map[string]string{
-		"/v2/droplets": "testdata/droplets.json",
+		"/v2/droplets":  "testdata/droplets.json",
+		"/v2/firewalls": "testdata/firewalls.json",
 	})
 	defer server.Close()
 
@@ -31,7 +32,8 @@ func TestCollector_Collect_Droplets(t *testing.T) {
 		t.Fatalf("Collect: %v", err)
 	}
 
-	if got, want := len(resources), 2; got != want {
+	// 2 droplets + 1 firewall = 3 resources.
+	if got, want := len(resources), 3; got != want {
 		t.Fatalf("len(resources) = %d, want %d", got, want)
 	}
 
@@ -64,10 +66,22 @@ func TestCollector_Collect_Droplets(t *testing.T) {
 		t.Errorf("d1.features = %v, want to include 'backups'", features)
 	}
 
+	// Droplet 1 should have a firewall edge populated (web-fw protects it).
+	// Edge values are full Resource IDs so ResourceGraph.Related can look
+	// the target up directly via ByID.
+	wantFWID := "digitalocean.firewall.fw-aaaa-1111"
+	if got := d1.Relations[EdgeFirewall]; len(got) != 1 || got[0] != wantFWID {
+		t.Errorf("d1.Relations[firewall] = %v, want [%s]", got, wantFWID)
+	}
+
 	// Droplet 2: db-01, no public IP, no backups, no tags, older image
 	d2 := resources[1]
 	if d2.Name != "db-01" {
 		t.Errorf("d2.Name = %q, want db-01", d2.Name)
+	}
+	// Droplet 2 is not in any firewall's droplet_ids; should have no edge.
+	if got := d2.Relations[EdgeFirewall]; len(got) != 0 {
+		t.Errorf("d2.Relations[firewall] = %v, want empty", got)
 	}
 	if got := d2.Attr("public_ipv4"); got != "" {
 		t.Errorf(`d2.Attr("public_ipv4") = %q, want empty (private only)`, got)
@@ -77,6 +91,56 @@ func TestCollector_Collect_Droplets(t *testing.T) {
 	}
 	if features, _ := d2.Attributes["features"].([]string); len(features) != 0 {
 		t.Errorf("d2.features = %v, want empty (no backups)", features)
+	}
+
+	// Firewall resource should be present and well-formed.
+	fw := resources[2]
+	if fw.Type != FirewallType {
+		t.Errorf("fw.Type = %q, want %q", fw.Type, FirewallType)
+	}
+	if fw.Name != "web-fw" {
+		t.Errorf("fw.Name = %q, want web-fw", fw.Name)
+	}
+	if got, _ := fw.Attributes["droplet_ids"].([]int); len(got) != 1 || got[0] != 123456 {
+		t.Errorf(`fw.Attributes["droplet_ids"] = %v, want [123456]`, fw.Attributes["droplet_ids"])
+	}
+}
+
+func TestLinkDropletsToFirewalls(t *testing.T) {
+	droplets := []core.Resource{
+		{ID: "digitalocean.droplet.1", Type: DropletType},
+		{ID: "digitalocean.droplet.2", Type: DropletType},
+	}
+	firewalls := []core.Resource{
+		{
+			ID:   "digitalocean.firewall.fw1",
+			Type: FirewallType,
+			Attributes: map[string]any{
+				"droplet_ids": []int{1},
+			},
+		},
+		{
+			ID:   "digitalocean.firewall.fw2",
+			Type: FirewallType,
+			Attributes: map[string]any{
+				"droplet_ids": []int{1, 2},
+			},
+		},
+	}
+
+	linkDropletsToFirewalls(droplets, firewalls)
+
+	if got := droplets[0].Relations[EdgeFirewall]; len(got) != 2 {
+		t.Errorf("droplet 1 firewall edges = %v, want 2", got)
+	}
+	if got := droplets[1].Relations[EdgeFirewall]; len(got) != 1 {
+		t.Errorf("droplet 2 firewall edges = %v, want 1", got)
+	}
+	// Edges must store full Resource IDs, not raw godo IDs.
+	for _, edge := range droplets[0].Relations[EdgeFirewall] {
+		if edge != "digitalocean.firewall.fw1" && edge != "digitalocean.firewall.fw2" {
+			t.Errorf("unexpected edge value %q", edge)
+		}
 	}
 }
 

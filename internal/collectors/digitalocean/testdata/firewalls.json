@@ -1,0 +1,40 @@
+{
+  "firewalls": [
+    {
+      "id": "fw-aaaa-1111",
+      "name": "web-fw",
+      "status": "succeeded",
+      "created_at": "2024-01-10T09:00:00Z",
+      "inbound_rules": [
+        {
+          "protocol": "tcp",
+          "ports": "22",
+          "sources": {
+            "addresses": ["203.0.113.5/32"]
+          }
+        },
+        {
+          "protocol": "tcp",
+          "ports": "443",
+          "sources": {
+            "addresses": ["0.0.0.0/0", "::/0"]
+          }
+        }
+      ],
+      "outbound_rules": [
+        {
+          "protocol": "tcp",
+          "ports": "all",
+          "destinations": {
+            "addresses": ["0.0.0.0/0", "::/0"]
+          }
+        }
+      ],
+      "droplet_ids": [123456],
+      "tags": [],
+      "pending_changes": []
+    }
+  ],
+  "links": {},
+  "meta": {"total": 1}
+}
