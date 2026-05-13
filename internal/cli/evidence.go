@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -102,7 +103,9 @@ type findingsEnvelope struct {
 
 // loadFindings reads either a wrapped scan envelope or a raw findings
 // array from path. Accepting both lets the operator hand-craft a
-// subset file with `jq` and still feed it to `evidence`.
+// subset file with `jq` and still feed it to `evidence`. The shape
+// is detected from the first non-whitespace byte: '{' means envelope,
+// '[' means raw array; anything else is rejected.
 func loadFindings(path string) ([]core.Finding, error) {
 	// G304: path is operator-supplied; this is the documented input.
 	//nolint:gosec // operator-supplied input path
@@ -110,15 +113,26 @@ func loadFindings(path string) ([]core.Finding, error) {
 	if err != nil {
 		return nil, fmt.Errorf("read %s: %w", path, err)
 	}
-	var env findingsEnvelope
-	if err := json.Unmarshal(data, &env); err == nil && env.Findings != nil {
+	trimmed := bytes.TrimLeft(data, " \t\r\n")
+	if len(trimmed) == 0 {
+		return nil, fmt.Errorf("parse %s: file is empty", path)
+	}
+	switch trimmed[0] {
+	case '{':
+		var env findingsEnvelope
+		if err := json.Unmarshal(data, &env); err != nil {
+			return nil, fmt.Errorf("parse %s: %w", path, err)
+		}
 		return env.Findings, nil
+	case '[':
+		var raw []core.Finding
+		if err := json.Unmarshal(data, &raw); err != nil {
+			return nil, fmt.Errorf("parse %s: %w", path, err)
+		}
+		return raw, nil
+	default:
+		return nil, fmt.Errorf("parse %s: expected JSON object or array", path)
 	}
-	var raw []core.Finding
-	if err := json.Unmarshal(data, &raw); err != nil {
-		return nil, fmt.Errorf("parse %s: %w", path, err)
-	}
-	return raw, nil
 }
 
 // printEvidenceSummary mirrors the shape promised in the ROADMAP demo

@@ -122,26 +122,32 @@ compliancekit report --in=./out/findings.json --format=html --out=./report.html
 
 ### `compliancekit evidence`
 
-Generate an audit-ready evidence pack from a findings file. See ARCHITECTURE.md §10 for the output layout.
+Generate an audit-ready evidence pack from a `findings.json`. See ARCHITECTURE.md §10 for the output layout.
 
 ```
-compliancekit evidence [flags]
+compliancekit evidence --in findings.json --out <dir> [flags]
 ```
+
+Reads either the wrapped scan envelope (the default `scan` output) or a raw findings array, so a `jq`-trimmed subset is acceptable input. Writes a tamper-evident folder with per-framework, per-control directories, an auditor-readable `summary.html`, a Drata/Vanta-importable `control-mapping.csv`, and `MANIFEST.sha256` covering every file.
 
 Flags:
 
-| Flag | Description |
-|---|---|
-| `--in <path>` | input `findings.json` (required) |
-| `--out <path>` | output directory (required) |
-| `--frameworks <names>` | frameworks to include (default: all mapped) |
-| `--include-raw` | include unredacted raw responses |
-| `--include-process-evidence <path>` | include manual attestation files from path |
+| Flag | Default | Description |
+|---|---|---|
+| `--in <path>` | `findings.json` | scan findings to package |
+| `--out <path>` | — (required) | output directory; must be empty or absent |
+| `--period <label>` | current quarter | audit period embedded in the pack (e.g. `2026-Q2`) |
+| `--include-raw` | `false` | skip redaction of sensitive tokens (AWS keys, GitHub PATs, Slack tokens, bearer headers, emails) in messages |
+
+Frameworks shipped at v0.4: SOC 2 (TSC), ISO 27001:2022 Annex A, CIS Controls v8. Future frameworks (NIST 800-53, HIPAA, PCI-DSS, MITRE ATT&CK) land at v0.9 and are picked up automatically once their YAML lands under `internal/frameworks/`.
 
 Example:
 
 ```
-compliancekit evidence --in=./out/findings.json --out=./evidence/2026-Q2/
+compliancekit scan --output json > findings.json
+compliancekit evidence --in findings.json --out evidence/2026-Q2/
+# verify tamper-evidence:
+cd evidence/2026-Q2/ && sha256sum -c MANIFEST.sha256
 ```
 
 ---

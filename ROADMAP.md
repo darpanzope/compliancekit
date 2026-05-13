@@ -93,31 +93,35 @@ db-01  ⚠ unreachable: i/o timeout
 
 ---
 
-## v0.4 — Evidence pack (weekend 4)
+## v0.4 — Evidence pack (weekend 4) ✅ shipped
 **Goal:** turn a scan into a folder that an actual auditor would accept.
 
 ### Deliverables
-- `compliancekit evidence` subcommand.
-- Folder structure per ARCHITECTURE §10 — controls grouped by framework, every artifact dated.
-- `MANIFEST.sha256` over the whole pack.
-- `control-mapping.csv` in a format Drata/Vanta/AuditBoard can import.
-- ISO 27001 Annex A mapping added.
-- Per-control human-readable Markdown summaries auto-generated.
-- Redaction by default; `--include-raw` opt-in for the auditor-trusted case.
+- `compliancekit evidence` subcommand. ✅
+- Folder structure per ARCHITECTURE §10 — controls grouped by framework, every artifact dated. ✅
+- `MANIFEST.sha256` over the whole pack, sha256sum(1)-format and byte-stable across re-runs. ✅
+- `control-mapping.csv` in a format Drata/Vanta/AuditBoard can import. ✅
+- ISO 27001:2022 Annex A catalog added (`internal/frameworks/iso27001.yaml`), 100% of v0.3 checks mapped. ✅
+- Per-control human-readable Markdown summaries auto-generated. ✅
+- `summary.html` auditor index (self-contained, dark mode, navigable). ✅
+- Redaction by default (AWS keys, GitHub PATs, Slack tokens, bearer headers, emails); `--include-raw` opt-in. ✅
 
-### Demo
+### Demo (actual v0.4 output)
 ```
-$ compliancekit evidence --in=findings.json --out=evidence/2026-Q2/
-Generating evidence pack for 2026-Q2...
-SOC 2: 23 controls covered, 4 with findings
-ISO 27001: 18 controls covered, 3 with findings
-CIS v8: 31 controls covered, 6 with findings
-Output: evidence/2026-Q2/ (142 files, MANIFEST.sha256 written)
+$ compliancekit evidence --in findings.json --out evidence/2026-Q2/
+Generating evidence pack from findings.json (2 findings)...
+SOC 2 Trust Services Criteria: 2 controls covered, 2 with open findings
+ISO/IEC 27001:2022 Annex A:    1 controls covered, 1 with open findings
+CIS Controls v8:               3 controls covered, 3 with open findings
+Output: /abs/evidence/2026-Q2 (15 files, MANIFEST.sha256 written)
+Auditor index: /abs/evidence/2026-Q2/summary.html
+Control mapping: /abs/evidence/2026-Q2/control-mapping.csv
 ```
 
 ### Definition of done
-- A tarball of an evidence pack passes a manual review against a SOC 2 readiness checklist.
-- `control-mapping.csv` imports cleanly into a sample Drata/Vanta sheet (validated against published schemas).
+- A tarball of an evidence pack passes a manual review against a SOC 2 readiness checklist. ⏳ (manual gate, pre-v0.5)
+- `control-mapping.csv` imports cleanly into a sample Drata/Vanta sheet (validated against published schemas). ⏳ (manual gate, pre-v0.5)
+- `sha256sum -c MANIFEST.sha256` succeeds for every file emitted. ✅ (smoke verified)
 
 ---
 
