@@ -230,8 +230,9 @@ compliancekit/
 ├── .github/
 │   ├── workflows/
 │   │   ├── ci.yaml
-│   │   ├── release.yaml           # goreleaser + cosign
-│   │   └── codeql.yaml
+│   │   ├── release.yaml           # goreleaser + cosign (v0.5+)
+│   │   ├── govulncheck.yaml       # Go CVE call-graph scan
+│   │   └── codeql.yaml            # static analysis (re-added at v0.5 when repo is public)
 │   └── ISSUE_TEMPLATE/
 ├── Dockerfile
 ├── .goreleaser.yml

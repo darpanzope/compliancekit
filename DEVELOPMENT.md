@@ -149,7 +149,7 @@ Use sparingly. `--no-verify` lands code that CI will reject anyway.
 
 ### Adding a new hook
 
-Edit `lefthook.yml`. The `pre-commit` block runs each `commands:` entry in parallel by default; cheap checks belong here. Slow checks (full test suite, cross-compile, codeql) belong in `pre-push` or in CI.
+Edit `lefthook.yml`. The `pre-commit` block runs each `commands:` entry in parallel by default; cheap checks belong here. Slow checks (full test suite, cross-compile, static analysis) belong in `pre-push` or in CI.
 
 ## Commit messages
 
@@ -249,7 +249,7 @@ A commit-msg hook to enforce this format will land at v0.5 alongside CONTRIBUTIN
 
 Required to pass before merge. Additionally:
 
-- `codeql.yaml` — GitHub CodeQL security scan
+- `codeql.yaml` — GitHub CodeQL static analysis (added at v0.5 when the repo flips public; CodeQL on private repos requires GitHub Advanced Security)
 - `release.yaml` — runs on tag push; invokes goreleaser (from v0.5)
 
 ## Recording new fixtures
