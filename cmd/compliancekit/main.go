@@ -6,6 +6,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/signal"
@@ -39,6 +40,15 @@ func main() {
 		Commit:  commit,
 		Date:    date,
 	}); err != nil {
+		// ExitCodeError carries an intentional non-zero exit code for
+		// outcomes that are not "the tool failed" (e.g. scan found
+		// high-severity findings). Other errors print with "error:" and
+		// exit 1.
+		var ec *cli.ExitCodeError
+		if errors.As(err, &ec) {
+			fmt.Fprintln(os.Stderr, ec.Message)
+			os.Exit(ec.Code)
+		}
 		fmt.Fprintln(os.Stderr, "error:", err)
 		os.Exit(1)
 	}
