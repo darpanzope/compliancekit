@@ -158,6 +158,6 @@ func PasswdPerms(_ context.Context, g *core.ResourceGraph) ([]core.Finding, erro
 }
 
 func init() {
-	core.Register(CheckShadowPerms.ID, ShadowPerms)
-	core.Register(CheckPasswdPerms.ID, PasswdPerms)
+	core.Register(CheckShadowPerms, ShadowPerms)
+	core.Register(CheckPasswdPerms, PasswdPerms)
 }

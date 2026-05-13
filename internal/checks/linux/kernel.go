@@ -149,6 +149,6 @@ func NoSourceRouting(_ context.Context, g *core.ResourceGraph) ([]core.Finding, 
 }
 
 func init() {
-	core.Register(CheckASLREnabled.ID, ASLREnabled)
-	core.Register(CheckNoSourceRouting.ID, NoSourceRouting)
+	core.Register(CheckASLREnabled, ASLREnabled)
+	core.Register(CheckNoSourceRouting, NoSourceRouting)
 }

@@ -182,6 +182,6 @@ func FirewallDefaultDeny(_ context.Context, g *core.ResourceGraph) ([]core.Findi
 }
 
 func init() {
-	core.Register(CheckFirewallActive.ID, FirewallActive)
-	core.Register(CheckFirewallDefaultDeny.ID, FirewallDefaultDeny)
+	core.Register(CheckFirewallActive, FirewallActive)
+	core.Register(CheckFirewallDefaultDeny, FirewallDefaultDeny)
 }

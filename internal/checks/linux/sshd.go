@@ -423,9 +423,9 @@ func parseSSHDDuration(s string) (int, error) {
 // init registers every check in this file with the default registry.
 // cmd/compliancekit imports this package for its side effects.
 func init() {
-	core.Register(CheckSSHDNoRootLogin.ID, SSHDNoRootLogin)
-	core.Register(CheckSSHDNoPasswordAuth.ID, SSHDNoPasswordAuth)
-	core.Register(CheckSSHDProtocol2.ID, SSHDProtocol2)
-	core.Register(CheckSSHDMaxAuthTries.ID, SSHDMaxAuthTries)
-	core.Register(CheckSSHDLoginGraceTime.ID, SSHDLoginGraceTime)
+	core.Register(CheckSSHDNoRootLogin, SSHDNoRootLogin)
+	core.Register(CheckSSHDNoPasswordAuth, SSHDNoPasswordAuth)
+	core.Register(CheckSSHDProtocol2, SSHDProtocol2)
+	core.Register(CheckSSHDMaxAuthTries, SSHDMaxAuthTries)
+	core.Register(CheckSSHDLoginGraceTime, SSHDLoginGraceTime)
 }

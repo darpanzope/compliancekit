@@ -85,5 +85,5 @@ func NoFirewall(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error
 // droplets.go init so the registration site for each check sits next
 // to its definition.
 func init() {
-	core.Register(CheckNoFirewall.ID, NoFirewall)
+	core.Register(CheckNoFirewall, NoFirewall)
 }

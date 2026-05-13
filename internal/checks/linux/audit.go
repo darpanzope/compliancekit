@@ -153,6 +153,6 @@ func JournaldPersistent(_ context.Context, g *core.ResourceGraph) ([]core.Findin
 }
 
 func init() {
-	core.Register(CheckAuditdRunning.ID, AuditdRunning)
-	core.Register(CheckJournaldPersistent.ID, JournaldPersistent)
+	core.Register(CheckAuditdRunning, AuditdRunning)
+	core.Register(CheckJournaldPersistent, JournaldPersistent)
 }

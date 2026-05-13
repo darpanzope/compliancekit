@@ -169,6 +169,6 @@ func NoEmptyPasswords(_ context.Context, g *core.ResourceGraph) ([]core.Finding,
 }
 
 func init() {
-	core.Register(CheckUIDZeroOnlyRoot.ID, UIDZeroOnlyRoot)
-	core.Register(CheckNoEmptyPasswords.ID, NoEmptyPasswords)
+	core.Register(CheckUIDZeroOnlyRoot, UIDZeroOnlyRoot)
+	core.Register(CheckNoEmptyPasswords, NoEmptyPasswords)
 }

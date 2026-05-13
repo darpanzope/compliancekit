@@ -199,9 +199,9 @@ func OldImage(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) 
 // triggers this at startup so checks are available without explicit
 // wiring at every call site.
 func init() {
-	core.Register(CheckBackupsDisabled.ID, BackupsDisabled)
-	core.Register(CheckNoTags.ID, NoTags)
-	core.Register(CheckOldImage.ID, OldImage)
+	core.Register(CheckBackupsDisabled, BackupsDisabled)
+	core.Register(CheckNoTags, NoTags)
+	core.Register(CheckOldImage, OldImage)
 }
 
 // containsString reports whether ss contains the exact string s.

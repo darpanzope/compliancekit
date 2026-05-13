@@ -121,5 +121,5 @@ func rulePortIncludes(portRange, port string) bool {
 }
 
 func init() {
-	core.Register(CheckSSHFromAny.ID, SSHFromAny)
+	core.Register(CheckSSHFromAny, SSHFromAny)
 }

@@ -23,7 +23,7 @@ func (f *fakeCollector) Collect(_ context.Context) ([]core.Resource, error) {
 
 func TestEngine_Run_HappyPath(t *testing.T) {
 	reg := core.NewRegistry()
-	reg.Register("test-pass", func(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+	reg.Register(core.Check{ID: "test-pass"}, func(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
 		var out []core.Finding
 		for _, r := range g.ByType("test.resource") {
 			out = append(out, core.Finding{
@@ -64,10 +64,10 @@ func TestEngine_Run_HappyPath(t *testing.T) {
 
 func TestEngine_Run_CheckErrorBecomesStatusError(t *testing.T) {
 	reg := core.NewRegistry()
-	reg.Register("test-fail", func(_ context.Context, _ *core.ResourceGraph) ([]core.Finding, error) {
+	reg.Register(core.Check{ID: "test-fail"}, func(_ context.Context, _ *core.ResourceGraph) ([]core.Finding, error) {
 		return nil, errors.New("ouch")
 	})
-	reg.Register("test-ok", func(_ context.Context, _ *core.ResourceGraph) ([]core.Finding, error) {
+	reg.Register(core.Check{ID: "test-ok"}, func(_ context.Context, _ *core.ResourceGraph) ([]core.Finding, error) {
 		return []core.Finding{{CheckID: "test-ok", Status: core.StatusPass}}, nil
 	})
 
@@ -114,7 +114,7 @@ func TestEngine_Run_CollectorErrorAborts(t *testing.T) {
 
 func TestEngine_Run_ContextCancellation(t *testing.T) {
 	reg := core.NewRegistry()
-	reg.Register("would-run", func(_ context.Context, _ *core.ResourceGraph) ([]core.Finding, error) {
+	reg.Register(core.Check{ID: "would-run"}, func(_ context.Context, _ *core.ResourceGraph) ([]core.Finding, error) {
 		t.Error("check ran despite canceled context")
 		return nil, nil
 	})
@@ -139,7 +139,7 @@ func TestEngine_Run_FillsTimestampOnlyWhenMissing(t *testing.T) {
 	custom.Timestamp = custom.Timestamp.AddDate(2020, 0, 0) // a fixed past date
 
 	reg := core.NewRegistry()
-	reg.Register("custom-time", func(_ context.Context, _ *core.ResourceGraph) ([]core.Finding, error) {
+	reg.Register(core.Check{ID: "custom-time"}, func(_ context.Context, _ *core.ResourceGraph) ([]core.Finding, error) {
 		return []core.Finding{custom}, nil
 	})
 
