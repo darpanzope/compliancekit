@@ -12,6 +12,12 @@ import (
 	"syscall"
 
 	"github.com/darpanzope/compliancekit/internal/cli"
+
+	// Side-effect import: each checks package's init() registers its
+	// CheckFuncs into the default registry so the scan command can find
+	// them. Adding a new provider's checks package means adding one
+	// import line here.
+	_ "github.com/darpanzope/compliancekit/internal/checks/digitalocean"
 )
 
 // These vars are populated by `-ldflags "-X main.version=..."` at build time.
