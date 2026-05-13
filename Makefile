@@ -1,0 +1,46 @@
+.PHONY: build run test lint fmt tidy clean setup check help
+.DEFAULT_GOAL := help
+
+BIN     := bin/compliancekit
+PKG     := github.com/darpanzope/compliancekit
+VERSION := $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
+COMMIT  := $(shell git rev-parse --short HEAD 2>/dev/null || echo "none")
+DATE    := $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
+LDFLAGS := -s -w \
+           -X main.version=$(VERSION) \
+           -X main.commit=$(COMMIT) \
+           -X main.date=$(DATE)
+
+build: ## build the binary into bin/compliancekit
+	@mkdir -p bin
+	CGO_ENABLED=0 go build -trimpath -ldflags="$(LDFLAGS)" -o $(BIN) ./cmd/compliancekit
+	@echo "built $(BIN)"
+
+run: ## run via go run; pass args via ARGS=
+	go run ./cmd/compliancekit $(ARGS)
+
+test: ## unit tests with race detector
+	go test -race -timeout=60s ./...
+
+lint: ## golangci-lint
+	golangci-lint run
+
+fmt: ## format all Go files
+	gofmt -s -w .
+	@command -v goimports >/dev/null && goimports -w -local $(PKG) . || true
+
+tidy: ## tidy go.mod / go.sum
+	go mod tidy
+
+clean: ## remove build artifacts
+	rm -rf bin/
+
+setup: ## install development tools (golangci-lint, goimports)
+	@command -v golangci-lint >/dev/null 2>&1 || go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+	@command -v goimports >/dev/null 2>&1 || go install golang.org/x/tools/cmd/goimports@latest
+	@echo "setup complete"
+
+check: lint test build ## pre-push gate: lint + test + build
+
+help: ## show this help
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'

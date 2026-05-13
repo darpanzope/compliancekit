@@ -34,7 +34,7 @@ Alternatives considered:
 - **Python** — Prowler's stack; deployment is painful, no static binary story.
 - **TypeScript/Bun** — immature for SSH and system-level ops; bigger bundle.
 
-**Go version pin:** `1.22` minimum. `go.mod` will track latest stable in CI.
+**Go version pin:** `1.26` minimum. `go.mod` tracks latest stable; CI runs against the pinned floor and the latest minor.
 
 ## 3. High-level architecture
 
