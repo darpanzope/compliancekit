@@ -34,7 +34,7 @@ Alternatives considered:
 - **Python** — Prowler's stack; deployment is painful, no static binary story.
 - **TypeScript/Bun** — immature for SSH and system-level ops; bigger bundle.
 
-**Go version pin:** `1.26` minimum. `go.mod` tracks latest stable; CI runs against the pinned floor and the latest minor.
+**Go version pin:** `1.24` minimum (the version golangci-lint's prebuilt release binary uses). Local development on the latest stable Go is encouraged; the floor is intentionally permissive so CI tooling stays simple. Bumped from `1.22` after toolchain upgrades; will move to `1.26+` once golangci-lint v2's prebuilt releases catch up.
 
 ## 3. High-level architecture
 

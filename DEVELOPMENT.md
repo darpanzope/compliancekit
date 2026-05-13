@@ -6,7 +6,7 @@ How to build, test, and iterate on compliancekit locally. For contributors; user
 
 | Tool | Version | Notes |
 |---|---|---|
-| Go | 1.26+ | the only hard requirement |
+| Go | 1.24+ | the only hard requirement (set by go.mod; CI builds against latest 1.24.x) |
 | make | any | thin wrapper over `go` commands |
 | golangci-lint | 1.55+ | installed by `make setup` if missing |
 | Docker | optional | only needed for `make test-integration` (SSH harness) |
