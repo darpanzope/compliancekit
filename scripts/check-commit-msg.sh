@@ -20,7 +20,7 @@ fi
 # Conventional Commits 1.0 pattern:
 #   <type>(<optional-scope>)?!?: <subject>
 # Types match the allowlist in DEVELOPMENT.md; scope is kebab-case-ish.
-pattern='^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-z0-9/_.-]+\))?!?: .+'
+pattern='^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-z0-9/_.,-]+\))?!?: .+'
 
 if [[ ! "$subject" =~ $pattern ]]; then
     cat >&2 <<EOF

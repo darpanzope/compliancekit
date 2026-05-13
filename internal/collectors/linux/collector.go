@@ -112,6 +112,18 @@ func (c *Collector) gatherOne(ctx context.Context, host Host) core.Resource {
 		attrs["sshd_error"] = err.Error()
 	}
 
+	if fw, err := gatherFirewall(ctx, client); err == nil {
+		attrs["firewall"] = fw
+	} else {
+		attrs["firewall_error"] = err.Error()
+	}
+
+	if audit, err := gatherAudit(ctx, client); err == nil {
+		attrs["audit"] = audit
+	} else {
+		attrs["audit_error"] = err.Error()
+	}
+
 	return core.Resource{
 		ID:         "linux.host." + host.Host,
 		Type:       HostType,
