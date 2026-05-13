@@ -1,0 +1,28 @@
+# inventory.yaml -- example linux SSH inventory for compliancekit.
+#
+# Hosts here are scanned by the linux collector (v0.2+) when
+# providers.linux.enabled: true in compliancekit.yaml.
+#
+# Per-host fields override defaults from providers.linux.ssh in
+# compliancekit.yaml. Empty fields fall through to those defaults.
+# See CONFIGURATION.md for the full schema.
+
+groups:
+  web:
+    hosts:
+      - host: web-01.acme.com
+      - host: web-02.acme.com
+        user: ubuntu                  # override default user for this host
+        port: 2222                    # override default port
+
+  db:
+    hosts:
+      - host: db-01.acme.com
+        ssh:
+          key_file: ~/.ssh/db_key     # per-host key
+          timeout: 30s                # per-host connect timeout
+
+# Top-level hosts (not in any group). Useful for bastions, one-offs.
+hosts:
+  - host: bastion.acme.com
+    tags: [prod, jump]
