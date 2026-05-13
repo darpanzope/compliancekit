@@ -124,6 +124,24 @@ func (c *Collector) gatherOne(ctx context.Context, host Host) core.Resource {
 		attrs["audit_error"] = err.Error()
 	}
 
+	if fs, err := gatherFilesystem(ctx, client); err == nil {
+		attrs["filesystem"] = fs
+	} else {
+		attrs["filesystem_error"] = err.Error()
+	}
+
+	if users, err := gatherUsers(ctx, client); err == nil {
+		attrs["users"] = users
+	} else {
+		attrs["users_error"] = err.Error()
+	}
+
+	if kernel, err := gatherKernel(ctx, client); err == nil {
+		attrs["kernel"] = kernel
+	} else {
+		attrs["kernel_error"] = err.Error()
+	}
+
 	return core.Resource{
 		ID:         "linux.host." + host.Host,
 		Type:       HostType,

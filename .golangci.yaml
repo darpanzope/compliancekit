@@ -146,9 +146,10 @@ issues:
         - unparam
 
     # The check metadata vars (Check{...}) trigger goconst for repeated
-    # short strings like provider="digitalocean". Suppress in that file
-    # only -- not project-wide.
-    - path: internal/checks/.*/(droplets|firewalls|firewall_rules)\.go
+    # short strings like provider="digitalocean" or system user names
+    # like "root" in filesystem checks. These are vocabulary, not
+    # incidental duplication; suppress goconst in the check files only.
+    - path: internal/checks/.*\.go
       linters:
         - goconst
 
