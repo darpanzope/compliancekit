@@ -14,7 +14,9 @@ coverage.html
 # State and outputs
 .compliancekit/
 out/
-evidence/
+# Runtime evidence packs (top-level only -- the internal/evidence/
+# package containing the pack writer must remain trackable).
+/evidence/
 
 # Claude Code session state
 .claude/
