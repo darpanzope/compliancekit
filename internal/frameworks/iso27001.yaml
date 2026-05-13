@@ -1,0 +1,267 @@
+# ISO/IEC 27001:2022 Annex A
+# Source: ISO/IEC 27001:2022 Information security, cybersecurity and privacy
+# protection -- Information security management systems -- Requirements,
+# Annex A (Reference set of information security controls).
+#
+# The 2022 revision restructures Annex A into four themes (A.5
+# Organizational, A.6 People, A.7 Physical, A.8 Technological) totalling
+# 93 controls -- down from 114 in the 2013 version.
+#
+# This file lists the subset referenced by compliancekit checks today
+# (A.8 Technological) plus the surrounding controls in that theme so a
+# new check can map without a catalog update. Other themes will be
+# added as checks reach them.
+
+id: iso27001
+name: ISO/IEC 27001:2022 Annex A
+version: "2022"
+description: |
+  ISO/IEC 27001 is the international standard for information security
+  management systems (ISMS). Annex A defines a reference set of
+  controls that an organisation selects from based on its risk
+  assessment. The 2022 revision collapses 114 controls into 93 across
+  four themes: Organizational (A.5), People (A.6), Physical (A.7),
+  and Technological (A.8).
+url: https://www.iso.org/standard/27001
+
+controls:
+  A.5.9:
+    name: Inventory of Information and Other Associated Assets
+    description: |
+      An inventory of information and other associated assets,
+      including owners, shall be developed and maintained.
+
+  A.5.15:
+    name: Access Control
+    description: |
+      Rules to control physical and logical access to information
+      and other associated assets shall be established and
+      implemented based on business and information security
+      requirements.
+
+  A.5.30:
+    name: ICT Readiness for Business Continuity
+    description: |
+      ICT readiness shall be planned, implemented, maintained and
+      tested based on business continuity objectives and ICT
+      continuity requirements.
+
+  A.8.1:
+    name: User Endpoint Devices
+    description: |
+      Information stored on, processed by or accessible via user
+      endpoint devices shall be protected.
+
+  A.8.2:
+    name: Privileged Access Rights
+    description: |
+      The allocation and use of privileged access rights shall be
+      restricted and managed.
+
+  A.8.3:
+    name: Information Access Restriction
+    description: |
+      Access to information and other associated assets shall be
+      restricted in accordance with the established topic-specific
+      policy on access control.
+
+  A.8.4:
+    name: Access to Source Code
+    description: |
+      Read and write access to source code, development tools and
+      software libraries shall be appropriately managed.
+
+  A.8.5:
+    name: Secure Authentication
+    description: |
+      Secure authentication technologies and procedures shall be
+      implemented based on information access restrictions and the
+      topic-specific policy on access control.
+
+  A.8.6:
+    name: Capacity Management
+    description: |
+      The use of resources shall be monitored and adjusted in line
+      with current and expected capacity requirements.
+
+  A.8.7:
+    name: Protection Against Malware
+    description: |
+      Protection against malware shall be implemented and supported
+      by appropriate user awareness.
+
+  A.8.8:
+    name: Management of Technical Vulnerabilities
+    description: |
+      Information about technical vulnerabilities of information
+      systems in use shall be obtained, the organisation's exposure
+      to such vulnerabilities evaluated, and appropriate measures
+      taken.
+
+  A.8.9:
+    name: Configuration Management
+    description: |
+      Configurations, including security configurations, of hardware,
+      software, services and networks shall be established,
+      documented, implemented, monitored and reviewed.
+
+  A.8.10:
+    name: Information Deletion
+    description: |
+      Information stored in information systems, devices or in any
+      other storage media shall be deleted when no longer required.
+
+  A.8.11:
+    name: Data Masking
+    description: |
+      Data masking shall be used in accordance with the
+      organisation's topic-specific policy on access control and
+      other related policies, and business requirements, taking
+      applicable legislation into consideration.
+
+  A.8.12:
+    name: Data Leakage Prevention
+    description: |
+      Data leakage prevention measures shall be applied to systems,
+      networks and any other devices that process, store or transmit
+      sensitive information.
+
+  A.8.13:
+    name: Information Backup
+    description: |
+      Backup copies of information, software and systems shall be
+      maintained and regularly tested in accordance with the agreed
+      topic-specific policy on backup.
+
+  A.8.14:
+    name: Redundancy of Information Processing Facilities
+    description: |
+      Information processing facilities shall be implemented with
+      redundancy sufficient to meet availability requirements.
+
+  A.8.15:
+    name: Logging
+    description: |
+      Logs that record activities, exceptions, faults and other
+      relevant events shall be produced, stored, protected and
+      analysed.
+
+  A.8.16:
+    name: Monitoring Activities
+    description: |
+      Networks, systems and applications shall be monitored for
+      anomalous behaviour and appropriate actions taken to evaluate
+      potential information security incidents.
+
+  A.8.17:
+    name: Clock Synchronization
+    description: |
+      The clocks of information processing systems used by the
+      organisation shall be synchronised to approved time sources.
+
+  A.8.18:
+    name: Use of Privileged Utility Programs
+    description: |
+      The use of utility programs that can be capable of overriding
+      system and application controls shall be restricted and tightly
+      controlled.
+
+  A.8.19:
+    name: Installation of Software on Operational Systems
+    description: |
+      Procedures and measures shall be implemented to securely manage
+      software installation on operational systems.
+
+  A.8.20:
+    name: Networks Security
+    description: |
+      Networks and network devices shall be secured, managed and
+      controlled to protect information in systems and applications.
+
+  A.8.21:
+    name: Security of Network Services
+    description: |
+      Security mechanisms, service levels and service requirements of
+      network services shall be identified, implemented and
+      monitored.
+
+  A.8.22:
+    name: Segregation of Networks
+    description: |
+      Groups of information services, users and information systems
+      shall be segregated in the organisation's networks.
+
+  A.8.23:
+    name: Web Filtering
+    description: |
+      Access to external websites shall be managed to reduce exposure
+      to malicious content.
+
+  A.8.24:
+    name: Use of Cryptography
+    description: |
+      Rules for the effective use of cryptography, including
+      cryptographic key management, shall be defined and implemented.
+
+  A.8.25:
+    name: Secure Development Lifecycle
+    description: |
+      Rules for the secure development of software and systems shall
+      be established and applied.
+
+  A.8.26:
+    name: Application Security Requirements
+    description: |
+      Information security requirements shall be identified,
+      specified and approved when developing or acquiring
+      applications.
+
+  A.8.27:
+    name: Secure System Architecture and Engineering Principles
+    description: |
+      Principles for engineering secure systems shall be established,
+      documented, maintained and applied to any information system
+      development activities.
+
+  A.8.28:
+    name: Secure Coding
+    description: |
+      Secure coding principles shall be applied to software
+      development.
+
+  A.8.29:
+    name: Security Testing in Development and Acceptance
+    description: |
+      Security testing processes shall be defined and implemented in
+      the development life cycle.
+
+  A.8.30:
+    name: Outsourced Development
+    description: |
+      The organisation shall direct, monitor and review the
+      activities related to outsourced system development.
+
+  A.8.31:
+    name: Separation of Development, Test and Production Environments
+    description: |
+      Development, testing and production environments shall be
+      separated and secured.
+
+  A.8.32:
+    name: Change Management
+    description: |
+      Changes to information processing facilities and information
+      systems shall be subject to change management procedures.
+
+  A.8.33:
+    name: Test Information
+    description: |
+      Test information shall be appropriately selected, protected and
+      managed.
+
+  A.8.34:
+    name: Protection of Information Systems During Audit Testing
+    description: |
+      Audit tests and other assurance activities involving assessment
+      of operational systems shall be planned and agreed between the
+      tester and appropriate management.

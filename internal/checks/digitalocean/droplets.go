@@ -37,8 +37,9 @@ var CheckBackupsDisabled = core.Check{
 		"'doctl compute droplet-action enable-backups <id>' or set " +
 		"'backups: true' in your Terraform digitalocean_droplet resource.",
 	Frameworks: map[string][]string{
-		"soc2":   {"CC6.6", "A1.2"},
-		"cis-v8": {"11.2"},
+		"soc2":     {"CC6.6", "A1.2"},
+		"iso27001": {"A.8.13", "A.5.30"},
+		"cis-v8":   {"11.2"},
 	},
 	Tags:    []string{"backup", "recovery"},
 	Scanner: "droplets.BackupsDisabled",
@@ -89,8 +90,9 @@ var CheckNoTags = core.Check{
 		"'doctl compute droplet tag <id> --tag-name prod' or set 'tags' " +
 		"in your Terraform digitalocean_droplet resource.",
 	Frameworks: map[string][]string{
-		"soc2":   {"CC1.4", "CC6.1"},
-		"cis-v8": {"1.1"},
+		"soc2":     {"CC1.4", "CC6.1"},
+		"iso27001": {"A.5.9"},
+		"cis-v8":   {"1.1"},
 	},
 	Tags:    []string{"inventory", "attribution"},
 	Scanner: "droplets.NoTags",
@@ -142,8 +144,9 @@ var CheckOldImage = core.Check{
 		"('doctl compute droplet-action rebuild <id> --image ubuntu-22-04-x64') " +
 		"or rotate it via an updated Terraform digitalocean_droplet block.",
 	Frameworks: map[string][]string{
-		"soc2":   {"CC7.1", "CC7.2"},
-		"cis-v8": {"7.5"},
+		"soc2":     {"CC7.1", "CC7.2"},
+		"iso27001": {"A.8.8", "A.8.19"},
+		"cis-v8":   {"7.5"},
 	},
 	Tags:    []string{"patching", "vulnerability"},
 	Scanner: "droplets.OldImage",
