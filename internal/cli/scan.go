@@ -105,7 +105,7 @@ func runScan(ctx context.Context, w io.Writer, opts scanOptions, providerFilter 
 		return fmt.Errorf("scan: %w", err)
 	}
 
-	if err := os.MkdirAll(cfg.Output.OutDir, 0o755); err != nil {
+	if err := os.MkdirAll(cfg.Output.OutDir, 0o750); err != nil {
 		return fmt.Errorf("create out_dir %s: %w", cfg.Output.OutDir, err)
 	}
 	for _, r := range reporters {
@@ -149,7 +149,7 @@ func buildReporters(formats []string) ([]core.Reporter, error) {
 	if len(formats) == 0 {
 		formats = []string{report.FormatJSON}
 	}
-	var reporters []core.Reporter
+	reporters := make([]core.Reporter, 0, len(formats))
 	for _, f := range formats {
 		r, err := report.New(f)
 		if err != nil {
@@ -162,7 +162,10 @@ func buildReporters(formats []string) ([]core.Reporter, error) {
 
 // writeReport opens path and invokes r.Render.
 func writeReport(ctx context.Context, r core.Reporter, result engine.Result, path string) error {
-	f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o600)
+	// path is composed from cfg.Output.OutDir (operator-controlled) and a
+	// fixed-suffix filename derived from the reporter format. There is no
+	// untrusted input here; the gosec G304 warning is a false positive.
+	f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o600) //nolint:gosec // path derives from operator config
 	if err != nil {
 		return fmt.Errorf("open %s: %w", path, err)
 	}
@@ -203,7 +206,7 @@ func describeCollectors(cs []core.Collector) string {
 // shown in ROADMAP.md's v0.1 demo block.
 func printSummary(w io.Writer, findings []core.Finding) {
 	var (
-		fail, errored int
+		fail, errored                     int
 		critical, high, medium, low, info int
 	)
 	for _, f := range findings {

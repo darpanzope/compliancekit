@@ -89,6 +89,6 @@ func TestSeverity_JSONRoundTrip(t *testing.T) {
 func TestSeverity_UnmarshalJSONRejectsUnknown(t *testing.T) {
 	var s Severity
 	if err := json.Unmarshal([]byte(`"bogus"`), &s); err == nil {
-		t.Error("expected error unmarshalling unknown severity")
+		t.Error("expected error unmarshaling unknown severity")
 	}
 }

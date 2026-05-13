@@ -13,7 +13,7 @@ import "context"
 // change to existing checks (see DECISIONS.md ADR-002).
 //
 // Implementations must honor ctx.Done() -- a long-running evaluator
-// gets cancelled on user interrupt (Ctrl-C) and on engine-side timeouts.
+// gets canceled on user interrupt (Ctrl-C) and on engine-side timeouts.
 type Evaluator interface {
 	// Evaluate runs all configured checks against the graph and returns
 	// every Finding produced. Findings of any Status are returned;

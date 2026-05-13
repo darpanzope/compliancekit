@@ -13,7 +13,7 @@ import "context"
 // time on network I/O.
 //
 // Collectors MUST honor ctx.Done() -- long-running provider scans get
-// cancelled on user interrupt (Ctrl-C) and on engine-side timeouts.
+// canceled on user interrupt (Ctrl-C) and on engine-side timeouts.
 //
 // See DECISIONS.md ADR-001 for the reasoning behind splitting collection
 // from evaluation.

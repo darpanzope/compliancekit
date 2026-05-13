@@ -17,7 +17,7 @@ func TestFinding_FingerprintStableAcrossSeverityAndMessage(t *testing.T) {
 		CheckID:  "do-spaces-public-acl",
 		Resource: ResourceRef{ID: "do.bucket.1"},
 		Status:   StatusFail,
-		Severity: SeverityCritical,    // changed
+		Severity: SeverityCritical,     // changed
 		Message:  "very public bucket", // changed
 	}
 	if a.Fingerprint() != b.Fingerprint() {

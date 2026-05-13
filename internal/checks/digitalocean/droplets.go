@@ -7,7 +7,7 @@
 //
 // At v0.1 metadata lives as Go vars next to the function. v0.3 will
 // migrate to side-by-side YAML files (per CHECKS.md) once the
-// `checks list` and `checks show` commands need a browseable catalogue.
+// `checks list` and `checks show` commands need a browseable catalog.
 // The metadata struct shape is the same either way, so this is purely
 // a serialization change.
 package digitalocean
@@ -46,8 +46,9 @@ var CheckBackupsDisabled = core.Check{
 
 // BackupsDisabled is the CheckFunc for CheckBackupsDisabled.
 func BackupsDisabled(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	var findings []core.Finding
-	for _, d := range g.ByType(docol.DropletType) {
+	droplets := g.ByType(docol.DropletType)
+	findings := make([]core.Finding, 0, len(droplets))
+	for _, d := range droplets {
 		features, _ := d.Attributes["features"].([]string)
 		hasBackups := containsString(features, "backups")
 
@@ -97,8 +98,9 @@ var CheckNoTags = core.Check{
 
 // NoTags is the CheckFunc for CheckNoTags.
 func NoTags(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	var findings []core.Finding
-	for _, d := range g.ByType(docol.DropletType) {
+	droplets := g.ByType(docol.DropletType)
+	findings := make([]core.Finding, 0, len(droplets))
+	for _, d := range droplets {
 		f := core.Finding{
 			CheckID:  CheckNoTags.ID,
 			Severity: CheckNoTags.Severity,
@@ -149,10 +151,11 @@ var CheckOldImage = core.Check{
 
 // OldImage is the CheckFunc for CheckOldImage.
 func OldImage(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	var findings []core.Finding
+	droplets := g.ByType(docol.DropletType)
+	findings := make([]core.Finding, 0, len(droplets))
 	now := time.Now().UTC()
 
-	for _, d := range g.ByType(docol.DropletType) {
+	for _, d := range droplets {
 		f := core.Finding{
 			CheckID:  CheckOldImage.ID,
 			Severity: CheckOldImage.Severity,

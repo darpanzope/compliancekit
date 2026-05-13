@@ -115,7 +115,7 @@ func TestEngine_Run_CollectorErrorAborts(t *testing.T) {
 func TestEngine_Run_ContextCancellation(t *testing.T) {
 	reg := core.NewRegistry()
 	reg.Register("would-run", func(_ context.Context, _ *core.ResourceGraph) ([]core.Finding, error) {
-		t.Error("check ran despite cancelled context")
+		t.Error("check ran despite canceled context")
 		return nil, nil
 	})
 	coll := &fakeCollector{name: "would-run", resources: []core.Resource{{ID: "a", Type: "t"}}}
@@ -126,7 +126,7 @@ func TestEngine_Run_ContextCancellation(t *testing.T) {
 	eng := New([]core.Collector{coll}, reg)
 	_, err := eng.Run(ctx)
 	if err == nil {
-		t.Error("expected context error when context is cancelled")
+		t.Error("expected context error when context is canceled")
 	}
 }
 

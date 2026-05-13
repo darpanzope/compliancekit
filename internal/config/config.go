@@ -30,7 +30,7 @@ type Config struct {
 
 	// SourcePath is the resolved path of the YAML file Load read from, or ""
 	// if no file was found and defaults plus environment were used alone.
-	// Populated by Load; excluded from marshalling because it is not part
+	// Populated by Load; excluded from marshaling because it is not part
 	// of the public schema.
 	SourcePath string `mapstructure:"-" yaml:"-" json:"-"`
 }

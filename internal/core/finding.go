@@ -21,7 +21,7 @@ type Finding struct {
 	Status Status `json:"status"`
 
 	// Severity is denormalized from the originating Check so reporters
-	// and CLI filters can act on it without joining against the catalogue.
+	// and CLI filters can act on it without joining against the catalog.
 	Severity Severity `json:"severity"`
 
 	// Resource identifies the resource the finding is about. A scan

@@ -46,9 +46,10 @@ var CheckNoFirewall = core.Check{
 // doesn't apply to private-only hosts. Droplets with at least one
 // firewall Pass. Droplets with a public IP and no firewall Fail.
 func NoFirewall(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	var findings []core.Finding
+	droplets := g.ByType(docol.DropletType)
+	findings := make([]core.Finding, 0, len(droplets))
 
-	for _, d := range g.ByType(docol.DropletType) {
+	for _, d := range droplets {
 		f := core.Finding{
 			CheckID:  CheckNoFirewall.ID,
 			Severity: CheckNoFirewall.Severity,

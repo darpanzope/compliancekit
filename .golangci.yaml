@@ -5,26 +5,56 @@ run:
 linters:
   disable-all: true
   enable:
+    # correctness
     - errcheck
-    - gosimple
     - govet
     - ineffassign
     - staticcheck
     - unused
-    - gosec
-    - misspell
+    - nilerr           # returning nil despite a non-nil error
+    - bodyclose        # response bodies must be closed
+    - noctx            # net/http.NewRequest without context
+    - sqlclosecheck    # forgotten Close on sql Rows / Stmt
+    - predeclared      # avoid shadowing Go builtins (new, len, ...)
+    - tparallel        # incorrect test parallelism
+
+    # security
+    - gosec            # common security issues (G404, G401, ...)
+
+    # simplicity / style
+    - gosimple
+    - gocritic         # opinionated extra checks (catches subtle bugs)
+    - unconvert        # remove unnecessary type conversions
+    - unparam          # detect unused function parameters
+    - prealloc         # suggest pre-allocating slices
+    - whitespace       # extra leading/trailing whitespace
+    - nakedret         # naked returns in long functions
+    - gocyclo          # cyclomatic complexity threshold
+    - goconst          # repeated string literals -> const
+
+    # formatting
     - gofmt
     - goimports
-    - revive
-    - bodyclose
-    - noctx
-    - prealloc
-    - unconvert
-    - unparam
+    - misspell
+
+    # style
+    - revive           # configurable replacement for golint
 
 linters-settings:
+  errcheck:
+    # Writes to stdout / stderr via fmt.Fprint family functions never
+    # fail in practice on a CLI tool, and forcing every print site to
+    # explicit-discard `_, _ =` is line noise that hides real errcheck
+    # signal. Kubernetes, Hugo, Trivy, and most major Go projects make
+    # the same exclusion. File and network writes are NOT excluded.
+    exclude-functions:
+      - fmt.Fprintf
+      - fmt.Fprintln
+      - fmt.Fprint
+
   goimports:
     local-prefixes: github.com/darpanzope/compliancekit
+
   misspell:
     locale: US
     ignore-words:
@@ -34,10 +64,93 @@ linters-settings:
       - wazero
       - ocsf
       - oscal
+      - rego
+
+  gocyclo:
+    # Cyclomatic complexity threshold. 15 is permissive; 10 is strict.
+    # Most v0.1 functions sit well under this; the limit catches future
+    # regressions before they become unreviewable.
+    min-complexity: 15
+
+  goconst:
+    min-len: 3
+    min-occurrences: 3
+    # Strings used in tests are often intentionally repeated; don't flag.
+    ignore-tests: true
+
+  nakedret:
+    # Allow naked returns in functions up to 30 lines; longer functions
+    # must name them explicitly so readers know what's returned.
+    max-func-lines: 30
+
+  gocritic:
+    # Enable additional checks beyond the default set. The defaults
+    # are conservative; these add genuine signal without false-positive
+    # noise.
+    enabled-tags:
+      - diagnostic
+      - opinionated
+      - performance
+      - style
+    disabled-checks:
+      - hugeParam          # parameter pass-by-value warnings; too noisy
+      - rangeValCopy       # same
+      - paramTypeCombine   # opinionated about func sig style
+
+  revive:
+    rules:
+      - name: blank-imports
+      - name: context-as-argument
+      - name: context-keys-type
+      - name: dot-imports
+      - name: error-naming
+      - name: error-return
+      - name: error-strings
+      - name: errorf
+      - name: exported
+        # Don't yell about every exported symbol needing a doc -- our
+        # convention is "public surface gets docs, internal helpers
+        # don't always need them."
+        disabled: true
+      - name: increment-decrement
+      - name: indent-error-flow
+      - name: package-comments
+      - name: range
+      - name: receiver-naming
+      - name: redefines-builtin-id
+      - name: superfluous-else
+      - name: time-naming
+      - name: unexported-return
+      - name: unreachable-code
+      - name: unused-parameter
+        # Off; checks routinely accept ctx/graph and don't use them.
+        # The signature is the contract, not the body.
+        disabled: true
+      - name: var-declaration
+      - name: var-naming
 
 issues:
   exclude-rules:
+    # Test code routinely uses constructs the production linters reject:
+    # constructed errors, ignored close, hard-coded magic numbers, etc.
     - path: _test\.go
       linters:
         - gosec
         - errcheck
+        - gocyclo
+        - goconst
+        - gocritic
+        - unparam
+
+    # The check metadata vars (Check{...}) trigger goconst for repeated
+    # short strings like provider="digitalocean". Suppress in that file
+    # only -- not project-wide.
+    - path: internal/checks/.*/(droplets|firewalls|firewall_rules)\.go
+      linters:
+        - goconst
+
+  # Default exclude rules from golangci-lint are kept off so we surface
+  # everything; toggle individual exclusions above when warranted.
+  exclude-use-default: false
+  max-issues-per-linter: 0
+  max-same-issues: 0

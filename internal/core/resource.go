@@ -61,7 +61,7 @@ func (r Resource) Attr(key string) string {
 }
 
 // AttrInt returns the int value of an attribute, or 0 if missing or non-numeric.
-// JSON unmarshalling yields float64 for numbers, so we accept that case too.
+// JSON unmarshaling yields float64 for numbers, so we accept that case too.
 func (r Resource) AttrInt(key string) int {
 	v, ok := r.Attributes[key]
 	if !ok {

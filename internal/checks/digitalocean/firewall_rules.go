@@ -56,9 +56,10 @@ var CheckSSHFromAny = core.Check{
 // or "::/0" source. A firewall with no SSH rule at all is Pass (the
 // rule isn't there to be too permissive).
 func SSHFromAny(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	var findings []core.Finding
+	firewalls := g.ByType(docol.FirewallType)
+	findings := make([]core.Finding, 0, len(firewalls))
 
-	for _, fw := range g.ByType(docol.FirewallType) {
+	for _, fw := range firewalls {
 		f := core.Finding{
 			CheckID:  CheckSSHFromAny.ID,
 			Severity: CheckSSHFromAny.Severity,

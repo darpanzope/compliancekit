@@ -2,7 +2,7 @@ package core
 
 import "context"
 
-// Check is the parsed metadata of a single check from the YAML catalogue.
+// Check is the parsed metadata of a single check from the YAML catalog.
 //
 // At runtime, a Check is paired with a CheckFunc registered in the
 // check registry; together they form a complete check ready to run.
