@@ -6,7 +6,7 @@ The phases are sized to ~10–15 hours of focused work. Each ends with a concret
 
 ---
 
-## v0.1 — Foundation (weekend 1)
+## v0.1 — Foundation (weekend 1) ✅ shipped
 **Goal:** scan a DigitalOcean account, get useful JSON back.
 
 ### Deliverables
@@ -41,7 +41,7 @@ $ compliancekit scan digitalocean --output=json --out=findings.json
 
 ---
 
-## v0.2 — Linux (weekend 2)
+## v0.2 — Linux (weekend 2) ✅ shipped
 **Goal:** scan a fleet of Linux droplets over SSH.
 
 ### Deliverables
@@ -71,7 +71,7 @@ db-01  ⚠ unreachable: i/o timeout
 
 ---
 
-## v0.3 — Reports and frameworks (weekend 3)
+## v0.3 — Reports and frameworks (weekend 3) ✅ shipped
 **Goal:** a scan turns into something a human (or an auditor) can actually read.
 
 ### Deliverables
