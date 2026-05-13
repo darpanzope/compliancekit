@@ -12,6 +12,7 @@ import (
 	"github.com/spf13/cobra"
 
 	do "github.com/darpanzope/compliancekit/internal/collectors/digitalocean"
+	linuxcol "github.com/darpanzope/compliancekit/internal/collectors/linux"
 	"github.com/darpanzope/compliancekit/internal/config"
 )
 
@@ -167,13 +168,16 @@ func reportHetznerProvider(w io.Writer, cfg config.HetznerConfig, checkConfigOnl
 }
 
 func reportLinuxProvider(w io.Writer, cfg config.LinuxConfig) error {
-	// Inventory existence is checked rather than parsed; the linux collector
-	// at v0.2+ does the full parse. doctor only confirms the path is real.
 	if _, err := os.Stat(cfg.Inventory); err != nil {
 		return fmt.Errorf("inventory file %s: %w", cfg.Inventory, err)
 	}
-	fmt.Fprintf(w, "%s providers.linux: inventory at %s (v0.2+ will scan over SSH)\n",
-		iconPass, cfg.Inventory)
+	inv, err := linuxcol.LoadInventory(cfg.Inventory)
+	if err != nil {
+		return fmt.Errorf("parse inventory: %w", err)
+	}
+	hosts := inv.AllHosts()
+	fmt.Fprintf(w, "%s providers.linux: %d host(s) across %d group(s) in %s\n",
+		iconPass, len(hosts), len(inv.Groups), cfg.Inventory)
 	return nil
 }
 

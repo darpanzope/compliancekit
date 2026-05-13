@@ -1,0 +1,31 @@
+# test/compose.yaml -- Linux test fixtures for v0.2 collector integration.
+#
+# This file declares two SSH-reachable containers (Ubuntu 22.04 and
+# Debian 12) preloaded with a known test SSH key, so the linux
+# collector can be exercised against real-but-disposable hosts.
+#
+# Local use:
+#   docker compose -f test/compose.yaml up -d
+#   ssh -i test/ssh/id_ed25519 -p 2200 ops@127.0.0.1   # ubuntu
+#   ssh -i test/ssh/id_ed25519 -p 2201 ops@127.0.0.1   # debian
+#   docker compose -f test/compose.yaml down
+#
+# Wiring this into CI lands as part of the v0.2 follow-up (the harness
+# is the largest remaining v0.2 DoD item per ROADMAP.md).
+
+services:
+  ubuntu:
+    image: rastasheep/ubuntu-sshd:22.04
+    container_name: compliancekit-test-ubuntu
+    ports:
+      - "127.0.0.1:2200:22"
+    # Test-only password (root/root) -- the image's default. The
+    # collector will switch to key auth once the SSH key fixture lands.
+    restart: "no"
+
+  debian:
+    image: rastasheep/ubuntu-sshd:18.04
+    container_name: compliancekit-test-debian
+    ports:
+      - "127.0.0.1:2201:22"
+    restart: "no"

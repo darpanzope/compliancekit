@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/cobra"
 
 	do "github.com/darpanzope/compliancekit/internal/collectors/digitalocean"
+	linuxcol "github.com/darpanzope/compliancekit/internal/collectors/linux"
 	"github.com/darpanzope/compliancekit/internal/config"
 	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/engine"
@@ -139,7 +140,15 @@ func buildCollectors(cfg *config.Config, providerFilter string) ([]core.Collecto
 		collectors = append(collectors, do.New(token))
 	}
 
-	// Future: linux (v0.2), kubernetes (v0.8), hetzner (v0.7).
+	if cfg.Providers.Linux.Enabled && (providerFilter == "" || providerFilter == "linux") {
+		inv, err := linuxcol.LoadInventory(cfg.Providers.Linux.Inventory)
+		if err != nil {
+			return nil, fmt.Errorf("linux inventory: %w", err)
+		}
+		collectors = append(collectors, linuxcol.New(inv, cfg.Providers.Linux.SSH))
+	}
+
+	// Future: kubernetes (v0.8), hetzner (v0.7).
 
 	return collectors, nil
 }

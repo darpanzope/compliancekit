@@ -28,6 +28,11 @@ run: ## run via go run; pass args via ARGS=
 test: ## unit tests with race detector
 	go test -race -timeout=60s ./...
 
+test-integration: ## bring up docker harness, run integration tests, tear down
+	docker compose -f test/compose.yaml up -d
+	@trap "docker compose -f test/compose.yaml down" EXIT; \
+		go test -race -timeout=120s -tags=integration ./...
+
 lint: ## golangci-lint
 	golangci-lint run
 
