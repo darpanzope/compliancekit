@@ -58,6 +58,8 @@ func New(format string) (core.Reporter, error) {
 	switch format {
 	case FormatJSON:
 		return NewJSON(), nil
+	case FormatMarkdown:
+		return NewMarkdown(), nil
 	default:
 		return nil, fmt.Errorf("unknown output format %q", format)
 	}
