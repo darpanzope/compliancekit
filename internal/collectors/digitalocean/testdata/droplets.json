@@ -1,0 +1,86 @@
+{
+  "droplets": [
+    {
+      "id": 123456,
+      "name": "web-01",
+      "memory": 1024,
+      "vcpus": 1,
+      "disk": 25,
+      "locked": false,
+      "status": "active",
+      "kernel": null,
+      "created_at": "2024-01-15T10:30:00Z",
+      "features": ["backups", "ipv6", "monitoring"],
+      "backup_ids": [],
+      "snapshot_ids": [],
+      "image": {
+        "id": 100000001,
+        "name": "Ubuntu 22.04 (LTS) x64",
+        "distribution": "Ubuntu",
+        "slug": "ubuntu-22-04-x64",
+        "public": true,
+        "regions": ["nyc3", "sfo3"],
+        "created_at": "2023-12-01T00:00:00Z",
+        "type": "snapshot",
+        "min_disk_size": 20,
+        "size_gigabytes": 0.5,
+        "status": "available",
+        "error_message": ""
+      },
+      "volume_ids": [],
+      "size_slug": "s-1vcpu-1gb",
+      "networks": {
+        "v4": [
+          {"ip_address": "203.0.113.10", "netmask": "255.255.240.0", "gateway": "203.0.113.1", "type": "public"},
+          {"ip_address": "10.0.0.10", "netmask": "255.255.0.0", "gateway": "10.0.0.1", "type": "private"}
+        ],
+        "v6": []
+      },
+      "region": {
+        "slug": "nyc3",
+        "name": "New York 3",
+        "sizes": [],
+        "available": true,
+        "features": []
+      },
+      "tags": ["prod", "web"],
+      "vpc_uuid": "abc-def-1111"
+    },
+    {
+      "id": 789012,
+      "name": "db-01",
+      "memory": 2048,
+      "vcpus": 2,
+      "disk": 60,
+      "locked": false,
+      "status": "active",
+      "created_at": "2023-06-01T00:00:00Z",
+      "features": [],
+      "image": {
+        "id": 100000002,
+        "name": "Ubuntu 20.04 (LTS) x64",
+        "distribution": "Ubuntu",
+        "slug": "ubuntu-20-04-x64",
+        "public": true,
+        "regions": ["nyc3"],
+        "created_at": "2022-01-01T00:00:00Z",
+        "type": "snapshot"
+      },
+      "volume_ids": [],
+      "size_slug": "s-2vcpu-2gb",
+      "networks": {
+        "v4": [
+          {"ip_address": "10.0.0.20", "netmask": "255.255.0.0", "gateway": "10.0.0.1", "type": "private"}
+        ]
+      },
+      "region": {
+        "slug": "nyc3",
+        "name": "New York 3"
+      },
+      "tags": [],
+      "vpc_uuid": "abc-def-1111"
+    }
+  ],
+  "links": {},
+  "meta": {"total": 2}
+}

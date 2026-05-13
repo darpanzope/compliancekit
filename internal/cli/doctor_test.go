@@ -3,11 +3,21 @@ package cli
 import (
 	"bytes"
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
+
+// stubProbe returns a deterministic probe func for tests so doctor never
+// touches the real DigitalOcean API.
+func stubProbe(dur time.Duration, err error) func(context.Context, string) (time.Duration, error) {
+	return func(_ context.Context, _ string) (time.Duration, error) {
+		return dur, err
+	}
+}
 
 func TestRunDoctor_NoProvidersFails(t *testing.T) {
 	chdir(t, t.TempDir())
@@ -23,7 +33,7 @@ func TestRunDoctor_NoProvidersFails(t *testing.T) {
 	}
 }
 
-func TestRunDoctor_DOEnabledResolvesToken(t *testing.T) {
+func TestRunDoctor_DOEnabledResolvesTokenAndProbes(t *testing.T) {
 	dir := t.TempDir()
 	chdir(t, dir)
 	writeFile(t, filepath.Join(dir, "compliancekit.yaml"), `
@@ -34,17 +44,57 @@ providers:
 `)
 	t.Setenv("DO_API_TOKEN_TEST", "fake-test-token-do-not-use")
 
+	var probeCallCount int
+	opts := doctorOptions{
+		doProbe: func(_ context.Context, _ string) (time.Duration, error) {
+			probeCallCount++
+			return 42 * time.Millisecond, nil
+		},
+	}
+
 	var buf bytes.Buffer
-	err := runDoctor(context.Background(), &buf, doctorOptions{})
+	err := runDoctor(context.Background(), &buf, opts)
 	if err != nil {
 		t.Errorf("runDoctor: %v\noutput:\n%s", err, buf.String())
 	}
+
 	out := buf.String()
 	if !strings.Contains(out, "DO_API_TOKEN_TEST resolved") {
 		t.Errorf("output missing token resolution line:\n%s", out)
 	}
+	if !strings.Contains(out, "API reachable (42ms)") {
+		t.Errorf("output missing API probe success line:\n%s", out)
+	}
+	if probeCallCount != 1 {
+		t.Errorf("probe called %d times, want 1", probeCallCount)
+	}
 	if !strings.Contains(out, "providers.linux: disabled") {
 		t.Errorf("output missing linux=disabled line:\n%s", out)
+	}
+}
+
+func TestRunDoctor_DOProbeFailureReportsAndExitsNonZero(t *testing.T) {
+	dir := t.TempDir()
+	chdir(t, dir)
+	writeFile(t, filepath.Join(dir, "compliancekit.yaml"), `
+providers:
+  digitalocean:
+    enabled: true
+    token_env: DO_API_TOKEN_BAD
+`)
+	t.Setenv("DO_API_TOKEN_BAD", "bad-token")
+
+	opts := doctorOptions{
+		doProbe: stubProbe(0, errors.New("401 Unauthorized")),
+	}
+
+	var buf bytes.Buffer
+	err := runDoctor(context.Background(), &buf, opts)
+	if err == nil {
+		t.Error("runDoctor expected to return error when probe fails")
+	}
+	if !strings.Contains(buf.String(), "API probe") {
+		t.Errorf("output missing probe failure line:\n%s", buf.String())
 	}
 }
 

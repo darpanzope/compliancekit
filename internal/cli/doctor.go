@@ -7,17 +7,25 @@ import (
 	"io"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 
+	do "github.com/darpanzope/compliancekit/internal/collectors/digitalocean"
 	"github.com/darpanzope/compliancekit/internal/config"
 )
 
-// doctorOptions holds the parsed flags for the doctor subcommand.
+// doctorOptions holds the parsed flags and dependencies for the doctor
+// subcommand. The probe func is overridable so tests can avoid hitting
+// the real DO API.
 type doctorOptions struct {
 	configPath  string
 	envName     string
 	checkConfig bool
+
+	// doProbe is the DigitalOcean API probe. Defaults to do.Probe (real
+	// HTTPS to api.digitalocean.com) when nil; tests inject a stub.
+	doProbe func(ctx context.Context, token string) (time.Duration, error)
 }
 
 func newDoctorCmd() *cobra.Command {
@@ -49,7 +57,11 @@ alongside the DigitalOcean collector.`,
 	return cmd
 }
 
-func runDoctor(_ context.Context, w io.Writer, opts doctorOptions) error {
+func runDoctor(ctx context.Context, w io.Writer, opts doctorOptions) error {
+	if opts.doProbe == nil {
+		opts.doProbe = do.Probe
+	}
+
 	cfg, err := config.Load(config.LoadOptions{
 		ConfigPath: opts.configPath,
 		EnvName:    opts.envName,
@@ -83,7 +95,7 @@ func runDoctor(_ context.Context, w io.Writer, opts doctorOptions) error {
 	combined = errors.Join(combined,
 		reportProvider(w, "digitalocean", cfg.Providers.DigitalOcean.Enabled,
 			func() error {
-				return reportDOProvider(w, cfg.Providers.DigitalOcean, opts.checkConfig)
+				return reportDOProvider(ctx, w, cfg.Providers.DigitalOcean, opts)
 			}),
 		reportProvider(w, "linux", cfg.Providers.Linux.Enabled,
 			func() error {
@@ -117,9 +129,9 @@ func reportProvider(w io.Writer, name string, enabled bool, details func() error
 	return nil
 }
 
-func reportDOProvider(w io.Writer, cfg config.DigitalOceanConfig, checkConfigOnly bool) error {
-	if checkConfigOnly {
-		fmt.Fprintf(w, "%s providers.digitalocean: enabled, token_env=%s (skipping env resolution)\n",
+func reportDOProvider(ctx context.Context, w io.Writer, cfg config.DigitalOceanConfig, opts doctorOptions) error {
+	if opts.checkConfig {
+		fmt.Fprintf(w, "%s providers.digitalocean: enabled, token_env=%s (skipping env resolution and API probe)\n",
 			iconInfo, cfg.TokenEnv)
 		return nil
 	}
@@ -129,6 +141,13 @@ func reportDOProvider(w io.Writer, cfg config.DigitalOceanConfig, checkConfigOnl
 	}
 	fmt.Fprintf(w, "%s providers.digitalocean: %s resolved (token length: %d)\n",
 		iconPass, cfg.TokenEnv, len(token))
+
+	dur, err := opts.doProbe(ctx, token)
+	if err != nil {
+		return fmt.Errorf("API probe: %w", err)
+	}
+	fmt.Fprintf(w, "%s providers.digitalocean: API reachable (%dms)\n",
+		iconPass, dur.Milliseconds())
 	return nil
 }
 
