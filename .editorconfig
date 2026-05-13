@@ -1,0 +1,35 @@
+# EditorConfig (https://editorconfig.org) -- consistent indentation
+# and line endings across editors that don't auto-detect from gofmt.
+
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# Go uses tabs (gofmt's choice).
+[*.go]
+indent_style = tab
+indent_size = 4
+
+# Makefile requires tabs.
+[Makefile]
+indent_style = tab
+
+# YAML / JSON / Markdown use spaces.
+[*.{yaml,yml,json}]
+indent_style = space
+indent_size = 2
+
+[*.md]
+indent_style = space
+indent_size = 2
+# Trailing whitespace in markdown can be a line break; don't trim.
+trim_trailing_whitespace = false
+
+# Shell scripts.
+[*.sh]
+indent_style = space
+indent_size = 4

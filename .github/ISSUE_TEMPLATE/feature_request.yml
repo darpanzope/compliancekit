@@ -1,0 +1,59 @@
+name: Feature request
+description: Propose a new check, provider, output format, or behavior.
+title: "feat: "
+labels: [enhancement, triage]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the suggestion. The more context you give about the
+        use case, the easier it is to assess fit and priority.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem are you trying to solve?
+      description: |
+        Describe the use case. "I'm trying to..." or "I want to..." is
+        a good start. Concrete > abstract.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: How would you address the problem? Rough sketch is fine.
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Workarounds you tried, similar tools, why they didn't fit.
+
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Scope guess
+      description: Best guess at where this lands on the roadmap.
+      options:
+        - New check
+        - New provider
+        - New output format
+        - New framework mapping
+        - CLI / UX
+        - Configuration
+        - Other / not sure
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: roadmap-check
+    attributes:
+      label: Have you checked ROADMAP.md and DECISIONS.md?
+      description: |
+        Many features are already planned or explicitly out of scope.
+        Calling out the relevant section helps the conversation.
+      options:
+        - label: I checked ROADMAP.md / DECISIONS.md and this isn't already covered.
+          required: true

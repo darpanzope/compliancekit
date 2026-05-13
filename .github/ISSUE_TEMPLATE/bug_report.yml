@@ -1,0 +1,81 @@
+name: Bug report
+description: Something is broken or behaves unexpectedly.
+title: "bug: "
+labels: [bug, triage]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug. Please fill the
+        sections below; the more concrete, the faster we can act.
+
+        If this is a **security** issue, please close this and report
+        it privately via the Security Advisory flow on the repo's
+        Security tab. Do not post exploit details in a public issue.
+
+  - type: input
+    id: version
+    attributes:
+      label: compliancekit version
+      description: Output of `compliancekit version`.
+      placeholder: "compliancekit v0.1.0 (commit abc1234, built 2026-05-13T14:22:00Z)"
+    validations:
+      required: true
+
+  - type: input
+    id: platform
+    attributes:
+      label: Platform
+      description: OS, distro, and architecture.
+      placeholder: "macOS 14.5 / darwin-arm64"
+    validations:
+      required: true
+
+  - type: input
+    id: provider
+    attributes:
+      label: Provider
+      description: Which provider was involved (digitalocean, linux, etc.).
+      placeholder: "digitalocean"
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What did you expect to happen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: What did you actually see? Paste error messages and stack traces verbatim.
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: How to reproduce
+      description: |
+        Minimal config, exact command, and what's needed to reproduce.
+        For scan-related bugs, please include the output of `compliancekit doctor --check-config`.
+    validations:
+      required: true
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Additional context
+      description: Logs, config excerpts, screenshots -- anything you think helps.
+
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy check
+      description: Confirm no secrets are in this report.
+      options:
+        - label: I've redacted tokens, account IDs, and IP addresses from any pasted output.
+          required: true
