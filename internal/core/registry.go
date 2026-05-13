@@ -67,8 +67,14 @@ func (r *Registry) Count() int {
 
 // defaultRegistry is the package-level registry used for production
 // checks. Test code should prefer NewRegistry for isolation; production
-// code uses the package-level helpers below.
+// code uses the package-level helpers below or DefaultRegistry() when
+// passing the registry to another package (e.g. the engine).
 var defaultRegistry = NewRegistry()
+
+// DefaultRegistry returns the package-level registry that production
+// checks register themselves into via init(). The engine accepts a
+// *Registry so tests can substitute an isolated one.
+func DefaultRegistry() *Registry { return defaultRegistry }
 
 // Register registers a check in the default registry.
 func Register(id string, fn CheckFunc) { defaultRegistry.Register(id, fn) }
