@@ -19,6 +19,7 @@ import (
 	// them. Adding a new provider's checks package means adding one
 	// import line here.
 	_ "github.com/darpanzope/compliancekit/internal/checks/digitalocean"
+	_ "github.com/darpanzope/compliancekit/internal/checks/linux"
 )
 
 // These vars are populated by `-ldflags "-X main.version=..."` at build time.
