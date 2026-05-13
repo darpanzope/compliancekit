@@ -62,6 +62,8 @@ func New(format string) (core.Reporter, error) {
 		return NewMarkdown(), nil
 	case FormatSARIF:
 		return NewSARIF(), nil
+	case FormatOCSF:
+		return NewOCSF(), nil
 	default:
 		return nil, fmt.Errorf("unknown output format %q", format)
 	}
