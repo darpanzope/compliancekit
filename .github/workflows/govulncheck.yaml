@@ -23,7 +23,10 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.24'
+          # Keep aligned with go.mod and ci.yaml's GO_VERSION. Newer
+          # patch releases include stdlib CVE fixes that older lines
+          # may not backport (we hit this with 1.24 → 1.25 stdlib).
+          go-version: '1.26'
           check-latest: true
 
       - name: Install govulncheck

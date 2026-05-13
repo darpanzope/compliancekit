@@ -1,6 +1,6 @@
 module github.com/darpanzope/compliancekit
 
-go 1.24
+go 1.26.3
 
 require (
 	github.com/digitalocean/godo v1.189.0

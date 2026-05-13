@@ -1,12 +1,9 @@
 run:
   timeout: 5m
-  # The 'go' field tells linters which language version to target. It must
-  # be <= the Go version golangci-lint itself was built with. The official
-  # release v1.64.x binary is built with Go 1.24; pinning here higher
-  # makes CI refuse to load the config. Our go.mod stays at 1.26.3; this
-  # only affects which 1.25+ language features the linters know about,
-  # which is fine since we don't use any yet.
-  go: "1.24"
+  # 'go' must be <= the Go version golangci-lint itself was built with.
+  # CI builds the linter from source via `go install` against the runner's
+  # Go 1.26 (see .github/workflows/ci.yaml), so this can match go.mod.
+  go: "1.26"
 
 linters:
   disable-all: true
