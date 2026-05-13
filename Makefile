@@ -1,6 +1,12 @@
 .PHONY: build run test lint fmt tidy clean setup check help
 .DEFAULT_GOAL := help
 
+# Tools installed via `go install` land in $GOPATH/bin which is often
+# not on a developer's shell PATH. Resolve once and reuse so every
+# recipe finds them.
+GOBIN   := $(shell go env GOPATH)/bin
+export PATH := $(GOBIN):$(PATH)
+
 BIN     := bin/compliancekit
 PKG     := github.com/darpanzope/compliancekit
 VERSION := $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
@@ -36,11 +42,14 @@ clean: ## remove build artifacts
 	rm -rf bin/
 
 setup: ## install development tools (golangci-lint, goimports, lefthook) and install git hooks
-	@command -v golangci-lint >/dev/null 2>&1 || go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
-	@command -v goimports >/dev/null 2>&1 || go install golang.org/x/tools/cmd/goimports@latest
-	@command -v lefthook >/dev/null 2>&1 || go install github.com/evilmartians/lefthook@latest
-	lefthook install
+	@test -x $(GOBIN)/golangci-lint || go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+	@test -x $(GOBIN)/goimports     || go install golang.org/x/tools/cmd/goimports@latest
+	@test -x $(GOBIN)/lefthook      || go install github.com/evilmartians/lefthook@latest
+	$(GOBIN)/lefthook install
 	@echo "setup complete (hooks installed)"
+	@echo
+	@echo "Tip: add this to your shell rc so the tools are on PATH everywhere:"
+	@echo "  export PATH=\"\$$(go env GOPATH)/bin:\$$PATH\""
 
 check: lint test build ## pre-push gate: lint + test + build
 
