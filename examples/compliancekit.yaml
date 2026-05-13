@@ -1,0 +1,35 @@
+# compliancekit.yaml - example configuration
+#
+# See CONFIGURATION.md for the full schema reference, defaults, and env
+# var conventions. Anything omitted here falls back to a built-in default.
+
+project: acme-saas
+environment: prod
+
+providers:
+  digitalocean:
+    enabled: true
+    token_env: DO_API_TOKEN     # the env var holding your read-scope token
+
+  # Uncomment to enable Linux SSH scanning (v0.2+).
+  # linux:
+  #   enabled: true
+  #   inventory: ./inventory.yaml
+  #   ssh:
+  #     user: ops
+  #     key_file: ~/.ssh/id_ed25519
+  #     timeout: 10s
+  #     max_parallel: 16
+
+frameworks:
+  - soc2
+  - cis-v8
+
+severity:
+  fail_on: high     # exit non-zero on any finding at this severity or above
+  min_report: info  # drop findings below this from output
+
+output:
+  format: [json]    # add 'html', 'markdown', 'sarif', 'json-ocsf' from v0.3+
+  out_dir: ./out
+  evidence: false   # set to true to generate the audit-ready evidence pack (v0.4+)
