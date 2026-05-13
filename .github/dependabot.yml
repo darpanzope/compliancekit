@@ -16,8 +16,13 @@ updates:
       time: "08:00"
       timezone: UTC
     open-pull-requests-limit: 5
+    # With include: scope, Dependabot appends "(deps)" to the prefix.
+    # Setting prefix to "build" yields the Conventional Commits subject
+    # "build(deps): bump foo from x to y". Setting it to "build(deps)"
+    # would yield "build(deps)(deps): ..." which fails our commit-msg
+    # validator.
     commit-message:
-      prefix: "build(deps)"
+      prefix: build
       include: scope
     labels:
       - dependencies
@@ -46,8 +51,9 @@ updates:
       time: "08:00"
       timezone: UTC
     open-pull-requests-limit: 5
+    # See gomod block above for the prefix rationale.
     commit-message:
-      prefix: "ci(deps)"
+      prefix: ci
       include: scope
     labels:
       - dependencies
