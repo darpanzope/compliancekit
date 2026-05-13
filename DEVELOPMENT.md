@@ -25,10 +25,12 @@ Linux: install Go from go.dev; `make` and `golangci-lint` via your package manag
 ```
 git clone git@github.com:darpanzope/compliancekit.git
 cd compliancekit
-make setup        # installs goimports, golangci-lint via 'go install' if missing
+make setup        # installs goimports, golangci-lint, lefthook + installs git hooks
 make build        # produces bin/compliancekit
 ./bin/compliancekit version
 ```
+
+`make setup` also runs `lefthook install`, which wires git hooks into `.git/hooks/`. From that point on, every commit and push goes through `lefthook.yml`. See [Git hooks](#git-hooks) below for the full set and how to skip them when needed.
 
 If `make setup` complains about missing system tools (make, docker), install them via your package manager — we don't auto-install OS-level dependencies.
 
@@ -117,6 +119,37 @@ To suppress a finding, use a line-level directive with justification:
 ```
 
 A bare `nolint` without a reason is itself a lint failure.
+
+## Git hooks
+
+Hooks are managed by [lefthook](https://github.com/evilmartians/lefthook) and configured in `lefthook.yml` at the repo root. `make setup` installs both the tool and the hook scripts; from there `git commit` and `git push` run them automatically.
+
+### Hooks installed
+
+| Stage | Check | Why |
+|---|---|---|
+| pre-commit | `gofmt` on staged Go files | Catch formatting drift before review |
+| pre-commit | `goimports` on staged Go files | Same, for import grouping |
+| pre-commit | `golangci-lint` on staged packages | Don't ship code that fails the lint floor |
+| pre-commit | `go vet` | Static analysis built into the toolchain |
+| pre-commit | `go mod tidy` (no changes) | go.mod / go.sum stay clean |
+| commit-msg | Conventional Commits format | Subjects parse for changelog / release tooling |
+| pre-push | `make check` (lint + test + build) | Anything that breaks CI gets caught locally |
+
+### Skipping hooks
+
+For experimental commits or work-in-progress squashes:
+
+```
+git commit --no-verify              # skip all hooks for one commit
+LEFTHOOK=0 git commit ...           # same; works for push too
+```
+
+Use sparingly. `--no-verify` lands code that CI will reject anyway.
+
+### Adding a new hook
+
+Edit `lefthook.yml`. The `pre-commit` block runs each `commands:` entry in parallel by default; cheap checks belong here. Slow checks (full test suite, cross-compile, codeql) belong in `pre-push` or in CI.
 
 ## Commit messages
 

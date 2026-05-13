@@ -35,10 +35,12 @@ tidy: ## tidy go.mod / go.sum
 clean: ## remove build artifacts
 	rm -rf bin/
 
-setup: ## install development tools (golangci-lint, goimports)
+setup: ## install development tools (golangci-lint, goimports, lefthook) and install git hooks
 	@command -v golangci-lint >/dev/null 2>&1 || go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 	@command -v goimports >/dev/null 2>&1 || go install golang.org/x/tools/cmd/goimports@latest
-	@echo "setup complete"
+	@command -v lefthook >/dev/null 2>&1 || go install github.com/evilmartians/lefthook@latest
+	lefthook install
+	@echo "setup complete (hooks installed)"
 
 check: lint test build ## pre-push gate: lint + test + build
 

@@ -1,0 +1,55 @@
+# lefthook.yml -- pre-commit and commit-msg hooks for compliancekit.
+#
+# Install: `lefthook install` (run automatically by `make setup`).
+# Skip a single hook: `LEFTHOOK=0 git commit ...`.
+# Skip all hooks: `git commit --no-verify`.
+#
+# Pre-push runs the full `make check` so anything that would fail CI
+# is caught before the push. Commit-msg validates Conventional Commits
+# format per DEVELOPMENT.md.
+
+pre-commit:
+  parallel: true
+  commands:
+    fmt:
+      glob: "*.go"
+      run: gofmt -s -l {staged_files} | (! grep .)
+      fail_text: "gofmt issues. Run 'make fmt' and stage the result."
+
+    imports:
+      glob: "*.go"
+      run: goimports -local github.com/darpanzope/compliancekit -l {staged_files} | (! grep .)
+      fail_text: "goimports issues. Run 'make fmt' and stage the result."
+
+    lint:
+      glob: "*.go"
+      # Lint only staged packages, not the whole tree, so commits stay fast.
+      run: golangci-lint run --new-from-rev=HEAD~1 ./...
+      fail_text: "golangci-lint failures. Run 'make lint' to reproduce."
+
+    vet:
+      glob: "*.go"
+      run: go vet ./...
+      fail_text: "go vet failures."
+
+    mod-tidy:
+      glob: "go.{mod,sum}"
+      run: |
+        before=$(sha256sum go.mod go.sum 2>/dev/null)
+        go mod tidy
+        after=$(sha256sum go.mod go.sum 2>/dev/null)
+        if [ "$before" != "$after" ]; then
+          echo "go.mod / go.sum were not tidy; please stage the updates" >&2
+          exit 1
+        fi
+
+commit-msg:
+  commands:
+    conventional:
+      run: scripts/check-commit-msg.sh {1}
+
+pre-push:
+  commands:
+    full-check:
+      run: make check
+      fail_text: "'make check' failed. Fix locally before pushing -- CI will reject this."
