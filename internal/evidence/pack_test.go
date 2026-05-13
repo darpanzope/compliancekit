@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"crypto/sha256"
+	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -289,6 +290,119 @@ func TestSlugify(t *testing.T) {
 		if got != c.want {
 			t.Errorf("slugify(%q) = %q, want %q", c.in, got, c.want)
 		}
+	}
+}
+
+func TestGenerate_WritesControlMarkdown(t *testing.T) {
+	dir := t.TempDir()
+	out := filepath.Join(dir, "pack")
+
+	findings := []core.Finding{
+		mkFinding("do-droplet-no-firewall", "droplet-1", core.StatusFail, core.SeverityHigh),
+		mkFinding("do-droplet-no-firewall", "droplet-2", core.StatusPass, core.SeverityHigh),
+	}
+	if _, err := Generate(context.Background(), findings, Options{
+		OutDir:    out,
+		Period:    "2026-Q2",
+		Generated: time.Date(2026, 5, 13, 12, 0, 0, 0, time.UTC),
+	}); err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+
+	// Locate one control.md and validate its key sections.
+	var md string
+	err := filepath.WalkDir(out, func(path string, d os.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		if d.IsDir() || filepath.Base(path) != "control.md" {
+			return nil
+		}
+		// G304: TempDir.
+		//nolint:gosec
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		md = string(data)
+		return io.EOF // stop walking after first match
+	})
+	if err != nil && err != io.EOF {
+		t.Fatal(err)
+	}
+	if md == "" {
+		t.Fatal("no control.md found")
+	}
+	for _, want := range []string{
+		"## Control statement",
+		"## Coverage summary",
+		"## Findings",
+		"do-droplet-no-firewall",
+		"Period:** 2026-Q2",
+	} {
+		if !strings.Contains(md, want) {
+			t.Errorf("control.md missing %q\n---\n%s", want, md)
+		}
+	}
+}
+
+func TestGenerate_WritesMappingCSV(t *testing.T) {
+	dir := t.TempDir()
+	out := filepath.Join(dir, "pack")
+
+	findings := []core.Finding{
+		mkFinding("do-droplet-no-firewall", "droplet-1", core.StatusFail, core.SeverityHigh),
+		mkFinding("do-droplet-no-firewall", "droplet-2", core.StatusFail, core.SeverityHigh),
+	}
+	res, err := Generate(context.Background(), findings, Options{
+		OutDir:    out,
+		Generated: time.Date(2026, 5, 13, 0, 0, 0, 0, time.UTC),
+	})
+	if err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+	if res.MappingCSVPath == "" {
+		t.Fatal("MappingCSVPath empty")
+	}
+
+	// G304: TempDir.
+	//nolint:gosec
+	data, err := os.ReadFile(res.MappingCSVPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	r := csv.NewReader(strings.NewReader(string(data)))
+	rows, err := r.ReadAll()
+	if err != nil {
+		t.Fatalf("parse csv: %v", err)
+	}
+	if len(rows) < 2 {
+		t.Fatalf("expected header + at least one row, got %d", len(rows))
+	}
+	wantHeader := []string{
+		"framework_id", "control_id", "control_name",
+		"check_id", "check_title",
+		"resource_id", "resource_name", "resource_type",
+		"status", "severity", "evidence_path",
+	}
+	for i, want := range wantHeader {
+		if rows[0][i] != want {
+			t.Errorf("header[%d] = %q, want %q", i, rows[0][i], want)
+		}
+	}
+
+	// At least one row should reference our check and a real evidence path.
+	foundCheck := false
+	for _, row := range rows[1:] {
+		if row[3] == "do-droplet-no-firewall" {
+			foundCheck = true
+			if !strings.HasSuffix(row[10], "/findings.json") {
+				t.Errorf("evidence_path malformed: %q", row[10])
+			}
+		}
+	}
+	if !foundCheck {
+		t.Error("CSV missing rows for do-droplet-no-firewall")
 	}
 }
 

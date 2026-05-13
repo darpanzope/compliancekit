@@ -139,23 +139,62 @@ func Generate(_ context.Context, findings []core.Finding, opts Options) (Result,
 		ControlIndex: map[string][]ControlRef{},
 	}
 
+	written, err := writeControlArtifacts(abs, controls, opts, &result)
+	if err != nil {
+		return Result{}, err
+	}
+	result.FilesWritten += written
+
+	result.FrameworkResults = computeFrameworkResults(result.ControlIndex)
+
+	mappingPath, err := writeMappingCSV(abs, controls)
+	if err != nil {
+		return Result{}, err
+	}
+	result.MappingCSVPath = mappingPath
+	result.FilesWritten++
+
+	manifestPath, err := WriteManifest(abs)
+	if err != nil {
+		return Result{}, err
+	}
+	result.ManifestPath = manifestPath
+	result.FilesWritten++ // MANIFEST.sha256 itself
+
+	return result, nil
+}
+
+// writeControlArtifacts creates the per-control directory tree and
+// emits findings.json + control.md for each ControlRef. Returns the
+// number of files written. The ControlIndex on result is populated
+// here so downstream rollup helpers can read from a single source.
+func writeControlArtifacts(root string, controls []ControlRef, opts Options, result *Result) (int, error) {
+	count := 0
 	for _, c := range controls {
-		dir := filepath.Join(abs, c.FrameworkID, c.DirName)
+		dir := filepath.Join(root, c.FrameworkID, c.DirName)
 		if err := os.MkdirAll(dir, 0o750); err != nil {
-			return Result{}, fmt.Errorf("mkdir %s: %w", dir, err)
+			return count, fmt.Errorf("mkdir %s: %w", dir, err)
 		}
-		path := filepath.Join(dir, "findings.json")
-		if err := writeFindingsJSON(path, c, opts); err != nil {
-			return Result{}, err
+		if err := writeFindingsJSON(filepath.Join(dir, "findings.json"), c, opts); err != nil {
+			return count, err
 		}
-		result.FilesWritten++
+		count++
+		if err := writeControlMarkdown(filepath.Join(dir, "control.md"), c, opts); err != nil {
+			return count, err
+		}
+		count++
 		result.ControlIndex[c.FrameworkID] = append(result.ControlIndex[c.FrameworkID], c)
 	}
+	return count, nil
+}
 
-	// Per-framework rollup. ControlsWithFail counts controls that
-	// have at least one actionable finding so the CLI footer can
-	// answer "how many controls have open work?".
-	for fwID, refs := range result.ControlIndex {
+// computeFrameworkResults rolls the per-control index up to a sorted
+// per-framework summary. ControlsWithFail counts controls that have
+// at least one actionable finding so the CLI footer can answer "how
+// many controls have open work?".
+func computeFrameworkResults(index map[string][]ControlRef) []FrameworkResult {
+	out := make([]FrameworkResult, 0, len(index))
+	for fwID, refs := range index {
 		name := refs[0].FrameworkName
 		failing := 0
 		for _, c := range refs {
@@ -166,25 +205,15 @@ func Generate(_ context.Context, findings []core.Finding, opts Options) (Result,
 				}
 			}
 		}
-		result.FrameworkResults = append(result.FrameworkResults, FrameworkResult{
+		out = append(out, FrameworkResult{
 			FrameworkID:      fwID,
 			FrameworkName:    name,
 			ControlsCovered:  len(refs),
 			ControlsWithFail: failing,
 		})
 	}
-	sort.Slice(result.FrameworkResults, func(i, j int) bool {
-		return result.FrameworkResults[i].FrameworkID < result.FrameworkResults[j].FrameworkID
-	})
-
-	manifestPath, err := WriteManifest(abs)
-	if err != nil {
-		return Result{}, err
-	}
-	result.ManifestPath = manifestPath
-	result.FilesWritten++ // MANIFEST.sha256 itself
-
-	return result, nil
+	sort.Slice(out, func(i, j int) bool { return out[i].FrameworkID < out[j].FrameworkID })
+	return out
 }
 
 // groupByControl walks every finding and emits one ControlRef per
