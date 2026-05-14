@@ -6,7 +6,7 @@
   Source of truth: internal/checks/**/*.go (the core.Check vars).
 -->
 
-This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **42 checks** across the providers below.
+This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **45 checks** across the providers below.
 
 Each check below has:
 
@@ -22,21 +22,91 @@ To inspect a single check from the CLI: `compliancekit checks show <id>`.
 
 | Provider | Checks |
 |---|---:|
-| `aws` | 22 |
+| `aws` | 25 |
 | `digitalocean` | 5 |
 | `linux` | 15 |
-| **total** | **42** |
+| **total** | **45** |
 
 ## By severity
 
 | Severity | Checks |
 |---|---:|
 | `critical` | 3 |
-| `high` | 19 |
-| `medium` | 12 |
+| `high` | 20 |
+| `medium` | 14 |
 | `low` | 8 |
 
 ## aws
+
+### `aws-cloudtrail-enabled`
+
+**At least one CloudTrail trail must be actively logging** &middot; severity `high` &middot; service `cloudtrail` &middot; resource `aws.account`
+
+CloudTrail is the API audit log for AWS. Without an active trail, post-incident investigation cannot answer who called what API, when, or from where. CIS AWS Foundations 3.1 prescribes at least one trail covering every region, actively logging.
+
+_Remediation:_
+
+> Create a trail: 'aws cloudtrail create-trail --name <name> --s3-bucket-name <bucket> --is-multi-region-trail --enable-log-file-validation' then 'aws cloudtrail start-logging --name <name>'. Ensure the S3 bucket has tight access controls.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `8.10` | Retain Audit Logs |
+| `cis-v8` | `8.5` | Collect Detailed Audit Logs |
+| `iso27001` | `A.8.15` | Logging |
+| `iso27001` | `A.8.16` | Monitoring Activities |
+| `soc2` | `CC7.2` | System Operations - Monitoring |
+| `soc2` | `CC7.3` | System Operations - Incident Evaluation |
+
+_Tags:_ `audit-logging`, `cloudtrail`
+
+---
+
+### `aws-cloudtrail-log-file-validation`
+
+**CloudTrail trails must have log file validation enabled** &middot; severity `medium` &middot; service `cloudtrail` &middot; resource `aws.cloudtrail.trail`
+
+Log file validation publishes a SHA-256 digest of every hour's log batch to a separate file in the same S3 bucket. The digest is signed with an account-specific private key whose public counterpart is stored by AWS. Without it, post-tamper detection of log files is not possible. CIS AWS Foundations 3.2.
+
+_Remediation:_
+
+> Enable: 'aws cloudtrail update-trail --name <name> --enable-log-file-validation'.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `8.5` | Collect Detailed Audit Logs |
+| `iso27001` | `A.8.15` | Logging |
+| `soc2` | `CC7.2` | System Operations - Monitoring |
+| `soc2` | `CC7.3` | System Operations - Incident Evaluation |
+
+_Tags:_ `cloudtrail`, `integrity`
+
+---
+
+### `aws-cloudtrail-multi-region`
+
+**At least one CloudTrail trail must be multi-region** &middot; severity `medium` &middot; service `cloudtrail` &middot; resource `aws.account`
+
+A single-region trail misses API calls in every other region the account uses, including the global IAM, S3, and CloudFront APIs. A multi-region trail captures the entire account. CIS AWS Foundations 3.1 prescribes at least one multi-region trail.
+
+_Remediation:_
+
+> Convert: 'aws cloudtrail update-trail --name <name> --is-multi-region-trail'. If you have multiple single-region trails, consolidating to one multi-region trail reduces cost and improves forensic coverage.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `8.5` | Collect Detailed Audit Logs |
+| `iso27001` | `A.8.15` | Logging |
+| `soc2` | `CC7.2` | System Operations - Monitoring |
+
+_Tags:_ `audit-logging`, `cloudtrail`, `multi-region`
+
+---
 
 ### `aws-ec2-ebs-encrypted`
 
