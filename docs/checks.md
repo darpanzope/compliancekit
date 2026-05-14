@@ -6,7 +6,7 @@
   Source of truth: internal/checks/**/*.go (the core.Check vars).
 -->
 
-This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **68 checks** across the providers below.
+This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **70 checks** across the providers below.
 
 Each check below has:
 
@@ -24,17 +24,17 @@ To inspect a single check from the CLI: `compliancekit checks show <id>`.
 |---|---:|
 | `aws` | 30 |
 | `digitalocean` | 5 |
-| `gcp` | 18 |
+| `gcp` | 20 |
 | `linux` | 15 |
-| **total** | **68** |
+| **total** | **70** |
 
 ## By severity
 
 | Severity | Checks |
 |---|---:|
 | `critical` | 4 |
-| `high` | 29 |
-| `medium` | 25 |
+| `high` | 30 |
+| `medium` | 26 |
 | `low` | 10 |
 
 ## aws
@@ -1113,6 +1113,53 @@ _Maps to:_
 | `soc2` | `CC6.1` | Logical and Physical Access Controls |
 
 _Tags:_ `credentials`, `iam`, `rotation`, `service-account`
+
+---
+
+### `gcp-logging-bucket-retention`
+
+**Cloud Logging buckets must retain entries for at least 365 days** &middot; severity `medium` &middot; service `logging` &middot; resource `gcp.logging.bucket`
+
+Most compliance frameworks expect at least 12 months of audit-log retention to cover an annual audit window. The Cloud Logging default is 30 days, which is well short. Lengthening retention on the _Default bucket (or routing to a longer-retention sink) is the cheapest way to clear the bar.
+
+_Remediation:_
+
+> 'gcloud logging buckets update _Default --location=global --retention-days=365 --project=<project>'. Combine with a sink to GCS for retention beyond 3650 days (the bucket maximum).
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `8.10` | Retain Audit Logs |
+| `iso27001` | `A.8.15` | Logging |
+| `soc2` | `CC7.2` | System Operations - Monitoring |
+| `soc2` | `CC7.3` | System Operations - Incident Evaluation |
+
+_Tags:_ `audit-trail`, `logging`, `retention`
+
+---
+
+### `gcp-logging-sink-exists`
+
+**Each project must export logs to a long-term sink** &middot; severity `high` &middot; service `logging` &middot; resource `gcp.project`
+
+Cloud Logging buckets default to 30-day retention, which isn't enough for incident response or compliance evidence over an audit window. A sink exporting to GCS / BigQuery / Pub-Sub gives the operator a durable, queryable archive that survives bucket TTL. CIS GCP Foundations 2.2.
+
+_Remediation:_
+
+> Create a project-level sink with no filter (catches everything): 'gcloud logging sinks create all-to-gcs storage.googleapis.com/<bucket> --project=<project>'. Then grant the sink's writer_identity roles/storage.objectCreator on the destination bucket.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `8.10` | Retain Audit Logs |
+| `iso27001` | `A.8.15` | Logging |
+| `iso27001` | `A.8.16` | Monitoring Activities |
+| `soc2` | `CC7.2` | System Operations - Monitoring |
+| `soc2` | `CC7.3` | System Operations - Incident Evaluation |
+
+_Tags:_ `audit-trail`, `logging`, `retention`
 
 ---
 

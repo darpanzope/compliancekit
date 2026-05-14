@@ -5,6 +5,7 @@ go 1.26.3
 require (
 	cloud.google.com/go/compute v1.62.0
 	cloud.google.com/go/iam v1.11.0
+	cloud.google.com/go/logging v1.18.0
 	cloud.google.com/go/resourcemanager v1.15.0
 	cloud.google.com/go/storage v1.62.1
 	github.com/aws/aws-sdk-go-v2 v1.41.7
