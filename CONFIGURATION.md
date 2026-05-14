@@ -84,11 +84,11 @@ frameworks:                     # array<string>, default ["soc2", "cis-v8"]
   - soc2
   - iso27001
   - cis-v8
-  - nist-800-53                 # v0.9+
-  - hipaa                       # v0.9+
-  - pci-dss                     # v0.9+
-  - mitre-attack                # v0.9+
-  - fedramp                     # v0.9+
+  - nist-800-53                 # v0.12+
+  - hipaa                       # v0.12+
+  - pci-dss                     # v0.12+
+  - mitre-attack                # v0.12+
+  - fedramp                     # v0.12+ (subset; full OSCAL catalog ingest v1.8)
 
 profile: ci-fast                # v0.6+. names a key under `profiles:` below.
 
@@ -191,8 +191,12 @@ Plus the well-known external env vars:
 | Env var | Purpose |
 |---|---|
 | `DO_API_TOKEN` | DigitalOcean API token (name configurable via `providers.digitalocean.token_env`) |
-| `HCLOUD_TOKEN` | Hetzner Cloud token (v0.7+) |
-| `SLACK_WEBHOOK` | Slack notify webhook (v0.14+) |
+| `HCLOUD_TOKEN` | Hetzner Cloud token (v0.10+) |
+| `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | AWS credentials (v0.7+, standard SDK chain) |
+| `AWS_PROFILE` | AWS profile name from `~/.aws/credentials` (v0.7+) |
+| `AWS_ROLE_ARN` | AWS role to assume after loading base credentials (v0.7+) |
+| `GOOGLE_APPLICATION_CREDENTIALS` | GCP service account JSON path (v0.8+) |
+| `SLACK_WEBHOOK` | Slack notify webhook (v0.17+) |
 | `SSH_AUTH_SOCK` | SSH agent socket (standard) |
 
 ## Secrets
