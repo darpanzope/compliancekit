@@ -171,7 +171,7 @@ to the v0.1-v0.5 audience that put compliancekit on the map.
 | Version | Theme | Headline |
 |---|---|---|
 | **v0.6** ✅ | **Drift + baseline + 0-100 hardening score** | "Your score went from 78 to 73 since Friday" |
-| **v0.7** | **AWS** | First-class AWS hardening, ~30 checks across IAM/EC2/S3/RDS/CloudTrail |
+| **v0.7** ✅ | **AWS** | First-class AWS hardening, 30 checks across IAM/EC2/S3/RDS/CloudTrail/KMS/Config/GuardDuty |
 | **v0.8** | **GCP** | GCP hardening with the same SDK seam pattern as AWS |
 | **v0.9** | **DigitalOcean deepening** | 5 checks → 25; Spaces, LBs, VPCs, managed DBs, K8s clusters |
 | **v0.10** | **Hetzner Cloud** | The indie-cloud completion |
@@ -258,10 +258,11 @@ $ compliancekit scan --profile ci-fast    # 8 checks instead of 35
 
 ---
 
-### v0.7 — AWS (weekend 7 — almost certainly two weekends) 🟡 rc1 cut at end of weekend 1
+### v0.7 — AWS (weekend 7) ✅ shipped
 
-**rc1 scope:** Foundation + IAM (8) + S3 (5) + EC2 (5) = 18 of 30 checks.
-**v0.7.0 (final) scope:** + RDS (4) + CloudTrail (3) + KMS (2) + Config + GuardDuty (3) = 30.
+**rc1 → final:** v0.7.0-rc1 cut at end of weekend 1 with 18 checks
+(IAM + S3 + EC2). v0.7.0 final shipped all 30 (added RDS + CloudTrail
++ KMS + Config + GuardDuty).
 
 
 **Goal:** first-class AWS hardening. Stop the "would love to use this
