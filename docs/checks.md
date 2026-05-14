@@ -6,7 +6,7 @@
   Source of truth: internal/checks/**/*.go (the core.Check vars).
 -->
 
-This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **152 checks** across the providers below.
+This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **154 checks** across the providers below.
 
 Each check below has:
 
@@ -25,9 +25,9 @@ To inspect a single check from the CLI: `compliancekit checks show <id>`.
 | `aws` | 30 |
 | `digitalocean` | 74 |
 | `gcp` | 25 |
-| `hetzner` | 8 |
+| `hetzner` | 10 |
 | `linux` | 15 |
-| **total** | **152** |
+| **total** | **154** |
 
 ## By severity
 
@@ -35,8 +35,8 @@ To inspect a single check from the CLI: `compliancekit checks show <id>`.
 |---|---:|
 | `critical` | 10 |
 | `high` | 40 |
-| `medium` | 53 |
-| `low` | 49 |
+| `medium` | 54 |
+| `low` | 50 |
 
 ## aws
 
@@ -3017,6 +3017,51 @@ _Maps to:_
 | `soc2` | `CC6.6` | Logical Access Security - Boundaries |
 
 _Tags:_ `exposure`, `firewall`, `ssh`
+
+---
+
+### `hetzner-network-non-rfc1918`
+
+**Hetzner private networks should use RFC1918 address space** &middot; severity `medium` &middot; service `networks` &middot; resource `hetzner.network`
+
+Hetzner Cloud private networks can be assigned any IPv4 CIDR. RFC1918 ranges (10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16) are the standard private space and what every other tool expects 'private' to mean. A network on a public range may route traffic in surprising ways at the underlying carrier — defensively keep private networks in private space.
+
+_Remediation:_
+
+> Hetzner doesn't support changing a network's IP range in place. Recreate the network with an RFC1918 CIDR ('hcloud network create --name <name> --ip-range 10.20.0.0/16') and reattach members.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `12.2` | Establish and Maintain a Secure Network Architecture |
+| `iso27001` | `A.8.20` | Networks Security |
+| `iso27001` | `A.8.22` | Segregation of Networks |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `addressing`, `network`
+
+---
+
+### `hetzner-network-orphan`
+
+**Hetzner private networks should have at least one member** &middot; severity `low` &middot; service `networks` &middot; resource `hetzner.network`
+
+A private network with zero servers AND zero load balancers attached protects nothing. Reserved IP range, appears in audit reports, no actual workload uses it. Either attach members or delete.
+
+_Remediation:_
+
+> List: 'hcloud network list --output columns=name,ip_range,servers'. For empty networks, either attach servers via 'hcloud server attach-to-network' or delete via 'hcloud network delete <name>'.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `1.1` | Establish and Maintain Detailed Enterprise Asset Inventory |
+| `iso27001` | `A.5.9` | Inventory of Information and Other Associated Assets |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `hygiene`, `network`
 
 ---
 

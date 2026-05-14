@@ -107,8 +107,8 @@ func (c *Collector) Collect(ctx context.Context) ([]core.Resource, error) {
 	subs := []subCollector{
 		{"servers", c.collectServers},
 		{"firewalls", c.collectFirewalls},
-		// Phase 4+ adds: networks, load_balancers, volumes,
-		// floating_ips.
+		{"networks", c.collectNetworks},
+		// Phase 5+ adds: load_balancers, volumes, floating_ips.
 	}
 
 	for _, s := range subs {
