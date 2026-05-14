@@ -1,0 +1,240 @@
+# compliancekit GitHub Action -- composite.
+#
+# This file is the source-of-truth for the `darpanzope/compliancekit-action@v1`
+# Action. At v0.5.0 release time, the contents of this directory are
+# copied into a separate public repo (darpanzope/compliancekit-action),
+# tagged v1.0.0 there, and the major-version mutable tag `v1` is moved
+# to point at it. The dedicated repo is what users reference; the
+# canonical source lives here so changes happen alongside the binary.
+#
+# Composite (not Docker container, not JavaScript) because:
+#
+#   - The binary already cross-compiles to linux/amd64 and linux/arm64.
+#     A composite action that downloads the appropriate prebuilt
+#     binary is faster (no image pull, no docker daemon round-trip)
+#     and more transparent (the recipe is shell, readable in the
+#     action.yaml).
+#   - Docker container actions cannot access $GITHUB_WORKSPACE
+#     symlinks or arbitrary host paths without explicit mounts; that
+#     friction is real for an action whose primary input is files
+#     in the workspace.
+
+name: compliancekit
+description: Open-source compliance scanner for cloud and Linux infrastructure
+author: darpanzope
+branding:
+  icon: shield
+  color: blue
+
+inputs:
+  version:
+    description: |
+      compliancekit version to install (without the leading 'v').
+      Default 'latest' resolves the highest published release.
+    required: false
+    default: latest
+
+  providers:
+    description: |
+      Comma-separated provider list to scan, e.g. 'digitalocean,linux'.
+      If empty, scans every provider enabled in the config file.
+    required: false
+    default: ''
+
+  config-file:
+    description: |
+      Path to a compliancekit.yaml relative to the workspace.
+      Optional; if absent, compliancekit falls back to its built-in defaults
+      and provider-specific environment variables.
+    required: false
+    default: ''
+
+  inventory:
+    description: |
+      Path to a Linux inventory.yaml. Only consulted when scanning the linux
+      provider. Ignored otherwise.
+    required: false
+    default: ''
+
+  frameworks:
+    description: |
+      Comma-separated framework filter, e.g. 'soc2,iso27001'.
+      Restricts the checks executed to those mapping at least one
+      control in one of the named frameworks. Empty means no filter.
+    required: false
+    default: ''
+
+  output:
+    description: |
+      Comma-separated output formats: json, markdown, sarif, ocsf, html.
+      Default 'sarif,markdown,json' covers Code Scanning ingestion,
+      PR comments, and downstream evidence pack generation.
+    required: false
+    default: sarif,markdown,json
+
+  out-dir:
+    description: Directory where compliancekit writes report files.
+    required: false
+    default: ./out
+
+  fail-on:
+    description: |
+      Severity threshold at which the action exits non-zero. Accepts
+      critical, high, medium, low, info, or 'never' to disable the
+      gate. Default 'high'.
+    required: false
+    default: high
+
+  evidence:
+    description: |
+      Whether to also generate an evidence pack after the scan.
+      Set 'true' to produce <out-dir>/evidence/ alongside the reports.
+    required: false
+    default: 'false'
+
+  evidence-period:
+    description: |
+      Audit period label written into the evidence pack
+      (e.g. '2026-Q2'). Defaults to the current calendar quarter.
+    required: false
+    default: ''
+
+  upload-sarif:
+    description: |
+      Whether to automatically upload SARIF output to the GitHub
+      Code Scanning tab. Requires the 'security-events: write'
+      permission on the calling workflow's job.
+    required: false
+    default: 'true'
+
+outputs:
+  reports-dir:
+    description: Absolute path to the output directory the scan wrote.
+    value: ${{ steps.scan.outputs.reports-dir }}
+  evidence-dir:
+    description: Absolute path to the evidence pack (empty when evidence=false).
+    value: ${{ steps.evidence.outputs.evidence-dir }}
+
+runs:
+  using: composite
+  steps:
+    - name: Resolve compliancekit version
+      id: resolve
+      shell: bash
+      run: |
+        set -eu
+        VERSION="${{ inputs.version }}"
+        if [ "$VERSION" = "latest" ] || [ -z "$VERSION" ]; then
+          VERSION=$(curl -sSfL https://api.github.com/repos/darpanzope/compliancekit/releases/latest \
+            | grep '"tag_name":' | head -n1 | sed -E 's/.*"v?([^"]+)".*/\1/')
+        fi
+        if [ -z "$VERSION" ]; then
+          echo "could not resolve compliancekit version" >&2
+          exit 1
+        fi
+        echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+    - name: Install compliancekit
+      shell: bash
+      env:
+        VERSION: ${{ steps.resolve.outputs.version }}
+      run: |
+        set -eu
+        os=$(uname -s | tr '[:upper:]' '[:lower:]')
+        arch=$(uname -m)
+        case "$arch" in
+          x86_64|amd64) arch=amd64 ;;
+          aarch64|arm64) arch=arm64 ;;
+          *) echo "unsupported architecture $arch" >&2; exit 1 ;;
+        esac
+        asset="compliancekit_${VERSION}_${os}_${arch}.tar.gz"
+        base="https://github.com/darpanzope/compliancekit/releases/download/v${VERSION}"
+        tmp=$(mktemp -d)
+        curl -sSfL -o "${tmp}/${asset}" "${base}/${asset}"
+        curl -sSfL -o "${tmp}/checksums.txt" "${base}/checksums.txt"
+        ( cd "$tmp" && grep "  ${asset}\$" checksums.txt | sha256sum -c - )
+        tar -xzf "${tmp}/${asset}" -C "$tmp"
+        sudo install -m 0755 "${tmp}/compliancekit" /usr/local/bin/compliancekit
+        compliancekit version
+
+    - name: Run compliancekit doctor
+      shell: bash
+      env:
+        CK_CONFIG: ${{ inputs.config-file }}
+      run: |
+        if [ -n "${CK_CONFIG}" ] && [ -f "${CK_CONFIG}" ]; then
+          compliancekit doctor --config "${CK_CONFIG}"
+        else
+          compliancekit doctor || true
+        fi
+
+    - name: Scan
+      id: scan
+      shell: bash
+      env:
+        CK_CONFIG: ${{ inputs.config-file }}
+        CK_PROVIDERS: ${{ inputs.providers }}
+        CK_OUTPUT: ${{ inputs.output }}
+        CK_OUT_DIR: ${{ inputs.out-dir }}
+        CK_FAIL_ON: ${{ inputs.fail-on }}
+      run: |
+        set -eu
+        mkdir -p "${CK_OUT_DIR}"
+        ARGS=(scan)
+        if [ -n "${CK_PROVIDERS}" ]; then
+          # 'scan' accepts a single provider positional today; with
+          # comma-separated input we loop in the future. For v0.5
+          # we forward the first one only.
+          first=${CK_PROVIDERS%%,*}
+          ARGS+=("${first}")
+        fi
+        [ -n "${CK_CONFIG}" ] && [ -f "${CK_CONFIG}" ] && ARGS+=(--config "${CK_CONFIG}")
+        ARGS+=(--out-dir "${CK_OUT_DIR}")
+        ARGS+=(--output "${CK_OUTPUT}")
+        if [ "${CK_FAIL_ON}" != "never" ]; then
+          ARGS+=(--fail-on "${CK_FAIL_ON}")
+        fi
+        echo "+ compliancekit ${ARGS[*]}"
+        # Capture exit code rather than letting `set -e` kill the
+        # step so we still upload SARIF / generate evidence on a
+        # findings-gated non-zero exit. The exit propagates at the
+        # end after every artifact is in place.
+        set +e
+        compliancekit "${ARGS[@]}"
+        scan_rc=$?
+        set -e
+        abs_out=$(cd "${CK_OUT_DIR}" && pwd)
+        echo "reports-dir=${abs_out}" >> "$GITHUB_OUTPUT"
+        echo "scan-rc=${scan_rc}" >> "$GITHUB_OUTPUT"
+
+    - name: Upload SARIF to Code Scanning
+      if: ${{ inputs.upload-sarif == 'true' && contains(inputs.output, 'sarif') }}
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: ${{ steps.scan.outputs.reports-dir }}/findings.sarif
+        category: compliancekit
+
+    - name: Generate evidence pack
+      id: evidence
+      if: ${{ inputs.evidence == 'true' && contains(inputs.output, 'json') }}
+      shell: bash
+      env:
+        CK_PERIOD: ${{ inputs.evidence-period }}
+        CK_REPORTS: ${{ steps.scan.outputs.reports-dir }}
+      run: |
+        set -eu
+        ARGS=(evidence --in "${CK_REPORTS}/findings.json" --out "${CK_REPORTS}/evidence")
+        [ -n "${CK_PERIOD}" ] && ARGS+=(--period "${CK_PERIOD}")
+        compliancekit "${ARGS[@]}"
+        abs_evidence=$(cd "${CK_REPORTS}/evidence" && pwd)
+        echo "evidence-dir=${abs_evidence}" >> "$GITHUB_OUTPUT"
+
+    - name: Propagate scan exit code
+      shell: bash
+      env:
+        SCAN_RC: ${{ steps.scan.outputs.scan-rc }}
+      run: |
+        if [ "${SCAN_RC}" -ne 0 ]; then
+          echo "compliancekit scan exited with code ${SCAN_RC}" >&2
+          exit "${SCAN_RC}"
+        fi
