@@ -106,22 +106,39 @@ func (r Resource) HasTag(tag string) bool {
 // Findings carry refs rather than full Resources so finding payloads stay
 // small and serialize cheaply.
 func (r Resource) Ref() ResourceRef {
-	return ResourceRef{
+	ref := ResourceRef{
 		ID:       r.ID,
 		Type:     r.Type,
 		Name:     r.Name,
 		Provider: r.Provider,
+		Region:   r.Region,
 	}
+	// Pull AccountID from the standardized cloudcommon attribute key.
+	// Cannot import cloudcommon here (would create a cycle); the
+	// string "account_id" is the canonical key defined in
+	// internal/collectors/cloudcommon/cloudcommon.go.
+	if s, ok := r.Attributes["account_id"].(string); ok {
+		ref.AccountID = s
+	}
+	return ref
 }
 
 // ResourceRef is a lightweight pointer to a Resource. Findings carry refs
 // rather than full resources to keep finding payloads small. Consumers
 // can look up the full Resource via ResourceGraph.ByID(ref.ID).
+//
+// AccountID + Region land on the Ref (rather than just on the parent
+// Resource's Attributes) so the evidence pack's control-mapping.csv
+// can surface them as columns without re-joining against the graph.
+// Empty for resources without a cloud account / region concept
+// (e.g. linux hosts).
 type ResourceRef struct {
-	ID       string `json:"id"`
-	Type     string `json:"type"`
-	Name     string `json:"name"`
-	Provider string `json:"provider"`
+	ID        string `json:"id"`
+	Type      string `json:"type"`
+	Name      string `json:"name"`
+	Provider  string `json:"provider"`
+	Region    string `json:"region,omitempty"`
+	AccountID string `json:"account_id,omitempty"`
 }
 
 // EvidencePtr is a pointer to raw evidence captured during collection.

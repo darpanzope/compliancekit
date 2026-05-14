@@ -383,6 +383,7 @@ func TestGenerate_WritesMappingCSV(t *testing.T) {
 		"framework_id", "control_id", "control_name",
 		"check_id", "check_title",
 		"resource_id", "resource_name", "resource_type",
+		"account_id", "region",
 		"status", "severity", "evidence_path",
 	}
 	for i, want := range wantHeader {
@@ -392,12 +393,13 @@ func TestGenerate_WritesMappingCSV(t *testing.T) {
 	}
 
 	// At least one row should reference our check and a real evidence path.
+	// evidence_path is the last column (index 12 with account_id+region added).
 	foundCheck := false
 	for _, row := range rows[1:] {
 		if row[3] == "do-droplet-no-firewall" {
 			foundCheck = true
-			if !strings.HasSuffix(row[10], "/findings.json") {
-				t.Errorf("evidence_path malformed: %q", row[10])
+			if !strings.HasSuffix(row[12], "/findings.json") {
+				t.Errorf("evidence_path malformed: %q", row[12])
 			}
 		}
 	}

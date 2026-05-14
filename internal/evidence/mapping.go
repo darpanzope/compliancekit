@@ -29,6 +29,8 @@ var mappingColumns = []string{
 	"resource_id",
 	"resource_name",
 	"resource_type",
+	"account_id", // v0.7: AWS account / GCP project / Hetzner project
+	"region",     // v0.7: AWS region / GCP location; empty for global resources
 	"status",
 	"severity",
 	"evidence_path",
@@ -76,6 +78,8 @@ func writeMappingCSV(outDir string, controls []ControlRef) (string, error) {
 				fnd.Resource.ID,
 				fnd.Resource.Name,
 				fnd.Resource.Type,
+				fnd.Resource.AccountID,
+				fnd.Resource.Region,
 				string(fnd.Status),
 				fnd.Severity.String(),
 				evidenceRel,
