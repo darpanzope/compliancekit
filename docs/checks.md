@@ -6,7 +6,7 @@
   Source of truth: internal/checks/**/*.go (the core.Check vars).
 -->
 
-This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **158 checks** across the providers below.
+This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **159 checks** across the providers below.
 
 Each check below has:
 
@@ -25,9 +25,9 @@ To inspect a single check from the CLI: `compliancekit checks show <id>`.
 | `aws` | 30 |
 | `digitalocean` | 74 |
 | `gcp` | 25 |
-| `hetzner` | 14 |
+| `hetzner` | 15 |
 | `linux` | 15 |
-| **total** | **158** |
+| **total** | **159** |
 
 ## By severity
 
@@ -36,7 +36,7 @@ To inspect a single check from the CLI: `compliancekit checks show <id>`.
 | `critical` | 10 |
 | `high` | 41 |
 | `medium` | 55 |
-| `low` | 52 |
+| `low` | 53 |
 
 ## aws
 
@@ -3017,6 +3017,27 @@ _Maps to:_
 | `soc2` | `CC6.6` | Logical Access Security - Boundaries |
 
 _Tags:_ `exposure`, `firewall`, `ssh`
+
+---
+
+### `hetzner-floating-ip-orphan`
+
+**Hetzner Floating IPs should be attached to a server** &middot; severity `low` &middot; service `floating_ips` &middot; resource `hetzner.floating_ip`
+
+A Hetzner Cloud Floating IP bills monthly regardless of whether it's attached. Common shape: a server was deleted and the IP wasn't released; it now sits forever paying a fee.
+
+_Remediation:_
+
+> Either attach to a server ('hcloud floating-ip assign <ip-id> <server-name>') or delete ('hcloud floating-ip delete <ip-id>').
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `1.1` | Establish and Maintain Detailed Enterprise Asset Inventory |
+| `iso27001` | `A.5.9` | Inventory of Information and Other Associated Assets |
+
+_Tags:_ `cost`, `floating-ip`, `hygiene`
 
 ---
 

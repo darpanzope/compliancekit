@@ -110,7 +110,7 @@ func (c *Collector) Collect(ctx context.Context) ([]core.Resource, error) {
 		{"networks", c.collectNetworks},
 		{"load_balancers", c.collectLoadBalancers},
 		{"volumes", c.collectVolumes},
-		// Phase 7+ adds: floating_ips.
+		{"floating_ips", c.collectFloatingIPs},
 	}
 
 	for _, s := range subs {
