@@ -6,7 +6,7 @@
   Source of truth: internal/checks/**/*.go (the core.Check vars).
 -->
 
-This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **241 checks** across the providers below.
+This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **254 checks** across the providers below.
 
 Each check below has:
 
@@ -26,9 +26,9 @@ To inspect a single check from the CLI: `compliancekit checks show <id>`.
 | `digitalocean` | 74 |
 | `gcp` | 25 |
 | `hetzner` | 15 |
-| `kubernetes` | 82 |
+| `kubernetes` | 95 |
 | `linux` | 15 |
-| **total** | **241** |
+| **total** | **254** |
 
 ## By severity
 
@@ -36,8 +36,8 @@ To inspect a single check from the CLI: `compliancekit checks show <id>`.
 |---|---:|
 | `critical` | 17 |
 | `high` | 60 |
-| `medium` | 82 |
-| `low` | 82 |
+| `medium` | 88 |
+| `low` | 89 |
 
 ## aws
 
@@ -3609,6 +3609,158 @@ _Tags:_ `jobs`, `k8s`, `reliability`
 
 ---
 
+### `k8s-limitrange-container-defaults`
+
+**LimitRanges should set container default requests/limits** &middot; severity `low` &middot; service `cluster` &middot; resource `k8s.limitrange`
+
+A LimitRange without `default` and `defaultRequest` for the Container type does not actually supply defaults to unannotated pods — it only enforces min/max if those are set. Defaults are the operational primitive that makes the pod-security resource-limit check pass for every pod.
+
+_Remediation:_
+
+> Add `default` and `defaultRequest` for `cpu` and `memory` to the LimitRange's container entry.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.6` | Capacity Management |
+
+_Tags:_ `k8s`, `limitrange`
+
+---
+
+### `k8s-mutating-webhook-side-effects`
+
+**Mutating webhooks should declare sideEffects: None or NoneOnDryRun** &middot; severity `low` &middot; service `admission` &middot; resource `k8s.mutatingwebhookconfig`
+
+`sideEffects: Some` or unset means the webhook may call out to external systems during admission, which makes `kubectl --dry-run=server` unreliable and can stall admission under load. Declare side-effect semantics explicitly.
+
+_Remediation:_
+
+> Set `sideEffects: None` if the webhook is purely local, or `NoneOnDryRun` if it skips side effects on dry-run requests.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `4.1` | Establish and Maintain a Secure Configuration Process |
+| `iso27001` | `A.8.32` | Change Management |
+
+_Tags:_ `admission`, `k8s`, `webhook`
+
+---
+
+### `k8s-namespace-default-workload`
+
+**Workloads should not run in the default namespace** &middot; severity `medium` &middot; service `cluster` &middot; resource `k8s.pod`
+
+The `default` namespace exists as the no-op landing zone for new clusters. Workloads scheduled there inherit the namespace's `default` ServiceAccount (which has whatever bindings exist on it cluster-wide), share quota and policy with every other lazy deployment, and complicate audit. Real workloads belong in named namespaces.
+
+_Remediation:_
+
+> Create per-app namespaces and move workloads into them. Apply PSA labels, NetworkPolicies, ResourceQuotas, and LimitRanges to each.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `4.1` | Establish and Maintain a Secure Configuration Process |
+| `iso27001` | `A.5.15` | Access Control |
+| `iso27001` | `A.8.2` | Privileged Access Rights |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `default`, `k8s`, `namespace`
+
+---
+
+### `k8s-namespace-limitrange-missing`
+
+**Namespaces should have at least one LimitRange** &middot; severity `low` &middot; service `cluster` &middot; resource `k8s.namespace`
+
+A LimitRange supplies default CPU/memory requests + limits to pods that don't declare them. Without one, the Pod Security checks for resource limits will keep failing for every workload an operator forgets to annotate.
+
+_Remediation:_
+
+> Apply a LimitRange to each namespace with sensible container defaults (e.g. 100m/128Mi requests, 1/1Gi limits).
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.6` | Capacity Management |
+| `soc2` | `CC7.3` | System Operations - Incident Evaluation |
+
+_Tags:_ `k8s`, `namespace`, `quota`
+
+---
+
+### `k8s-namespace-psa-label`
+
+**Namespaces should set pod-security.kubernetes.io enforce label** &middot; severity `medium` &middot; service `cluster` &middot; resource `k8s.namespace`
+
+Pod Security Admission (PSA, GA in K8s 1.25) uses namespace labels to enforce the baseline/restricted profiles. Without an `enforce` label, the namespace runs the cluster default — usually `privileged`, meaning no Pod Security gate is in place. Set `enforce: restricted` on workload namespaces.
+
+_Remediation:_
+
+> `kubectl label namespace <ns> pod-security.kubernetes.io/enforce=restricted`. Stage with `audit` or `warn` levels first if workloads might violate.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `4.1` | Establish and Maintain a Secure Configuration Process |
+| `iso27001` | `A.8.2` | Privileged Access Rights |
+| `iso27001` | `A.8.20` | Networks Security |
+| `iso27001` | `A.8.9` | Configuration Management |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `k8s`, `namespace`, `psa`
+
+---
+
+### `k8s-namespace-resourcequota-missing`
+
+**Namespaces should have at least one ResourceQuota** &middot; severity `medium` &middot; service `cluster` &middot; resource `k8s.namespace`
+
+A namespace without a ResourceQuota has no cap on how much CPU, memory, pods, or storage it can consume. A buggy controller, a fork-bomb, or an OOM-storm in one namespace can starve the whole cluster. Quotas are the K8s primitive for namespace-level capacity guardrails.
+
+_Remediation:_
+
+> Create a `ResourceQuota` per namespace with hard caps on `pods`, `limits.cpu`, `limits.memory`, and `count/secrets`/`count/configmaps` at minimum.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.6` | Capacity Management |
+| `soc2` | `CC7.3` | System Operations - Incident Evaluation |
+
+_Tags:_ `k8s`, `namespace`, `quota`
+
+---
+
+### `k8s-namespace-stuck-terminating`
+
+**Namespaces should not stay in Terminating phase** &middot; severity `low` &middot; service `cluster` &middot; resource `k8s.namespace`
+
+A namespace that stays in `Terminating` indicates a finalizer-stuck deletion — usually a CRD whose controller has been removed without cleaning up its custom resources. Until resolved, the namespace cannot be recreated and its resources are in limbo.
+
+_Remediation:_
+
+> `kubectl get namespace <name> -o json` reveals the blocking finalizer. Either restore the controller, manually clean its CRs, or (as a last resort) force-remove the finalizer.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.16` | Monitoring Activities |
+| `soc2` | `CC7.3` | System Operations - Incident Evaluation |
+
+_Tags:_ `hygiene`, `k8s`, `namespace`
+
+---
+
 ### `k8s-networkpolicy-allow-all-egress`
 
 **NetworkPolicies should not have allow-all egress rules** &middot; severity `medium` &middot; service `network` &middot; resource `k8s.networkpolicy`
@@ -4203,6 +4355,32 @@ _Tags:_ `env`, `k8s`, `secrets`
 
 ---
 
+### `k8s-policy-engine-present`
+
+**Cluster should have a policy engine installed** &middot; severity `medium` &middot; service `cluster` &middot; resource `k8s.cluster`
+
+Pod Security Admission covers the pod surface. For everything else (image-from-registry-allowlist, label requirements, RBAC restrictions, custom resource validation), a dedicated policy engine — Kyverno, OPA Gatekeeper, or jspolicy — is the modern primitive. Detection looks for the engine's ValidatingWebhookConfigurations.
+
+_Remediation:_
+
+> Install Kyverno (`helm install kyverno kyverno/kyverno`) or OPA Gatekeeper. Apply org policies as Kyverno ClusterPolicies or Gatekeeper ConstraintTemplates.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `4.1` | Establish and Maintain a Secure Configuration Process |
+| `cis-v8` | `6.8` | Define and Maintain Role-Based Access Control |
+| `iso27001` | `A.5.15` | Access Control |
+| `iso27001` | `A.8.32` | Change Management |
+| `iso27001` | `A.8.9` | Configuration Management |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `cluster`, `k8s`, `policy`
+
+---
+
 ### `k8s-pv-encryption-hint`
 
 **PersistentVolumes should carry an encryption hint** &middot; severity `medium` &middot; service `storage` &middot; resource `k8s.persistentvolume`
@@ -4770,6 +4948,67 @@ _Tags:_ `k8s`, `least-privilege`, `rbac`, `wildcard`
 
 ---
 
+### `k8s-resourcequota-compute-limit`
+
+**ResourceQuotas should cap CPU and memory** &middot; severity `low` &middot; service `cluster` &middot; resource `k8s.resourcequota`
+
+Without compute caps, a single tenant can consume all of a cluster's CPU or memory headroom. `limits.cpu` + `limits.memory` plus the matching `requests.*` keep namespace consumption bounded.
+
+_Remediation:_
+
+> Add `hard.limits.cpu` and `hard.limits.memory` (and `hard.requests.cpu` / `hard.requests.memory`).
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.6` | Capacity Management |
+| `soc2` | `CC7.3` | System Operations - Incident Evaluation |
+
+_Tags:_ `k8s`, `quota`
+
+---
+
+### `k8s-resourcequota-object-counts`
+
+**ResourceQuotas should cap object counts** &middot; severity `low` &middot; service `cluster` &middot; resource `k8s.resourcequota`
+
+etcd has practical ceilings on object count. Without `count/configmaps`, `count/secrets`, `persistentvolumeclaims` caps, a chatty controller can fill etcd within a namespace.
+
+_Remediation:_
+
+> Add `hard.count/configmaps`, `hard.count/secrets`, and `hard.persistentvolumeclaims` to every ResourceQuota.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.6` | Capacity Management |
+
+_Tags:_ `k8s`, `quota`
+
+---
+
+### `k8s-resourcequota-pod-limit`
+
+**ResourceQuotas should cap pod counts** &middot; severity `low` &middot; service `cluster` &middot; resource `k8s.resourcequota`
+
+A pod cap (`hard.pods: <n>`) prevents a runaway controller from spawning thousands of pods and exhausting node capacity. Pair with `count/secrets` and `count/configmaps` to bound etcd object count.
+
+_Remediation:_
+
+> Add `spec.hard.pods: 50` (or your operational ceiling) to every ResourceQuota.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.6` | Capacity Management |
+
+_Tags:_ `k8s`, `quota`
+
+---
+
 ### `k8s-sa-default-automount`
 
 **Default ServiceAccounts should disable token automount** &middot; severity `medium` &middot; service `rbac` &middot; resource `k8s.serviceaccount`
@@ -5125,6 +5364,52 @@ _Maps to:_
 | `soc2` | `A1.2` | Availability - Backup and Recovery |
 
 _Tags:_ `k8s`, `reclaim`, `storage`
+
+---
+
+### `k8s-validating-webhook-failure-policy`
+
+**Validating webhooks should set failurePolicy=Fail** &middot; severity `medium` &middot; service `admission` &middot; resource `k8s.validatingwebhookconfig`
+
+`failurePolicy: Ignore` means a webhook outage silently bypasses policy. That is appropriate only for advisory checks; any security-critical webhook should fail closed (`Fail`) so an outage halts admission rather than letting unchecked resources through.
+
+_Remediation:_
+
+> Set `failurePolicy: Fail` on security-relevant webhooks. Pair with a `namespaceSelector` that exempts kube-system so a webhook outage cannot brick the control plane.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `4.1` | Establish and Maintain a Secure Configuration Process |
+| `iso27001` | `A.8.16` | Monitoring Activities |
+| `iso27001` | `A.8.32` | Change Management |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC7.2` | System Operations - Monitoring |
+
+_Tags:_ `admission`, `k8s`, `webhook`
+
+---
+
+### `k8s-webhook-namespace-selector`
+
+**Cluster-wide webhooks should exempt kube-system via namespaceSelector** &middot; severity `medium` &middot; service `admission` &middot; resource `k8s.mutatingwebhookconfig`
+
+A webhook with no `namespaceSelector` matches every namespace including kube-system. If the webhook backing pod goes down, the control plane components in kube-system cannot create their own helper resources, and the cluster can lock itself out of recovery. Exempt kube-system explicitly.
+
+_Remediation:_
+
+> Add `namespaceSelector: {matchExpressions: [{key: kubernetes.io/metadata.name, operator: NotIn, values: [kube-system, kube-public]}]}`.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `4.1` | Establish and Maintain a Secure Configuration Process |
+| `iso27001` | `A.8.16` | Monitoring Activities |
+| `soc2` | `CC7.3` | System Operations - Incident Evaluation |
+
+_Tags:_ `admission`, `control-plane`, `k8s`, `webhook`
 
 ---
 
