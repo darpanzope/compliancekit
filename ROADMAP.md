@@ -174,7 +174,7 @@ to the v0.1-v0.5 audience that put compliancekit on the map.
 | **v0.7** ✅ | **AWS** | First-class AWS hardening, 30 checks across IAM/EC2/S3/RDS/CloudTrail/KMS/Config/GuardDuty |
 | **v0.8** ✅ | **GCP** | First-class GCP hardening, 25 checks across IAM/Compute/GCS/Cloud SQL/Logging/KMS/BigQuery |
 | **v0.9** ✅ | **DigitalOcean depth pass — everything except DOKS** | 5 → 74 checks across 20 services; the most comprehensive OSS DigitalOcean scanner |
-| **v0.10** | **Hetzner Cloud** | The indie-cloud completion |
+| **v0.10** ✅ | **Hetzner Cloud** | 15 checks across servers/firewalls/networks/LBs/volumes/floating IPs |
 | **v0.11** | Containers + K8s + EKS/GKE/DOKS-deep | From cluster to instance in one scan |
 | **v0.12** | Framework expansion (NIST 800-53 r5, HIPAA, PCI-DSS, MITRE ATT&CK) | Map every finding to ATT&CK |
 | **v0.13** | IaC / OCSF / OSCAL ingest + emit | Plays nicely with the rest of the security stack |
@@ -506,7 +506,7 @@ all three frameworks. No new framework yaml needed.
 
 ---
 
-### v0.10 — Hetzner Cloud (weekend 10)
+### v0.10 — Hetzner Cloud ✅ shipped
 
 **Goal:** the indie-cloud completion. Hetzner is the cheapest
 serious-cloud option for the audience; pairing DO + Hetzner gives a

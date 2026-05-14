@@ -35,6 +35,11 @@ providers:
   #   enabled: true
   #   projects: []       # empty means "use the credential's default project"
 
+  # Uncomment to enable Hetzner Cloud scanning (v0.10+).
+  # hetzner:
+  #   enabled: true
+  #   token_env: HCLOUD_TOKEN     # project-scoped API token
+
 frameworks:
   - soc2
   - cis-v8
