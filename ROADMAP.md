@@ -173,7 +173,7 @@ to the v0.1-v0.5 audience that put compliancekit on the map.
 | **v0.6** ✅ | **Drift + baseline + 0-100 hardening score** | "Your score went from 78 to 73 since Friday" |
 | **v0.7** ✅ | **AWS** | First-class AWS hardening, 30 checks across IAM/EC2/S3/RDS/CloudTrail/KMS/Config/GuardDuty |
 | **v0.8** ✅ | **GCP** | First-class GCP hardening, 25 checks across IAM/Compute/GCS/Cloud SQL/Logging/KMS/BigQuery |
-| **v0.9** | **DigitalOcean depth pass — everything except DOKS** | 5 → ~75 checks; the most comprehensive OSS DigitalOcean scanner |
+| **v0.9** ✅ | **DigitalOcean depth pass — everything except DOKS** | 5 → 74 checks across 20 services; the most comprehensive OSS DigitalOcean scanner |
 | **v0.10** | **Hetzner Cloud** | The indie-cloud completion |
 | **v0.11** | Containers + K8s + EKS/GKE/DOKS-deep | From cluster to instance in one scan |
 | **v0.12** | Framework expansion (NIST 800-53 r5, HIPAA, PCI-DSS, MITRE ATT&CK) | Map every finding to ATT&CK |
@@ -426,7 +426,7 @@ Hardening score: 71/100
 
 ---
 
-### v0.9 — DigitalOcean depth pass (multi-weekend)
+### v0.9 — DigitalOcean depth pass ✅ shipped
 
 **Goal:** the most comprehensive OSS DigitalOcean security scanner.
 Cover every DO surface except DOKS (which lands as part of the v0.11

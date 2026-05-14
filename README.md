@@ -156,7 +156,7 @@ Full per-check reference (auto-generated, IDs / severities / framework mappings 
 
 | Provider | Status | Checks | Notes |
 |---|---|---:|---|
-| DigitalOcean | v0.9 (in flight) | 5 → ~75 | account hardening + droplets + firewalls + VPCs + LBs + DNS + certs + managed DBs + Spaces + Container Registry + App Platform + Functions + CDN + volumes + snapshots + reserved IPs + SSH keys + images + monitoring + projects (every DO surface except DOKS) |
+| DigitalOcean | v0.9 ✅ | 74 | account hardening (3) + droplets (8) + firewalls (6) + VPCs (3) + LBs (5) + DNS (4) + certs (2) + managed DBs (8) + Spaces (6) + Spaces keys (2) + Container Registry (3) + App Platform (5) + Functions (3) + volumes (2) + snapshots (2) + CDN (2) + reserved IPs (2) + SSH keys (2) + images (2) + monitoring (2) + projects (2) (every DO surface except DOKS, which lands at v0.11) |
 | Linux over SSH | first-party | 15 | agentless; CIS Ubuntu/Debian benchmark subset; covers sshd, ufw/nftables, auditd, filesystem, users, kernel |
 | AWS | v0.7 ✅ | 30 | IAM (8) + S3 (5) + EC2 (5) + RDS (4) + CloudTrail (3) + KMS (2) + Config (2) + GuardDuty (1) |
 | GCP | v0.8 ✅ | 25 | IAM (6) + Compute (5) + GCS (4) + Cloud SQL (3) + Logging (2) + KMS (2) + BigQuery (3) |
