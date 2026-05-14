@@ -35,6 +35,7 @@ import (
 	// the catalog is generated without all provider inits running.
 	_ "github.com/darpanzope/compliancekit/internal/checks/aws"
 	_ "github.com/darpanzope/compliancekit/internal/checks/digitalocean"
+	_ "github.com/darpanzope/compliancekit/internal/checks/gcp"
 	_ "github.com/darpanzope/compliancekit/internal/checks/linux"
 
 	"github.com/darpanzope/compliancekit/internal/core"

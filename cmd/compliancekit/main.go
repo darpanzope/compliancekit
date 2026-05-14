@@ -20,6 +20,7 @@ import (
 	// import line here.
 	_ "github.com/darpanzope/compliancekit/internal/checks/aws"
 	_ "github.com/darpanzope/compliancekit/internal/checks/digitalocean"
+	_ "github.com/darpanzope/compliancekit/internal/checks/gcp"
 	_ "github.com/darpanzope/compliancekit/internal/checks/linux"
 )
 

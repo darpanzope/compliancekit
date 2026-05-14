@@ -57,26 +57,15 @@ func TestNew_NoProjectErrors(t *testing.T) {
 	}
 }
 
-func TestCollect_EmitsProjectResource(t *testing.T) {
-	override := &DefaultCredentials{
-		ProjectID:   "p1",
-		Credentials: &google.Credentials{ProjectID: "p1"},
-	}
-	c, err := New(context.Background(), Options{
-		Projects:            []string{"p1", "p2"},
-		CredentialsOverride: override,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	resources, err := c.Collect(context.Background())
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(resources) != 2 {
-		t.Fatalf("got %d resources, want 2 (one per project)", len(resources))
-	}
-	for _, r := range resources {
+// TestProjectResource_Shape covers the project-anchor emission
+// directly. The full Collect() integration test belongs at v1.1
+// behind a build tag against a real GCP test project; faking out
+// every service client in unit tests would duplicate the SDK
+// surface for no gain.
+func TestProjectResource_Shape(t *testing.T) {
+	c := &Collector{projects: []string{"p1", "p2"}}
+	for _, projectID := range c.projects {
+		r := c.projectResource(projectID)
 		if r.Type != ProjectType {
 			t.Errorf("type: %q, want %q", r.Type, ProjectType)
 		}
@@ -84,11 +73,11 @@ func TestCollect_EmitsProjectResource(t *testing.T) {
 			t.Errorf("provider: %q", r.Provider)
 		}
 		coord := cloudcommon.CoordOf(r)
-		if coord.AccountID == "" {
-			t.Errorf("project %q: account_id not stamped", r.Name)
+		if coord.AccountID != projectID {
+			t.Errorf("project %q: account_id = %q, want %q", projectID, coord.AccountID, projectID)
 		}
 		if coord.Region != "" {
-			t.Errorf("project %q: region should be empty (project is location-agnostic), got %q", r.Name, coord.Region)
+			t.Errorf("project %q: region should be empty (project is location-agnostic), got %q", projectID, coord.Region)
 		}
 	}
 }

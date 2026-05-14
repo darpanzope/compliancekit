@@ -6,7 +6,7 @@
   Source of truth: internal/checks/**/*.go (the core.Check vars).
 -->
 
-This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **50 checks** across the providers below.
+This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **56 checks** across the providers below.
 
 Each check below has:
 
@@ -24,16 +24,17 @@ To inspect a single check from the CLI: `compliancekit checks show <id>`.
 |---|---:|
 | `aws` | 30 |
 | `digitalocean` | 5 |
+| `gcp` | 6 |
 | `linux` | 15 |
-| **total** | **50** |
+| **total** | **56** |
 
 ## By severity
 
 | Severity | Checks |
 |---|---:|
 | `critical` | 3 |
-| `high` | 22 |
-| `medium` | 16 |
+| `high` | 25 |
+| `medium` | 19 |
 | `low` | 9 |
 
 ## aws
@@ -849,6 +850,147 @@ _Maps to:_
 | `soc2` | `CC6.6` | Logical Access Security - Boundaries |
 
 _Tags:_ `exposure`, `network`, `ssh`
+
+---
+
+## gcp
+
+### `gcp-iam-cloudaudit-logging`
+
+**GCP project audit logging must cover admin/read/write activity for allServices** &middot; severity `medium` &middot; service `iam` &middot; resource `gcp.iam.policy`
+
+Cloud Audit Logs are GCP's API-level change record. CIS GCP Foundations 2.1 prescribes a project-level audit config for 'allServices' with ADMIN_READ, DATA_READ, DATA_WRITE all enabled. Without it, post-incident forensics has only partial coverage of who-did-what-when.
+
+_Remediation:_
+
+> Add the audit config via Cloud Console (IAM & Admin -> Audit Logs -> Default audit logs configuration) or set auditConfigs in your Terraform / Deployment Manager templates: `auditConfigs: [{ service: 'allServices', auditLogConfigs: [{ logType: ADMIN_READ }, { logType: DATA_READ }, { logType: DATA_WRITE }] }]`.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `8.10` | Retain Audit Logs |
+| `cis-v8` | `8.5` | Collect Detailed Audit Logs |
+| `iso27001` | `A.8.15` | Logging |
+| `iso27001` | `A.8.16` | Monitoring Activities |
+| `soc2` | `CC7.2` | System Operations - Monitoring |
+| `soc2` | `CC7.3` | System Operations - Incident Evaluation |
+
+_Tags:_ `audit-logging`, `iam`
+
+---
+
+### `gcp-iam-no-broad-token-creator`
+
+**GCP project must not grant broad service-account impersonation** &middot; severity `high` &middot; service `iam` &middot; resource `gcp.iam.policy`
+
+Project-level grants of roles/iam.serviceAccountTokenCreator or roles/iam.serviceAccountUser let the holder mint short-lived tokens for ANY service account in the project (or impersonate it via gcloud --impersonate-service-account). Scoping these grants to specific service-account resources (not the project) is the CIS GCP 1.6 separation-of-duties baseline.
+
+_Remediation:_
+
+> Replace project-level grants with per-SA grants: 'gcloud iam service-accounts add-iam-policy-binding <sa-email> --member=<principal> --role=roles/iam.serviceAccountTokenCreator'. Then remove the project-level binding via 'gcloud projects remove-iam-policy-binding ...'.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `5.4` | Restrict Administrator Privileges to Dedicated Accounts |
+| `iso27001` | `A.5.15` | Access Control |
+| `iso27001` | `A.8.2` | Privileged Access Rights |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `iam`, `impersonation`, `service-account`
+
+---
+
+### `gcp-iam-no-default-sa-in-use`
+
+**GCP default Compute / App Engine service accounts must not be used** &middot; severity `medium` &middot; service `iam` &middot; resource `gcp.iam.service_account`
+
+The default Compute Engine service account (<project-number>-compute@developer.gserviceaccount.com) and App Engine default service account (<project-id>@appspot.gserviceaccount.com) carry the Editor role on the project by default, which is over-broad. Workloads running as these SAs inherit those permissions. CIS GCP 1.5 prescribes replacing them with purpose-built SAs scoped to the actual job.
+
+_Remediation:_
+
+> Create a purpose-built SA: 'gcloud iam service-accounts create my-workload --display-name="My Workload"', grant the specific roles it needs, then redeploy the workload with --service-account=my-workload@<project>.iam.gserviceaccount.com.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `5.4` | Restrict Administrator Privileges to Dedicated Accounts |
+| `iso27001` | `A.5.15` | Access Control |
+| `iso27001` | `A.8.2` | Privileged Access Rights |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `default-sa`, `iam`, `service-account`
+
+---
+
+### `gcp-iam-no-primitive-roles`
+
+**GCP project IAM must not grant primitive roles (Owner/Editor/Viewer)** &middot; severity `high` &middot; service `iam` &middot; resource `gcp.iam.policy`
+
+Primitive GCP roles (Owner, Editor, Viewer) grant access to every API in the project, defeating least-privilege. CIS GCP Foundations Benchmark 1.4 (no service account user impersonation escalation) and 1.8 (separation of duties) prescribe using predefined or custom roles scoped to the actual job instead.
+
+_Remediation:_
+
+> List who has primitive roles: 'gcloud projects get-iam-policy <project> --flatten=bindings --filter="bindings.role:roles/(owner|editor|viewer)"'. For each member, identify the specific actions they need and replace with a predefined role (e.g. roles/storage.objectAdmin) or a custom role.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `5.4` | Restrict Administrator Privileges to Dedicated Accounts |
+| `iso27001` | `A.5.15` | Access Control |
+| `iso27001` | `A.8.2` | Privileged Access Rights |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `iam`, `least-privilege`, `primitive-roles`
+
+---
+
+### `gcp-iam-no-user-managed-sa-keys`
+
+**GCP service accounts should not have user-managed keys** &middot; severity `medium` &middot; service `iam` &middot; resource `gcp.iam.service_account`
+
+User-managed service-account keys are the GCP analog of long-lived AWS access keys -- the canonical credential-leak path. Workload Identity Federation (for GitHub Actions, GitLab CI, AWS-running workloads), GCE metadata server (for GCE VMs), and GKE Workload Identity (for GKE pods) cover the legitimate use cases with short-lived tokens. CIS GCP 1.4 prescribes no user-managed keys.
+
+_Remediation:_
+
+> Migrate to Workload Identity Federation: https://cloud.google.com/iam/docs/workload-identity-federation . Once the WIF provider + service-account binding is in place, delete the user-managed keys: 'gcloud iam service-accounts keys list --iam-account=<sa-email>' then 'gcloud iam service-accounts keys delete <key-id> --iam-account=<sa-email>'.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `5.4` | Restrict Administrator Privileges to Dedicated Accounts |
+| `iso27001` | `A.8.5` | Secure Authentication |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `credentials`, `iam`, `service-account`
+
+---
+
+### `gcp-iam-sa-key-age`
+
+**GCP service-account user-managed keys must be rotated within 90 days** &middot; severity `high` &middot; service `iam` &middot; resource `gcp.iam.service_account`
+
+User-managed service-account keys are long-lived static credentials -- the GCP equivalent of an AWS access key. CIS GCP 1.7 prescribes 90-day rotation to cap the exposure window of any leaked key. (System-managed keys, which Google rotates automatically, are out of scope for this check.)
+
+_Remediation:_
+
+> Rotate via 'gcloud iam service-accounts keys create new-key.json --iam-account=<sa-email>', deploy the new key everywhere it's needed, then 'gcloud iam service-accounts keys delete <old-key-id>'. Better: switch to Workload Identity Federation and remove the need for long-lived keys altogether.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `5.4` | Restrict Administrator Privileges to Dedicated Accounts |
+| `iso27001` | `A.8.2` | Privileged Access Rights |
+| `iso27001` | `A.8.5` | Secure Authentication |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `credentials`, `iam`, `rotation`, `service-account`
 
 ---
 

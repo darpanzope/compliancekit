@@ -76,19 +76,18 @@ func (c *Collector) Name() string { return providerName }
 // command + tests can read it.
 func (c *Collector) Projects() []string { return c.projects }
 
-// Collect implements core.Collector. v0.8 phase 1 resolves the
-// project scope and emits only the synthetic project resources.
-// Per-service collectors (IAM, Compute, GCS, Cloud SQL, Cloud
-// Logging, KMS, BigQuery) plug in via phases 2-8.
+// Collect implements core.Collector. Emits per-project anchors
+// plus everything the per-service collectors produce. Per-project
+// errors surface as collect-error placeholders inside each service
+// helper rather than aborting the entire scan.
 func (c *Collector) Collect(ctx context.Context) ([]core.Resource, error) {
 	out := []core.Resource{}
 	for _, projectID := range c.projects {
-		// Per-project resources go between this and the project
-		// anchor; per-service collectors at phases 2-8 will plug
-		// in here.
-		project := c.projectResource(projectID)
-		out = append(out, project)
+		out = append(out, c.projectResource(projectID))
 	}
+	// IAM is per-project. Compute / GCS / Cloud SQL / Logging /
+	// KMS / BigQuery land in subsequent phases and plug in here.
+	out = c.collectIAM(ctx, out)
 	return out, nil
 }
 
