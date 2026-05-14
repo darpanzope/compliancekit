@@ -6,7 +6,7 @@
   Source of truth: internal/checks/**/*.go (the core.Check vars).
 -->
 
-This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **210 checks** across the providers below.
+This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **226 checks** across the providers below.
 
 Each check below has:
 
@@ -26,18 +26,18 @@ To inspect a single check from the CLI: `compliancekit checks show <id>`.
 | `digitalocean` | 74 |
 | `gcp` | 25 |
 | `hetzner` | 15 |
-| `kubernetes` | 51 |
+| `kubernetes` | 67 |
 | `linux` | 15 |
-| **total** | **210** |
+| **total** | **226** |
 
 ## By severity
 
 | Severity | Checks |
 |---|---:|
 | `critical` | 17 |
-| `high` | 56 |
-| `medium` | 69 |
-| `low` | 68 |
+| `high` | 59 |
+| `medium` | 78 |
+| `low` | 72 |
 
 ## aws
 
@@ -3457,6 +3457,95 @@ _Tags:_ `controllers`, `k8s`, `rollout`
 
 ---
 
+### `k8s-ingress-class-set`
+
+**Ingresses should set ingressClassName explicitly** &middot; severity `low` &middot; service `network` &middot; resource `k8s.ingress`
+
+Without `ingressClassName`, every ingress controller in the cluster may claim and serve the Ingress — leading to unpredictable routing on multi-controller clusters. Setting the class explicitly is unambiguous and the modern best practice.
+
+_Remediation:_
+
+> Set `spec.ingressClassName: <name>` (e.g. nginx, traefik, alb) on every Ingress. Remove the deprecated kubernetes.io/ingress.class annotation.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `4.1` | Establish and Maintain a Secure Configuration Process |
+| `iso27001` | `A.8.20` | Networks Security |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `hygiene`, `ingress`, `k8s`, `network`
+
+---
+
+### `k8s-ingress-dangerous-annotations`
+
+**Ingresses should not use snippet annotations (RCE risk)** &middot; severity `high` &middot; service `network` &middot; resource `k8s.ingress`
+
+ingress-nginx allows arbitrary nginx configuration via the `configuration-snippet`, `server-snippet`, `auth-snippet`, and `modsecurity-snippet` annotations. CVEs in this surface have repeatedly turned Ingress write access into cluster-wide RCE — most recently CVE-2025-1974 ('IngressNightmare'). Disable the snippet annotations cluster-wide (`--enable-snippets=false`) and audit any existing use.
+
+_Remediation:_
+
+> Remove the snippet annotations and reconfigure via ConfigMap settings or a dedicated module. Set `allow-snippet-annotations: false` on the ingress controller and `enable-snippets: false`.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.2` | Privileged Access Rights |
+| `iso27001` | `A.8.32` | Change Management |
+| `iso27001` | `A.8.9` | Configuration Management |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `critical`, `ingress`, `k8s`, `network`, `rce`
+
+---
+
+### `k8s-ingress-default-backend`
+
+**Ingresses should not declare a default backend** &middot; severity `low` &middot; service `network` &middot; resource `k8s.ingress`
+
+A default backend catches every unmatched request and sends it to the named service. That makes the ingress reachable for arbitrary hostnames (path traversal, SSRF surface). Most production setups prefer explicit host+path rules and let unmatched traffic 404.
+
+_Remediation:_
+
+> Remove `spec.defaultBackend` and add explicit `rules`. If you genuinely need a catch-all, document the intent.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.20` | Networks Security |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `ingress`, `k8s`, `network`
+
+---
+
+### `k8s-ingress-tls-missing`
+
+**Ingresses should configure TLS** &middot; severity `medium` &middot; service `network` &middot; resource `k8s.ingress`
+
+An Ingress without a `spec.tls` section terminates plain HTTP at the ingress controller. Outside of behind-a-LB setups where TLS terminates upstream, this exposes traffic in cleartext.
+
+_Remediation:_
+
+> Add a `spec.tls` entry referencing a Secret of type kubernetes.io/tls. cert-manager + Let's Encrypt is the standard automated path.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `3.10` | Encrypt Sensitive Data in Transit |
+| `iso27001` | `A.8.20` | Networks Security |
+| `iso27001` | `A.8.24` | Use of Cryptography |
+
+_Tags:_ `ingress`, `k8s`, `network`, `tls`
+
+---
+
 ### `k8s-job-backoff-limit`
 
 **Jobs should set a sensible backoffLimit** &middot; severity `low` &middot; service `jobs` &middot; resource `k8s.job`
@@ -3475,6 +3564,172 @@ _Maps to:_
 | `soc2` | `CC7.3` | System Operations - Incident Evaluation |
 
 _Tags:_ `jobs`, `k8s`, `reliability`
+
+---
+
+### `k8s-networkpolicy-allow-all-egress`
+
+**NetworkPolicies should not have allow-all egress rules** &middot; severity `medium` &middot; service `network` &middot; resource `k8s.networkpolicy`
+
+An empty `to` block in an egress rule allows traffic to anywhere — internal, external, the cloud control plane. The legitimate use cases are narrow; the dangerous ones are common.
+
+_Remediation:_
+
+> List the allowed destinations explicitly: `to: [{podSelector: {matchLabels: {...}}}]` for in-cluster, `to: [{ipBlock: {cidr: ..., except: ['169.254.169.254/32']}}]` for external (with the cloud IMDS excluded).
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `4.1` | Establish and Maintain a Secure Configuration Process |
+| `iso27001` | `A.8.20` | Networks Security |
+| `iso27001` | `A.8.22` | Segregation of Networks |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `egress`, `k8s`, `network`, `policy`
+
+---
+
+### `k8s-networkpolicy-allow-all-ingress`
+
+**NetworkPolicies should not have allow-all ingress rules** &middot; severity `medium` &middot; service `network` &middot; resource `k8s.networkpolicy`
+
+A NetworkPolicy with an empty `from` block (or a rule with no ingress fields beyond ports) allows traffic from anywhere in the cluster. This is rarely the intent — usually the operator meant 'from any pod in this namespace,' which requires an empty `podSelector` peer.
+
+_Remediation:_
+
+> Specify the source of allowed traffic explicitly: `from: [{podSelector: {}}]` for same-namespace, `from: [{namespaceSelector: {matchLabels: {...}}}]` for cross-namespace, `from: [{ipBlock: {cidr: ...}}]` for external.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `4.1` | Establish and Maintain a Secure Configuration Process |
+| `iso27001` | `A.8.20` | Networks Security |
+| `iso27001` | `A.8.22` | Segregation of Networks |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `k8s`, `network`, `policy`
+
+---
+
+### `k8s-networkpolicy-default-deny-egress`
+
+**Each namespace should have a default-deny egress NetworkPolicy** &middot; severity `medium` &middot; service `network` &middot; resource `k8s.namespace`
+
+Default-deny egress is the second half of namespace isolation. Without it, a compromised workload can call out to any internal service plus any external endpoint, exfiltrating data or pivoting to the cloud control plane via the node's IMDS. Pair with explicit allow rules to in-cluster DNS, upstream APIs, and any external dependencies.
+
+_Remediation:_
+
+> Apply a default-deny egress NetworkPolicy (`podSelector: {}`, `policyTypes: [Egress]`, no egress rules) plus allow-list rules to kube-dns and required external endpoints.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `4.1` | Establish and Maintain a Secure Configuration Process |
+| `iso27001` | `A.8.20` | Networks Security |
+| `iso27001` | `A.8.22` | Segregation of Networks |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `default-deny`, `egress`, `k8s`, `network`, `policy`
+
+---
+
+### `k8s-networkpolicy-default-deny-ingress`
+
+**Each namespace should have a default-deny ingress NetworkPolicy** &middot; severity `high` &middot; service `network` &middot; resource `k8s.namespace`
+
+Without a default-deny ingress NetworkPolicy, every pod in the namespace is reachable from every other pod in the cluster. A compromise of one pod becomes a lateral-movement primitive. The default-deny pattern is `podSelector: {}` + `policyTypes: [Ingress]` and no ingress rules — that baselines deny-all, and additive policies open specific flows.
+
+_Remediation:_
+
+> Apply the default-deny manifest to every workload namespace. Then add allow-list NetworkPolicies for the specific flows each workload needs.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `4.1` | Establish and Maintain a Secure Configuration Process |
+| `iso27001` | `A.8.20` | Networks Security |
+| `iso27001` | `A.8.22` | Segregation of Networks |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `default-deny`, `k8s`, `network`, `policy`
+
+---
+
+### `k8s-networkpolicy-empty-selector`
+
+**NetworkPolicies with empty podSelector apply to every pod** &middot; severity `low` &middot; service `network` &middot; resource `k8s.networkpolicy`
+
+An empty `podSelector` matches every pod in the namespace. That is the right choice for default-deny baselines but the wrong choice for additive allow-list policies — every such allow rule applies to every pod. Mostly informational; verify intent.
+
+_Remediation:_
+
+> If this is a default-deny policy, ignore (or rename the policy `default-deny`). If it is an additive allow rule, add a `matchLabels` clause to restrict scope.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `4.1` | Establish and Maintain a Secure Configuration Process |
+| `iso27001` | `A.8.20` | Networks Security |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `informational`, `k8s`, `network`, `policy`
+
+---
+
+### `k8s-networkpolicy-from-all-namespaces`
+
+**NetworkPolicies should not allow ingress from all namespaces** &middot; severity `medium` &middot; service `network` &middot; resource `k8s.networkpolicy`
+
+An ingress peer with `namespaceSelector: {}` selects every namespace in the cluster. The intent is usually to allow traffic from a specific tier (e.g. all `monitoring` namespaces) — instead it grants every workload from every tenant. Always pair namespaceSelector with at least one matchLabels rule.
+
+_Remediation:_
+
+> Add labels to source namespaces and reference them: `namespaceSelector: {matchLabels: {tier: monitoring}}`.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `4.1` | Establish and Maintain a Secure Configuration Process |
+| `iso27001` | `A.8.20` | Networks Security |
+| `iso27001` | `A.8.22` | Segregation of Networks |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `k8s`, `network`, `policy`
+
+---
+
+### `k8s-networkpolicy-namespace-coverage`
+
+**Workload namespaces should have at least one NetworkPolicy** &middot; severity `medium` &middot; service `network` &middot; resource `k8s.namespace`
+
+A namespace with no NetworkPolicy resources has a flat allow-all network. The bar for posture compliance frameworks (SOC 2, ISO 27001, NIST) is that *some* network segmentation exists. Default-deny is preferred (see related checks); even an allow-list policy is better than none.
+
+_Remediation:_
+
+> Apply at least one NetworkPolicy. The default-deny baseline is the safest starting point.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `4.1` | Establish and Maintain a Secure Configuration Process |
+| `iso27001` | `A.8.20` | Networks Security |
+| `iso27001` | `A.8.22` | Segregation of Networks |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `k8s`, `network`, `policy`
 
 ---
 
@@ -4412,6 +4667,120 @@ _Maps to:_
 | `soc2` | `CC6.1` | Logical and Physical Access Controls |
 
 _Tags:_ `hygiene`, `k8s`, `rbac`, `service-account`
+
+---
+
+### `k8s-service-external-ips`
+
+**Services should not set spec.externalIPs** &middot; severity `medium` &middot; service `network` &middot; resource `k8s.service`
+
+`spec.externalIPs` lets an operator route arbitrary node IPs to a Service. It bypasses both LoadBalancer and Ingress paths and exists primarily for legacy bare-metal deployments. There is a well-known privilege escalation via externalIPs if a tenant can mutate Services (CVE-2020-8554).
+
+_Remediation:_
+
+> Use `type: LoadBalancer` with a real LB, or `type: NodePort`, or an Ingress. If externalIPs is genuinely needed, deploy an admission policy restricting which IPs are allowed.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.20` | Networks Security |
+| `iso27001` | `A.8.22` | Segregation of Networks |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `external-ips`, `k8s`, `network`
+
+---
+
+### `k8s-service-loadbalancer-no-tls`
+
+**LoadBalancer Services should not expose plain HTTP only** &middot; severity `medium` &middot; service `network` &middot; resource `k8s.service`
+
+A LoadBalancer service that only exposes port 80 ships every request and response in cleartext. K8s does not handle TLS termination at the Service level — operators typically front the service with an Ingress or terminate TLS in-pod. Expose 443 too (or 443-only) so traffic can be encrypted.
+
+_Remediation:_
+
+> Add a 443/TCP port to the Service definition and terminate TLS at the workload, or front the workload with an Ingress carrying a TLS section.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `3.10` | Encrypt Sensitive Data in Transit |
+| `iso27001` | `A.8.20` | Networks Security |
+| `iso27001` | `A.8.24` | Use of Cryptography |
+
+_Tags:_ `k8s`, `loadbalancer`, `network`, `tls`
+
+---
+
+### `k8s-service-loadbalancer-source-ranges`
+
+**LoadBalancer Services should restrict source ranges** &middot; severity `high` &middot; service `network` &middot; resource `k8s.service`
+
+A Service with `type: LoadBalancer` and no `loadBalancerSourceRanges` is reachable from the entire public internet. For an admin endpoint (Argo CD, Prometheus, Grafana, internal SaaS dashboards) this is often unintended. Set source ranges to the operator's office / VPN CIDR.
+
+_Remediation:_
+
+> Add `spec.loadBalancerSourceRanges: [<cidr1>, <cidr2>]`. For workloads that genuinely should be public, document the intent via an annotation or waiver.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.20` | Networks Security |
+| `iso27001` | `A.8.22` | Segregation of Networks |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `exposure`, `k8s`, `loadbalancer`, `network`
+
+---
+
+### `k8s-service-nodeport`
+
+**Services should generally not use type: NodePort** &middot; severity `low` &middot; service `network` &middot; resource `k8s.service`
+
+`type: NodePort` opens a port on every node — every node, even those not running the workload. Without a network policy to filter traffic, the service is reachable from any node-attached subnet. Most modern clusters should use LoadBalancer or Ingress instead and let NodePort exist only as the kube-proxy implementation detail under those.
+
+_Remediation:_
+
+> Switch to LoadBalancer (real cloud LB) or Ingress (routed via an in-cluster controller). Keep NodePort only for tightly scoped infra (kube-apiserver via metallb, etc.).
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.20` | Networks Security |
+| `iso27001` | `A.8.22` | Segregation of Networks |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `k8s`, `network`, `nodeport`
+
+---
+
+### `k8s-service-public-without-network-policy`
+
+**Public Services should run in a namespace with at least one NetworkPolicy** &middot; severity `medium` &middot; service `network` &middot; resource `k8s.service`
+
+A namespace with a public-facing Service (LoadBalancer/NodePort) and no NetworkPolicy has no egress or ingress filtering — a compromise of the public-facing pod can talk to anything cluster-internal. Defense in depth requires at least one policy in the namespace, ideally a default-deny baseline.
+
+_Remediation:_
+
+> Apply a default-deny NetworkPolicy to the namespace (`podSelector: {}`, policyTypes: [Ingress, Egress]), then allow the specific flows the workload needs.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `4.1` | Establish and Maintain a Secure Configuration Process |
+| `iso27001` | `A.8.20` | Networks Security |
+| `iso27001` | `A.8.22` | Segregation of Networks |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `defense-in-depth`, `k8s`, `network`, `policy`
 
 ---
 

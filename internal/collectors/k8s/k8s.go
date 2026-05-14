@@ -181,6 +181,7 @@ func (c *Collector) Collect(ctx context.Context) ([]core.Resource, error) {
 			{"workloads", c.collectWorkloads},
 			{"controllers", c.collectControllers},
 			{"rbac", c.collectRBAC},
+			{"network", c.collectNetwork},
 		}
 
 		for _, s := range subs {
