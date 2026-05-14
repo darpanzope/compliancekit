@@ -6,7 +6,7 @@
   Source of truth: internal/checks/**/*.go (the core.Check vars).
 -->
 
-This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **149 checks** across the providers below.
+This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **152 checks** across the providers below.
 
 Each check below has:
 
@@ -25,18 +25,18 @@ To inspect a single check from the CLI: `compliancekit checks show <id>`.
 | `aws` | 30 |
 | `digitalocean` | 74 |
 | `gcp` | 25 |
-| `hetzner` | 5 |
+| `hetzner` | 8 |
 | `linux` | 15 |
-| **total** | **149** |
+| **total** | **152** |
 
 ## By severity
 
 | Severity | Checks |
 |---|---:|
-| `critical` | 9 |
-| `high` | 39 |
+| `critical` | 10 |
+| `high` | 40 |
 | `medium` | 53 |
-| `low` | 48 |
+| `low` | 49 |
 
 ## aws
 
@@ -2951,6 +2951,74 @@ _Tags:_ `backup`, `recovery`, `storage`
 ---
 
 ## hetzner
+
+### `hetzner-firewall-any-port-from-any`
+
+**Hetzner firewalls must not allow any-port from the public internet** &middot; severity `critical` &middot; service `firewalls` &middot; resource `hetzner.firewall`
+
+Hetzner firewall rules can omit the port to mean 'all ports.' An inbound rule with sources 0.0.0.0/0 and no port (or `1-65535`) for TCP/UDP effectively disables the firewall. Common shape of pasted-in incident-triage rules that survive past the incident.
+
+_Remediation:_
+
+> Replace the rule with explicit port lists. 'hcloud firewall replace-rules <name>' with a narrowly scoped rules.json. Audit history if available.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.20` | Networks Security |
+| `iso27001` | `A.8.22` | Segregation of Networks |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `catastrophic`, `exposure`, `firewall`
+
+---
+
+### `hetzner-firewall-orphan`
+
+**Hetzner firewalls should be applied to at least one resource** &middot; severity `low` &middot; service `firewalls` &middot; resource `hetzner.firewall`
+
+A firewall with zero AppliedTo entries protects nothing. They accumulate as servers are deleted but the firewalls are left behind. Cleaning them up makes 'which firewall protects this server?' answerable in one query.
+
+_Remediation:_
+
+> Either apply the firewall to a server or label selector ('hcloud firewall apply-to-resource ...') or delete it ('hcloud firewall delete <name>').
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `1.1` | Establish and Maintain Detailed Enterprise Asset Inventory |
+| `iso27001` | `A.5.9` | Inventory of Information and Other Associated Assets |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `firewall`, `hygiene`
+
+---
+
+### `hetzner-firewall-ssh-from-any`
+
+**Hetzner firewalls must not allow SSH (port 22) from the public internet** &middot; severity `high` &middot; service `firewalls` &middot; resource `hetzner.firewall`
+
+An inbound rule allowing TCP 22 from 0.0.0.0/0 or ::/0 exposes SSH brute-force attempts to every host on the internet. Restrict to bastion IPs, VPN ranges, or use the Hetzner Cloud Console SSH gateway.
+
+_Remediation:_
+
+> Replace the rule with a narrow source: 'hcloud firewall replace-rules <name> --rules-file rules.json' with sources scoped to your operator CIDRs.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `12.2` | Establish and Maintain a Secure Network Architecture |
+| `cis-v8` | `4.4` | Implement and Manage a Firewall on Servers |
+| `iso27001` | `A.8.21` | Security of Network Services |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `exposure`, `firewall`, `ssh`
+
+---
 
 ### `hetzner-server-locked`
 
