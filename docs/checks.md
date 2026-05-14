@@ -6,7 +6,7 @@
   Source of truth: internal/checks/**/*.go (the core.Check vars).
 -->
 
-This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **75 checks** across the providers below.
+This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **78 checks** across the providers below.
 
 Each check below has:
 
@@ -23,19 +23,19 @@ To inspect a single check from the CLI: `compliancekit checks show <id>`.
 | Provider | Checks |
 |---|---:|
 | `aws` | 30 |
-| `digitalocean` | 5 |
+| `digitalocean` | 8 |
 | `gcp` | 25 |
 | `linux` | 15 |
-| **total** | **75** |
+| **total** | **78** |
 
 ## By severity
 
 | Severity | Checks |
 |---|---:|
 | `critical` | 5 |
-| `high` | 31 |
-| `medium` | 29 |
-| `low` | 10 |
+| `high` | 32 |
+| `medium` | 30 |
+| `low` | 11 |
 
 ## aws
 
@@ -733,6 +733,70 @@ _Tags:_ `backup`, `recovery`, `s3`
 ---
 
 ## digitalocean
+
+### `do-account-email-verified`
+
+**DigitalOcean account email must be verified** &middot; severity `medium` &middot; service `account` &middot; resource `digitalocean.account`
+
+Email verification is the prerequisite for billing alerts, password-reset flows, and 2FA recovery codes being delivered to the right inbox. An unverified email means every account-recovery story falls back to support tickets, which is too slow for incident response.
+
+_Remediation:_
+
+> Open the verification email DO sent at signup. If missing, log in and request a fresh one from Settings > Account. Change the address first if the current one is compromised or a personal inbox -- production accounts should point at a role-based address (eg. ops@example.com) with at least two readers.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `account`, `identity`
+
+---
+
+### `do-account-status-active`
+
+**DigitalOcean account must be in 'active' status** &middot; severity `high` &middot; service `account` &middot; resource `digitalocean.account`
+
+DigitalOcean's account.status field surfaces billing failures, ToS holds, and suspensions. A 'warning' or 'locked' account loses access to new droplet creation, snapshot restoration, and any recovery flow that depends on billing being current. Continuous compliance evidence becomes impossible to collect from a non-active account.
+
+_Remediation:_
+
+> Check the DO control panel for the operative warning. Common causes: expired payment method, exceeded prepaid balance, ToS dispute. Resolve before any subsequent compliance-relevant change; everything else in this report depends on the platform being responsive.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.5.30` | ICT Readiness for Business Continuity |
+| `iso27001` | `A.8.6` | Capacity Management |
+| `soc2` | `A1.2` | Availability - Backup and Recovery |
+
+_Tags:_ `account`, `platform-health`
+
+---
+
+### `do-account-uses-named-team`
+
+**Production DigitalOcean accounts should use a named team** &middot; severity `low` &middot; service `account` &middot; resource `digitalocean.account`
+
+DigitalOcean creates an implicit 'Personal' team for every new account. Running production workloads under the Personal team is single-user by definition -- if the operator is unavailable (sick, on leave, departed) there is no second party authorised to issue tokens, manage billing, or rotate credentials. A named team with at least two members is the minimum bus-factor.
+
+_Remediation:_
+
+> Create a team via 'doctl invoice list --team <name>' workflow or the Settings > Team UI. Move resources by transferring projects under the new team. Add at least one co-administrator. The Personal team can stay for non-prod experiments; the audit-relevant workloads belong on a real team.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `6.8` | Define and Maintain Role-Based Access Control |
+| `iso27001` | `A.5.15` | Access Control |
+| `soc2` | `CC1.4` | Commitment to Competence |
+
+_Tags:_ `account`, `bus-factor`
+
+---
 
 ### `do-droplet-backups-disabled`
 
