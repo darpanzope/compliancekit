@@ -6,7 +6,7 @@
   Source of truth: internal/checks/**/*.go (the core.Check vars).
 -->
 
-This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **78 checks** across the providers below.
+This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **82 checks** across the providers below.
 
 Each check below has:
 
@@ -23,10 +23,10 @@ To inspect a single check from the CLI: `compliancekit checks show <id>`.
 | Provider | Checks |
 |---|---:|
 | `aws` | 30 |
-| `digitalocean` | 8 |
+| `digitalocean` | 12 |
 | `gcp` | 25 |
 | `linux` | 15 |
-| **total** | **78** |
+| **total** | **82** |
 
 ## By severity
 
@@ -34,8 +34,8 @@ To inspect a single check from the CLI: `compliancekit checks show <id>`.
 |---|---:|
 | `critical` | 5 |
 | `high` | 32 |
-| `medium` | 30 |
-| `low` | 11 |
+| `medium` | 33 |
+| `low` | 12 |
 
 ## aws
 
@@ -780,7 +780,7 @@ _Tags:_ `account`, `platform-health`
 
 **Production DigitalOcean accounts should use a named team** &middot; severity `low` &middot; service `account` &middot; resource `digitalocean.account`
 
-DigitalOcean creates an implicit 'Personal' team for every new account. Running production workloads under the Personal team is single-user by definition -- if the operator is unavailable (sick, on leave, departed) there is no second party authorised to issue tokens, manage billing, or rotate credentials. A named team with at least two members is the minimum bus-factor.
+DigitalOcean creates an implicit 'Personal' team for every new account. Running production workloads under the Personal team is single-user by definition -- if the operator is unavailable (sick, on leave, departed) there is no second party authorized to issue tokens, manage billing, or rotate credentials. A named team with at least two members is the minimum bus-factor.
 
 _Remediation:_
 
@@ -819,6 +819,28 @@ _Maps to:_
 | `soc2` | `CC6.6` | Logical Access Security - Boundaries |
 
 _Tags:_ `backup`, `recovery`
+
+---
+
+### `do-droplet-monitoring-disabled`
+
+**Droplets should have the DigitalOcean monitoring agent enabled** &middot; severity `medium` &middot; service `droplets` &middot; resource `digitalocean.droplet`
+
+DigitalOcean's monitoring agent (do-agent) is required for the platform's alerting and dashboard story. Without it, resource-level metrics (CPU, memory, disk, network) are not reported and the alerts API has nothing to fire on. SOC 2 CC7.2 + CC7.3 and ISO 27001 A.8.16 both require continuous operational monitoring of production resources.
+
+_Remediation:_
+
+> Enable monitoring via 'doctl compute droplet-action enable-monitoring <id>' or set 'monitoring = true' in the Terraform digitalocean_droplet resource. New droplets created via the UI have a checkbox for this at create time.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.16` | Monitoring Activities |
+| `soc2` | `CC7.2` | System Operations - Monitoring |
+| `soc2` | `CC7.3` | System Operations - Incident Evaluation |
+
+_Tags:_ `alerting`, `droplet`, `monitoring`
 
 ---
 
@@ -869,6 +891,30 @@ _Tags:_ `attribution`, `inventory`
 
 ---
 
+### `do-droplet-no-vpc`
+
+**Droplets must belong to a VPC** &middot; severity `medium` &middot; service `droplets` &middot; resource `digitalocean.droplet`
+
+DigitalOcean droplets created before mid-2020 may not be associated with a VPC. Without VPC membership the droplet sits on a region-wide shared private network where every droplet in the region can reach every other droplet's private interface. VPC isolation is the modern baseline; a missing vpc_uuid is almost certainly a legacy droplet that should be migrated.
+
+_Remediation:_
+
+> Create or pick a VPC: 'doctl vpcs list'. Move the droplet by destroying and recreating inside the VPC (DO does not support migrating an existing droplet across VPCs in place; the move is destructive). Take a snapshot first.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `12.2` | Establish and Maintain a Secure Network Architecture |
+| `iso27001` | `A.8.20` | Networks Security |
+| `iso27001` | `A.8.22` | Segregation of Networks |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `droplet`, `network`, `segmentation`
+
+---
+
 ### `do-droplet-old-image`
 
 **Droplet base image should be less than one year old** &middot; severity `medium` &middot; service `droplets` &middot; resource `digitalocean.droplet`
@@ -890,6 +936,52 @@ _Maps to:_
 | `soc2` | `CC7.2` | System Operations - Monitoring |
 
 _Tags:_ `patching`, `vulnerability`
+
+---
+
+### `do-droplet-private-networking-disabled`
+
+**Droplets must have private networking enabled** &middot; severity `medium` &middot; service `droplets` &middot; resource `digitalocean.droplet`
+
+Without the 'private_networking' feature, a droplet has no internal interface; every connection to a peer in the same region routes over the public Internet, bypasses the firewall's allow-from-private-only rules, and inflates egress bandwidth bills. Modern DO droplets enable this by default; legacy droplets sometimes have it disabled.
+
+_Remediation:_
+
+> DO does not support enabling private networking on an existing droplet -- the droplet must be recreated. Take a snapshot, destroy the droplet, recreate from the snapshot with the 'private_networking' feature enabled (default for new droplets since 2022).
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `12.2` | Establish and Maintain a Secure Network Architecture |
+| `iso27001` | `A.8.20` | Networks Security |
+| `iso27001` | `A.8.22` | Segregation of Networks |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `droplet`, `network`, `private-networking`
+
+---
+
+### `do-droplet-status-non-active`
+
+**Droplets should be in 'active' status** &middot; severity `low` &middot; service `droplets` &middot; resource `digitalocean.droplet`
+
+A droplet in any state other than 'active' is either powered off (still billing, not running services), partially provisioned (state new), archived, or in an unknown state the API can't classify. Each of these is a posture signal worth reviewing -- powered-off droplets in particular often indicate forgotten environments that still cost money and still have attack surface (their public IPs are reserved).
+
+_Remediation:_
+
+> List non-active droplets with 'doctl compute droplet list --format Name,Status'. For each, decide: bring it back online (power-on), destroy if obsolete, or document the reason in the resource tags.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `1.1` | Establish and Maintain Detailed Enterprise Asset Inventory |
+| `iso27001` | `A.5.9` | Inventory of Information and Other Associated Assets |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `droplet`, `hygiene`
 
 ---
 
