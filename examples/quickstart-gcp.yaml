@@ -1,0 +1,31 @@
+# compliancekit.yaml — Google Cloud quickstart.
+#
+# Auth uses Application Default Credentials. Any of these works:
+#   - gcloud auth application-default login           (laptop)
+#   - export GOOGLE_APPLICATION_CREDENTIALS=path/to/sa.json
+#   - Workload Identity Federation (CI; preferred over SA keys)
+#   - GCE metadata server (when running on a GCE VM)
+#
+# compliancekit only reads — narrow your principal to roles/viewer
+# or a custom least-privilege role in production.
+#
+# Run:    compliancekit doctor
+#         compliancekit scan
+
+providers:
+  gcp:
+    enabled: true
+    projects: []        # empty = "the credential's default project"
+    # projects:         # explicit list for multi-project scans:
+    #   - my-prod
+    #   - my-staging
+
+frameworks: [soc2, iso27001, cis-v8]
+
+severity:
+  fail_on: high
+  min_report: info
+
+output:
+  format: [json, html, markdown]
+  out_dir: ./out

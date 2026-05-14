@@ -1,0 +1,30 @@
+# compliancekit.yaml — AWS quickstart.
+#
+# Auth uses the standard SDK chain. Any of these works:
+#   - export AWS_ACCESS_KEY_ID=AKIA... AWS_SECRET_ACCESS_KEY=...
+#   - export AWS_PROFILE=myprofile      (from ~/.aws/credentials)
+#   - IAM role via IMDSv2 (when running on an EC2 instance)
+#   - GitHub Actions OIDC (when running in CI)
+#
+# compliancekit only reads — narrow your principal to ReadOnlyAccess
+# or a custom least-privilege policy in production.
+#
+# Run:    compliancekit doctor
+#         compliancekit scan
+
+providers:
+  aws:
+    enabled: true
+    regions: []         # empty = "every region visible to the credential"
+    # profile: prod     # uncomment to override AWS_PROFILE
+    # role_arn: arn:aws:iam::123456789012:role/ScannerRole
+
+frameworks: [soc2, iso27001, cis-v8]
+
+severity:
+  fail_on: high
+  min_report: info
+
+output:
+  format: [json, html, markdown]
+  out_dir: ./out

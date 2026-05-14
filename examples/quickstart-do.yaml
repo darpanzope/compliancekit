@@ -1,0 +1,25 @@
+# compliancekit.yaml — DigitalOcean quickstart.
+#
+# Prereq: export DO_API_TOKEN=dop_v1_xxxxxxxxxxxx
+#         (Generate one at https://cloud.digitalocean.com/account/api/tokens
+#          — read scope is enough; compliancekit does not write.)
+#
+# Run:    compliancekit doctor          # confirms auth + reachability
+#         compliancekit scan            # writes findings.json to ./out/
+#
+# See GETTING_STARTED.md for the full walk-through.
+
+providers:
+  digitalocean:
+    enabled: true
+    token_env: DO_API_TOKEN
+
+frameworks: [soc2, iso27001, cis-v8]
+
+severity:
+  fail_on: high     # exit non-zero on any high+ finding
+  min_report: info
+
+output:
+  format: [json, html, markdown]
+  out_dir: ./out

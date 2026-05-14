@@ -39,7 +39,7 @@ You don't have a security team. You don't have an SRE. You have a Saturday.
 
 ```
 $ compliancekit scan
-Scanning digitalocean, linux (35 checks)...
+scanning digitalocean, linux (159 checks)...
 ✗ web-01: no firewall attached                       (high, soc2/CC6.6)
 ✗ web-01: SSH allowed from 0.0.0.0/0                 (high, iso27001/A.8.21)
 ✓ web-01: backups enabled                            (medium)
@@ -132,23 +132,81 @@ cosign verify-blob \
   compliancekit_<version>_checksums.txt
 ```
 
-## Sixty-second tour
+## Quickstart
+
+End-to-end first scan in about a minute. Replace `<provider>` with the
+cloud you actually use — each provider's auth is different, so pick one
+to start.
+
+**1. Install** (see [§Install](#install) above for other paths):
+
+```sh
+brew install darpanzope/tap/compliancekit
+```
+
+**2. Set the auth env var for your provider:**
+
+| Provider | Env var | Where to get it |
+|---|---|---|
+| DigitalOcean | `DO_API_TOKEN` | https://cloud.digitalocean.com/account/api/tokens (read scope) |
+| AWS | Standard SDK chain | `aws configure` / `AWS_PROFILE` / IMDSv2 / GitHub OIDC |
+| GCP | Application Default Credentials | `gcloud auth application-default login` |
+| Hetzner Cloud | `HCLOUD_TOKEN` | Hetzner Cloud Console → Security → API Tokens (read scope) |
+
+Example for DO:
+
+```sh
+export DO_API_TOKEN=dop_v1_xxxxxxxxxxxx
+```
+
+**3. Grab a minimal config** matching your provider:
+
+```sh
+# pick one
+curl -O https://raw.githubusercontent.com/darpanzope/compliancekit/main/examples/quickstart-do.yaml
+curl -O https://raw.githubusercontent.com/darpanzope/compliancekit/main/examples/quickstart-aws.yaml
+curl -O https://raw.githubusercontent.com/darpanzope/compliancekit/main/examples/quickstart-gcp.yaml
+curl -O https://raw.githubusercontent.com/darpanzope/compliancekit/main/examples/quickstart-hetzner.yaml
+
+mv quickstart-*.yaml compliancekit.yaml
+```
+
+**4. Confirm auth + run the scan:**
+
+```sh
+compliancekit doctor                # confirms token resolves + API is reachable
+compliancekit scan                  # writes findings.{json,html,markdown} into ./out/
+```
+
+Expected output (numbers vary by account):
 
 ```
-# 1. Smoke test config + connectivity.
-compliancekit doctor
+scanning digitalocean (159 checks)...
+wrote ./out/findings.json
+wrote ./out/findings.html
+wrote ./out/findings.markdown
 
-# 2. Scan everything enabled in compliancekit.yaml.
-compliancekit scan --output json,html --out-dir out/
+592 findings (23 critical, 164 high, 190 medium, 215 low)
+Hardening score: 67/100 (coverage 100%)
+findings at or above high severity present
+```
 
-# 3. Turn findings into an evidence folder an auditor will accept.
+Open `out/findings.html` in your browser — search/filter, dark mode,
+drill into any finding by ID, severity, or resource.
+
+**5. Generate the auditor-ready evidence pack (optional):**
+
+```sh
 compliancekit evidence --in out/findings.json --out evidence/2026-Q2/
 open evidence/2026-Q2/summary.html
 ```
 
-Full CLI reference in [CLI.md](CLI.md). Config schema in [CONFIGURATION.md](CONFIGURATION.md).
+For the long-form walk-through (per-provider auth deep-dive, CI
+integration, evidence pack structure, output formats), see
+**[GETTING_STARTED.md](GETTING_STARTED.md)**. Full CLI reference in
+[CLI.md](CLI.md). Config schema in [CONFIGURATION.md](CONFIGURATION.md).
 
-## What's in the box at v0.5
+## What's in the box today
 
 Full per-check reference (auto-generated, IDs / severities / framework mappings / remediation): [docs/checks.md](docs/checks.md).
 

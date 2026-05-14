@@ -1,0 +1,27 @@
+# compliancekit.yaml — Hetzner Cloud quickstart.
+#
+# Prereq: export HCLOUD_TOKEN=hcloud-xxxxxxxxxxxx
+#         (Generate one at https://console.hetzner.cloud/projects/<id>/security/tokens
+#          — Read scope is enough.)
+#
+# One token = one Hetzner project. To scan multiple projects, run
+# multiple scans with different tokens — Hetzner has no
+# multi-project surface in the cloud API.
+#
+# Run:    compliancekit doctor
+#         compliancekit scan
+
+providers:
+  hetzner:
+    enabled: true
+    token_env: HCLOUD_TOKEN
+
+frameworks: [soc2, iso27001, cis-v8]
+
+severity:
+  fail_on: high
+  min_report: info
+
+output:
+  format: [json, html, markdown]
+  out_dir: ./out
