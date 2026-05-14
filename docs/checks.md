@@ -6,7 +6,7 @@
   Source of truth: internal/checks/**/*.go (the core.Check vars).
 -->
 
-This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **65 checks** across the providers below.
+This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **68 checks** across the providers below.
 
 Each check below has:
 
@@ -24,17 +24,17 @@ To inspect a single check from the CLI: `compliancekit checks show <id>`.
 |---|---:|
 | `aws` | 30 |
 | `digitalocean` | 5 |
-| `gcp` | 15 |
+| `gcp` | 18 |
 | `linux` | 15 |
-| **total** | **65** |
+| **total** | **68** |
 
 ## By severity
 
 | Severity | Checks |
 |---|---:|
 | `critical` | 4 |
-| `high` | 28 |
-| `medium` | 23 |
+| `high` | 29 |
+| `medium` | 25 |
 | `low` | 10 |
 
 ## aws
@@ -1113,6 +1113,75 @@ _Maps to:_
 | `soc2` | `CC6.1` | Logical and Physical Access Controls |
 
 _Tags:_ `credentials`, `iam`, `rotation`, `service-account`
+
+---
+
+### `gcp-sql-automated-backups`
+
+**Cloud SQL instances must have automated backups enabled** &middot; severity `medium` &middot; service `sql` &middot; resource `gcp.sql.instance`
+
+Automated backups are the recovery path from data corruption, accidental delete, and ransomware. Without them the operator is one DROP TABLE away from total loss. CIS GCP Foundations 6.7.
+
+_Remediation:_
+
+> Enable backups: 'gcloud sql instances patch <name> --backup-start-time=03:00'. Pair with point-in-time recovery (--enable-point-in-time-recovery for Postgres, --enable-bin-log for MySQL) for sub-day RPO.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `11.2` | Perform Automated Backups |
+| `iso27001` | `A.8.13` | Information Backup |
+| `iso27001` | `A.8.14` | Redundancy of Information Processing Facilities |
+| `soc2` | `A1.2` | Availability - Backup and Recovery |
+
+_Tags:_ `backup`, `recovery`, `sql`
+
+---
+
+### `gcp-sql-deletion-protection`
+
+**Cloud SQL instances must have deletion protection enabled** &middot; severity `medium` &middot; service `sql` &middot; resource `gcp.sql.instance`
+
+Deletion protection blocks accidental instance deletion at the API. It's the last guard between a stray Terraform destroy or console click and total loss of the production database (along with the automated backups, which live inside the instance). Cheap to enable, hard to recover without.
+
+_Remediation:_
+
+> 'gcloud sql instances patch <name> --deletion-protection'. For Terraform-managed fleets, set deletion_protection = true on the google_sql_database_instance resource.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `11.2` | Perform Automated Backups |
+| `iso27001` | `A.8.13` | Information Backup |
+| `soc2` | `A1.2` | Availability - Backup and Recovery |
+
+_Tags:_ `data-protection`, `recovery`, `sql`
+
+---
+
+### `gcp-sql-no-public-ip`
+
+**Cloud SQL instances must not have public IPv4** &middot; severity `high` &middot; service `sql` &middot; resource `gcp.sql.instance`
+
+Cloud SQL with a public IPv4 address is reachable from the internet, gated only by authorized-network IP allowlists and the database engine's own auth. Use private IP (VPC peering) so the instance has no public attack surface at all. CIS GCP Foundations 6.6.
+
+_Remediation:_
+
+> Disable public IP: 'gcloud sql instances patch <name> --no-assign-ip --network=projects/<project>/global/networks/<vpc>'. Apps connect via private IP, the Cloud SQL Auth Proxy, or a connector with IAM auth.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `3.3` | Configure Data Access Control Lists |
+| `iso27001` | `A.8.20` | Networks Security |
+| `iso27001` | `A.8.22` | Segregation of Networks |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `network-exposure`, `public-access`, `sql`
 
 ---
 
