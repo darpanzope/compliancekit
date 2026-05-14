@@ -143,6 +143,9 @@ func (c *Collector) Collect(ctx context.Context) ([]core.Resource, error) {
 	out = c.collectConfig(ctx, regions, out)
 	out = c.collectGuardDuty(ctx, regions, out)
 
+	// v0.11: EKS for the K8s posture arc.
+	out = c.collectEKS(ctx, regions, out)
+
 	out = append(out, account)
 	return out, nil
 }

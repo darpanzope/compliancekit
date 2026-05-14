@@ -6,7 +6,7 @@
   Source of truth: internal/checks/**/*.go (the core.Check vars).
 -->
 
-This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **264 checks** across the providers below.
+This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **276 checks** across the providers below.
 
 Each check below has:
 
@@ -26,18 +26,18 @@ To inspect a single check from the CLI: `compliancekit checks show <id>`.
 | `digitalocean` | 74 |
 | `gcp` | 25 |
 | `hetzner` | 15 |
-| `kubernetes` | 105 |
+| `kubernetes` | 117 |
 | `linux` | 15 |
-| **total** | **264** |
+| **total** | **276** |
 
 ## By severity
 
 | Severity | Checks |
 |---|---:|
 | `critical` | 17 |
-| `high` | 61 |
-| `medium` | 94 |
-| `low` | 92 |
+| `high` | 65 |
+| `medium` | 99 |
+| `low` | 95 |
 
 ## aws
 
@@ -3496,6 +3496,274 @@ _Maps to:_
 | `iso27001` | `A.8.32` | Change Management |
 
 _Tags:_ `controllers`, `k8s`, `rollout`
+
+---
+
+### `k8s-eks-authentication-mode`
+
+**EKS clusters should use API access entries (not aws-auth ConfigMap)** &middot; severity `low` &middot; service `eks` &middot; resource `aws.eks.cluster`
+
+The legacy aws-auth ConfigMap is error-prone — one typo locks operators out of the cluster. EKS Access Entries (GA in 2024) are the API-driven replacement: per-principal grants without a YAML round-trip. `authenticationMode: API` or `API_AND_CONFIG_MAP` enables them.
+
+_Remediation:_
+
+> `aws eks update-cluster-config --name <c> --access-config authenticationMode=API_AND_CONFIG_MAP` (with migration window) then API once aws-auth is fully migrated.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.5.15` | Access Control |
+| `iso27001` | `A.8.2` | Privileged Access Rights |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `auth`, `eks`, `k8s`
+
+---
+
+### `k8s-eks-cluster-active`
+
+**EKS clusters should be in ACTIVE status** &middot; severity `high` &middot; service `eks` &middot; resource `aws.eks.cluster`
+
+A cluster in CREATING / UPDATING / DELETING is mid-lifecycle; in FAILED state it has a control-plane issue that requires AWS support to resolve. ACTIVE is the only steady-state.
+
+_Remediation:_
+
+> Open an AWS support case if a cluster is stuck in FAILED. For long UPDATING runs, check `aws eks describe-update ...` for the in-flight change.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.16` | Monitoring Activities |
+| `soc2` | `CC7.3` | System Operations - Incident Evaluation |
+
+_Tags:_ `eks`, `k8s`, `reliability`
+
+---
+
+### `k8s-eks-control-plane-logging`
+
+**EKS clusters should enable all control-plane log types** &middot; severity `medium` &middot; service `eks` &middot; resource `aws.eks.cluster`
+
+Control-plane logging ships api / audit / authenticator / controllerManager / scheduler logs to CloudWatch. Without audit logs in particular, incident response on a cluster compromise is severely limited.
+
+_Remediation:_
+
+> `aws eks update-cluster-config --name <c> --logging '{"clusterLogging":[{"types":["api","audit","authenticator","controllerManager","scheduler"],"enabled":true}]}'`.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `8.10` | Retain Audit Logs |
+| `cis-v8` | `8.5` | Collect Detailed Audit Logs |
+| `iso27001` | `A.8.15` | Logging |
+| `iso27001` | `A.8.16` | Monitoring Activities |
+| `soc2` | `CC7.2` | System Operations - Monitoring |
+
+_Tags:_ `eks`, `k8s`, `logging`
+
+---
+
+### `k8s-eks-irsa-enabled`
+
+**EKS clusters should expose an OIDC provider for IRSA** &middot; severity `medium` &middot; service `eks` &middot; resource `aws.eks.cluster`
+
+IAM Roles for Service Accounts (IRSA) requires the EKS cluster to expose an OIDC issuer. Without it, in-cluster workloads must use the node's instance profile credentials — a much broader privilege grant than per-SA roles.
+
+_Remediation:_
+
+> `eksctl utils associate-iam-oidc-provider --cluster <name>` (or terraform aws_iam_openid_connect_provider). Then annotate SAs with `eks.amazonaws.com/role-arn`.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.5.15` | Access Control |
+| `iso27001` | `A.8.2` | Privileged Access Rights |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `eks`, `iam`, `irsa`, `k8s`
+
+---
+
+### `k8s-eks-nodegroup-bottlerocket`
+
+**EKS node groups should use Bottlerocket or AL2023** &middot; severity `low` &middot; service `eks` &middot; resource `aws.eks.nodegroup`
+
+Bottlerocket is purpose-built for K8s nodes — minimal attack surface, immutable rootfs, kubelet pre-configured. AL2023 is the modern Amazon Linux. AL2 is EOL on the EKS roadmap; Windows AMIs have their own audit considerations.
+
+_Remediation:_
+
+> Set `amiType: BOTTLEROCKET_x86_64` (or `BOTTLEROCKET_ARM_64`) on new node groups. Migrate existing AL2 node groups via blue/green replacement.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `4.1` | Establish and Maintain a Secure Configuration Process |
+| `iso27001` | `A.8.8` | Management of Technical Vulnerabilities |
+| `iso27001` | `A.8.9` | Configuration Management |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `ami`, `eks`, `k8s`, `nodegroup`
+
+---
+
+### `k8s-eks-nodegroup-launch-template`
+
+**EKS node groups should use a launch template** &middot; severity `low` &middot; service `eks` &middot; resource `aws.eks.nodegroup`
+
+Without a launch template, EKS provisions instances with default IMDS config (hop limit 2, allowing pods to reach the metadata service and acquire the node role's credentials). A custom launch template lets you set `httpPutResponseHopLimit: 1` plus user-data hardening.
+
+_Remediation:_
+
+> Create an EC2 launch template with `metadataOptions.httpPutResponseHopLimit: 1` and `httpTokens: required`. Reference it in the nodegroup spec.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `4.1` | Establish and Maintain a Secure Configuration Process |
+| `iso27001` | `A.8.2` | Privileged Access Rights |
+| `iso27001` | `A.8.9` | Configuration Management |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `eks`, `imds`, `k8s`, `nodegroup`
+
+---
+
+### `k8s-eks-nodegroup-ssh`
+
+**EKS node groups should not enable SSH remote access** &middot; severity `medium` &middot; service `eks` &middot; resource `aws.eks.nodegroup`
+
+SSH into a node bypasses every K8s control: kubelet credentials, network policy, RBAC. The modern operational replacement is SSM Session Manager, which provides per-session auth + audit. Disable EC2-key-based SSH on node groups.
+
+_Remediation:_
+
+> Recreate the node group without `remoteAccess.ec2SshKey`. For break-glass node access, use SSM Session Manager with per-engineer IAM grants.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `4.1` | Establish and Maintain a Secure Configuration Process |
+| `iso27001` | `A.8.2` | Privileged Access Rights |
+| `iso27001` | `A.8.20` | Networks Security |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `eks`, `k8s`, `nodegroup`, `ssh`
+
+---
+
+### `k8s-eks-nodegroup-version-skew`
+
+**EKS node group version should match the cluster version** &middot; severity `medium` &middot; service `eks` &middot; resource `aws.eks.nodegroup`
+
+K8s supports kubelet versions up to 3 minor releases behind the API server (post-1.28) — but the operational sweet spot is to keep node groups aligned. A persistent skew indicates a stalled upgrade.
+
+_Remediation:_
+
+> `aws eks update-nodegroup-version --cluster-name <c> --nodegroup-name <ng>`. For managed node groups, this triggers a rolling replacement.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.8` | Management of Technical Vulnerabilities |
+| `soc2` | `CC7.1` | System Operations - Vulnerabilities |
+
+_Tags:_ `eks`, `k8s`, `nodegroup`, `upgrade`
+
+---
+
+### `k8s-eks-private-endpoint`
+
+**EKS clusters should enable the private API endpoint** &middot; severity `medium` &middot; service `eks` &middot; resource `aws.eks.cluster`
+
+Enabling `endpointPrivateAccess` puts the API server on a VPC endpoint reachable from within the VPC without transit through the public internet. Even when public access is also enabled, the private endpoint is the preferred path for in-cluster controllers (which would otherwise NAT out and back in).
+
+_Remediation:_
+
+> `aws eks update-cluster-config --name <c> --resources-vpc-config endpointPrivateAccess=true`.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.20` | Networks Security |
+| `iso27001` | `A.8.22` | Segregation of Networks |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `eks`, `endpoint`, `k8s`
+
+---
+
+### `k8s-eks-public-endpoint-open`
+
+**EKS API endpoint should not be publicly reachable without CIDR restriction** &middot; severity `high` &middot; service `eks` &middot; resource `aws.eks.cluster`
+
+An EKS cluster with `endpointPublicAccess: true` and publicAccessCidrs of 0.0.0.0/0 exposes the Kubernetes API to the entire internet. The first defense is RBAC, but the primary mitigation is to restrict the API endpoint to your operator CIDRs or run with private-only access.
+
+_Remediation:_
+
+> `aws eks update-cluster-config --name <c> --resources-vpc-config endpointPublicAccess=true,publicAccessCidrs=<your-cidr>`. Better: switch to `endpointPrivateAccess=true,endpointPublicAccess=false` and reach the API via VPN/bastion.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.20` | Networks Security |
+| `iso27001` | `A.8.22` | Segregation of Networks |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `critical`, `eks`, `exposure`, `k8s`
+
+---
+
+### `k8s-eks-secrets-encryption`
+
+**EKS clusters should encrypt secrets with KMS** &middot; severity `high` &middot; service `eks` &middot; resource `aws.eks.cluster`
+
+EKS supports envelope encryption of Kubernetes Secrets with a customer KMS key. Without it, Secret values rest in plaintext in etcd. Enabling encryptionConfig at cluster create is the only path; re-encryption of existing clusters requires a cluster replacement.
+
+_Remediation:_
+
+> At cluster creation: `aws eks create-cluster ... --encryption-config resources=secrets,provider={keyArn=<arn>}`. For existing clusters, plan a blue/green migration.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.10` | Information Deletion |
+| `iso27001` | `A.8.24` | Use of Cryptography |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `eks`, `encryption`, `k8s`, `secrets`
+
+---
+
+### `k8s-eks-version-supported`
+
+**EKS clusters should run a supported K8s version** &middot; severity `high` &middot; service `eks` &middot; resource `aws.eks.cluster`
+
+EKS supports each minor version for 14 months. A cluster on a deprecated minor will be force-upgraded by AWS, often at an inconvenient time. Stay on a current minor (1.28+ as of mid-2026).
+
+_Remediation:_
+
+> `aws eks update-cluster-version --name <c> --kubernetes-version 1.30`. Plan node-group version updates after the control plane is upgraded.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.8` | Management of Technical Vulnerabilities |
+| `soc2` | `CC7.1` | System Operations - Vulnerabilities |
+
+_Tags:_ `eks`, `k8s`, `upgrade`
 
 ---
 
