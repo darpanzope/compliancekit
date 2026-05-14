@@ -173,7 +173,7 @@ to the v0.1-v0.5 audience that put compliancekit on the map.
 | **v0.6** ✅ | **Drift + baseline + 0-100 hardening score** | "Your score went from 78 to 73 since Friday" |
 | **v0.7** ✅ | **AWS** | First-class AWS hardening, 30 checks across IAM/EC2/S3/RDS/CloudTrail/KMS/Config/GuardDuty |
 | **v0.8** ✅ | **GCP** | First-class GCP hardening, 25 checks across IAM/Compute/GCS/Cloud SQL/Logging/KMS/BigQuery |
-| **v0.9** | **DigitalOcean deepening** | 5 checks → 25; Spaces, LBs, VPCs, managed DBs, K8s clusters |
+| **v0.9** | **DigitalOcean depth pass — everything except DOKS** | 5 → ~75 checks; the most comprehensive OSS DigitalOcean scanner |
 | **v0.10** | **Hetzner Cloud** | The indie-cloud completion |
 | **v0.11** | Containers + K8s + EKS/GKE/DOKS-deep | From cluster to instance in one scan |
 | **v0.12** | Framework expansion (NIST 800-53 r5, HIPAA, PCI-DSS, MITRE ATT&CK) | Map every finding to ATT&CK |
@@ -426,50 +426,83 @@ Hardening score: 71/100
 
 ---
 
-### v0.9 — DigitalOcean deepening (weekend 9)
+### v0.9 — DigitalOcean depth pass (multi-weekend)
 
-**Goal:** turn the v0.1 minimum-viable DO coverage into a complete
-DO posture scanner. The audience that put compliancekit on the map
-deserves a depth pass.
+**Goal:** the most comprehensive OSS DigitalOcean security scanner.
+Cover every DO surface except DOKS (which lands as part of the v0.11
+K8s arc to ride one shared codebase across AWS / GCP / DO Kubernetes).
+No current OSS tool ships first-class DigitalOcean hardening —
+Prowler / ScoutSuite / CloudSploit all skip DO entirely; v0.9 fills
+the gap. ADR-007 set the slot at "DO deepening, 25 checks"; the
+scope was expanded to ~75 during the v0.8 → v0.9 transition because
+the cloudcommon abstractions from v0.7-v0.8 mean each additional DO
+check costs ~50-60% of what it would have at v0.7.
 
-**Today (v0.5):** 5 DO checks — droplets-no-firewall, ssh-from-any,
-backups-disabled, no-tags, old-image. **Goal at v0.9: 25 DO checks.**
+**Today (v0.8):** 5 DO checks — droplets-no-firewall, ssh-from-any,
+backups-disabled, no-tags, old-image. **Goal at v0.9: ~75 DO checks
+across 20 service families.**
 
-| Surface | New checks |
-|---|---|
-| **Spaces** (S3-compatible object storage) | 4 (public-listing, CDN tier, default encryption, lifecycle policy on critical buckets) |
-| **VPCs** | 3 (no default-VPC usage in prod, sane CIDR planning, peering hygiene) |
-| **Load Balancers** | 3 (HTTPS redirect, TLS ≥1.2, no anonymous health-check IPs in the allowlist) |
-| **Managed Databases** | 4 (trusted-sources only, automated backups on, point-in-time recovery for prod, end-of-life check) |
-| **DOKS** (cluster-level only; node-level lands at v0.11) | 3 (cluster version not EOL, surge-upgrade on, private endpoint where possible) |
-| **Container Registry** | 2 (image-retention policy, no `latest` tag in production manifests) |
-| **App Platform** | 1 (HTTPS-only, custom-domain TLS) |
+| Surface | New | Notes |
+|---|---:|---|
+| **Account / team hardening** | 3 | MFA, recovery email, billing alerts |
+| **Droplets** (deepening) | +4 | monitoring + droplet agents, VPC membership, public-IP discipline |
+| **Firewalls** (deepening) | +5 | RDP, ANY/ANY ingress, default-deny outbound, broad port ranges, orphans |
+| **VPCs / peering / NAT gateways** | 4 | no default VPC, orphan, cross-region peering, NAT presence |
+| **Load Balancers** | 5 | HTTPS redirect, TLS ≥1.2, healthchecks, sticky-session security, allowlist |
+| **Domains / DNS** | 4 | DNSSEC, CAA, SPF, DMARC |
+| **Certificates** | 2 | expiry threshold, deprecated key types |
+| **Managed Databases** | 8 | public access, trusted sources, TLS required, backups, version EOL, eviction policy, replicas, private network |
+| **Spaces** (S3-compatible object storage; aws-sdk-go-v2/s3 with DO endpoint) | 6 | public ACL, versioning, lifecycle, CORS wildcard, default encryption, access logging |
+| **Spaces access keys** | 2 | age, scope |
+| **Container Registry** | 3 | private visibility, garbage collection enabled, quota |
+| **App Platform** (PaaS) | 5 | env vars marked secret, custom-domain TLS, source repo visibility, alerts, deployment history |
+| **Functions** (serverless) | 3 | namespace region, public trigger surface, env-var secrets |
+| **CDN endpoints** | 2 | custom cert, TLS version |
+| **Block volumes** | 2 | orphan, snapshot recency |
+| **Snapshots** (droplet + volume) | 2 | age, public visibility |
+| **Reserved + floating IPs** | 2 | orphan IPv4, orphan IPv6 |
+| **Account-level SSH keys** | 2 | age, deprecated algorithm |
+| **Custom images** | 2 | public visibility, age |
+| **Monitoring + uptime checks** | 2 | basic alerts present, uptime checks on public droplets |
+| **Projects + tagging** | 2 | default project not used for prod, untagged resources |
 
-Plus existing v0.5 checks: 5. Total: 25.
+Plus existing v0.5 checks: 5. **Total: ~75.**
 
 **Plumbing**
 
-- All new resource types added to `internal/collectors/digitalocean/`
-  with corresponding `core.Resource` types.
-- The existing godo SDK client is reused; no new SDK dependency.
-- **godo rate-limit handling**: explicit per-resource pagination so
-  a 500-droplet account does not hammer the API. The existing
-  collector did one big `ListDroplets`; v0.9 introduces page-stream
-  iteration.
+- Collector restructure (phase 1): per-service files in
+  `internal/collectors/digitalocean/`, per-service errors emit
+  `digitalocean.collect_error` placeholders rather than aborting
+  the entire scan. Same pattern AWS / GCP use today.
+- `cloudcommon.Stamp` applied to every DO resource:
+  `AccountID = team-uuid`, `Region = region-slug`. Brings DO
+  parity with the AWS / GCP attribution.
+- godo SDK client reused (no new dep). Spaces is the one outlier:
+  no godo bucket API — uses `aws-sdk-go-v2/s3` (already in dep
+  tree at v0.7) with a custom endpoint resolver pointing at
+  `<region>.digitaloceanspaces.com`. Auth via `SPACES_KEY` /
+  `SPACES_SECRET` env-var pair, mirroring the `DO_API_TOKEN`
+  pattern.
+- godo pagination already in place from v0.1; reused everywhere.
 
 **Framework mappings**
 
-The CIS controls and ISO/SOC 2 control set is already broad enough
-to absorb 20 more DO checks. No new framework yamls needed.
+The CIS Controls v8 + SOC 2 TSC + ISO 27001:2022 Annex A catalogs
+already absorb 75 DO checks without expansion. Each check maps to
+all three frameworks. No new framework yaml needed.
 
 **Definition of done**
 
-- 25 DO checks, all framework-mapped, all fixture-backed.
-- Page-stream pagination verified against a real DO test account
-  carrying ≥250 droplets and ≥10 LBs.
-- The DigitalOcean tutorial article (from the v0.5 launch
-  conversation with the DO community team) lands as a companion
-  post.
+- ~75 DO checks, every check framework-mapped, every check
+  fixture-backed (graph-test pattern from v0.7/v0.8).
+- `cloudcommon.Stamp` on every DO resource; account_id + region
+  populated in the evidence pack `control-mapping.csv`.
+- Smoke run against a real DO test account with droplets, a LB,
+  a managed DB, a Spaces bucket, an App Platform app, and a
+  registry, all in a non-default project under a non-default VPC.
+- README provider table updated to "DigitalOcean | v0.9 ✅ | 75".
+- Companion blog post pitched to the DO community team —
+  "the OSS DO posture scanner the ecosystem was missing."
 
 ---
 
