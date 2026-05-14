@@ -17,8 +17,13 @@ env:
 
 jobs:
   ci:
+    # v0.11 added k8s.io/client-go (the K8s collector), which tripled
+    # the compile workload across lint + race-tests + build. The
+    # previous 10-min cap was already at the edge for v0.10; v0.11
+    # blew past it. 30 min gives meaningful headroom without being
+    # absurd.
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
 
