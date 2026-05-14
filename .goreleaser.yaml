@@ -144,6 +144,10 @@ docker_signs:
 
 brews:
   - name: compliancekit
+    # Push under Formula/ (Homebrew's expected layout). Without this
+    # directive the formula lands at tap root and 'brew install <tap>/
+    # <formula>' fails to resolve it.
+    directory: Formula
     # The tap is a separate repo we publish to. Requires
     # HOMEBREW_TAP_GITHUB_TOKEN with `contents: write` on the tap.
     repository:
