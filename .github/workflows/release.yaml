@@ -1,0 +1,95 @@
+name: release
+
+# Triggered when a v*.*.* tag is pushed. The workflow:
+#
+#   1. Restores the full git history (goreleaser computes changelog
+#      from the range between the previous tag and HEAD).
+#   2. Sets up Go, Docker buildx, syft (SBOM), cosign (signing).
+#   3. Logs into GHCR using the workflow's ambient GITHUB_TOKEN so
+#      Docker manifests can be pushed to ghcr.io/darpanzope/*.
+#   4. Runs `goreleaser release` which assembles binaries, archives,
+#      checksums, SBOMs, Docker images, cosign signatures, the
+#      GitHub Release, and the Homebrew formula push -- per the
+#      .goreleaser.yaml in the repo root.
+#
+# Required secrets (configured at repo or org level):
+#
+#   - HOMEBREW_TAP_GITHUB_TOKEN: a fine-grained PAT with
+#     contents: write on darpanzope/homebrew-tap. GoReleaser uses
+#     this to push the brew formula update.
+#
+# Required permissions (set on the job, not the workflow):
+#
+#   - contents: write -- create the GitHub Release.
+#   - packages: write -- push to GHCR.
+#   - id-token: write -- mint the OIDC token cosign uses to sign
+#     artifacts via Fulcio. This is what makes the signatures
+#     keyless: no long-lived key in a secret.
+
+on:
+  push:
+    tags: [ 'v*.*.*' ]
+
+permissions:
+  contents: read
+
+env:
+  GO_VERSION: '1.26'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      packages: write
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # full history for goreleaser's changelog
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          check-latest: true
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Set up QEMU (for arm64 image build on amd64 runner)
+        uses: docker/setup-qemu-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install Syft (SBOM generator)
+        uses: anchore/sbom-action/download-syft@v0
+
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v3
+        with:
+          cosign-release: 'v2.4.1'
+
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: '~> v2'
+          args: release --clean
+        env:
+          # Ambient token for the GitHub Release + GHCR push.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Fine-grained PAT for pushing the Homebrew formula to
+          # darpanzope/homebrew-tap. Create this with
+          # contents: write on the tap repo only.
+          HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
+          # Tells cosign to use the ambient OIDC token rather than
+          # prompting for a browser-based one.
+          COSIGN_EXPERIMENTAL: 'true'
