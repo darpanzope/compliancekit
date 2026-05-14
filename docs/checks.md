@@ -6,7 +6,7 @@
   Source of truth: internal/checks/**/*.go (the core.Check vars).
 -->
 
-This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **61 checks** across the providers below.
+This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **65 checks** across the providers below.
 
 Each check below has:
 
@@ -24,18 +24,18 @@ To inspect a single check from the CLI: `compliancekit checks show <id>`.
 |---|---:|
 | `aws` | 30 |
 | `digitalocean` | 5 |
-| `gcp` | 11 |
+| `gcp` | 15 |
 | `linux` | 15 |
-| **total** | **61** |
+| **total** | **65** |
 
 ## By severity
 
 | Severity | Checks |
 |---|---:|
-| `critical` | 3 |
-| `high` | 27 |
-| `medium` | 22 |
-| `low` | 9 |
+| `critical` | 4 |
+| `high` | 28 |
+| `medium` | 23 |
+| `low` | 10 |
 
 ## aws
 
@@ -1113,6 +1113,101 @@ _Maps to:_
 | `soc2` | `CC6.1` | Logical and Physical Access Controls |
 
 _Tags:_ `credentials`, `iam`, `rotation`, `service-account`
+
+---
+
+### `gcp-storage-logging`
+
+**GCS buckets must have access logging configured** &middot; severity `low` &middot; service `storage` &middot; resource `gcp.storage.bucket`
+
+GCS access logs are the forensic trail when a bucket is the source of a security incident. Without them, 'who accessed this object at this timestamp' is unanswerable. Cloud Audit Logs cover the management plane; bucket access logs cover the data plane.
+
+_Remediation:_
+
+> Enable access logging to a dedicated log-aggregation bucket: 'gsutil logging set on -b gs://<log-bucket> -o AccessLog gs://<bucket>'. The log bucket must not be the source bucket (would create a logging loop).
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `8.10` | Retain Audit Logs |
+| `cis-v8` | `8.5` | Collect Detailed Audit Logs |
+| `iso27001` | `A.8.15` | Logging |
+| `soc2` | `CC7.2` | System Operations - Monitoring |
+
+_Tags:_ `audit-logging`, `storage`
+
+---
+
+### `gcp-storage-public-access-prevention`
+
+**GCS buckets must have Public Access Prevention enforced** &middot; severity `critical` &middot; service `storage` &middot; resource `gcp.storage.bucket`
+
+Public Access Prevention is the bucket- or org-level switch that overrides any IAM binding or ACL granting public access. With PAP=enforced, `allUsers` and `allAuthenticatedUsers` grants are rejected outright at the API. Combined with UBLA, this is the strongest defense against accidental public-bucket incidents. CIS GCP Foundations 5.1.
+
+_Remediation:_
+
+> 'gsutil pap set enforced gs://<bucket>'. Better still, set an organization policy (constraints/storage.publicAccessPrevention) so new buckets inherit PAP automatically.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `3.3` | Configure Data Access Control Lists |
+| `iso27001` | `A.8.20` | Networks Security |
+| `iso27001` | `A.8.3` | Information Access Restriction |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `data-exposure`, `public-access`, `storage`
+
+---
+
+### `gcp-storage-uniform-bucket-level-access`
+
+**GCS buckets must use Uniform Bucket-Level Access** &middot; severity `high` &middot; service `storage` &middot; resource `gcp.storage.bucket`
+
+Uniform Bucket-Level Access disables per-object ACLs and forces all access through IAM bindings at the bucket level. ACLs are the legacy path that produces public buckets via accidental `allUsers` grants; UBLA eliminates that surface entirely. CIS GCP Foundations 5.2.
+
+_Remediation:_
+
+> 'gsutil uniformbucketlevelaccess set on gs://<bucket>'. Once UBLA is on, manage permissions only via IAM at the bucket or project level.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `3.3` | Configure Data Access Control Lists |
+| `iso27001` | `A.8.20` | Networks Security |
+| `iso27001` | `A.8.3` | Information Access Restriction |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `data-exposure`, `iam`, `storage`
+
+---
+
+### `gcp-storage-versioning`
+
+**GCS buckets must have versioning enabled** &middot; severity `medium` &middot; service `storage` &middot; resource `gcp.storage.bucket`
+
+Object versioning preserves previous versions of every object, giving point-in-time recovery from accidental delete and ransomware encryption-in-place. The CIS GCP Foundations Benchmark does not pin versioning specifically, but every reasonable production-readiness checklist does.
+
+_Remediation:_
+
+> 'gsutil versioning set on gs://<bucket>'. Pair with a lifecycle rule to expire old non-current versions if storage cost is a concern.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `11.2` | Perform Automated Backups |
+| `iso27001` | `A.8.13` | Information Backup |
+| `iso27001` | `A.8.14` | Redundancy of Information Processing Facilities |
+| `soc2` | `A1.2` | Availability - Backup and Recovery |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `backup`, `recovery`, `storage`
 
 ---
 
