@@ -33,8 +33,8 @@ Available on every subcommand:
 | `report` | v0.3 | convert findings to a different format |
 | `evidence` | v0.4 | generate the audit-ready evidence pack |
 | `checks list` / `show` | v0.1 | query the check catalogue |
-| `diff` | v0.6 | compare two findings sets (drift gate) |
-| `baseline` | v0.6 | capture current state as accepted baseline |
+| `diff` | v0.6 ✅ | compare two findings sets (drift gate) |
+| `baseline` | v0.6 ✅ | capture current state as accepted baseline |
 | `doctor` | v0.1 | smoke test config, secrets, connectivity |
 | `version` | v0.1 | print version + commit + build date |
 | `remediate` | v0.15 | generate remediation snippets |
@@ -72,7 +72,8 @@ Flags:
 | `--include-raw` | evidence pack includes unredacted raw responses |
 | `--no-evidence` | skip evidence pack generation |
 | `--state-dir <path>` | override state directory |
-| `--baseline` | treat current findings as accepted baseline (v0.6+) |
+| `--baseline` | treat current findings as accepted baseline (use `compliancekit baseline` for the workflow) |
+| `--profile <name>` | named subset of checks declared in `compliancekit.yaml` under `profiles:` |
 | `--dry-run` | enumerate what would run; don't execute checks |
 
 Examples:
@@ -180,47 +181,78 @@ compliancekit checks show do-spaces-public-acl
 
 ---
 
-### `compliancekit diff` (v0.6+)
+### `compliancekit baseline`
 
-Compare two findings sets. Useful for CI drift gates.
+Capture a scan's findings as the accepted baseline. The next scan's
+`diff` against this file classifies findings as new / existing /
+resolved.
 
 ```
-compliancekit diff <previous.json> <current.json> [flags]
+compliancekit baseline [flags]
 ```
 
 Flags:
 
-| Flag | Description |
-|---|---|
-| `--fail-on <level>` | exit non-zero if new findings at this level or above |
-| `--format <fmt>` | `text` (default), `json`, `markdown` |
+| Flag | Default | Description |
+|---|---|---|
+| `--in <path>` | `findings.json` | scan findings to capture |
+| `--out <path>` | `.compliancekit/baseline.json` | baseline file to write |
 
-Output groups findings into **new**, **existing**, and **resolved**.
+Baselines are gitignored by default. Commit one deliberately if you
+want PR-level drift gating. Schema is `compliancekit.baseline.v1`;
+a future change bumps the schema rather than silently invalidating
+older files.
 
 Example:
 
 ```
-compliancekit diff previous.json current.json --fail-on=high --format=markdown
+compliancekit scan --output json --out-dir out/
+compliancekit baseline --in out/findings.json
+# commit .compliancekit/baseline.json
 ```
 
 ---
 
-### `compliancekit baseline` (v0.6+)
+### `compliancekit diff`
 
-Capture the current state as the accepted baseline. After this, only **new** findings (drift) are reported by default.
+Classify a current scan's findings against a previously captured
+baseline. The drift gate for CI.
 
 ```
-compliancekit baseline create [flags]
-compliancekit baseline apply <baseline.json>
-compliancekit baseline clear
+compliancekit diff <baseline.json> <findings.json> [flags]
 ```
 
-`create` flags:
+Flags:
 
-| Flag | Description |
+| Flag | Default | Description |
+|---|---|---|
+| `--fail-on` | `never` | exit-code gate; see below |
+
+Severity-aware exit codes:
+
+| `--fail-on` value | Meaning |
 |---|---|
-| `--in <path>` | input findings file (required) |
-| `--out <path>` | baseline file (default: `.compliancekit/baseline.json`) |
+| `never` | always exit 0 (just print the diff) |
+| `<sev>` | exit 2 if **any** current finding is actionable at or above `<sev>` (matches `scan --fail-on`) |
+| `new-<sev>` | exit 2 if any **NEW** actionable finding is at or above `<sev>` (drift-gate: PR introduced a regression) |
+
+Severities: `critical`, `high`, `medium`, `low`, `info`.
+
+Output:
+
+```
++ 2 new   (1 high, 1 medium)
+- 1 resolved  (1 high)
+= 23 existing
+Hardening score: 76 -> 73 (-3)
+```
+
+Example CI workflow:
+
+```yaml
+- run: compliancekit scan --output json --out-dir out/
+- run: compliancekit diff .compliancekit/baseline.json out/findings.json --fail-on=new-high
+```
 
 ---
 

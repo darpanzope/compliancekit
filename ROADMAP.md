@@ -170,7 +170,7 @@ to the v0.1-v0.5 audience that put compliancekit on the map.
 
 | Version | Theme | Headline |
 |---|---|---|
-| **v0.6** | **Drift + baseline + 0-100 hardening score** | "Your score went from 78 to 73 since Friday" |
+| **v0.6** ✅ | **Drift + baseline + 0-100 hardening score** | "Your score went from 78 to 73 since Friday" |
 | **v0.7** | **AWS** | First-class AWS hardening, ~30 checks across IAM/EC2/S3/RDS/CloudTrail |
 | **v0.8** | **GCP** | GCP hardening with the same SDK seam pattern as AWS |
 | **v0.9** | **DigitalOcean deepening** | 5 checks → 25; Spaces, LBs, VPCs, managed DBs, K8s clusters |
@@ -204,7 +204,7 @@ detail — pinning them now means re-planning them in six months.
 
 ---
 
-### v0.6 — Drift + baseline + hardening score (weekend 6)
+### v0.6 — Drift + baseline + hardening score ✅ shipped
 
 **Goal:** turn compliancekit from "list of findings" into "trendable
 state of your fleet."
@@ -213,22 +213,22 @@ state of your fleet."
 
 - `compliancekit baseline` subcommand: snapshot the current findings
   set as the accepted baseline. Stored under `.compliancekit/baseline.json`
-  (gitignored by default; opt-in commit for "fail PR if drift").
+  (gitignored by default; opt-in commit for "fail PR if drift"). ✅
 - `compliancekit diff <old> <new>` subcommand: classify findings as
   `new` / `existing` / `resolved` via the existing `Finding.Fingerprint()`
   hash. Severity-aware exit codes so CI can gate on "any new high since
-  last scan" instead of "any finding ever."
-- **Hardening score** — a 0-100 number rolled up from the resource graph.
-  Weighting formula documented in `internal/score/`; the formula is
-  explicit so an auditor can re-derive it. Score sits next to the count
-  in `scan` output, in the HTML reporter, and in the evidence pack's
-  `summary.html`.
-- **Profiles**: named subsets of the catalog (`profile: ci-fast`,
-  `profile: pre-audit`, `profile: cis-only`) declared in
-  `compliancekit.yaml`. Same binary, different scope per environment.
-- **Engine: resource-graph query helpers** — `graph.Query()` filter
-  expressions. Was promised at v0.6 in [CHECKS.md](CHECKS.md); lands
-  here.
+  last scan" instead of "any finding ever." ✅ (`--fail-on=new-high`)
+- **Hardening score** — a 0-100 integer rolled up from the resource
+  graph. Weighting formula locked in DECISIONS.md ADR-008 (50/20/8/3/1
+  by severity, skips excluded). Score sits next to the count in `scan`
+  output, in the HTML reporter, and in the evidence pack's
+  `summary.html`. ✅
+- **Profiles**: named subsets of the catalog (`ci-fast`, `pre-audit`,
+  `cis-only`) declared in `compliancekit.yaml`. Same binary, different
+  scope per environment. ✅
+- **Engine: `graph.Query()` filter expressions** — small DSL with
+  `=` / `!=` / `CONTAINS` / `AND` / `OR` / `NOT` / parens; identifiers
+  resolve to Resource fields or attributes. ✅
 
 **Demo**
 
@@ -250,12 +250,11 @@ $ compliancekit scan --profile ci-fast    # 8 checks instead of 35
 
 **Definition of done**
 
-- Score is deterministic: two runs over identical input produce
-  identical numbers.
-- `diff` exit codes documented in CLI.md; CI integration recipe in
-  the docs.
-- Baseline schema is versioned (`schema: compliancekit.baseline.v1`)
-  so v0.7 cannot accidentally invalidate v0.6 baselines.
+- Score is deterministic: two runs over identical input produce identical numbers. ✅ (pinned by `TestCompute_Deterministic`)
+- Score is monotonic: pass-up never decreases, fail-down never increases. ✅ (pinned by `TestCompute_Monotonic_*`)
+- `diff` exit codes documented in CLI.md; CI integration recipe in the docs. ✅
+- Baseline schema is versioned (`schema: compliancekit.baseline.v1`) so v0.7 cannot accidentally invalidate v0.6 baselines. ✅
+- `graph.Query()` parses every expression in CHECKS.md's example block. ✅
 
 ---
 

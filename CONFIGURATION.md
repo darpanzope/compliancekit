@@ -77,7 +77,28 @@ frameworks:                     # array<string>, default ["soc2", "cis-v8"]
   - mitre-attack                # v0.9+
   - fedramp                     # v0.9+
 
-profile: cis-level-1            # v0.6+. one of: minimal | cis-level-1 | cis-level-2 | paranoid
+profile: ci-fast                # v0.6+. names a key under `profiles:` below.
+
+# Named subsets of the check catalog. Selectors are AND-composed
+# when populated; empty selectors are no-ops. include_ids is the
+# escape hatch and short-circuits the other include_* selectors.
+profiles:                       # v0.6+
+  ci-fast:
+    description: Fast PR-time sanity scan
+    include_severities: [critical, high]
+  pre-audit:
+    description: Comprehensive pre-audit scan
+    include_frameworks: [soc2, iso27001]
+  cis-only:
+    description: CIS Controls v8 alignment only
+    include_frameworks: [cis-v8]
+  do-only:
+    include_providers: [digitalocean]
+  custom:
+    include_ids:
+      - do-droplet-no-firewall
+      - linux-sshd-no-root-login
+    exclude_tags: [experimental]
 
 severity:
   fail_on: high                 # exit non-zero if any finding at this severity or above

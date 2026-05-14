@@ -46,6 +46,7 @@ Scanning digitalocean, linux (35 checks)...
 ✗ db-01: auditd not running                          (medium, cis-v8/8.5)
 ...
 24 findings (3 high, 8 medium, 13 low) in 4.2s
+Hardening score: 73/100 (coverage 92%)
 
 $ compliancekit evidence --in findings.json --out evidence/2026-Q2/
 Generating evidence pack from findings.json (24 findings)...
@@ -55,6 +56,18 @@ CIS Controls v8:               14 controls covered, 6 with open findings
 Output: evidence/2026-Q2 (61 files, MANIFEST.sha256 written)
 Auditor index: evidence/2026-Q2/summary.html
 Control mapping: evidence/2026-Q2/control-mapping.csv
+```
+
+**Drift gating** (v0.6+):
+
+```
+$ compliancekit baseline --in findings.json     # snapshot accepted state
+$ # ... PR makes a change ...
+$ compliancekit diff .compliancekit/baseline.json findings.json --fail-on=new-high
++ 2 new   (1 high, 1 medium)
+- 1 resolved
+= 23 existing
+Hardening score: 76 -> 73 (-3)
 ```
 
 ## Why this exists

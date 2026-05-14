@@ -151,7 +151,7 @@ The graph exposes typed queries:
 graph.ByType("digitalocean.spaces.bucket")           // all buckets
 graph.ByID("digitalocean.droplet.123")               // one resource
 graph.Related(droplet, "firewall")                   // droplets→firewalls
-graph.Query(`type = "droplet" AND tag CONTAINS "prod"`)  // filter expr (v0.6+)
+graph.Query(`type = "digitalocean.droplet" AND tag CONTAINS "prod"`) // filter expr
 ```
 
 Resource attribute access:
@@ -319,7 +319,7 @@ Use only `{{ .Resource.* }}` and `{{ .Finding.* }}` fields documented in `core/`
 
 Deprecated checks still run unless `severity: info` is set; they print a warning in the report. Remove only after two minor versions.
 
-## Cross-resource checks (v0.6+)
+## Cross-resource checks (v0.6+ — query DSL shipped)
 
 When a check needs to relate multiple resources, walk the graph via `Related`:
 
@@ -344,6 +344,22 @@ func DropletWithoutFirewall(ctx context.Context, graph core.ResourceGraph) ([]co
 ```
 
 Edges are populated by the collector when it fetches data. Adding a new edge type requires updating the collector to emit it.
+
+For the "give me a filtered slice of resources" case, prefer the v0.6 query DSL over manual filtering:
+
+```go
+prod, err := graph.Query(`type = "digitalocean.droplet" AND tag CONTAINS "prod"`)
+if err != nil {
+    return nil, err  // parse error -- fail loudly, do not silently return zero matches
+}
+for _, droplet := range prod {
+    // ...
+}
+```
+
+Supported syntax: `=`, `!=`, `CONTAINS`, `AND`, `OR`, `NOT`, `(...)`. Identifiers map to `type`, `provider`, `region`, `name`, `id`, the special `tag` (matches any tag in the slice), or any key in `Resource.Attributes`. Values are quoted strings, bare integers, or `true`/`false`. See `internal/core/query.go` for the parser and `internal/core/query_test.go` for runnable examples.
+
+A parse error is the loud signal — the check author has a typo. The function returns `(nil, error)`; the scanner surfaces it as `StatusError` per check, so the operator sees what's wrong without losing findings from other checks.
 
 ## Performance notes
 
