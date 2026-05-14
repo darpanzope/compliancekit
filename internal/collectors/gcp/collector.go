@@ -95,6 +95,8 @@ func (c *Collector) Collect(ctx context.Context) ([]core.Resource, error) {
 	out = c.collectLogging(ctx, out)
 	out = c.collectKMS(ctx, out)
 	out = c.collectBigQuery(ctx, out)
+	// v0.11: GKE for the K8s posture arc.
+	out = c.collectGKE(ctx, out)
 	return out, nil
 }
 

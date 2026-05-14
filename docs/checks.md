@@ -6,7 +6,7 @@
   Source of truth: internal/checks/**/*.go (the core.Check vars).
 -->
 
-This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **276 checks** across the providers below.
+This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **289 checks** across the providers below.
 
 Each check below has:
 
@@ -26,18 +26,18 @@ To inspect a single check from the CLI: `compliancekit checks show <id>`.
 | `digitalocean` | 74 |
 | `gcp` | 25 |
 | `hetzner` | 15 |
-| `kubernetes` | 117 |
+| `kubernetes` | 130 |
 | `linux` | 15 |
-| **total** | **276** |
+| **total** | **289** |
 
 ## By severity
 
 | Severity | Checks |
 |---|---:|
 | `critical` | 17 |
-| `high` | 65 |
-| `medium` | 99 |
-| `low` | 95 |
+| `high` | 69 |
+| `medium` | 104 |
+| `low` | 99 |
 
 ## aws
 
@@ -3764,6 +3764,296 @@ _Maps to:_
 | `soc2` | `CC7.1` | System Operations - Vulnerabilities |
 
 _Tags:_ `eks`, `k8s`, `upgrade`
+
+---
+
+### `k8s-gke-binary-authorization`
+
+**GKE clusters should enable Binary Authorization** &middot; severity `medium` &middot; service `gke` &middot; resource `gcp.gke.cluster`
+
+Binary Authorization enforces that container images come from approved repositories and (optionally) carry attestations from your CI pipeline. It is the GCP-native supply-chain enforcement layer for K8s.
+
+_Remediation:_
+
+> `gcloud container clusters update <c> --binauthz-evaluation-mode=PROJECT_SINGLETON_POLICY_ENFORCE`. Create attestation policies in Binary Authorization.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.30` | Outsourced Development |
+
+_Tags:_ `gke`, `k8s`, `supply-chain`
+
+---
+
+### `k8s-gke-legacy-abac`
+
+**GKE clusters should not enable legacy ABAC** &middot; severity `high` &middot; service `gke` &middot; resource `gcp.gke.cluster`
+
+Legacy ABAC predates RBAC; GKE leaves the flag exposed for old clusters. With it on, every authenticated user has broad permissions regardless of Role/ClusterRoleBinding.
+
+_Remediation:_
+
+> `gcloud container clusters update <c> --no-enable-legacy-authorization` (irreversible — verify RBAC is correctly configured first).
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `6.8` | Define and Maintain Role-Based Access Control |
+| `iso27001` | `A.5.15` | Access Control |
+| `iso27001` | `A.8.2` | Privileged Access Rights |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `gke`, `k8s`, `legacy`, `rbac`
+
+---
+
+### `k8s-gke-logging-monitoring`
+
+**GKE clusters should enable logging and monitoring** &middot; severity `medium` &middot; service `gke` &middot; resource `gcp.gke.cluster`
+
+Cloud Logging + Cloud Monitoring integration is the GKE-native observability story. Without it, audit and workload logs do not flow to Cloud Logging — degraded incident response.
+
+_Remediation:_
+
+> `gcloud container clusters update <c> --logging=SYSTEM,WORKLOAD --monitoring=SYSTEM`. For compliance-sensitive workloads also include `--logging=...,APISERVER,AUDIT`.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `8.10` | Retain Audit Logs |
+| `cis-v8` | `8.5` | Collect Detailed Audit Logs |
+| `iso27001` | `A.8.15` | Logging |
+| `iso27001` | `A.8.16` | Monitoring Activities |
+| `soc2` | `CC7.2` | System Operations - Monitoring |
+
+_Tags:_ `gke`, `k8s`, `logging`
+
+---
+
+### `k8s-gke-master-authorized-networks`
+
+**GKE clusters should restrict control-plane CIDR access** &middot; severity `high` &middot; service `gke` &middot; resource `gcp.gke.cluster`
+
+Master Authorized Networks restricts which source CIDRs can reach the GKE control plane. Without it (or with 0.0.0.0/0 in the list), kubectl from anywhere on the internet can attempt to authenticate.
+
+_Remediation:_
+
+> `gcloud container clusters update <c> --enable-master-authorized-networks --master-authorized-networks <cidr1>,<cidr2>`.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.20` | Networks Security |
+| `iso27001` | `A.8.22` | Segregation of Networks |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `exposure`, `gke`, `k8s`
+
+---
+
+### `k8s-gke-network-policy`
+
+**GKE clusters should enable network policy** &middot; severity `medium` &middot; service `gke` &middot; resource `gcp.gke.cluster`
+
+GKE's network policy (Calico-based) is the enforcement layer for NetworkPolicy resources. Without it, NetworkPolicy objects exist but are no-ops — every workload can talk to every other workload.
+
+_Remediation:_
+
+> `gcloud container clusters update <c> --enable-network-policy`. Existing clusters require a rolling node-pool replacement; plan a maintenance window.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `4.1` | Establish and Maintain a Secure Configuration Process |
+| `iso27001` | `A.8.20` | Networks Security |
+| `iso27001` | `A.8.22` | Segregation of Networks |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `gke`, `k8s`, `network-policy`
+
+---
+
+### `k8s-gke-nodepool-auto-repair`
+
+**GKE node pools should enable auto-repair** &middot; severity `low` &middot; service `gke` &middot; resource `gcp.gke.nodepool`
+
+Auto-repair detects unhealthy nodes (failed kubelet heartbeats, persistent NotReady) and replaces them. Disabling it means a failed node sits in the cluster until manual intervention.
+
+_Remediation:_
+
+> `gcloud container node-pools update <np> --cluster=<c> --enable-autorepair`.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.16` | Monitoring Activities |
+| `soc2` | `CC7.3` | System Operations - Incident Evaluation |
+
+_Tags:_ `gke`, `k8s`, `nodepool`, `reliability`
+
+---
+
+### `k8s-gke-nodepool-auto-upgrade`
+
+**GKE node pools should enable auto-upgrade** &middot; severity `low` &middot; service `gke` &middot; resource `gcp.gke.nodepool`
+
+Auto-upgrade keeps node pool versions aligned with the cluster control plane on the release channel's cadence. Without it, the node pool drifts and may exceed the supported skew.
+
+_Remediation:_
+
+> `gcloud container node-pools update <np> --cluster=<c> --enable-autoupgrade`.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.8` | Management of Technical Vulnerabilities |
+| `soc2` | `CC7.1` | System Operations - Vulnerabilities |
+
+_Tags:_ `gke`, `k8s`, `nodepool`, `upgrade`
+
+---
+
+### `k8s-gke-nodepool-cos`
+
+**GKE node pools should use Container-Optimized OS** &middot; severity `low` &middot; service `gke` &middot; resource `gcp.gke.nodepool`
+
+Container-Optimized OS (COS) is Google's hardened, minimal node OS. Ubuntu node pools are supported but have a larger attack surface and a slower patch cadence than COS.
+
+_Remediation:_
+
+> Create node pools with `--image-type=COS_CONTAINERD`.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `4.1` | Establish and Maintain a Secure Configuration Process |
+| `iso27001` | `A.8.2` | Privileged Access Rights |
+| `iso27001` | `A.8.8` | Management of Technical Vulnerabilities |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `gke`, `k8s`, `nodepool`, `os`
+
+---
+
+### `k8s-gke-nodepool-default-sa`
+
+**GKE node pools should not use the default Compute Engine SA** &middot; severity `medium` &middot; service `gke` &middot; resource `gcp.gke.nodepool`
+
+The default Compute Engine SA has the Editor role on the project by default. Every node pool using it gives every in-cluster workload (and any pod that escapes to the node) project-Editor — a serious privilege escalation surface.
+
+_Remediation:_
+
+> Create a dedicated minimum-privilege SA for nodes (roles/container.nodeServiceAccount + roles/monitoring.metricWriter + roles/logging.logWriter). Use `--service-account=<sa-email>` on node pool create.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.5.15` | Access Control |
+| `iso27001` | `A.8.2` | Privileged Access Rights |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `gke`, `iam`, `k8s`, `nodepool`
+
+---
+
+### `k8s-gke-private-cluster`
+
+**GKE clusters should run with private nodes** &middot; severity `high` &middot; service `gke` &middot; resource `gcp.gke.cluster`
+
+Without `privateClusterConfig.enablePrivateNodes`, every node receives a public IP — a sprawling attack surface plus accidental NAT-less egress. Private clusters keep node IPs RFC1918 and route egress through Cloud NAT.
+
+_Remediation:_
+
+> At cluster creation: `gcloud container clusters create ... --enable-private-nodes`. Existing clusters need a migration; the in-place toggle is limited.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.20` | Networks Security |
+| `iso27001` | `A.8.22` | Segregation of Networks |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `gke`, `k8s`, `private`
+
+---
+
+### `k8s-gke-release-channel`
+
+**GKE clusters should subscribe to a release channel** &middot; severity `low` &middot; service `gke` &middot; resource `gcp.gke.cluster`
+
+Release channels (RAPID/REGULAR/STABLE) let Google manage cluster upgrades on a predictable cadence. Without a channel, the cluster sticks at its creation version forever unless an operator manually triggers upgrades.
+
+_Remediation:_
+
+> `gcloud container clusters update <c> --release-channel=regular`. RAPID for dev, REGULAR for most, STABLE for risk-averse production.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.8` | Management of Technical Vulnerabilities |
+| `soc2` | `CC7.1` | System Operations - Vulnerabilities |
+
+_Tags:_ `gke`, `k8s`, `upgrade`
+
+---
+
+### `k8s-gke-shielded-nodes`
+
+**GKE clusters should enable Shielded Nodes** &middot; severity `medium` &middot; service `gke` &middot; resource `gcp.gke.cluster`
+
+Shielded Nodes turn on secure boot + integrity monitoring on the underlying GCE instances. Without it, a node-level bootkit / rootkit can persist across reboots and silently exfiltrate kubelet credentials.
+
+_Remediation:_
+
+> `gcloud container clusters update <c> --enable-shielded-nodes`. Combine with shielded VM config on each node pool.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `4.1` | Establish and Maintain a Secure Configuration Process |
+| `iso27001` | `A.8.2` | Privileged Access Rights |
+| `iso27001` | `A.8.9` | Configuration Management |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `gke`, `k8s`, `shielded`
+
+---
+
+### `k8s-gke-workload-identity`
+
+**GKE clusters should enable Workload Identity** &middot; severity `high` &middot; service `gke` &middot; resource `gcp.gke.cluster`
+
+Workload Identity is the GKE-native way to bind Kubernetes ServiceAccounts to GCP IAM Service Accounts. Without it, in-cluster workloads inherit the node's compute engine SA — typically over-privileged and shared across every workload on the node.
+
+_Remediation:_
+
+> `gcloud container clusters update <c> --workload-pool=<project>.svc.id.goog`. Annotate K8s SAs with `iam.gke.io/gcp-service-account` to bind.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.5.15` | Access Control |
+| `iso27001` | `A.8.2` | Privileged Access Rights |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `gke`, `iam`, `k8s`
 
 ---
 

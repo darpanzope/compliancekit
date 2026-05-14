@@ -4,6 +4,7 @@ go 1.26.3
 
 require (
 	cloud.google.com/go/compute v1.62.0
+	cloud.google.com/go/container v1.51.0
 	cloud.google.com/go/iam v1.11.0
 	cloud.google.com/go/kms v1.31.0
 	cloud.google.com/go/logging v1.18.0
