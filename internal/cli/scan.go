@@ -135,62 +135,94 @@ func runScan(ctx context.Context, w io.Writer, opts scanOptions, providerFilter 
 // buildCollectors constructs the set of collectors from config. The
 // providerFilter, when non-empty, restricts the result to a single
 // provider (matches the positional argument to `scan`).
+//
+// Per-provider construction lives in individual buildXCollector
+// helpers so this function stays under gocyclo's 15-edge ceiling
+// as new providers land.
 func buildCollectors(ctx context.Context, cfg *config.Config, providerFilter string) ([]core.Collector, error) {
 	var collectors []core.Collector
-
-	if cfg.Providers.DigitalOcean.Enabled && (providerFilter == "" || providerFilter == "digitalocean") {
-		tokenEnv := cfg.Providers.DigitalOcean.TokenEnv
-		token := os.Getenv(tokenEnv)
-		if token == "" {
-			return nil, NewExitCode(5, "env var %s is unset; cannot scan digitalocean", tokenEnv)
-		}
-		collectors = append(collectors, do.New(token))
-	}
-
-	if cfg.Providers.Linux.Enabled && (providerFilter == "" || providerFilter == "linux") {
-		inv, err := linuxcol.LoadInventory(cfg.Providers.Linux.Inventory)
+	for _, build := range []func(context.Context, *config.Config, string) (core.Collector, error){
+		buildDOCollector,
+		buildLinuxCollector,
+		buildAWSCollector,
+		buildGCPCollector,
+		// Future: hetzner (v0.10), kubernetes (v0.11).
+	} {
+		c, err := build(ctx, cfg, providerFilter)
 		if err != nil {
-			return nil, fmt.Errorf("linux inventory: %w", err)
+			return nil, err
 		}
-		collectors = append(collectors, linuxcol.New(inv, cfg.Providers.Linux.SSH))
+		if c != nil {
+			collectors = append(collectors, c)
+		}
 	}
-
-	if cfg.Providers.AWS.Enabled && (providerFilter == "" || providerFilter == "aws") {
-		// AWS_PROFILE / AWS_ROLE_ARN env vars are also honored by the
-		// SDK directly; only override when the config supplies a value
-		// so an operator can mix-and-match config and env.
-		if cfg.Providers.AWS.Profile != "" {
-			_ = os.Setenv("AWS_PROFILE", cfg.Providers.AWS.Profile)
-		}
-		if cfg.Providers.AWS.RoleARN != "" {
-			_ = os.Setenv("AWS_ROLE_ARN", cfg.Providers.AWS.RoleARN)
-		}
-		awsCol, err := awscol.New(ctx, awscol.Options{
-			Regions: cfg.Providers.AWS.Regions,
-		})
-		if err != nil {
-			return nil, NewExitCode(5, "aws: %v", err)
-		}
-		collectors = append(collectors, awsCol)
-	}
-
-	if cfg.Providers.GCP.Enabled && (providerFilter == "" || providerFilter == "gcp") {
-		// Authentication uses Application Default Credentials --
-		// GOOGLE_APPLICATION_CREDENTIALS, gcloud, metadata server,
-		// or Workload Identity Federation. Projects defaults to
-		// the credential's default project when empty.
-		gc, err := gcpcol.New(ctx, gcpcol.Options{
-			Projects: cfg.Providers.GCP.Projects,
-		})
-		if err != nil {
-			return nil, NewExitCode(5, "gcp: %v", err)
-		}
-		collectors = append(collectors, gc)
-	}
-
-	// Future: hetzner (v0.10), kubernetes (v0.11).
-
 	return collectors, nil
+}
+
+func providerSelected(name, filter string) bool {
+	return filter == "" || filter == name
+}
+
+func buildDOCollector(_ context.Context, cfg *config.Config, filter string) (core.Collector, error) {
+	if !cfg.Providers.DigitalOcean.Enabled || !providerSelected("digitalocean", filter) {
+		return nil, nil
+	}
+	tokenEnv := cfg.Providers.DigitalOcean.TokenEnv
+	token := os.Getenv(tokenEnv)
+	if token == "" {
+		return nil, NewExitCode(5, "env var %s is unset; cannot scan digitalocean", tokenEnv)
+	}
+	return do.New(token), nil
+}
+
+func buildLinuxCollector(_ context.Context, cfg *config.Config, filter string) (core.Collector, error) {
+	if !cfg.Providers.Linux.Enabled || !providerSelected("linux", filter) {
+		return nil, nil
+	}
+	inv, err := linuxcol.LoadInventory(cfg.Providers.Linux.Inventory)
+	if err != nil {
+		return nil, fmt.Errorf("linux inventory: %w", err)
+	}
+	return linuxcol.New(inv, cfg.Providers.Linux.SSH), nil
+}
+
+func buildAWSCollector(ctx context.Context, cfg *config.Config, filter string) (core.Collector, error) {
+	if !cfg.Providers.AWS.Enabled || !providerSelected("aws", filter) {
+		return nil, nil
+	}
+	// AWS_PROFILE / AWS_ROLE_ARN env vars are also honored by the
+	// SDK directly; only override when the config supplies a value
+	// so an operator can mix-and-match config and env.
+	if cfg.Providers.AWS.Profile != "" {
+		_ = os.Setenv("AWS_PROFILE", cfg.Providers.AWS.Profile)
+	}
+	if cfg.Providers.AWS.RoleARN != "" {
+		_ = os.Setenv("AWS_ROLE_ARN", cfg.Providers.AWS.RoleARN)
+	}
+	awsCol, err := awscol.New(ctx, awscol.Options{
+		Regions: cfg.Providers.AWS.Regions,
+	})
+	if err != nil {
+		return nil, NewExitCode(5, "aws: %v", err)
+	}
+	return awsCol, nil
+}
+
+func buildGCPCollector(ctx context.Context, cfg *config.Config, filter string) (core.Collector, error) {
+	if !cfg.Providers.GCP.Enabled || !providerSelected("gcp", filter) {
+		return nil, nil
+	}
+	// Authentication uses Application Default Credentials --
+	// GOOGLE_APPLICATION_CREDENTIALS, gcloud, metadata server,
+	// or Workload Identity Federation. Projects defaults to the
+	// credential's default project when empty.
+	gc, err := gcpcol.New(ctx, gcpcol.Options{
+		Projects: cfg.Providers.GCP.Projects,
+	})
+	if err != nil {
+		return nil, NewExitCode(5, "gcp: %v", err)
+	}
+	return gc, nil
 }
 
 // applyScanFlagOverrides copies non-empty flag values from opts into
