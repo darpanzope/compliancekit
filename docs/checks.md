@@ -6,7 +6,7 @@
   Source of truth: internal/checks/**/*.go (the core.Check vars).
 -->
 
-This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **226 checks** across the providers below.
+This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **241 checks** across the providers below.
 
 Each check below has:
 
@@ -26,18 +26,18 @@ To inspect a single check from the CLI: `compliancekit checks show <id>`.
 | `digitalocean` | 74 |
 | `gcp` | 25 |
 | `hetzner` | 15 |
-| `kubernetes` | 67 |
+| `kubernetes` | 82 |
 | `linux` | 15 |
-| **total** | **226** |
+| **total** | **241** |
 
 ## By severity
 
 | Severity | Checks |
 |---|---:|
 | `critical` | 17 |
-| `high` | 59 |
-| `medium` | 78 |
-| `low` | 72 |
+| `high` | 60 |
+| `medium` | 82 |
+| `low` | 82 |
 
 ## aws
 
@@ -3282,6 +3282,48 @@ _Tags:_ `hygiene`, `volume`
 
 ## kubernetes
 
+### `k8s-configmap-secret-shaped-data`
+
+**ConfigMaps should not hold credential-shaped keys** &middot; severity `high` &middot; service `secrets` &middot; resource `k8s.configmap`
+
+ConfigMap values are stored in plaintext in etcd and visible to anyone with `get configmaps` (which is broader than `get secrets`). A key named `password`, `token`, `api_key`, etc. is almost always a misplaced credential. The developer probably meant to use a Secret.
+
+_Remediation:_
+
+> Move the credential-shaped key into a Secret. The workload's volume mount or env reference should switch from `configMapKeyRef` to `secretKeyRef`.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.10` | Information Deletion |
+| `iso27001` | `A.8.24` | Use of Cryptography |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `configmap`, `k8s`, `secrets`
+
+---
+
+### `k8s-configmap-too-large`
+
+**ConfigMaps should be under 1 MiB** &middot; severity `low` &middot; service `secrets` &middot; resource `k8s.configmap`
+
+Large ConfigMaps stress etcd write replication and slow API responses for tooling that lists them. Mostly an operational signal — a ConfigMap holding a >1 MiB JSON document or a binary blob is usually a sign that another storage primitive would fit better.
+
+_Remediation:_
+
+> For large config bundles, mount from a PVC, fetch at startup, or split into multiple keys.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.6` | Capacity Management |
+
+_Tags:_ `configmap`, `k8s`, `size`
+
+---
+
 ### `k8s-cronjob-concurrency`
 
 **CronJobs should not allow concurrent executions** &middot; severity `low` &middot; service `jobs` &middot; resource `k8s.cronjob`
@@ -4139,6 +4181,154 @@ _Tags:_ `k8s`, `pod-security`, `seccomp`
 
 ---
 
+### `k8s-pod-secret-via-env`
+
+**Pods should mount Secrets as volumes rather than env vars** &middot; severity `medium` &middot; service `secrets` &middot; resource `k8s.pod`
+
+Container `env.valueFrom.secretKeyRef` exposes the secret via the process's environment, which means any process in the container (including library calls, `/proc/<pid>/environ`, core dumps) can read it. Volume mounts are the safer pattern: only code that explicitly opens the file path sees the contents, and rotation via secret update propagates without restarting the pod.
+
+_Remediation:_
+
+> Replace `valueFrom.secretKeyRef` with a `volumeMount` that points at a Secret volume. Read the value from the file at runtime.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.10` | Information Deletion |
+| `iso27001` | `A.8.24` | Use of Cryptography |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `env`, `k8s`, `secrets`
+
+---
+
+### `k8s-pv-encryption-hint`
+
+**PersistentVolumes should carry an encryption hint** &middot; severity `medium` &middot; service `storage` &middot; resource `k8s.persistentvolume`
+
+Compliancekit cannot guarantee a PV is encrypted (CSI drivers report differently) but can detect the canonical hints — `encrypted=true` in CSI volumeAttributes, KMS key references, or the `compliancekit.io/encrypted=true` label. A PV with none of these is most likely unencrypted.
+
+_Remediation:_
+
+> Apply the `compliancekit.io/encrypted: "true"` label to PVs you have verified out-of-band, or migrate the workload onto a StorageClass with encryption parameters configured.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.10` | Information Deletion |
+| `iso27001` | `A.8.24` | Use of Cryptography |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `encryption`, `k8s`, `storage`
+
+---
+
+### `k8s-pv-orphan`
+
+**Released PersistentVolumes should be cleaned up** &middot; severity `low` &middot; service `storage` &middot; resource `k8s.persistentvolume`
+
+A PV in `Released` phase has lost its claim but still exists. Without manual intervention the underlying disk keeps billing. For Retain volumes this is by design; for Delete volumes it usually indicates a stuck reclaim — the volume plugin failed to clean up.
+
+_Remediation:_
+
+> Either rebind the PV to a new PVC or delete it. `kubectl delete pv <name>` removes the K8s object; the underlying disk is destroyed only if reclaimPolicy=Delete.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.6` | Capacity Management |
+
+_Tags:_ `cost`, `hygiene`, `k8s`, `storage`
+
+---
+
+### `k8s-pv-reclaim-retain`
+
+**PersistentVolumes for stateful claims should set reclaimPolicy: Retain** &middot; severity `low` &middot; service `storage` &middot; resource `k8s.persistentvolume`
+
+Same data-loss risk as the StorageClass check but flagged at the PV level so manually-provisioned volumes (no StorageClass) are still covered.
+
+_Remediation:_
+
+> `kubectl patch pv <name> -p '{"spec": {"persistentVolumeReclaimPolicy": "Retain"}}'`. For dynamically-provisioned volumes, fix the StorageClass instead so new PVs inherit Retain.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `11.2` | Perform Automated Backups |
+| `iso27001` | `A.8.13` | Information Backup |
+| `iso27001` | `A.8.14` | Redundancy of Information Processing Facilities |
+| `soc2` | `A1.2` | Availability - Backup and Recovery |
+
+_Tags:_ `k8s`, `reclaim`, `storage`
+
+---
+
+### `k8s-pvc-not-bound`
+
+**PersistentVolumeClaims should be Bound** &middot; severity `low` &middot; service `storage` &middot; resource `k8s.persistentvolumeclaim`
+
+A PVC stuck in `Pending` phase indicates the cluster could not provision matching storage — either no StorageClass with the right capacity / access mode, or the CSI driver failed. Pods that mount the PVC stay Pending forever.
+
+_Remediation:_
+
+> `kubectl describe pvc <name>` shows the controller message. Common fixes: switch StorageClass, request a smaller size, ensure the CSI driver pod is healthy.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.16` | Monitoring Activities |
+
+_Tags:_ `k8s`, `reliability`, `storage`
+
+---
+
+### `k8s-pvc-orphan`
+
+**Bound PersistentVolumeClaims should be mounted by at least one pod** &middot; severity `low` &middot; service `storage` &middot; resource `k8s.persistentvolumeclaim`
+
+A PVC bound to a real PV but mounted by zero pods is paying for storage nobody uses. Common after a Deployment is deleted but PVCs were not — the storage class's reclaim policy keeps the disk around. Audit and delete.
+
+_Remediation:_
+
+> For PVCs you've confirmed are truly unused: `kubectl delete pvc <name> -n <ns>`. Make sure the underlying PV's reclaim policy matches your intent before deleting.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.6` | Capacity Management |
+
+_Tags:_ `cost`, `k8s`, `storage`
+
+---
+
+### `k8s-pvc-readwritemany`
+
+**PVCs using ReadWriteMany should be documented** &middot; severity `low` &middot; service `storage` &middot; resource `k8s.persistentvolumeclaim`
+
+ReadWriteMany access mode lets multiple pods write to the same volume concurrently. Few CSI drivers support it well (NFS, EFS, Azure Files, CephFS). Pods that use it must coordinate concurrent writes — a common source of subtle data-corruption bugs. Informational; flag for review.
+
+_Remediation:_
+
+> Confirm the workload's concurrency model handles RWX correctly. Where possible, prefer one-writer-many-readers (RWO + an internal sync) over RWX.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.16` | Monitoring Activities |
+| `soc2` | `CC7.3` | System Operations - Incident Evaluation |
+
+_Tags:_ `informational`, `k8s`, `rwx`, `storage`
+
+---
+
 ### `k8s-rbac-anonymous-bind`
 
 **Bindings should not grant any role to system:anonymous** &middot; severity `critical` &middot; service `rbac` &middot; resource `k8s.clusterrolebinding`
@@ -4670,6 +4860,70 @@ _Tags:_ `hygiene`, `k8s`, `rbac`, `service-account`
 
 ---
 
+### `k8s-secret-immutable`
+
+**Long-lived Secrets should be marked immutable** &middot; severity `low` &middot; service `secrets` &middot; resource `k8s.secret`
+
+Setting `immutable: true` on a Secret prevents accidental updates that would silently propagate to running pods, and lets the kubelet skip the periodic watch refresh on that Secret — a meaningful API-server load reduction at scale.
+
+_Remediation:_
+
+> For Secrets that should never change after creation (rotation via replacement), add `immutable: true`. For Secrets you do rotate in-place, leave mutable.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.10` | Information Deletion |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `immutable`, `k8s`, `secrets`
+
+---
+
+### `k8s-secret-orphan`
+
+**Secrets should be referenced by at least one pod or ServiceAccount** &middot; severity `low` &middot; service `secrets` &middot; resource `k8s.secret`
+
+An unreferenced Secret often holds a stale credential that nobody knows to rotate. Leftover Secrets accumulate as deployments come and go. Periodic cleanup is the standard hygiene practice.
+
+_Remediation:_
+
+> Audit Secrets against actual references and delete those genuinely unused. Use `kubectl delete secret <name> -n <ns>`.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.10` | Information Deletion |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `hygiene`, `k8s`, `secrets`
+
+---
+
+### `k8s-secret-too-large`
+
+**Secrets should be under 1 MiB** &middot; severity `low` &middot; service `secrets` &middot; resource `k8s.secret`
+
+The K8s API hard-limits Secrets to 1 MiB. Very large Secrets often indicate misuse — a kubeconfig, a private CA bundle, an entire TLS chain, or accidentally stored binary data. Operationally large Secrets also stress etcd because every API write replicates the full value.
+
+_Remediation:_
+
+> For large bundles, store the contents in object storage and reference them with a small credentials Secret that lets the pod fetch at startup. For multi-file bundles, split into multiple Secrets.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.10` | Information Deletion |
+| `iso27001` | `A.8.6` | Capacity Management |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `k8s`, `secrets`, `size`
+
+---
+
 ### `k8s-service-external-ips`
 
 **Services should not set spec.externalIPs** &middot; severity `medium` &middot; service `network` &middot; resource `k8s.service`
@@ -4804,6 +5058,73 @@ _Maps to:_
 | `soc2` | `A1.2` | Availability - Backup and Recovery |
 
 _Tags:_ `controllers`, `ha`, `k8s`, `stateful`
+
+---
+
+### `k8s-storageclass-default-multiple`
+
+**Only one StorageClass should be marked default** &middot; severity `medium` &middot; service `storage` &middot; resource `k8s.storageclass`
+
+When multiple StorageClasses carry the `storageclass.kubernetes.io/is-default-class: true` annotation, the cluster's behavior on a PVC without `storageClassName` is undefined — it picks whichever the admission plugin sees first, which can change at upgrade time. Exactly one default is correct; zero defaults forces every PVC to declare its class.
+
+_Remediation:_
+
+> Set the annotation to `false` on every StorageClass except the intended default.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `4.1` | Establish and Maintain a Secure Configuration Process |
+| `iso27001` | `A.8.6` | Capacity Management |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `hygiene`, `k8s`, `storage`
+
+---
+
+### `k8s-storageclass-encryption`
+
+**StorageClasses should configure at-rest encryption** &middot; severity `medium` &middot; service `storage` &middot; resource `k8s.storageclass`
+
+Disk encryption at rest is the baseline for any data-bearing workload. The CSI parameters that enable it vary by driver — AWS EBS uses `encrypted: true` (and optionally `kmsKeyId`), GCP PD uses `disk-encryption-kms-key`, Azure Disk uses `diskEncryptionSetID`. A StorageClass that omits all of these provisions unencrypted volumes.
+
+_Remediation:_
+
+> Add the driver-specific encryption parameter. For AWS EBS: `parameters.encrypted: "true"`. For GCP PD: `parameters.disk-encryption-kms-key: projects/.../keys/...`. For Azure: `parameters.diskEncryptionSetID: ...`.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.10` | Information Deletion |
+| `iso27001` | `A.8.24` | Use of Cryptography |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `encryption`, `k8s`, `storage`
+
+---
+
+### `k8s-storageclass-reclaim-policy`
+
+**StorageClasses for data-bearing workloads should set reclaimPolicy: Retain** &middot; severity `low` &middot; service `storage` &middot; resource `k8s.storageclass`
+
+The default StorageClass reclaim policy is `Delete`, which destroys the underlying volume when its PVC is deleted. That is correct for ephemeral workloads (CI scratch, cache) but a data-loss hazard for databases and stateful apps. `Retain` keeps the volume around so an operator can rebind or backup before deletion.
+
+_Remediation:_
+
+> Define a separate StorageClass for stateful workloads with `reclaimPolicy: Retain`. Leave Delete for ephemeral classes.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `11.2` | Perform Automated Backups |
+| `iso27001` | `A.8.13` | Information Backup |
+| `iso27001` | `A.8.14` | Redundancy of Information Processing Facilities |
+| `soc2` | `A1.2` | Availability - Backup and Recovery |
+
+_Tags:_ `k8s`, `reclaim`, `storage`
 
 ---
 
