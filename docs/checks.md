@@ -6,7 +6,7 @@
   Source of truth: internal/checks/**/*.go (the core.Check vars).
 -->
 
-This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **47 checks** across the providers below.
+This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **50 checks** across the providers below.
 
 Each check below has:
 
@@ -22,19 +22,19 @@ To inspect a single check from the CLI: `compliancekit checks show <id>`.
 
 | Provider | Checks |
 |---|---:|
-| `aws` | 27 |
+| `aws` | 30 |
 | `digitalocean` | 5 |
 | `linux` | 15 |
-| **total** | **47** |
+| **total** | **50** |
 
 ## By severity
 
 | Severity | Checks |
 |---|---:|
 | `critical` | 3 |
-| `high` | 21 |
-| `medium` | 15 |
-| `low` | 8 |
+| `high` | 22 |
+| `medium` | 16 |
+| `low` | 9 |
 
 ## aws
 
@@ -105,6 +105,53 @@ _Maps to:_
 | `soc2` | `CC7.2` | System Operations - Monitoring |
 
 _Tags:_ `audit-logging`, `cloudtrail`, `multi-region`
+
+---
+
+### `aws-config-delivery-channel`
+
+**AWS Config must have a delivery channel configured** &middot; severity `low` &middot; service `config` &middot; resource `aws.config.region`
+
+Config's recorder produces a stream of events; the delivery channel is the S3 bucket (and optional SNS topic) those events get written to. Without a delivery channel the recorder records into the void -- the audit trail is invisible to the operator.
+
+_Remediation:_
+
+> Configure a delivery channel: 'aws configservice put-delivery-channel --delivery-channel ...'. The S3 bucket should be in the same region and tightly access-controlled.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `8.10` | Retain Audit Logs |
+| `cis-v8` | `8.5` | Collect Detailed Audit Logs |
+| `iso27001` | `A.8.15` | Logging |
+| `soc2` | `CC7.2` | System Operations - Monitoring |
+
+_Tags:_ `audit-logging`, `config`
+
+---
+
+### `aws-config-recorder-on`
+
+**AWS Config must be enabled in every region** &middot; severity `medium` &middot; service `config` &middot; resource `aws.config.region`
+
+AWS Config records resource state changes over time, providing the change-log a forensic investigation needs to answer 'when did this resource look the way it did?' Without it, the answer is 'we don't know.' CIS AWS Foundations 3.5 prescribes a recorder in every region.
+
+_Remediation:_
+
+> Enable Config in the region: AWS Console -> Config -> Get started, or via CLI: 'aws configservice put-configuration-recorder --configuration-recorder ... --recording-group ...' then 'aws configservice start-configuration-recorder --configuration-recorder-name ...'. Consider an org-level Config aggregator if you scan many accounts.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `8.5` | Collect Detailed Audit Logs |
+| `iso27001` | `A.8.15` | Logging |
+| `iso27001` | `A.8.16` | Monitoring Activities |
+| `soc2` | `CC7.2` | System Operations - Monitoring |
+| `soc2` | `CC7.3` | System Operations - Incident Evaluation |
+
+_Tags:_ `audit-logging`, `change-tracking`, `config`
 
 ---
 
@@ -223,6 +270,29 @@ _Maps to:_
 | `soc2` | `CC6.6` | Logical Access Security - Boundaries |
 
 _Tags:_ `ec2`, `exposure`, `network`
+
+---
+
+### `aws-guardduty-enabled`
+
+**GuardDuty must be enabled in every region** &middot; severity `high` &middot; service `guardduty` &middot; resource `aws.guardduty.region`
+
+GuardDuty is AWS's managed threat-detection service. It analyzes VPC Flow Logs, CloudTrail, and DNS logs for known IOCs and behavioral anomalies -- credential exfiltration, crypto-mining workloads, communication with known C2 endpoints. CIS AWS Foundations 3.10 prescribes GuardDuty in every region.
+
+_Remediation:_
+
+> Enable: 'aws guardduty create-detector --enable'. Consider organization-level GuardDuty for multi-account coverage. Wire findings into a SIEM or compliancekit ingest at v0.13 once the OCSF ingest path ships.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `8.5` | Collect Detailed Audit Logs |
+| `iso27001` | `A.8.16` | Monitoring Activities |
+| `soc2` | `CC7.2` | System Operations - Monitoring |
+| `soc2` | `CC7.3` | System Operations - Incident Evaluation |
+
+_Tags:_ `guardduty`, `threat-detection`
 
 ---
 
