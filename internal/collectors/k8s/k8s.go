@@ -175,11 +175,12 @@ func (c *Collector) Collect(ctx context.Context) ([]core.Resource, error) {
 		out = append(out, c.clusterAnchor(scope))
 
 		// Per-phase additions land here as additional entries.
-		// Phase 1 ships workloads (Pods); Phase 2 adds controllers
-		// (Deployments, StatefulSets, DaemonSets, Jobs, CronJobs, PDB).
+		// Phase 1 ships workloads (Pods); Phase 2 adds controllers;
+		// Phase 3 adds rbac (Roles/Bindings + ServiceAccounts).
 		subs := []subCollector{
 			{"workloads", c.collectWorkloads},
 			{"controllers", c.collectControllers},
+			{"rbac", c.collectRBAC},
 		}
 
 		for _, s := range subs {

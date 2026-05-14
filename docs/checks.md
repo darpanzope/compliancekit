@@ -6,7 +6,7 @@
   Source of truth: internal/checks/**/*.go (the core.Check vars).
 -->
 
-This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **187 checks** across the providers below.
+This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **210 checks** across the providers below.
 
 Each check below has:
 
@@ -26,18 +26,18 @@ To inspect a single check from the CLI: `compliancekit checks show <id>`.
 | `digitalocean` | 74 |
 | `gcp` | 25 |
 | `hetzner` | 15 |
-| `kubernetes` | 28 |
+| `kubernetes` | 51 |
 | `linux` | 15 |
-| **total** | **187** |
+| **total** | **210** |
 
 ## By severity
 
 | Severity | Checks |
 |---|---:|
-| `critical` | 11 |
-| `high` | 48 |
-| `medium` | 65 |
-| `low` | 63 |
+| `critical` | 17 |
+| `high` | 56 |
+| `medium` | 69 |
+| `low` | 68 |
 
 ## aws
 
@@ -3881,6 +3881,537 @@ _Maps to:_
 | `soc2` | `CC6.6` | Logical Access Security - Boundaries |
 
 _Tags:_ `k8s`, `pod-security`, `seccomp`
+
+---
+
+### `k8s-rbac-anonymous-bind`
+
+**Bindings should not grant any role to system:anonymous** &middot; severity `critical` &middot; service `rbac` &middot; resource `k8s.clusterrolebinding`
+
+A binding that includes the user `system:anonymous` or the group `system:unauthenticated` grants permissions to any caller with network access to the API server, regardless of authentication. This is a very common misconfiguration that turns into a critical incident the moment the API server is reachable from outside the cluster.
+
+_Remediation:_
+
+> `kubectl get clusterrolebindings,rolebindings -A -o yaml | grep -B5 -E 'system:(anonymous|unauthenticated)'`. Remove or replace every match.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `6.8` | Define and Maintain Role-Based Access Control |
+| `iso27001` | `A.5.15` | Access Control |
+| `iso27001` | `A.8.2` | Privileged Access Rights |
+| `iso27001` | `A.8.3` | Information Access Restriction |
+| `iso27001` | `A.8.5` | Secure Authentication |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `anonymous`, `critical`, `k8s`, `rbac`
+
+---
+
+### `k8s-rbac-bind`
+
+**Roles should not grant the bind verb on roles** &middot; severity `high` &middot; service `rbac` &middot; resource `k8s.clusterrole`
+
+`bind` on roles/clusterroles lets the subject create RoleBindings that reference roles broader than what the subject itself holds. Like escalate, it bypasses RBAC's privilege escalation prevention.
+
+_Remediation:_
+
+> Limit bind to admin roles. For namespace-scoped admin delegation, prefer dedicated admin ClusterRoles bound to specific groups.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `6.8` | Define and Maintain Role-Based Access Control |
+| `iso27001` | `A.5.15` | Access Control |
+| `iso27001` | `A.8.2` | Privileged Access Rights |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `bind`, `k8s`, `rbac`
+
+---
+
+### `k8s-rbac-cluster-admin-non-system`
+
+**ClusterRoleBindings to cluster-admin should target only system subjects** &middot; severity `critical` &middot; service `rbac` &middot; resource `k8s.clusterrolebinding`
+
+A binding to the built-in `cluster-admin` ClusterRole grants total cluster control. The default bindings shipped with the kube-apiserver bind it to `system:masters` (the in-cluster trust chain) and to specific control-plane components — anything beyond that is a posture failure unless a written justification exists.
+
+_Remediation:_
+
+> Audit `kubectl get clusterrolebindings -o yaml | grep -B5 cluster-admin`. For human admins, prefer a named admin Group; bind that group to cluster-admin with explicit subjects. Revoke ad-hoc cluster-admin bindings to individual user accounts.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `6.8` | Define and Maintain Role-Based Access Control |
+| `iso27001` | `A.5.15` | Access Control |
+| `iso27001` | `A.8.2` | Privileged Access Rights |
+| `iso27001` | `A.8.3` | Information Access Restriction |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `cluster-admin`, `critical`, `k8s`, `rbac`
+
+---
+
+### `k8s-rbac-create-pods`
+
+**Roles should rarely grant create on pods** &middot; severity `medium` &middot; service `rbac` &middot; resource `k8s.clusterrole`
+
+Direct create on pods (as opposed to controllers like Deployments) lets the subject schedule a pod with any ServiceAccount they can name — including a powerful one in the same namespace. It is a well-known privilege escalation primitive in multi-tenant clusters.
+
+_Remediation:_
+
+> Grant create on Deployments/StatefulSets instead and let the controllers create the pods. If you must allow direct pod creation (e.g. for a debug tool), pair the role with a narrow `pods/serviceAccountName` admission policy.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `6.8` | Define and Maintain Role-Based Access Control |
+| `iso27001` | `A.8.2` | Privileged Access Rights |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `k8s`, `pods`, `rbac`
+
+---
+
+### `k8s-rbac-csr-approve`
+
+**Roles should not grant approval on CertificateSigningRequests** &middot; severity `high` &middot; service `rbac` &middot; resource `k8s.clusterrole`
+
+The `update` verb on certificatesigningrequests/approval lets the subject issue cluster-trusted certificates for any identity. Combined with a kubelet bootstrap workflow, this can lead directly to a node compromise.
+
+_Remediation:_
+
+> Approval should be reserved for the controller-manager and a small operator group. Audit and remove any other binding to system:certificates.k8s.io:certificatesigningrequests/approval.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `6.8` | Define and Maintain Role-Based Access Control |
+| `iso27001` | `A.5.15` | Access Control |
+| `iso27001` | `A.8.24` | Use of Cryptography |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `certificates`, `k8s`, `rbac`
+
+---
+
+### `k8s-rbac-empty-subjects`
+
+**Bindings should have at least one subject** &middot; severity `low` &middot; service `rbac` &middot; resource `k8s.rolebinding`
+
+A binding with zero subjects is dead code — it cannot grant access to anyone. Most often it is a leftover from a removed account or group. Either delete it or document why it exists as a placeholder.
+
+_Remediation:_
+
+> `kubectl delete <kind> <name>` for any binding with no subjects. If kept intentionally as a placeholder, add a comment annotation explaining why.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.5.15` | Access Control |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `hygiene`, `k8s`, `rbac`
+
+---
+
+### `k8s-rbac-escalate`
+
+**Roles should not grant the escalate verb on roles** &middot; severity `critical` &middot; service `rbac` &middot; resource `k8s.clusterrole`
+
+`escalate` on roles/clusterroles lets the subject add rules to a role that exceed what the subject itself holds. It defeats the privilege-escalation prevention K8s applies to RBAC mutations.
+
+_Remediation:_
+
+> Remove the escalate verb entirely. The cluster-admin ClusterRole already has full RBAC privileges; no other role should need escalate.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `6.8` | Define and Maintain Role-Based Access Control |
+| `iso27001` | `A.5.15` | Access Control |
+| `iso27001` | `A.8.2` | Privileged Access Rights |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `escalate`, `k8s`, `rbac`
+
+---
+
+### `k8s-rbac-full-wildcard`
+
+**Roles should not grant * verbs * resources * api groups simultaneously** &middot; severity `critical` &middot; service `rbac` &middot; resource `k8s.clusterrole`
+
+A single rule with `*` in verbs, resources, AND apiGroups is functionally identical to cluster-admin. It grants every action on every resource type in every group, present and future. This is the canonical privilege escalation surface and should exist only on `cluster-admin` itself.
+
+_Remediation:_
+
+> Replace the wildcard rule with explicit grants. If a workload genuinely needs cluster-admin, use the existing `cluster-admin` ClusterRole and bind it explicitly so audit trails make the intent visible.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `6.8` | Define and Maintain Role-Based Access Control |
+| `iso27001` | `A.5.15` | Access Control |
+| `iso27001` | `A.8.2` | Privileged Access Rights |
+| `iso27001` | `A.8.3` | Information Access Restriction |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `cluster-admin`, `critical`, `k8s`, `rbac`
+
+---
+
+### `k8s-rbac-impersonate`
+
+**Roles should not grant the impersonate verb** &middot; severity `critical` &middot; service `rbac` &middot; resource `k8s.clusterrole`
+
+`impersonate` lets the subject act as any user, group, or ServiceAccount. It exists for trusted gateway proxies like kubectl-as flows — any other role with this verb is a privilege escalation primitive.
+
+_Remediation:_
+
+> Strip the impersonate verb. If a controller genuinely needs it (auth proxy, dashboard), document the rationale and limit `resourceNames` to specific subjects.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `6.8` | Define and Maintain Role-Based Access Control |
+| `iso27001` | `A.5.15` | Access Control |
+| `iso27001` | `A.8.2` | Privileged Access Rights |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `critical`, `impersonate`, `k8s`, `rbac`
+
+---
+
+### `k8s-rbac-pods-exec`
+
+**Roles should not grant pods/exec** &middot; severity `high` &middot; service `rbac` &middot; resource `k8s.clusterrole`
+
+`pods/exec` lets the subject open a shell inside any matching pod, bypassing every container-level security control. With this verb, the audit trail goes from `kubectl apply` events to interactive shell traffic the kube-apiserver does not record.
+
+_Remediation:_
+
+> Reserve pods/exec for break-glass roles bound only to a small set of named humans. CI/CD pipelines and applications should not have it.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `6.8` | Define and Maintain Role-Based Access Control |
+| `iso27001` | `A.8.16` | Monitoring Activities |
+| `iso27001` | `A.8.2` | Privileged Access Rights |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `exec`, `k8s`, `rbac`
+
+---
+
+### `k8s-rbac-pods-portforward`
+
+**Roles should not grant pods/portforward** &middot; severity `high` &middot; service `rbac` &middot; resource `k8s.clusterrole`
+
+`pods/portforward` opens a tunnel from kubectl to any port in a target pod, bypassing Services and NetworkPolicies. It is a debugging primitive and should not be a normal workload permission.
+
+_Remediation:_
+
+> Restrict pods/portforward to operator/SRE roles bound to named humans, not pipelines or applications.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `6.8` | Define and Maintain Role-Based Access Control |
+| `iso27001` | `A.8.16` | Monitoring Activities |
+| `iso27001` | `A.8.2` | Privileged Access Rights |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `k8s`, `portforward`, `rbac`
+
+---
+
+### `k8s-rbac-secrets-readable`
+
+**Roles should not grant read access to secrets broadly** &middot; severity `high` &middot; service `rbac` &middot; resource `k8s.clusterrole`
+
+`get/list/watch` on secrets exposes every credential in the namespace (or cluster, for ClusterRoles). Operators frequently grant this for the wrong reason — what they want is access to a single ConfigMap or one specific secret. Use `resourceNames` to narrow.
+
+_Remediation:_
+
+> If the role only needs to read one secret, set `resourceNames: [the-secret-name]`. Otherwise consider whether the secret could be a projected token, environment variable, or external secrets reference.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `6.8` | Define and Maintain Role-Based Access Control |
+| `iso27001` | `A.5.15` | Access Control |
+| `iso27001` | `A.8.10` | Information Deletion |
+| `iso27001` | `A.8.2` | Privileged Access Rights |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `k8s`, `least-privilege`, `rbac`, `secrets`
+
+---
+
+### `k8s-rbac-secrets-writable`
+
+**Roles should not grant write access to secrets** &middot; severity `critical` &middot; service `rbac` &middot; resource `k8s.clusterrole`
+
+`create/update/patch/delete` on secrets lets the subject overwrite credentials used by other workloads — a direct privilege escalation. Almost no application has a legitimate need; if one does, it should be a ClusterOperator with a much narrower scope.
+
+_Remediation:_
+
+> Strip write verbs on secrets. For controllers that manage their own secrets, use `resourceNames` to lock the grant to a single named secret.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `6.8` | Define and Maintain Role-Based Access Control |
+| `iso27001` | `A.5.15` | Access Control |
+| `iso27001` | `A.8.10` | Information Deletion |
+| `iso27001` | `A.8.2` | Privileged Access Rights |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `k8s`, `rbac`, `secrets`
+
+---
+
+### `k8s-rbac-stale-role-ref`
+
+**Bindings should reference an existing role** &middot; severity `low` &middot; service `rbac` &middot; resource `k8s.rolebinding`
+
+A binding with a roleRef that does not resolve grants no access — the API server silently drops it. The danger is that a future role recreation may reactivate an unintended grant. Delete or fix every stale binding.
+
+_Remediation:_
+
+> Either delete the binding or create the referenced role. `kubectl get rolebinding -A -o json | jq ...` filtering on roleRef.name is the quick audit.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.5.15` | Access Control |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `hygiene`, `k8s`, `rbac`
+
+---
+
+### `k8s-rbac-tokenrequest`
+
+**Roles should not grant create on serviceaccounts/token broadly** &middot; severity `high` &middot; service `rbac` &middot; resource `k8s.clusterrole`
+
+`create` on serviceaccounts/token lets the subject mint bound tokens for any ServiceAccount they can name, which is most of the way to becoming that SA. The kube-controller-manager needs this verb; almost nothing else does.
+
+_Remediation:_
+
+> Restrict via `resourceNames: [<specific-sa>]` or remove the verb entirely. Tools that need to issue tokens should use `audience`-bound TokenRequest projection on a workload SA rather than the create verb.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `6.8` | Define and Maintain Role-Based Access Control |
+| `iso27001` | `A.5.15` | Access Control |
+| `iso27001` | `A.8.2` | Privileged Access Rights |
+| `iso27001` | `A.8.5` | Secure Authentication |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `k8s`, `rbac`, `tokens`
+
+---
+
+### `k8s-rbac-user-subject`
+
+**Bindings should target ServiceAccounts or Groups, not Users** &middot; severity `low` &middot; service `rbac` &middot; resource `k8s.rolebinding`
+
+Binding directly to a User makes lifecycle messy — if the user leaves the org, the binding lingers and the audit chain breaks. Groups are revocable centrally; ServiceAccounts are namespace-scoped and rotatable. User subjects exist for emergencies and one-offs.
+
+_Remediation:_
+
+> Bind to a Group instead and manage membership in the IdP. For automated callers, switch to a ServiceAccount.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `hygiene`, `k8s`, `lifecycle`, `rbac`
+
+---
+
+### `k8s-rbac-wildcard-apigroups`
+
+**Roles should not grant wildcard API groups** &middot; severity `medium` &middot; service `rbac` &middot; resource `k8s.clusterrole`
+
+`apiGroups: ['*']` grants the rule's verbs across every API group at once, including custom resources. Combined with wildcard verbs or resources, this is effectively cluster-admin.
+
+_Remediation:_
+
+> Enumerate API groups: `['', 'apps', 'batch', 'networking.k8s.io']` etc.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.5.15` | Access Control |
+| `iso27001` | `A.8.2` | Privileged Access Rights |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `k8s`, `rbac`, `wildcard`
+
+---
+
+### `k8s-rbac-wildcard-resources`
+
+**Roles should not grant wildcard resources** &middot; severity `high` &middot; service `rbac` &middot; resource `k8s.clusterrole`
+
+`resources: ['*']` grants the rule's verbs against every resource type, present or future. Adding a new CRD to the cluster silently extends the role's scope.
+
+_Remediation:_
+
+> List exact resource names: `[pods, configmaps, services]`. For CRDs, name them explicitly.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.5.15` | Access Control |
+| `iso27001` | `A.8.2` | Privileged Access Rights |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `k8s`, `rbac`, `wildcard`
+
+---
+
+### `k8s-rbac-wildcard-verbs`
+
+**Roles should not grant wildcard verbs** &middot; severity `high` &middot; service `rbac` &middot; resource `k8s.clusterrole`
+
+A rule with `verbs: ['*']` grants every action — get, create, update, delete, patch, and watch — on the named resources. Even when scoped to one resource type, this is rarely the intent; usually one or two verbs are sufficient. Wildcards make least-privilege analysis impossible.
+
+_Remediation:_
+
+> Enumerate the verbs the role actually needs (get/list/watch for read-only; add create/update/delete only as required). Use `kubectl auth can-i --list --as=<sa>` to validate the minimum.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `6.8` | Define and Maintain Role-Based Access Control |
+| `iso27001` | `A.5.15` | Access Control |
+| `iso27001` | `A.8.2` | Privileged Access Rights |
+| `iso27001` | `A.8.3` | Information Access Restriction |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `k8s`, `least-privilege`, `rbac`, `wildcard`
+
+---
+
+### `k8s-sa-default-automount`
+
+**Default ServiceAccounts should disable token automount** &middot; severity `medium` &middot; service `rbac` &middot; resource `k8s.serviceaccount`
+
+Every namespace ships with a `default` ServiceAccount that by default has automountServiceAccountToken=true. Pods that do not opt out get the default SA's token mounted at /var/run/secrets/... — a credential they almost certainly do not need. Disabling automount on the default SA forces workloads to be explicit about API access.
+
+_Remediation:_
+
+> `kubectl patch sa default -n <ns> -p '{"automountServiceAccountToken": false}'` in every namespace. Workloads that legitimately need API access should declare a dedicated SA with automount=true.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `6.8` | Define and Maintain Role-Based Access Control |
+| `iso27001` | `A.5.15` | Access Control |
+| `iso27001` | `A.8.2` | Privileged Access Rights |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `default-sa`, `k8s`, `rbac`, `service-account`
+
+---
+
+### `k8s-sa-default-used`
+
+**Pods should not run as the default ServiceAccount** &middot; severity `medium` &middot; service `rbac` &middot; resource `k8s.pod`
+
+Running as the namespace's default SA means inheriting whatever bindings exist on that SA — which is often more than the workload requires. Dedicated per-workload SAs make least-privilege analysis tractable and let you rotate one workload's credentials without affecting others.
+
+_Remediation:_
+
+> Create a per-workload ServiceAccount and reference it via `spec.serviceAccountName` in the pod template. Bind only the specific Roles the workload needs.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `6.8` | Define and Maintain Role-Based Access Control |
+| `iso27001` | `A.5.15` | Access Control |
+| `iso27001` | `A.8.2` | Privileged Access Rights |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `k8s`, `rbac`, `service-account`
+
+---
+
+### `k8s-sa-imagepull-secrets-set`
+
+**ServiceAccounts pulling from private registries should declare imagePullSecrets** &middot; severity `low` &middot; service `rbac` &middot; resource `k8s.serviceaccount`
+
+When a pod's image lives in a private registry, the pull is authenticated either via the pod's imagePullSecrets or — more commonly — via secrets attached to the pod's ServiceAccount. A SA used by pods pulling from registries other than docker.io or public quay/ghcr.io should have imagePullSecrets attached.
+
+_Remediation:_
+
+> `kubectl patch sa <name> -n <ns> -p '{"imagePullSecrets": [{"name": "<docker-secret>"}]}'`. Maintain the dockerconfigjson Secret outside the cluster (or via external-secrets) so the value can rotate cleanly.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `6.8` | Define and Maintain Role-Based Access Control |
+| `iso27001` | `A.8.30` | Outsourced Development |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `k8s`, `rbac`, `service-account`, `supply-chain`
+
+---
+
+### `k8s-sa-orphan`
+
+**Custom ServiceAccounts should be used by at least one pod** &middot; severity `low` &middot; service `rbac` &middot; resource `k8s.serviceaccount`
+
+An unused custom ServiceAccount is dead code — it often retains bindings from a previous workload generation. Leftover SAs with leftover Role/ClusterRoleBindings are a frequent privilege-escalation surface. Either delete the SA or repoint a workload at it.
+
+_Remediation:_
+
+> Audit with `kubectl get sa -A` cross-referenced against `kubectl get pods -A -o jsonpath='{.items[*].spec.serviceAccountName}'`. Delete orphans after confirming no workload reactivation is planned.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.5.15` | Access Control |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `hygiene`, `k8s`, `rbac`, `service-account`
 
 ---
 
