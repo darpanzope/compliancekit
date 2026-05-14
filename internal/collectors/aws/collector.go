@@ -136,6 +136,10 @@ func (c *Collector) Collect(ctx context.Context) ([]core.Resource, error) {
 	// rather than aborting the whole scan.
 	out = c.collectEC2(ctx, regions, out)
 
+	// RDS is per-region. CloudTrail / KMS / Config / GuardDuty
+	// each land in their own commit and plug in here.
+	out = c.collectRDS(ctx, regions, out)
+
 	out = append(out, account)
 	return out, nil
 }

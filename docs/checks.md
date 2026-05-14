@@ -6,7 +6,7 @@
   Source of truth: internal/checks/**/*.go (the core.Check vars).
 -->
 
-This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **38 checks** across the providers below.
+This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **42 checks** across the providers below.
 
 Each check below has:
 
@@ -22,18 +22,18 @@ To inspect a single check from the CLI: `compliancekit checks show <id>`.
 
 | Provider | Checks |
 |---|---:|
-| `aws` | 18 |
+| `aws` | 22 |
 | `digitalocean` | 5 |
 | `linux` | 15 |
-| **total** | **38** |
+| **total** | **42** |
 
 ## By severity
 
 | Severity | Checks |
 |---|---:|
-| `critical` | 2 |
-| `high` | 18 |
-| `medium` | 10 |
+| `critical` | 3 |
+| `high` | 19 |
+| `medium` | 12 |
 | `low` | 8 |
 
 ## aws
@@ -335,6 +335,98 @@ _Maps to:_
 | `soc2` | `CC6.1` | Logical and Physical Access Controls |
 
 _Tags:_ `iam`, `least-privilege`, `lifecycle`
+
+---
+
+### `aws-rds-backup-retention`
+
+**RDS DB instances must have backup retention >= 7 days** &middot; severity `medium` &middot; service `rds` &middot; resource `aws.rds.instance`
+
+Automated backups are RDS's point-in-time recovery mechanism. BackupRetentionPeriod=0 disables them entirely; values < 7 days reduce the recovery window below the industry-standard floor for production data.
+
+_Remediation:_
+
+> Set retention: 'aws rds modify-db-instance --db-instance-identifier <name> --backup-retention-period 7 --apply-immediately'. For production-tier data consider 30 days.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `11.2` | Perform Automated Backups |
+| `iso27001` | `A.8.13` | Information Backup |
+| `soc2` | `A1.2` | Availability - Backup and Recovery |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `backup`, `rds`, `recovery`
+
+---
+
+### `aws-rds-deletion-protection`
+
+**RDS DB instances must have deletion protection enabled** &middot; severity `medium` &middot; service `rds` &middot; resource `aws.rds.instance`
+
+Deletion protection is a guard against the worst-case operator-error / compromised-credential outcome: a single 'aws rds delete-db-instance' call destroying customer data. With protection on, the call fails with an explicit error and forces the operator to disable protection first. CIS AWS Foundations 2.3.2.
+
+_Remediation:_
+
+> Enable: 'aws rds modify-db-instance --db-instance-identifier <name> --deletion-protection --apply-immediately'. Set as a default in IaC modules so new instances inherit it.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `3.3` | Configure Data Access Control Lists |
+| `cis-v8` | `5.4` | Restrict Administrator Privileges to Dedicated Accounts |
+| `iso27001` | `A.8.13` | Information Backup |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `guard-rail`, `lifecycle`, `rds`
+
+---
+
+### `aws-rds-encrypted`
+
+**RDS DB instances must be encrypted at rest** &middot; severity `high` &middot; service `rds` &middot; resource `aws.rds.instance`
+
+RDS storage encryption at rest is a checkbox at creation time that cannot be retroactively flipped on an existing instance. Without it, RDS snapshots, replicas, and underlying storage carry unencrypted customer data. CIS AWS Foundations 2.3.1.
+
+_Remediation:_
+
+> Encryption cannot be enabled in-place. Snapshot the instance, copy the snapshot with --kms-key-id specified, restore the encrypted snapshot to a new instance, then cut over via DNS or connection strings. For new instances always set --storage-encrypted at create-time.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.24` | Use of Cryptography |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `data-at-rest`, `encryption`, `rds`
+
+---
+
+### `aws-rds-not-publicly-accessible`
+
+**RDS DB instances must not be publicly accessible** &middot; severity `critical` &middot; service `rds` &middot; resource `aws.rds.instance`
+
+A publicly accessible RDS instance receives a public DNS name and is reachable from the internet (subject to security group rules). Combined with a permissive SG, this is the most common path to a database breach. Production databases belong in private subnets, reachable only from application security groups inside the VPC. CIS AWS Foundations 2.3.3.
+
+_Remediation:_
+
+> Set the instance to private: 'aws rds modify-db-instance --db-instance-identifier <name> --no-publicly-accessible --apply-immediately'. Update the security group to allow ingress only from the application tier.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `12.2` | Establish and Maintain a Secure Network Architecture |
+| `cis-v8` | `4.4` | Implement and Manage a Firewall on Servers |
+| `iso27001` | `A.8.20` | Networks Security |
+| `iso27001` | `A.8.21` | Security of Network Services |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `exposure`, `network`, `rds`
 
 ---
 
