@@ -38,8 +38,15 @@ env:
 
 jobs:
   release:
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # v0.11 (Kubernetes) added k8s.io/client-go and tripled the binary
+    # size from ~50MB -> ~154MB. Building the arm64 Docker image under
+    # QEMU emulation on an amd64 runner is too slow for the previous
+    # 30-min cap. Switched to a native arm64 runner: the arm64 image
+    # now builds natively, and the amd64 image is built via QEMU on
+    # arm — which is ~3-4x faster than the reverse direction.
+    # See reference-supplychain memory for context.
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 90
     permissions:
       contents: write
       packages: write
