@@ -6,7 +6,7 @@
   Source of truth: internal/checks/**/*.go (the core.Check vars).
 -->
 
-This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **129 checks** across the providers below.
+This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **132 checks** across the providers below.
 
 Each check below has:
 
@@ -23,10 +23,10 @@ To inspect a single check from the CLI: `compliancekit checks show <id>`.
 | Provider | Checks |
 |---|---:|
 | `aws` | 30 |
-| `digitalocean` | 59 |
+| `digitalocean` | 62 |
 | `gcp` | 25 |
 | `linux` | 15 |
-| **total** | **129** |
+| **total** | **132** |
 
 ## By severity
 
@@ -35,7 +35,7 @@ To inspect a single check from the CLI: `compliancekit checks show <id>`.
 | `critical` | 9 |
 | `high` | 38 |
 | `medium` | 48 |
-| `low` | 34 |
+| `low` | 37 |
 
 ## aws
 
@@ -1535,6 +1535,70 @@ _Maps to:_
 | `soc2` | `CC6.6` | Logical Access Security - Boundaries |
 
 _Tags:_ `exposure`, `network`, `ssh`
+
+---
+
+### `do-functions-disabled-triggers`
+
+**Functions namespaces should not have disabled triggers** &middot; severity `low` &middot; service `functions` &middot; resource `digitalocean.functions_namespace`
+
+Disabled triggers indicate either a forgotten test or a manual disable during incident response that was never re-enabled. Either way the trigger should be cleaned up so the active surface matches the deployed surface.
+
+_Remediation:_
+
+> List: 'doctl serverless triggers list'. For each disabled trigger, re-enable or delete.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `1.1` | Establish and Maintain Detailed Enterprise Asset Inventory |
+| `iso27001` | `A.5.9` | Inventory of Information and Other Associated Assets |
+
+_Tags:_ `functions`, `hygiene`
+
+---
+
+### `do-functions-namespace-empty`
+
+**Functions namespaces should host at least one trigger** &middot; severity `low` &middot; service `functions` &middot; resource `digitalocean.functions_namespace`
+
+A namespace with zero triggers is provisioned but unused. Functions billing has a free tier so the cost is low; the audit-trail confusion isn't. Either delete or deploy something into it.
+
+_Remediation:_
+
+> List triggers: 'doctl serverless namespaces get <namespace>'. If empty, 'doctl serverless namespaces delete'.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `1.1` | Establish and Maintain Detailed Enterprise Asset Inventory |
+| `iso27001` | `A.5.9` | Inventory of Information and Other Associated Assets |
+
+_Tags:_ `functions`, `hygiene`
+
+---
+
+### `do-functions-no-access-keys`
+
+**Functions namespaces should have at least one access key** &middot; severity `low` &middot; service `functions` &middot; resource `digitalocean.functions_namespace`
+
+DO Functions namespaces ship with an implicit owner key but explicit access keys are how applications + CI systems authenticate. Zero access keys is either an unused namespace (delete it) or an over-reliance on the implicit owner key (rotate to scoped keys).
+
+_Remediation:_
+
+> Either delete the unused namespace via the DO control panel, or create scoped access keys per workload that connects to it.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `5.4` | Restrict Administrator Privileges to Dedicated Accounts |
+| `iso27001` | `A.5.15` | Access Control |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `credential-hygiene`, `functions`
 
 ---
 

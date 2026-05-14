@@ -16,19 +16,20 @@ var _ core.Collector = (*Collector)(nil)
 
 func TestCollector_Collect_Droplets(t *testing.T) {
 	server := newFixtureServer(t, map[string]string{
-		"/v2/account":        "testdata/account.json",
-		"/v2/droplets":       "testdata/droplets.json",
-		"/v2/firewalls":      "testdata/firewalls.json",
-		"/v2/vpcs":           "testdata/empty_vpcs.json",
-		"/v2/vpcs/peerings":  "testdata/empty_vpc_peerings.json",
-		"/v2/load_balancers": "testdata/empty_load_balancers.json",
-		"/v2/domains":        "testdata/empty_domains.json",
-		"/v2/certificates":   "testdata/empty_certificates.json",
-		"/v2/volumes":        "testdata/empty_volumes.json",
-		"/v2/snapshots":      "testdata/empty_snapshots.json",
-		"/v2/databases":      "testdata/empty_databases.json",
-		"/v2/spaces/keys":    "testdata/empty_spaces_keys.json",
-		"/v2/apps":           "testdata/empty_apps.json",
+		"/v2/account":              "testdata/account.json",
+		"/v2/droplets":             "testdata/droplets.json",
+		"/v2/firewalls":            "testdata/firewalls.json",
+		"/v2/vpcs":                 "testdata/empty_vpcs.json",
+		"/v2/vpcs/peerings":        "testdata/empty_vpc_peerings.json",
+		"/v2/load_balancers":       "testdata/empty_load_balancers.json",
+		"/v2/domains":              "testdata/empty_domains.json",
+		"/v2/certificates":         "testdata/empty_certificates.json",
+		"/v2/volumes":              "testdata/empty_volumes.json",
+		"/v2/snapshots":            "testdata/empty_snapshots.json",
+		"/v2/databases":            "testdata/empty_databases.json",
+		"/v2/spaces/keys":          "testdata/empty_spaces_keys.json",
+		"/v2/apps":                 "testdata/empty_apps.json",
+		"/v2/functions/namespaces": "testdata/empty_functions.json",
 	})
 	defer server.Close()
 
