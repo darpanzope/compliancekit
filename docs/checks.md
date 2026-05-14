@@ -6,7 +6,7 @@
   Source of truth: internal/checks/**/*.go (the core.Check vars).
 -->
 
-This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **132 checks** across the providers below.
+This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **144 checks** across the providers below.
 
 Each check below has:
 
@@ -23,19 +23,19 @@ To inspect a single check from the CLI: `compliancekit checks show <id>`.
 | Provider | Checks |
 |---|---:|
 | `aws` | 30 |
-| `digitalocean` | 62 |
+| `digitalocean` | 74 |
 | `gcp` | 25 |
 | `linux` | 15 |
-| **total** | **132** |
+| **total** | **144** |
 
 ## By severity
 
 | Severity | Checks |
 |---|---:|
 | `critical` | 9 |
-| `high` | 38 |
-| `medium` | 48 |
-| `low` | 37 |
+| `high` | 39 |
+| `medium` | 51 |
+| `low` | 45 |
 
 ## aws
 
@@ -908,6 +908,49 @@ _Tags:_ `app-platform`, `secrets`
 
 ---
 
+### `do-cdn-no-custom-cert`
+
+**CDN endpoints with custom domains should use a custom cert** &middot; severity `medium` &middot; service `cdn` &middot; resource `digitalocean.cdn`
+
+A CDN with a custom domain but no attached certificate serves the domain over HTTP only or relies on the DO default cert which doesn't cover your apex. Pair every custom domain with a managed (Let's Encrypt) or uploaded certificate.
+
+_Remediation:_
+
+> Create a managed cert via 'doctl compute certificate create --type lets_encrypt --domains cdn.example.com'. Update the CDN: 'doctl compute cdn update <id> --certificate-id <id>'.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `3.10` | Encrypt Sensitive Data in Transit |
+| `iso27001` | `A.8.24` | Use of Cryptography |
+
+_Tags:_ `cdn`, `tls`
+
+---
+
+### `do-cdn-no-custom-domain`
+
+**CDN endpoints should use a custom domain** &middot; severity `medium` &middot; service `cdn` &middot; resource `digitalocean.cdn`
+
+A CDN endpoint without a custom domain serves traffic on the ondigitaloceanspaces.com subdomain. Production traffic should resolve under your domain so DNS-level controls (CAA, DNSSEC) apply and the user-visible URL matches your brand.
+
+_Remediation:_
+
+> Configure a custom domain via 'doctl compute cdn update <id> --custom-domain cdn.example.com --certificate-id <cert-id>' and point your DNS at the CDN's endpoint.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `3.10` | Encrypt Sensitive Data in Transit |
+| `iso27001` | `A.8.20` | Networks Security |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `cdn`
+
+---
+
 ### `do-certificate-near-expiry`
 
 **Certificates should not expire within 30 days** &middot; severity `high` &middot; service `certificates` &middot; resource `digitalocean.certificate`
@@ -1602,6 +1645,50 @@ _Tags:_ `credential-hygiene`, `functions`
 
 ---
 
+### `do-image-public`
+
+**Custom images should not be marked public** &middot; severity `high` &middot; service `images` &middot; resource `digitalocean.image`
+
+A custom image (built from your droplet) marked public is downloadable by any DO user. Custom images frequently embed credentials in /etc, /home, or /root; making one public is a leak of those secrets to the entire platform.
+
+_Remediation:_
+
+> Set the image private via the DO control panel (Images > Snapshots / Custom Images > Settings).
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `3.3` | Configure Data Access Control Lists |
+| `iso27001` | `A.8.3` | Information Access Restriction |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `data-exposure`, `images`
+
+---
+
+### `do-image-too-old`
+
+**Custom images older than 1 year should be reviewed** &middot; severity `low` &middot; service `images` &middot; resource `digitalocean.image`
+
+A custom image built more than a year ago is almost certainly far behind on patches; restoring it would produce a system out of patch compliance immediately.
+
+_Remediation:_
+
+> Rebuild the image from a current base, then delete the stale one.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.8` | Management of Technical Vulnerabilities |
+| `soc2` | `CC7.1` | System Operations - Vulnerabilities |
+
+_Tags:_ `images`, `patching`
+
+---
+
 ### `do-lb-health-check-cleartext`
 
 **Load balancer health checks should not use cleartext HTTP** &middot; severity `medium` &middot; service `load_balancers` &middot; resource `digitalocean.load_balancer`
@@ -1713,6 +1800,93 @@ _Tags:_ `encryption-in-transit`, `lb`, `tls`
 
 ---
 
+### `do-monitoring-disabled-alert`
+
+**Configured alert policies should be enabled** &middot; severity `low` &middot; service `monitoring` &middot; resource `digitalocean.alert_policy`
+
+A disabled alert policy is dead weight: it shows up in the audit trail but never fires. Common cause: a one-off silence during incident response that was never re-enabled.
+
+_Remediation:_
+
+> Either delete the policy or re-enable it. Avoid the long-lived 'disabled' state.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.16` | Monitoring Activities |
+| `soc2` | `CC7.2` | System Operations - Monitoring |
+
+_Tags:_ `alerting`, `hygiene`, `monitoring`
+
+---
+
+### `do-monitoring-no-alerts`
+
+**Account should have at least one configured alert policy** &middot; severity `low` &middot; service `monitoring` &middot; resource `digitalocean.account`
+
+An account with zero alert policies has no signal channel for the standard ops events (high CPU, low disk, droplet down). Configure at least the four basics: CPU sustained, memory sustained, disk usage, droplet status.
+
+_Remediation:_
+
+> Create an alert: 'doctl monitoring alert create --type v1/insights/droplet/cpu --description "high cpu" --compare GreaterThan --value 80 --window 10m --emails ops@example.com'.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.16` | Monitoring Activities |
+| `soc2` | `CC7.2` | System Operations - Monitoring |
+| `soc2` | `CC7.3` | System Operations - Incident Evaluation |
+
+_Tags:_ `alerting`, `monitoring`
+
+---
+
+### `do-project-default-no-description`
+
+**The default project should have an explicit description** &middot; severity `low` &middot; service `projects` &middot; resource `digitalocean.project`
+
+The default project gets every resource not assigned elsewhere. Leaving its description empty makes the audit trail ambiguous when a misassigned resource shows up there. Set a description that explains the policy ('catch-all for unsorted; review weekly').
+
+_Remediation:_
+
+> Set a description on the default project via the DO control panel.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `1.1` | Establish and Maintain Detailed Enterprise Asset Inventory |
+| `iso27001` | `A.5.9` | Inventory of Information and Other Associated Assets |
+| `soc2` | `CC1.4` | Commitment to Competence |
+
+_Tags:_ `projects`
+
+---
+
+### `do-project-no-environment`
+
+**Projects should declare their environment** &middot; severity `low` &middot; service `projects` &middot; resource `digitalocean.project`
+
+DO projects have an environment field (Development / Staging / Production). Setting it correctly drives the right defaults in the control panel and gives an unambiguous signal in audit logs. Empty environments collapse the distinction.
+
+_Remediation:_
+
+> Set via the DO control panel: Projects > Settings > Environment.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `1.1` | Establish and Maintain Detailed Enterprise Asset Inventory |
+| `iso27001` | `A.5.9` | Inventory of Information and Other Associated Assets |
+| `soc2` | `CC1.4` | Commitment to Competence |
+
+_Tags:_ `projects`
+
+---
+
 ### `do-registry-empty`
 
 **Container registries should host at least one repository** &middot; severity `low` &middot; service `registry` &middot; resource `digitalocean.registry`
@@ -1772,6 +1946,49 @@ _Maps to:_
 | `soc2` | `A1.2` | Availability - Backup and Recovery |
 
 _Tags:_ `capacity`, `registry`
+
+---
+
+### `do-reserved-ip-no-project`
+
+**Reserved IPs should be assigned to a project** &middot; severity `low` &middot; service `reserved_ips` &middot; resource `digitalocean.reserved_ip`
+
+Reserved IPs without a project_id sit in the default project, making cost attribution + access control awkward.
+
+_Remediation:_
+
+> Move the IP to a named project via the DO control panel or 'doctl projects resources assign'.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `1.1` | Establish and Maintain Detailed Enterprise Asset Inventory |
+| `iso27001` | `A.5.9` | Inventory of Information and Other Associated Assets |
+| `soc2` | `CC1.4` | Commitment to Competence |
+
+_Tags:_ `projects`, `reserved-ip`
+
+---
+
+### `do-reserved-ip-orphan`
+
+**Reserved IPs should be attached to a droplet** &middot; severity `low` &middot; service `reserved_ips` &middot; resource `digitalocean.reserved_ip`
+
+An unattached reserved IP bills regardless of use. Common shape: a droplet was destroyed without releasing its reserved IP, and the IP sits forever paying a fee.
+
+_Remediation:_
+
+> Either attach to a droplet ('doctl compute reserved-ip action assign <ip> <droplet-id>') or release ('doctl compute reserved-ip delete <ip>').
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `1.1` | Establish and Maintain Detailed Enterprise Asset Inventory |
+| `iso27001` | `A.5.9` | Inventory of Information and Other Associated Assets |
+
+_Tags:_ `cost`, `hygiene`, `reserved-ip`
 
 ---
 
@@ -1990,6 +2207,51 @@ _Maps to:_
 | `soc2` | `CC6.1` | Logical and Physical Access Controls |
 
 _Tags:_ `credential-rotation`, `spaces`
+
+---
+
+### `do-ssh-key-too-many`
+
+**Account-level SSH key count should be bounded** &middot; severity `low` &middot; service `ssh_keys` &middot; resource `digitalocean.ssh_key`
+
+DO account-level SSH keys are auto-injected into every new droplet's root authorized_keys. The more keys live at the account level, the more former-employee or former-laptop keys propagate to new droplets. Prune to active humans only; prefer per-droplet provisioning for ephemeral access.
+
+_Remediation:_
+
+> List + audit: 'doctl compute ssh-key list'. Delete obsolete keys with 'doctl compute ssh-key delete <id>'.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.2` | Privileged Access Rights |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `credential-hygiene`, `ssh-keys`
+
+---
+
+### `do-ssh-key-weak-algorithm`
+
+**Account SSH keys must use strong algorithms** &middot; severity `medium` &middot; service `ssh_keys` &middot; resource `digitalocean.ssh_key`
+
+DSA keys, RSA keys shorter than 3072 bits, or unknown algorithms should not exist in the DO account SSH key list. Anyone holding the corresponding private key can land on every droplet that imports authorized_keys from this account.
+
+_Remediation:_
+
+> Generate a new key: 'ssh-keygen -t ed25519'. Add via 'doctl compute ssh-key import <name> --public-key-file ~/.ssh/id_ed25519.pub'. Delete the weak key.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `3.10` | Encrypt Sensitive Data in Transit |
+| `cis-v8` | `5.4` | Restrict Administrator Privileges to Dedicated Accounts |
+| `iso27001` | `A.8.24` | Use of Cryptography |
+| `iso27001` | `A.8.5` | Secure Authentication |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `crypto-agility`, `ssh-keys`
 
 ---
 

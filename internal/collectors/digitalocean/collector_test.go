@@ -30,6 +30,12 @@ func TestCollector_Collect_Droplets(t *testing.T) {
 		"/v2/spaces/keys":          "testdata/empty_spaces_keys.json",
 		"/v2/apps":                 "testdata/empty_apps.json",
 		"/v2/functions/namespaces": "testdata/empty_functions.json",
+		"/v2/cdn/endpoints":        "testdata/empty_cdn.json",
+		"/v2/reserved_ips":         "testdata/empty_reserved_ips.json",
+		"/v2/account/keys":         "testdata/empty_ssh_keys.json",
+		"/v2/images":               "testdata/empty_images.json",
+		"/v2/monitoring/alerts":    "testdata/empty_alerts.json",
+		"/v2/projects":             "testdata/empty_projects.json",
 	})
 	defer server.Close()
 
