@@ -131,6 +131,11 @@ func (c *Collector) Collect(ctx context.Context) ([]core.Resource, error) {
 	}
 	out = updated
 
+	// EC2 is per-region; fan out across the regions in scope. A
+	// failure in one region surfaces as a placeholder resource
+	// rather than aborting the whole scan.
+	out = c.collectEC2(ctx, regions, out)
+
 	out = append(out, account)
 	return out, nil
 }

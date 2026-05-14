@@ -42,8 +42,38 @@ type Config struct {
 type Providers struct {
 	DigitalOcean DigitalOceanConfig `mapstructure:"digitalocean" yaml:"digitalocean,omitempty"`
 	Linux        LinuxConfig        `mapstructure:"linux"        yaml:"linux,omitempty"`
+	AWS          AWSConfig          `mapstructure:"aws"          yaml:"aws,omitempty"`
 	Kubernetes   KubernetesConfig   `mapstructure:"kubernetes"   yaml:"kubernetes,omitempty"`
 	Hetzner      HetznerConfig      `mapstructure:"hetzner"      yaml:"hetzner,omitempty"`
+}
+
+// AWSConfig configures the AWS collector (v0.7+).
+//
+// Authentication uses the standard SDK chain (env vars, AWS_PROFILE,
+// AWS_ROLE_ARN, IMDSv2, OIDC); none of those need explicit config
+// here. The fields below narrow the scan rather than configure
+// credentials.
+type AWSConfig struct {
+	// Enabled flips the provider on. Default false (the scanner does
+	// nothing for AWS until explicitly enabled, consistent with every
+	// other provider).
+	Enabled bool `mapstructure:"enabled" yaml:"enabled"`
+
+	// Regions narrows the per-region scope. Empty (the default) means
+	// "all regions the credential can see," resolved via EC2
+	// DescribeRegions at scan time. Unknown region names in the list
+	// are silently dropped; the scan banner reports the actual region
+	// count so typos are observable.
+	Regions []string `mapstructure:"regions" yaml:"regions,omitempty"`
+
+	// Profile (optional) overrides AWS_PROFILE. Most operators will
+	// leave this empty and rely on the environment.
+	Profile string `mapstructure:"profile" yaml:"profile,omitempty"`
+
+	// RoleARN (optional) instructs the SDK to assume this role after
+	// loading base credentials. Useful for cross-account scanning.
+	// Equivalent to setting AWS_ROLE_ARN env var.
+	RoleARN string `mapstructure:"role_arn" yaml:"role_arn,omitempty"`
 }
 
 // DigitalOceanConfig configures the DigitalOcean collector.
@@ -146,6 +176,7 @@ type StateConfig struct {
 func (c Config) AnyProviderEnabled() bool {
 	return c.Providers.DigitalOcean.Enabled ||
 		c.Providers.Linux.Enabled ||
+		c.Providers.AWS.Enabled ||
 		c.Providers.Kubernetes.Enabled ||
 		c.Providers.Hetzner.Enabled
 }

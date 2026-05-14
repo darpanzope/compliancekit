@@ -9,6 +9,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	awscol "github.com/darpanzope/compliancekit/internal/collectors/aws"
 	do "github.com/darpanzope/compliancekit/internal/collectors/digitalocean"
 	linuxcol "github.com/darpanzope/compliancekit/internal/collectors/linux"
 	"github.com/darpanzope/compliancekit/internal/config"
@@ -79,7 +80,7 @@ func runScan(ctx context.Context, w io.Writer, opts scanOptions, providerFilter 
 		return fmt.Errorf("invalid fail_on severity: %w", err)
 	}
 
-	collectors, err := buildCollectors(cfg, providerFilter)
+	collectors, err := buildCollectors(ctx, cfg, providerFilter)
 	if err != nil {
 		return err
 	}
@@ -133,7 +134,7 @@ func runScan(ctx context.Context, w io.Writer, opts scanOptions, providerFilter 
 // buildCollectors constructs the set of collectors from config. The
 // providerFilter, when non-empty, restricts the result to a single
 // provider (matches the positional argument to `scan`).
-func buildCollectors(cfg *config.Config, providerFilter string) ([]core.Collector, error) {
+func buildCollectors(ctx context.Context, cfg *config.Config, providerFilter string) ([]core.Collector, error) {
 	var collectors []core.Collector
 
 	if cfg.Providers.DigitalOcean.Enabled && (providerFilter == "" || providerFilter == "digitalocean") {
@@ -153,7 +154,26 @@ func buildCollectors(cfg *config.Config, providerFilter string) ([]core.Collecto
 		collectors = append(collectors, linuxcol.New(inv, cfg.Providers.Linux.SSH))
 	}
 
-	// Future: kubernetes (v0.8), hetzner (v0.7).
+	if cfg.Providers.AWS.Enabled && (providerFilter == "" || providerFilter == "aws") {
+		// AWS_PROFILE / AWS_ROLE_ARN env vars are also honored by the
+		// SDK directly; only override when the config supplies a value
+		// so an operator can mix-and-match config and env.
+		if cfg.Providers.AWS.Profile != "" {
+			_ = os.Setenv("AWS_PROFILE", cfg.Providers.AWS.Profile)
+		}
+		if cfg.Providers.AWS.RoleARN != "" {
+			_ = os.Setenv("AWS_ROLE_ARN", cfg.Providers.AWS.RoleARN)
+		}
+		awsCol, err := awscol.New(ctx, awscol.Options{
+			Regions: cfg.Providers.AWS.Regions,
+		})
+		if err != nil {
+			return nil, NewExitCode(5, "aws: %v", err)
+		}
+		collectors = append(collectors, awsCol)
+	}
+
+	// Future: kubernetes (v0.11), hetzner (v0.10), gcp (v0.8).
 
 	return collectors, nil
 }

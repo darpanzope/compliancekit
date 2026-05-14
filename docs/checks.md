@@ -6,7 +6,7 @@
   Source of truth: internal/checks/**/*.go (the core.Check vars).
 -->
 
-This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **33 checks** across the providers below.
+This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **38 checks** across the providers below.
 
 Each check below has:
 
@@ -22,21 +22,139 @@ To inspect a single check from the CLI: `compliancekit checks show <id>`.
 
 | Provider | Checks |
 |---|---:|
-| `aws` | 13 |
+| `aws` | 18 |
 | `digitalocean` | 5 |
 | `linux` | 15 |
-| **total** | **33** |
+| **total** | **38** |
 
 ## By severity
 
 | Severity | Checks |
 |---|---:|
 | `critical` | 2 |
-| `high` | 14 |
-| `medium` | 9 |
+| `high` | 18 |
+| `medium` | 10 |
 | `low` | 8 |
 
 ## aws
+
+### `aws-ec2-ebs-encrypted`
+
+**EBS volumes must be encrypted at rest** &middot; severity `high` &middot; service `ec2` &middot; resource `aws.ec2.volume`
+
+EBS volumes hold the persistent data attached to EC2 instances. Encryption at rest defends against snapshot disclosure and disk reuse. AWS lets you enable default encryption per region so new volumes are encrypted automatically; this check catches existing volumes that pre-date that flag. CIS AWS Foundations 2.2.
+
+_Remediation:_
+
+> Create a snapshot of the unencrypted volume, copy the snapshot with --encrypted, restore a new volume from the encrypted snapshot, detach the old volume from the instance, and attach the new one. Enable the region-wide default ('aws ec2 enable-ebs-encryption-by-default') so future volumes are encrypted automatically.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.24` | Use of Cryptography |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `data-at-rest`, `ebs`, `ec2`, `encryption`
+
+---
+
+### `aws-ec2-imdsv2-required`
+
+**EC2 instances must require IMDSv2** &middot; severity `high` &middot; service `ec2` &middot; resource `aws.ec2.instance`
+
+Instance Metadata Service v2 requires session-token authentication for every metadata request, which defeats the SSRF + IMDSv1 = credential exfiltration attack that has produced multiple high-profile cloud breaches (e.g. Capital One 2019). CIS AWS Foundations 5.6 mandates IMDSv2 on every running instance.
+
+_Remediation:_
+
+> Enforce IMDSv2: 'aws ec2 modify-instance-metadata-options --instance-id <id> --http-tokens required --http-endpoint enabled'. For new instances bake this into launch templates and AMI defaults.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `4.1` | Establish and Maintain a Secure Configuration Process |
+| `cis-v8` | `4.4` | Implement and Manage a Firewall on Servers |
+| `iso27001` | `A.8.20` | Networks Security |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `ec2`, `metadata-service`, `ssrf`
+
+---
+
+### `aws-ec2-no-default-vpc-in-use`
+
+**EC2 instances must not run in the default VPC** &middot; severity `medium` &middot; service `ec2` &middot; resource `aws.ec2.instance`
+
+AWS provisions a default VPC in every region with overly permissive defaults: every subnet is public, the default security group allows all egress, and instances launched without explicit network config land here. Production workloads belong in a purpose-built VPC with private subnets and explicit ingress/egress rules.
+
+_Remediation:_
+
+> Build a new VPC ('aws ec2 create-vpc --cidr-block 10.0.0.0/16'), create private subnets across two AZs, set up NAT for outbound, then migrate workloads. Consider deleting the default VPC in every region with no workloads ('aws ec2 delete-vpc --vpc-id <default-vpc>').
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `12.2` | Establish and Maintain a Secure Network Architecture |
+| `cis-v8` | `4.4` | Implement and Manage a Firewall on Servers |
+| `iso27001` | `A.8.20` | Networks Security |
+| `iso27001` | `A.8.22` | Segregation of Networks |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `ec2`, `network`, `vpc`
+
+---
+
+### `aws-ec2-no-public-amis`
+
+**AMIs owned by this account must not be public** &middot; severity `high` &middot; service `ec2` &middot; resource `aws.ec2.ami`
+
+Public AMIs are visible to every AWS account. A public AMI may leak baked-in secrets (credentials in cloud-init, hardcoded API keys in software), internal IP schemes, and a complete list of installed software an attacker can fingerprint for vulnerabilities. Public AMIs are only appropriate for software the organization explicitly distributes to other AWS users.
+
+_Remediation:_
+
+> Mark the AMI private: 'aws ec2 modify-image-attribute --image-id <ami-id> --launch-permission Remove='[{"Group":"all"}]'. Review the AMI's installed software for any leaked secrets before continuing to use it; an exposed AMI is a credential-disclosure incident.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `3.3` | Configure Data Access Control Lists |
+| `iso27001` | `A.8.12` | Data Leakage Prevention |
+| `iso27001` | `A.8.3` | Information Access Restriction |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `ami`, `data-exposure`, `ec2`
+
+---
+
+### `aws-ec2-sg-no-ingress-from-any`
+
+**EC2 security groups must not allow ingress from 0.0.0.0/0 except on 80/443** &middot; severity `high` &middot; service `ec2` &middot; resource `aws.ec2.security_group`
+
+Security groups with 0.0.0.0/0 (or ::/0) ingress expose every port they cover to the entire internet. SSH (22), RDP (3389), and database ports are the high-leverage attacker targets; only HTTP (80) and HTTPS (443) have any business being open to all. CIS AWS Foundations 5.2 (ingress from any to administrative ports) and 5.3 (default SGs allow all egress).
+
+_Remediation:_
+
+> Narrow the source CIDR to the actual caller: 'aws ec2 revoke-security-group-ingress --group-id <id> --protocol tcp --port 22 --cidr 0.0.0.0/0' then re-authorize with the office or VPN CIDR. For long-running access prefer SSM Session Manager over open-port SSH.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `12.2` | Establish and Maintain a Secure Network Architecture |
+| `cis-v8` | `4.4` | Implement and Manage a Firewall on Servers |
+| `iso27001` | `A.8.20` | Networks Security |
+| `iso27001` | `A.8.21` | Security of Network Services |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `ec2`, `exposure`, `network`
+
+---
 
 ### `aws-iam-access-key-age`
 
