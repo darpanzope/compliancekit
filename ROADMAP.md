@@ -172,7 +172,7 @@ to the v0.1-v0.5 audience that put compliancekit on the map.
 |---|---|---|
 | **v0.6** ✅ | **Drift + baseline + 0-100 hardening score** | "Your score went from 78 to 73 since Friday" |
 | **v0.7** ✅ | **AWS** | First-class AWS hardening, 30 checks across IAM/EC2/S3/RDS/CloudTrail/KMS/Config/GuardDuty |
-| **v0.8** | **GCP** | GCP hardening with the same SDK seam pattern as AWS |
+| **v0.8** ✅ | **GCP** | First-class GCP hardening, 25 checks across IAM/Compute/GCS/Cloud SQL/Logging/KMS/BigQuery |
 | **v0.9** | **DigitalOcean deepening** | 5 checks → 25; Spaces, LBs, VPCs, managed DBs, K8s clusters |
 | **v0.10** | **Hetzner Cloud** | The indie-cloud completion |
 | **v0.11** | Containers + K8s + EKS/GKE/DOKS-deep | From cluster to instance in one scan |
@@ -356,7 +356,7 @@ Hardening score: 64/100
 
 ---
 
-### v0.8 — GCP (weekend 8)
+### v0.8 — GCP ✅ shipped
 
 **Goal:** GCP at the same depth as AWS at v0.7. The SDK pattern is
 identical so the second cloud is much cheaper than the first.
@@ -365,13 +365,13 @@ identical so the second cloud is much cheaper than the first.
 
 | Service | Checks |
 |---|---|
-| IAM | 6 (no broad primitive roles in prod, no user-managed SA keys >90d, no SA keys at all where Workload Identity Federation works, audit logging on critical services, MFA on org admins) |
-| Compute Engine | 5 (default network usage, SSH from 0.0.0.0/0, OS Login enforced, shielded-VM on, no auto-attached SAs with broad scopes) |
-| GCS | 4 (uniform bucket-level access, public-access prevention, default encryption with CMEK where required, logging) |
-| Cloud SQL | 3 (no public IP, automated backups on, deletion protection) |
-| Cloud Logging | 2 (org-level sink to a hold bucket, log retention ≥365d for audit logs) |
-| KMS | 2 (key rotation, separation of key admin and user) |
-| BigQuery | 3 (no `allAuthenticatedUsers` ACLs, CMEK for sensitive datasets, no public datasets) |
+| IAM | 6 (no primitive roles, no broad token-creator, audit logging, SA-key age, no user-managed SA keys, no default SA in use) |
+| Compute Engine | 5 (no default network, no SSH from 0.0.0.0/0, OS Login enforced, shielded-VM, no broad SA scopes) |
+| GCS | 4 (uniform bucket-level access, public-access prevention, versioning, access logging) |
+| Cloud SQL | 3 (no public IPv4, automated backups, deletion protection) |
+| Cloud Logging | 2 (long-term sink exists per project, log bucket retention ≥365d) |
+| KMS | 2 (encrypt/decrypt key rotation ≤90d, admin/user role separation) |
+| BigQuery | 3 (no public datasets, no allAuthenticatedUsers, default CMEK) |
 
 **Plumbing**
 

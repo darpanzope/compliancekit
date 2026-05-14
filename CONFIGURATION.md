@@ -70,6 +70,18 @@ providers:                      # object, required. At least one provider must b
     role_arn: ""                # optional. Equivalent to AWS_ROLE_ARN
                                 # (assume-role for cross-account scanning).
 
+  gcp:                          # v0.8+
+    enabled: false
+    # Authentication uses Application Default Credentials:
+    #   GOOGLE_APPLICATION_CREDENTIALS pointing at a service-account
+    #   JSON, gcloud user creds, GCE/GKE metadata server, or Workload
+    #   Identity Federation. Nothing to configure here for auth.
+    projects: []                # array<string>. Empty = use the
+                                # credential's default project. Unknown
+                                # project IDs become per-project
+                                # gcp.collect_error placeholders rather
+                                # than aborting the whole scan.
+
   kubernetes:                   # v0.11+
     enabled: false
     kubeconfig: ~/.kube/config

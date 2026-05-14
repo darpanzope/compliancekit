@@ -159,7 +159,7 @@ Full per-check reference (auto-generated, IDs / severities / framework mappings 
 | DigitalOcean | first-party | 5 | account, droplets, firewalls; full droplet inventory + per-firewall rule analysis |
 | Linux over SSH | first-party | 15 | agentless; CIS Ubuntu/Debian benchmark subset; covers sshd, ufw/nftables, auditd, filesystem, users, kernel |
 | AWS | v0.7 ✅ | 30 | IAM (8) + S3 (5) + EC2 (5) + RDS (4) + CloudTrail (3) + KMS (2) + Config (2) + GuardDuty (1) |
-| GCP | v0.8 | ~25 | planned (IAM / Compute / GCS / Cloud SQL / Logging / KMS / BigQuery) |
+| GCP | v0.8 ✅ | 25 | IAM (6) + Compute (5) + GCS (4) + Cloud SQL (3) + Logging (2) + KMS (2) + BigQuery (3) |
 | DigitalOcean deepening | v0.9 | +20 | planned (Spaces / LBs / VPCs / managed DBs / DOKS / Container Registry / App Platform) |
 | Hetzner Cloud | v0.10 | ~15 | planned |
 | Kubernetes + EKS / GKE / DOKS-deep | v0.11 | ~35 | planned |

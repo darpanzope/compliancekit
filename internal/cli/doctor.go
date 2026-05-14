@@ -12,6 +12,7 @@ import (
 	"github.com/spf13/cobra"
 
 	do "github.com/darpanzope/compliancekit/internal/collectors/digitalocean"
+	gcpcol "github.com/darpanzope/compliancekit/internal/collectors/gcp"
 	linuxcol "github.com/darpanzope/compliancekit/internal/collectors/linux"
 	"github.com/darpanzope/compliancekit/internal/config"
 )
@@ -102,6 +103,10 @@ func runDoctor(ctx context.Context, w io.Writer, opts doctorOptions) error {
 			func() error {
 				return reportLinuxProvider(w, cfg.Providers.Linux)
 			}),
+		reportProvider(w, "gcp", cfg.Providers.GCP.Enabled,
+			func() error {
+				return reportGCPProvider(ctx, w, cfg.Providers.GCP, opts.checkConfig)
+			}),
 		reportProvider(w, "kubernetes", cfg.Providers.Kubernetes.Enabled, nil),
 		reportProvider(w, "hetzner", cfg.Providers.Hetzner.Enabled,
 			func() error {
@@ -149,6 +154,29 @@ func reportDOProvider(ctx context.Context, w io.Writer, cfg config.DigitalOceanC
 	}
 	fmt.Fprintf(w, "%s providers.digitalocean: API reachable (%dms)\n",
 		iconPass, dur.Milliseconds())
+	return nil
+}
+
+// reportGCPProvider resolves Application Default Credentials and
+// reports the project list that would be scanned. Skipped under
+// --check-config so the doctor can run with no GCP credentials
+// at hand.
+func reportGCPProvider(ctx context.Context, w io.Writer, cfg config.GCPConfig, checkConfigOnly bool) error {
+	if checkConfigOnly {
+		projects := "credential default"
+		if len(cfg.Projects) > 0 {
+			projects = strings.Join(cfg.Projects, ", ")
+		}
+		fmt.Fprintf(w, "%s providers.gcp: enabled, projects=%s (skipping ADC resolution)\n",
+			iconInfo, projects)
+		return nil
+	}
+	gc, err := gcpcol.New(ctx, gcpcol.Options{Projects: cfg.Projects})
+	if err != nil {
+		return fmt.Errorf("ADC: %w", err)
+	}
+	fmt.Fprintf(w, "%s providers.gcp: %d project(s): %s\n",
+		iconPass, len(gc.Projects()), strings.Join(gc.Projects(), ", "))
 	return nil
 }
 

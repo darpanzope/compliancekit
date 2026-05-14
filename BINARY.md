@@ -234,7 +234,7 @@ How the artifact changes shape over time:
 | v0.5 | version metadata, build provenance | negligible |
 | v0.6 | drift + baseline + hardening score engine | negligible |
 | v0.7 | aws-sdk-go-v2 (IAM, EC2, S3, RDS, CloudTrail, KMS, Config, GuardDuty) | +56 MB stripped (~5-7 MB compressed per platform tarball; the predicted +12 MB underestimated the per-service type weight, but compressed binary growth is in the noise) |
-| v0.8 | cloud.google.com/go (Compute, GCS, SQL, Logging, KMS, BigQuery, IAM) | +10 MB |
+| v0.8 | cloud.google.com/go (IAM, Compute, GCS, KMS, Logging) + google.golang.org/api (SQLAdmin, BigQuery) | +38 MB stripped (~6-8 MB compressed; like AWS the per-service-pb weight ran higher than the original +10 MB prediction — gRPC clients carry a pb companion per service. Still under the AWS-on-AWS-only baseline) |
 | v0.9 | godo expanded surface (Spaces, LBs, VPCs, DBs, App Platform, Registry) | negligible (reuses existing SDK) |
 | v0.10 | hcloud-go (Hetzner) | +2 MB |
 | v0.11 | k8s.io/client-go (EKS / GKE / DOKS adapters as thin glue) | +5 MB |

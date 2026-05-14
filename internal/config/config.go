@@ -43,6 +43,7 @@ type Providers struct {
 	DigitalOcean DigitalOceanConfig `mapstructure:"digitalocean" yaml:"digitalocean,omitempty"`
 	Linux        LinuxConfig        `mapstructure:"linux"        yaml:"linux,omitempty"`
 	AWS          AWSConfig          `mapstructure:"aws"          yaml:"aws,omitempty"`
+	GCP          GCPConfig          `mapstructure:"gcp"          yaml:"gcp,omitempty"`
 	Kubernetes   KubernetesConfig   `mapstructure:"kubernetes"   yaml:"kubernetes,omitempty"`
 	Hetzner      HetznerConfig      `mapstructure:"hetzner"      yaml:"hetzner,omitempty"`
 }
@@ -74,6 +75,26 @@ type AWSConfig struct {
 	// loading base credentials. Useful for cross-account scanning.
 	// Equivalent to setting AWS_ROLE_ARN env var.
 	RoleARN string `mapstructure:"role_arn" yaml:"role_arn,omitempty"`
+}
+
+// GCPConfig configures the GCP collector (v0.8+).
+//
+// Authentication uses Application Default Credentials (ADC):
+// GOOGLE_APPLICATION_CREDENTIALS env var pointing at a service-
+// account JSON, gcloud's user credentials, GCE/GKE metadata
+// server, or Workload Identity Federation. None of those need
+// explicit config here; the fields below narrow the scan rather
+// than configure credentials.
+type GCPConfig struct {
+	// Enabled flips the provider on. Default false (consistent
+	// with every other provider).
+	Enabled bool `mapstructure:"enabled" yaml:"enabled"`
+
+	// Projects narrows the per-project scope. Empty (the default)
+	// means "use the default project from credentials." Unknown
+	// project IDs surface as per-project gcp.collect_error
+	// placeholders rather than aborting the whole scan.
+	Projects []string `mapstructure:"projects" yaml:"projects,omitempty"`
 }
 
 // DigitalOceanConfig configures the DigitalOcean collector.
@@ -177,6 +198,7 @@ func (c Config) AnyProviderEnabled() bool {
 	return c.Providers.DigitalOcean.Enabled ||
 		c.Providers.Linux.Enabled ||
 		c.Providers.AWS.Enabled ||
+		c.Providers.GCP.Enabled ||
 		c.Providers.Kubernetes.Enabled ||
 		c.Providers.Hetzner.Enabled
 }

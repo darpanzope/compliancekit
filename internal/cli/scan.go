@@ -11,6 +11,7 @@ import (
 
 	awscol "github.com/darpanzope/compliancekit/internal/collectors/aws"
 	do "github.com/darpanzope/compliancekit/internal/collectors/digitalocean"
+	gcpcol "github.com/darpanzope/compliancekit/internal/collectors/gcp"
 	linuxcol "github.com/darpanzope/compliancekit/internal/collectors/linux"
 	"github.com/darpanzope/compliancekit/internal/config"
 	"github.com/darpanzope/compliancekit/internal/core"
@@ -173,7 +174,21 @@ func buildCollectors(ctx context.Context, cfg *config.Config, providerFilter str
 		collectors = append(collectors, awsCol)
 	}
 
-	// Future: kubernetes (v0.11), hetzner (v0.10), gcp (v0.8).
+	if cfg.Providers.GCP.Enabled && (providerFilter == "" || providerFilter == "gcp") {
+		// Authentication uses Application Default Credentials --
+		// GOOGLE_APPLICATION_CREDENTIALS, gcloud, metadata server,
+		// or Workload Identity Federation. Projects defaults to
+		// the credential's default project when empty.
+		gc, err := gcpcol.New(ctx, gcpcol.Options{
+			Projects: cfg.Providers.GCP.Projects,
+		})
+		if err != nil {
+			return nil, NewExitCode(5, "gcp: %v", err)
+		}
+		collectors = append(collectors, gc)
+	}
+
+	// Future: hetzner (v0.10), kubernetes (v0.11).
 
 	return collectors, nil
 }

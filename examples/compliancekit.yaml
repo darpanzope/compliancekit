@@ -21,6 +21,20 @@ providers:
   #     timeout: 10s
   #     max_parallel: 16
 
+  # Uncomment to enable AWS scanning (v0.7+).
+  # aws:
+  #   enabled: true
+  #   regions: []        # empty means "all regions visible to the credential"
+  #   # profile: prod    # overrides AWS_PROFILE
+  #   # role_arn: ...    # assume this role after loading base creds
+
+  # Uncomment to enable GCP scanning (v0.8+). Authentication uses
+  # Application Default Credentials (GOOGLE_APPLICATION_CREDENTIALS,
+  # gcloud, GCE metadata, or Workload Identity Federation).
+  # gcp:
+  #   enabled: true
+  #   projects: []       # empty means "use the credential's default project"
+
 frameworks:
   - soc2
   - cis-v8
