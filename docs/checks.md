@@ -6,7 +6,7 @@
   Source of truth: internal/checks/**/*.go (the core.Check vars).
 -->
 
-This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **289 checks** across the providers below.
+This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **298 checks** across the providers below.
 
 Each check below has:
 
@@ -26,18 +26,18 @@ To inspect a single check from the CLI: `compliancekit checks show <id>`.
 | `digitalocean` | 74 |
 | `gcp` | 25 |
 | `hetzner` | 15 |
-| `kubernetes` | 130 |
+| `kubernetes` | 139 |
 | `linux` | 15 |
-| **total** | **289** |
+| **total** | **298** |
 
 ## By severity
 
 | Severity | Checks |
 |---|---:|
 | `critical` | 17 |
-| `high` | 69 |
-| `medium` | 104 |
-| `low` | 99 |
+| `high` | 71 |
+| `medium` | 107 |
+| `low` | 103 |
 
 ## aws
 
@@ -3496,6 +3496,199 @@ _Maps to:_
 | `iso27001` | `A.8.32` | Change Management |
 
 _Tags:_ `controllers`, `k8s`, `rollout`
+
+---
+
+### `k8s-doks-auto-upgrade`
+
+**DOKS clusters should enable auto-upgrade** &middot; severity `medium` &middot; service `doks` &middot; resource `digitalocean.doks.cluster`
+
+Auto-upgrade lets DO promote the cluster within the maintenance window when a new minor lands. Without it, the cluster sticks at its creation version until manually upgraded — and DO unsupports minor versions on a known schedule.
+
+_Remediation:_
+
+> `doctl kubernetes cluster update <c> --auto-upgrade`. Combine with a maintenance window during low-traffic hours.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.8` | Management of Technical Vulnerabilities |
+| `soc2` | `CC7.1` | System Operations - Vulnerabilities |
+
+_Tags:_ `doks`, `k8s`, `upgrade`
+
+---
+
+### `k8s-doks-cluster-running`
+
+**DOKS clusters should be in running state** &middot; severity `high` &middot; service `doks` &middot; resource `digitalocean.doks.cluster`
+
+A cluster in degraded / errored / upgrading state needs operator attention. running is the steady-state.
+
+_Remediation:_
+
+> Check the DO control panel for the failure reason. Open a support ticket if the cluster cannot self-heal.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.16` | Monitoring Activities |
+| `soc2` | `CC7.3` | System Operations - Incident Evaluation |
+
+_Tags:_ `doks`, `k8s`, `reliability`
+
+---
+
+### `k8s-doks-ha-control-plane`
+
+**DOKS clusters should run with HA control plane** &middot; severity `high` &middot; service `doks` &middot; resource `digitalocean.doks.cluster`
+
+DOKS supports an HA control plane (multiple master replicas across zones) for an extra $40/month. Without it, control-plane maintenance windows or zone outages cause API unavailability. For production workloads, HA is the baseline.
+
+_Remediation:_
+
+> `doctl kubernetes cluster update <c> --ha` (creates a new HA control plane; existing workloads continue). For new clusters, pass `--ha` at create time.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `11.2` | Perform Automated Backups |
+| `iso27001` | `A.8.14` | Redundancy of Information Processing Facilities |
+| `soc2` | `A1.2` | Availability - Backup and Recovery |
+
+_Tags:_ `doks`, `ha`, `k8s`
+
+---
+
+### `k8s-doks-maintenance-window`
+
+**DOKS clusters should configure a maintenance window** &middot; severity `low` &middot; service `doks` &middot; resource `digitalocean.doks.cluster`
+
+Without an explicit maintenance window, DO picks one. Set the window to low-traffic hours so upgrades, certificate rotations, and other maintenance events do not coincide with peak load.
+
+_Remediation:_
+
+> `doctl kubernetes cluster update <c> --maintenance-window="sunday 04:00"` (UTC).
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.16` | Monitoring Activities |
+| `soc2` | `CC7.3` | System Operations - Incident Evaluation |
+
+_Tags:_ `doks`, `k8s`, `upgrade`
+
+---
+
+### `k8s-doks-nodepool-autoscale`
+
+**DOKS node pools should enable autoscaling** &middot; severity `low` &middot; service `doks` &middot; resource `digitalocean.doks.nodepool`
+
+Autoscaling lets the cluster grow under load and shrink under idle, matching capacity to demand. Manual sizing typically over-provisions for peak or under-provisions and trips workloads in surge.
+
+_Remediation:_
+
+> `doctl kubernetes cluster node-pool update <c> <np> --auto-scale=true --min-nodes=<n> --max-nodes=<n>`.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.6` | Capacity Management |
+| `soc2` | `CC7.3` | System Operations - Incident Evaluation |
+
+_Tags:_ `autoscale`, `doks`, `k8s`, `nodepool`
+
+---
+
+### `k8s-doks-nodepool-min-nodes`
+
+**DOKS node pools should have min_nodes >= 2** &middot; severity `medium` &middot; service `doks` &middot; resource `digitalocean.doks.nodepool`
+
+Even with autoscaling, a min_nodes of 1 means the cluster can drop to a single node — no HA, no rolling update headroom, and during a node replacement the cluster has zero capacity in that pool.
+
+_Remediation:_
+
+> `doctl kubernetes cluster node-pool update <c> <np> --min-nodes=2`. For HA workloads, min_nodes >= 3.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `11.2` | Perform Automated Backups |
+| `iso27001` | `A.8.14` | Redundancy of Information Processing Facilities |
+| `soc2` | `A1.2` | Availability - Backup and Recovery |
+
+_Tags:_ `doks`, `ha`, `k8s`, `nodepool`
+
+---
+
+### `k8s-doks-registry-integration`
+
+**DOKS clusters should integrate with DO Container Registry** &middot; severity `low` &middot; service `doks` &middot; resource `digitalocean.doks.cluster`
+
+Enabling registry integration places a dockerconfigjson Secret in every namespace, letting workloads pull from the DO private Container Registry without manually-managed pull credentials. Strict pull credentials beat sprawling imagePullSecret literals.
+
+_Remediation:_
+
+> `doctl kubernetes cluster registry add <cluster>`.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `6.8` | Define and Maintain Role-Based Access Control |
+| `iso27001` | `A.8.30` | Outsourced Development |
+
+_Tags:_ `doks`, `k8s`, `registry`
+
+---
+
+### `k8s-doks-surge-upgrade`
+
+**DOKS clusters should enable surge upgrades** &middot; severity `low` &middot; service `doks` &middot; resource `digitalocean.doks.cluster`
+
+Surge upgrades provision replacement nodes before draining old ones — workloads stay available across rolling node-pool upgrades. Without surge, each upgrade hits a capacity dip equal to the node being replaced.
+
+_Remediation:_
+
+> `doctl kubernetes cluster update <c> --surge-upgrade=true`.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `11.2` | Perform Automated Backups |
+| `iso27001` | `A.8.14` | Redundancy of Information Processing Facilities |
+
+_Tags:_ `doks`, `k8s`, `upgrade`
+
+---
+
+### `k8s-doks-vpc-attached`
+
+**DOKS clusters should attach to a non-default VPC** &middot; severity `medium` &middot; service `doks` &middot; resource `digitalocean.doks.cluster`
+
+DOKS clusters by default land in the region's default VPC, which is shared across the account. Attaching to a dedicated VPC isolates the cluster's network plane from other workloads and makes firewall rules easier to reason about.
+
+_Remediation:_
+
+> Create a dedicated VPC: `doctl vpcs create --name=k8s --region=<r>`. Recreate the cluster with `--vpc-uuid=<id>` (in-place VPC change is not supported).
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.20` | Networks Security |
+| `iso27001` | `A.8.22` | Segregation of Networks |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `doks`, `k8s`, `network`
 
 ---
 

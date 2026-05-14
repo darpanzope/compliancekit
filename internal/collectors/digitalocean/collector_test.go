@@ -36,6 +36,7 @@ func TestCollector_Collect_Droplets(t *testing.T) {
 		"/v2/images":               "testdata/empty_images.json",
 		"/v2/monitoring/alerts":    "testdata/empty_alerts.json",
 		"/v2/projects":             "testdata/empty_projects.json",
+		"/v2/kubernetes/clusters":  "testdata/empty_doks.json",
 	})
 	defer server.Close()
 

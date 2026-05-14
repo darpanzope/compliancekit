@@ -123,6 +123,7 @@ func (c *Collector) Collect(ctx context.Context) ([]core.Resource, error) {
 		{"images", c.collectImages},
 		{"alerts", c.collectAlerts},
 		{"projects", c.collectProjects},
+		{"doks", c.collectDOKS},
 	}
 
 	// Run every sub-collector first so we can cross-link the
