@@ -6,7 +6,7 @@
   Source of truth: internal/checks/**/*.go (the core.Check vars).
 -->
 
-This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **70 checks** across the providers below.
+This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **72 checks** across the providers below.
 
 Each check below has:
 
@@ -24,9 +24,9 @@ To inspect a single check from the CLI: `compliancekit checks show <id>`.
 |---|---:|
 | `aws` | 30 |
 | `digitalocean` | 5 |
-| `gcp` | 20 |
+| `gcp` | 22 |
 | `linux` | 15 |
-| **total** | **70** |
+| **total** | **72** |
 
 ## By severity
 
@@ -34,7 +34,7 @@ To inspect a single check from the CLI: `compliancekit checks show <id>`.
 |---|---:|
 | `critical` | 4 |
 | `high` | 30 |
-| `medium` | 26 |
+| `medium` | 28 |
 | `low` | 10 |
 
 ## aws
@@ -1113,6 +1113,50 @@ _Maps to:_
 | `soc2` | `CC6.1` | Logical and Physical Access Controls |
 
 _Tags:_ `credentials`, `iam`, `rotation`, `service-account`
+
+---
+
+### `gcp-kms-admin-user-separation`
+
+**KMS key admins must be separate from encrypters/decrypters** &middot; severity `medium` &middot; service `kms` &middot; resource `gcp.kms.crypto_key`
+
+A principal with both roles/cloudkms.admin and roles/cloudkms.cryptoKeyEncrypterDecrypter on the same key can rotate or destroy keys while also reading ciphertext encrypted under them, collapsing the separation of duties that KMS is meant to enforce. CIS GCP Foundations 1.11 prescribes that these roles never coincide on the same principal at the key level.
+
+_Remediation:_
+
+> Audit who holds which key roles: 'gcloud kms keys get-iam-policy <key> --keyring=<ring> --location=<loc>'. Remove the overlap by either revoking the admin role (typical for applications) or moving crypto operations to a dedicated service account distinct from the key admin.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `6.8` | Define and Maintain Role-Based Access Control |
+| `iso27001` | `A.5.15` | Access Control |
+| `iso27001` | `A.8.2` | Privileged Access Rights |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `kms`, `least-privilege`, `separation-of-duties`
+
+---
+
+### `gcp-kms-key-rotation`
+
+**KMS encrypt/decrypt keys must rotate at least every 90 days** &middot; severity `medium` &middot; service `kms` &middot; resource `gcp.kms.crypto_key`
+
+Periodic rotation of symmetric keys limits the blast radius of a compromised key version: once rotated, ciphertext written under the old version can still be decrypted but new traffic uses fresh material. CIS GCP Foundations 1.10 prescribes a rotation period of 90 days or less. Asymmetric and signing keys are out of scope (the rotation period field doesn't apply).
+
+_Remediation:_
+
+> 'gcloud kms keys update <key> --keyring=<ring> --location=<location> --rotation-period=90d --next-rotation-time=<rfc3339>'. For Terraform set rotation_period = "7776000s" on the google_kms_crypto_key resource.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.24` | Use of Cryptography |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `key-management`, `kms`, `rotation`
 
 ---
 

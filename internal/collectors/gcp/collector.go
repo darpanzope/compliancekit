@@ -85,14 +85,15 @@ func (c *Collector) Collect(ctx context.Context) ([]core.Resource, error) {
 	for _, projectID := range c.projects {
 		out = append(out, c.projectResource(projectID))
 	}
-	// IAM + Compute + GCS + Cloud SQL + Cloud Logging are
-	// per-project. KMS / BigQuery land in subsequent phases and
-	// plug in here.
+	// IAM + Compute + GCS + Cloud SQL + Cloud Logging + KMS are
+	// per-project. BigQuery lands in the next phase and plugs
+	// in here.
 	out = c.collectIAM(ctx, out)
 	out = c.collectCompute(ctx, out)
 	out = c.collectStorage(ctx, out)
 	out = c.collectSQL(ctx, out)
 	out = c.collectLogging(ctx, out)
+	out = c.collectKMS(ctx, out)
 	return out, nil
 }
 
