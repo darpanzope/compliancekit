@@ -6,7 +6,7 @@
   Source of truth: internal/checks/**/*.go (the core.Check vars).
 -->
 
-This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **56 checks** across the providers below.
+This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **61 checks** across the providers below.
 
 Each check below has:
 
@@ -24,17 +24,17 @@ To inspect a single check from the CLI: `compliancekit checks show <id>`.
 |---|---:|
 | `aws` | 30 |
 | `digitalocean` | 5 |
-| `gcp` | 6 |
+| `gcp` | 11 |
 | `linux` | 15 |
-| **total** | **56** |
+| **total** | **61** |
 
 ## By severity
 
 | Severity | Checks |
 |---|---:|
 | `critical` | 3 |
-| `high` | 25 |
-| `medium` | 19 |
+| `high` | 27 |
+| `medium` | 22 |
 | `low` | 9 |
 
 ## aws
@@ -854,6 +854,128 @@ _Tags:_ `exposure`, `network`, `ssh`
 ---
 
 ## gcp
+
+### `gcp-compute-no-broad-scopes`
+
+**GCE instances must not run with cloud-platform service-account scope** &middot; severity `high` &middot; service `compute` &middot; resource `gcp.compute.instance`
+
+The cloud-platform OAuth scope grants the attached service account access to every GCP API the SA has IAM permissions for. Combined with the default Compute Engine SA (which has roles/editor by default), this gives any process on the instance project-wide write access. CIS GCP 4.1 + 4.2 prescribe narrower scopes (specific service-level scopes) or IAM-only access control with no scopes.
+
+_Remediation:_
+
+> Stop the instance, change its scopes to specific service scopes only (e.g. logging-write, monitoring-write): 'gcloud compute instances set-service-account <name> --scopes=logging-write,monitoring-write,storage-ro'. Better: rely on IAM permissions and remove the cloud-platform scope.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `5.4` | Restrict Administrator Privileges to Dedicated Accounts |
+| `iso27001` | `A.5.15` | Access Control |
+| `iso27001` | `A.8.2` | Privileged Access Rights |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `compute`, `least-privilege`, `service-account`
+
+---
+
+### `gcp-compute-no-default-network`
+
+**GCP projects must not use the auto-mode default VPC network** &middot; severity `medium` &middot; service `compute` &middot; resource `gcp.compute.network`
+
+GCP's auto-mode default VPC creates a subnet in every region with predefined firewall rules (allow-ssh, allow-rdp, allow-internal). For production workloads this is too permissive; a purpose-built custom-mode VPC with explicit subnet and firewall design is the right shape. CIS GCP Foundations 3.1.
+
+_Remediation:_
+
+> Migrate workloads to a custom-mode VPC: 'gcloud compute networks create my-vpc --subnet-mode=custom'. Then delete the default network: 'gcloud compute networks delete default'. The delete fails if anything still uses it.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `12.2` | Establish and Maintain a Secure Network Architecture |
+| `cis-v8` | `4.4` | Implement and Manage a Firewall on Servers |
+| `iso27001` | `A.8.20` | Networks Security |
+| `iso27001` | `A.8.22` | Segregation of Networks |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `compute`, `network`
+
+---
+
+### `gcp-compute-no-ssh-from-any`
+
+**Firewall rules must not allow SSH (tcp:22) from 0.0.0.0/0** &middot; severity `high` &middot; service `compute` &middot; resource `gcp.compute.firewall`
+
+SSH (tcp:22) exposed to 0.0.0.0/0 is the canonical brute-force attack target. CIS GCP Foundations 3.6 prescribes scoping SSH ingress to a known CIDR (office IP, VPN, IAP tunnel range). Identity-Aware Proxy (IAP) tunnel is the GCP-native preferred path for SSH access without exposing port 22 at all.
+
+_Remediation:_
+
+> Narrow the source CIDR: 'gcloud compute firewall-rules update <rule> --source-ranges=<your-cidr>'. For zero exposed-port access set up IAP tunneling: https://cloud.google.com/iap/docs/using-tcp-forwarding .
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `12.2` | Establish and Maintain a Secure Network Architecture |
+| `cis-v8` | `4.4` | Implement and Manage a Firewall on Servers |
+| `iso27001` | `A.8.20` | Networks Security |
+| `iso27001` | `A.8.21` | Security of Network Services |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `compute`, `exposure`, `firewall`, `ssh`
+
+---
+
+### `gcp-compute-os-login-enabled`
+
+**OS Login must be enabled at project level** &middot; severity `medium` &middot; service `compute` &middot; resource `gcp.compute.project_metadata`
+
+OS Login replaces SSH key management with IAM: an operator with the required IAM role gets short-lived SSH credentials, and revoking access is a single IAM unbind rather than chasing per-instance authorized_keys files. CIS GCP Foundations 4.4 prescribes enabling OS Login at the project metadata level so all new instances inherit it.
+
+_Remediation:_
+
+> 'gcloud compute project-info add-metadata --metadata enable-oslogin=TRUE'. Then grant roles/compute.osLogin (or osAdminLogin) to the principals who should be able to SSH in.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `5.4` | Restrict Administrator Privileges to Dedicated Accounts |
+| `cis-v8` | `6.5` | Require MFA for Administrative Access |
+| `iso27001` | `A.8.2` | Privileged Access Rights |
+| `iso27001` | `A.8.5` | Secure Authentication |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `compute`, `iam`, `ssh`
+
+---
+
+### `gcp-compute-shielded-vm`
+
+**GCE instances must have Shielded VM fully enabled** &middot; severity `medium` &middot; service `compute` &middot; resource `gcp.compute.instance`
+
+Shielded VM uses a hardened firmware (UEFI), Secure Boot (only Google-signed bootloaders), vTPM (virtual trusted platform module), and integrity monitoring (boot-time checks against a trusted baseline) to defend the boot chain. Without it, a rootkit-level compromise is much harder to detect. CIS GCP 4.8 prescribes all three options on.
+
+_Remediation:_
+
+> Shielded VM settings are set at instance create time; recreate the instance with all three options enabled. For existing instances, the simpler path is 'gcloud compute instances stop <name>' then 'gcloud compute instances update <name> --shielded-secure-boot --shielded-vtpm --shielded-integrity-monitoring' then start it back up.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `3.10` | Encrypt Sensitive Data in Transit |
+| `cis-v8` | `4.1` | Establish and Maintain a Secure Configuration Process |
+| `iso27001` | `A.8.7` | Protection Against Malware |
+| `iso27001` | `A.8.8` | Management of Technical Vulnerabilities |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+| `soc2` | `CC7.1` | System Operations - Vulnerabilities |
+
+_Tags:_ `boot-integrity`, `compute`, `shielded-vm`
+
+---
 
 ### `gcp-iam-cloudaudit-logging`
 
