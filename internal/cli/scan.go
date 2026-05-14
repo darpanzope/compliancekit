@@ -14,6 +14,7 @@ import (
 	"github.com/darpanzope/compliancekit/internal/config"
 	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/engine"
+	"github.com/darpanzope/compliancekit/internal/profile"
 	"github.com/darpanzope/compliancekit/internal/report"
 	"github.com/darpanzope/compliancekit/internal/score"
 )
@@ -24,6 +25,7 @@ type scanOptions struct {
 	outDir     string
 	formats    []string
 	failOn     string
+	profile    string
 }
 
 func newScanCmd() *cobra.Command {
@@ -57,6 +59,7 @@ Exit codes:
 	cmd.Flags().StringVar(&opts.outDir, "out-dir", "", "output directory (overrides config)")
 	cmd.Flags().StringSliceVar(&opts.formats, "output", nil, "output format(s) (overrides config)")
 	cmd.Flags().StringVar(&opts.failOn, "fail-on", "", "severity threshold for non-zero exit (overrides config)")
+	cmd.Flags().StringVar(&opts.profile, "profile", "", "named profile from compliancekit.yaml `profiles:` to restrict which checks run")
 
 	return cmd
 }
@@ -70,16 +73,7 @@ func runScan(ctx context.Context, w io.Writer, opts scanOptions, providerFilter 
 		return fmt.Errorf("config: %w", err)
 	}
 
-	// Flag overrides on config.
-	if opts.outDir != "" {
-		cfg.Output.OutDir = opts.outDir
-	}
-	if len(opts.formats) > 0 {
-		cfg.Output.Format = opts.formats
-	}
-	if opts.failOn != "" {
-		cfg.Severity.FailOn = opts.failOn
-	}
+	applyScanFlagOverrides(cfg, opts)
 	failOnLevel, err := cfg.Severity.FailOnLevel()
 	if err != nil {
 		return fmt.Errorf("invalid fail_on severity: %w", err)
@@ -98,10 +92,20 @@ func runScan(ctx context.Context, w io.Writer, opts scanOptions, providerFilter 
 		return err
 	}
 
-	fmt.Fprintf(w, "scanning %s (%d checks)...\n",
-		describeCollectors(collectors), core.RegisteredCount())
+	registry, err := buildRegistry(cfg)
+	if err != nil {
+		return err
+	}
 
-	eng := engine.New(collectors, core.DefaultRegistry())
+	if cfg.Profile != "" {
+		fmt.Fprintf(w, "scanning %s (profile=%s, %d checks)...\n",
+			describeCollectors(collectors), cfg.Profile, len(registry.Checks()))
+	} else {
+		fmt.Fprintf(w, "scanning %s (%d checks)...\n",
+			describeCollectors(collectors), len(registry.Checks()))
+	}
+
+	eng := engine.New(collectors, registry)
 	result, err := eng.Run(ctx)
 	if err != nil {
 		return fmt.Errorf("scan: %w", err)
@@ -152,6 +156,68 @@ func buildCollectors(cfg *config.Config, providerFilter string) ([]core.Collecto
 	// Future: kubernetes (v0.8), hetzner (v0.7).
 
 	return collectors, nil
+}
+
+// applyScanFlagOverrides copies non-empty flag values from opts into
+// cfg. Split out of runScan so the latter stays under gocyclo's
+// 15-edge ceiling now that profile selection is a fourth override.
+func applyScanFlagOverrides(cfg *config.Config, opts scanOptions) {
+	if opts.outDir != "" {
+		cfg.Output.OutDir = opts.outDir
+	}
+	if len(opts.formats) > 0 {
+		cfg.Output.Format = opts.formats
+	}
+	if opts.failOn != "" {
+		cfg.Severity.FailOn = opts.failOn
+	}
+	if opts.profile != "" {
+		cfg.Profile = opts.profile
+	}
+}
+
+// buildRegistry returns the registry to hand to the engine. With no
+// profile set, it's the default registry as-is. With cfg.Profile
+// pointing at a named entry under cfg.Profiles, the surviving subset
+// is copied into a fresh registry so the engine iterates the smaller
+// set without engine.New needing to know about profiles at all.
+func buildRegistry(cfg *config.Config) (*core.Registry, error) {
+	if cfg.Profile == "" {
+		return core.DefaultRegistry(), nil
+	}
+	pc, ok := cfg.Profiles[cfg.Profile]
+	if !ok {
+		return nil, fmt.Errorf("profile %q is not defined under `profiles:` in %s",
+			cfg.Profile, cfg.SourcePath)
+	}
+	p := profile.Profile{
+		Name:              cfg.Profile,
+		Description:       pc.Description,
+		IncludeProviders:  pc.IncludeProviders,
+		ExcludeProviders:  pc.ExcludeProviders,
+		IncludeSeverities: pc.IncludeSeverities,
+		IncludeFrameworks: pc.IncludeFrameworks,
+		IncludeTags:       pc.IncludeTags,
+		ExcludeTags:       pc.ExcludeTags,
+		IncludeIDs:        pc.IncludeIDs,
+		ExcludeIDs:        pc.ExcludeIDs,
+	}
+	all := core.DefaultRegistry()
+	surviving, err := p.Filter(all.Checks())
+	if err != nil {
+		return nil, err
+	}
+	filtered := core.NewRegistry()
+	for _, c := range surviving {
+		fn, ok := all.Get(c.ID)
+		if !ok {
+			// Should not happen -- p.Filter returned a check that the
+			// registry doesn't have a function for. Defensive guard.
+			return nil, fmt.Errorf("internal: check %q in registry metadata but no func", c.ID)
+		}
+		filtered.Register(c, fn)
+	}
+	return filtered, nil
 }
 
 // buildReporters constructs the reporter set from the configured format list.

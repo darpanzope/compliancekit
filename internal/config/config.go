@@ -19,14 +19,15 @@ import (
 
 // Config is the parsed compliancekit.yaml.
 type Config struct {
-	Project     string         `mapstructure:"project"     yaml:"project,omitempty"`
-	Environment string         `mapstructure:"environment" yaml:"environment,omitempty"`
-	Providers   Providers      `mapstructure:"providers"   yaml:"providers"`
-	Frameworks  []string       `mapstructure:"frameworks"  yaml:"frameworks"`
-	Profile     string         `mapstructure:"profile"     yaml:"profile,omitempty"`
-	Severity    SeverityConfig `mapstructure:"severity"    yaml:"severity"`
-	Output      OutputConfig   `mapstructure:"output"      yaml:"output"`
-	State       StateConfig    `mapstructure:"state"       yaml:"state"`
+	Project     string                   `mapstructure:"project"     yaml:"project,omitempty"`
+	Environment string                   `mapstructure:"environment" yaml:"environment,omitempty"`
+	Providers   Providers                `mapstructure:"providers"   yaml:"providers"`
+	Frameworks  []string                 `mapstructure:"frameworks"  yaml:"frameworks"`
+	Profile     string                   `mapstructure:"profile"     yaml:"profile,omitempty"`
+	Profiles    map[string]ProfileConfig `mapstructure:"profiles"    yaml:"profiles,omitempty"`
+	Severity    SeverityConfig           `mapstructure:"severity"    yaml:"severity"`
+	Output      OutputConfig             `mapstructure:"output"      yaml:"output"`
+	State       StateConfig              `mapstructure:"state"       yaml:"state"`
 
 	// SourcePath is the resolved path of the YAML file Load read from, or ""
 	// if no file was found and defaults plus environment were used alone.
@@ -173,4 +174,24 @@ func (c Config) Validate() error {
 	}
 
 	return nil
+}
+
+// ProfileConfig is one named subset of the check catalog declared
+// under `profiles:` in compliancekit.yaml. Mirrors the selectors on
+// internal/profile.Profile; the loader copies fields across into
+// the engine type at scan time.
+//
+// Profiles are pure filters over the registered checks. A profile
+// that names zero checks is an error at scan time -- almost always
+// a typo in the selectors.
+type ProfileConfig struct {
+	Description       string   `mapstructure:"description"        yaml:"description,omitempty"`
+	IncludeProviders  []string `mapstructure:"include_providers"  yaml:"include_providers,omitempty"`
+	ExcludeProviders  []string `mapstructure:"exclude_providers"  yaml:"exclude_providers,omitempty"`
+	IncludeSeverities []string `mapstructure:"include_severities" yaml:"include_severities,omitempty"`
+	IncludeFrameworks []string `mapstructure:"include_frameworks" yaml:"include_frameworks,omitempty"`
+	IncludeTags       []string `mapstructure:"include_tags"       yaml:"include_tags,omitempty"`
+	ExcludeTags       []string `mapstructure:"exclude_tags"       yaml:"exclude_tags,omitempty"`
+	IncludeIDs        []string `mapstructure:"include_ids"        yaml:"include_ids,omitempty"`
+	ExcludeIDs        []string `mapstructure:"exclude_ids"        yaml:"exclude_ids,omitempty"`
 }
