@@ -624,7 +624,10 @@ unless it actually reaches one.
 ### v0.13 — IaC / OCSF / OSCAL ingest + emit
 
 **Goal:** compose with the rest of the security stack instead of
-competing with it.
+competing with it. By v0.13 the catalog has ~200 native checks
+across five providers; the remaining value is cross-tool
+interoperability so a single compliancekit run produces the
+artifacts a SOC + GRC + FedRAMP audit each need.
 
 **Deliverables**
 
@@ -632,8 +635,8 @@ competing with it.
   vendor outputs (AWS Security Hub, GCP Security Command Center,
   Defender) and surfaces them as findings in the same envelope.
 - **OSCAL emit**: `compliancekit evidence --emit=oscal-assessment-results`
-  produces an OSCAL Assessment Results v1.0.4 document alongside the
-  pack. Useful for FedRAMP-adjacent customers.
+  produces an OSCAL Assessment Results v1.0.4 document alongside
+  the pack. Useful for FedRAMP-adjacent customers.
 - **OSCAL ingest**: `compliancekit ingest --format=oscal-catalog`
   reads an OSCAL Catalog so a customer's bespoke framework can be
   scanned without writing a new yaml.
@@ -644,11 +647,37 @@ competing with it.
 - ADR-003 (OCSF) is finally complete: OCSF is no longer just an
   output, it is a wire format for cross-tool composition.
 
+**Plumbing**
+
+- New ingest pipeline at `internal/ingest/` with one file per
+  supported source format. Each reads bytes, emits a slice of
+  `core.Finding` + (optionally) projected `core.Resource` entries.
+- OSCAL Go bindings: `github.com/defenseunicorns/go-oscal` or
+  hand-rolled minimal parser (decide at design time based on dep
+  size; OSCAL XSD is ~3MB compiled).
+- The reporter family gains an `oscal-ar` format alongside the
+  existing five.
+- Framework mapping table: a tailorable yaml that maps incoming
+  external rule IDs (e.g. Trivy CIS-Docker-1.2.3) to compliancekit
+  framework controls.
+
+**Definition of done**
+
+- All four ingest formats (`ocsf`, `oscal-catalog`, `sarif`,
+  `oscal-catalog`) round-trip a vendor fixture.
+- OSCAL Assessment Results emit validates against the v1.0.4
+  XSD.
+- README "Output formats" table lists oscal-ar alongside the
+  existing five.
+- ADR-003 marked Resolved.
+
 ---
 
 ### v0.14 — Vuln / secret / SCA ingest
 
-**Goal:** every CVE tied to a real resource in the graph.
+**Goal:** every CVE tied to a real resource in the graph. By v0.14
+the operator can answer "which of my droplets has CVE-2026-XXXXX
+right now?" without running a separate vuln-DB tool.
 
 **Deliverables**
 
@@ -666,12 +695,34 @@ competing with it.
   native dependency resolver. compliancekit's job is the graph and
   the evidence pack; the scanners are best left to specialists.
 
+**Plumbing**
+
+- Extends `internal/ingest/` from v0.13 with per-tool adapters:
+  `trivy.go`, `grype.go`, `checkov.go`, `gitleaks.go`.
+- `core.Finding` gains optional `Vulnerability` + `Secret` typed
+  metadata blocks so reporters can render CVE IDs + secret
+  fingerprints natively.
+- Cross-reference rules: a Trivy finding against an image SHA gets
+  joined to every DO/AWS/GCP/K8s resource referencing that SHA.
+  Joins happen at scan time using the existing resource graph.
+- Evidence pack gains a `vulnerabilities.csv` index alongside
+  `control-mapping.csv`.
+
+**Definition of done**
+
+- One ingest fixture per tool (Trivy / Grype / Checkov / gitleaks).
+- A CVE found by Trivy on a container image used by an App Platform
+  app appears in `findings.json` linked to the App resource.
+- Memory ceiling: 10k vuln findings on a 500-resource graph stays
+  under 500MB RSS.
+
 ---
 
 ### v0.15 — Remediation generators
 
 **Goal:** the "OK how do I fix it" question gets answered
-copy-pasteably.
+copy-pasteably. Every shipped check produces both a finding AND
+a structured remediation in the operator's tool of choice.
 
 **Deliverables**
 
@@ -687,6 +738,29 @@ copy-pasteably.
 - **Per ADR-006**: remediation is *generation*, not *application*.
   `--apply-fix` is the v2.x gate, intentionally a separate trust
   bar.
+
+**Plumbing**
+
+- New subcommand `cmd/compliancekit/remediate.go` driven by
+  `internal/remediate/` package.
+- `core.Check` interface gains an optional `Remediate(finding)
+  -> Snippet` method; checks without one continue to surface the
+  free-text `Remediation` field as fallback.
+- One remediation per (check, output-format) tuple. CI gates
+  that every active check has at least one tested remediation
+  by v0.15-shipping.
+- Per-format renderers in `internal/remediate/render/{bash,
+  terraform,ansible,cli}.go`.
+
+**Definition of done**
+
+- Every v0.5-v0.10 check has a structured remediation in at least
+  three output formats (bash + terraform + one cloud-CLI).
+- A regression test asserts that re-running a Terraform-format
+  remediation against the same finding twice produces idempotent
+  HCL.
+- Contributor guide updated: new checks REQUIRE a remediation
+  generator alongside the eval function.
 
 ---
 
