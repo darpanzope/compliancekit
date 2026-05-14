@@ -175,8 +175,9 @@ comment is harder to anchor at the top):**
 >   per-archive SBOM
 > - A GitHub Action so dropping it into CI is ~10 lines of YAML
 >
-> Roadmap: Hetzner at v0.7, K8s at v0.8, AWS / GCP / etc at v1.7.
-> serve mode (continuous monitoring without the SaaS bill) at v1.1.
+> Roadmap: AWS at v0.7, GCP at v0.8, DigitalOcean depth pass at v0.9,
+> Hetzner at v0.10, K8s + EKS / GKE / DOKS at v0.11. serve mode
+> (continuous monitoring without the SaaS bill) at v1.1.
 >
 > MIT licence. Happy to answer anything.
 
@@ -272,7 +273,7 @@ hasn't, depending). LinkedIn copy:
 > and it's the part I'm most excited about.
 >
 > MIT licence, single static binary, GitHub Action for CI. Roadmap
-> goes through K8s at v0.8 and AWS at v1.7.
+> hits AWS at v0.7, GCP at v0.8, K8s + EKS / GKE / DOKS at v0.11.
 >
 > github.com/darpanzope/compliancekit
 

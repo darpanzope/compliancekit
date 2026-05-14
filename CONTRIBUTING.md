@@ -118,7 +118,12 @@ machine-generated, the contributor signs for the work.
 
 **No, or not yet:**
 - New providers before the version that's slated to add them (see
-  ROADMAP.md). Hetzner is v0.7; K8s is v0.8; AWS is v1.7.
+  [ROADMAP.md](ROADMAP.md)). Locked sequence: AWS at v0.7, GCP at v0.8,
+  DigitalOcean deepening at v0.9, Hetzner at v0.10, K8s + EKS/GKE/DOKS
+  at v0.11. Tail clouds (Cloudflare, GitHub, Google Workspace, Vercel,
+  Linode, Vultr) at v1.7. Pulling any of these forward needs a
+  conversation -- the sequence is locked in
+  [DECISIONS.md ADR-007](DECISIONS.md).
 - New output formats. Five reporters at v0.4 is enough; a new format
   needs an ADR.
 - Adding new lint rules to `.golangci.yaml`. Suppressing existing rules

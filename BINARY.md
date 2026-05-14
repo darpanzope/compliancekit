@@ -57,8 +57,12 @@ Single process. Goroutines for concurrency. No subprocess fan-out (except plugin
 External I/O (outbound only by default):
    ──► HTTPS to api.digitalocean.com (godo)
    ──► SSH/22 to inventory hosts (x/crypto/ssh)
-   ──► (v0.14+) HTTPS to webhook sinks
-   ──► (v0.10+) HTTPS to ingestor sources
+   ──► (v0.7+)  HTTPS to AWS APIs (aws-sdk-go-v2)
+   ──► (v0.8+)  HTTPS to GCP APIs (cloud.google.com/go)
+   ──► (v0.10+) HTTPS to api.hetzner.cloud (hcloud-go)
+   ──► (v0.11+) HTTPS to K8s API servers (client-go)
+   ──► (v0.13+) HTTPS to ingestor sources
+   ──► (v0.17+) HTTPS to webhook / Slack / Discord / email sinks
 
 No inbound listener until v1.1's `compliancekit serve`.
 ```
@@ -86,7 +90,7 @@ binary
     ├── internal/checks/linux/*.yaml              check metadata
     ├── internal/frameworks/*.yaml                control mappings
     ├── web/report/*.{html,css,js,svg}            HTML report assets
-    └── internal/policies/*.rego                  (v0.13+) Rego checks
+    └── internal/policies/*.rego                  (v0.16+) Rego checks
 ```
 
 **Why embedded:** one binary, zero install steps, no "missing config" failure mode. Updating the check catalogue means a new release — which is the right cadence for compliance content anyway.
@@ -102,14 +106,18 @@ github.com/darpanzope/compliancekit
 ├── gopkg.in/yaml.v3                    check/config parsing
 ├── github.com/rs/zerolog               structured logging
 │
-├── (v0.10) github.com/owenrumney/go-sarif    SARIF emitter
+├── (v0.7)  github.com/aws/aws-sdk-go-v2/...  AWS collector
 │
-├── (v0.13) github.com/open-policy-agent/opa
+├── (v0.8)  cloud.google.com/go               GCP collector
+│
+├── (v0.10) github.com/hetznercloud/hcloud-go Hetzner SDK
+│
+├── (v0.11) k8s.io/client-go                  K8s collector
+│
+├── (v0.13) (ingest deps; OCSF / OSCAL / SARIF / Trivy / Checkov)
+│
+├── (v0.16) github.com/open-policy-agent/opa
 │            └── Rego evaluator
-│
-├── (v0.8)  k8s.io/client-go                  K8s collector
-│
-├── (v0.7)  github.com/hetznercloud/hcloud-go Hetzner SDK
 │
 ├── (v1.1)  modernc.org/sqlite                pure-Go SQLite
 │            github.com/jackc/pgx/v5          Postgres (opt-in)
@@ -204,7 +212,7 @@ internal/                 private to this module
   ├── checks/             check YAML + Go scanner funcs
   ├── state/              local state store
   ├── config/             viper-backed config loader
-  └── notify/             (v0.14+) Slack/Discord/webhook/...
+  └── notify/             (v0.17+) Slack/Discord/webhook/...
 pkg/                      public API for embedders
   └── compliancekit/      stable from v1.0
 web/                      embedded static assets
@@ -224,10 +232,19 @@ How the artifact changes shape over time:
 | v0.3 | embedded HTML/CSS/JS, SARIF emitter, OCSF mapper | +1 MB |
 | v0.4 | evidence-pack writer, sha256 manifest | negligible |
 | v0.5 | version metadata, build provenance | negligible |
-| v0.7 | hcloud-go (Hetzner) | +2 MB |
-| v0.8 | client-go (K8s) | +5 MB |
-| v0.10 | SARIF ingester, OSCAL types | +1 MB |
-| v0.13 | OPA Rego runtime | +6 MB |
+| v0.6 | drift + baseline + hardening score engine | negligible |
+| v0.7 | aws-sdk-go-v2 (IAM, EC2, S3, RDS, CloudTrail, KMS, Config, GuardDuty) | +12 MB |
+| v0.8 | cloud.google.com/go (Compute, GCS, SQL, Logging, KMS, BigQuery, IAM) | +10 MB |
+| v0.9 | godo expanded surface (Spaces, LBs, VPCs, DBs, App Platform, Registry) | negligible (reuses existing SDK) |
+| v0.10 | hcloud-go (Hetzner) | +2 MB |
+| v0.11 | k8s.io/client-go (EKS / GKE / DOKS adapters as thin glue) | +5 MB |
+| v0.12 | extra framework yamls (NIST 800-53 r5, HIPAA, PCI-DSS v4, MITRE ATT&CK) | negligible (embedded yaml) |
+| v0.13 | OCSF / OSCAL / SARIF / Trivy / Checkov ingest types | +1 MB |
+| v0.14 | (no new deps; ingest already covers vuln/secret/SCA shapes) | negligible |
+| v0.15 | remediation generator templates | negligible (embedded text) |
+| v0.16 | OPA Rego runtime (github.com/open-policy-agent/opa) | +6 MB |
+| v0.17 | notification sink HTTP/SMTP clients | +1 MB |
+| v0.18 | waivers schema only | negligible |
 | v1.1 | SQLite (pure Go), HTTP server, REST handlers | +3 MB |
 | v2.0 | wazero (WASM), gRPC | +4 MB |
 

@@ -61,10 +61,15 @@ Control mapping: evidence/2026-Q2/control-mapping.csv
 
 Prowler exists. ScoutSuite exists. Steampipe exists. They are excellent
 tools that target the **enterprise security teams who own AWS, GCP, and
-Azure** — and they leave a huge slice of the market unserved:
+Azure** — and they leave a huge slice of the market unserved.
 
-- **DigitalOcean, Hetzner, Linode, Vultr.** First-class support, not
-  third-party plugins.
+What compliancekit does differently:
+
+- **DigitalOcean, Hetzner, Linode, Vultr — first-class, not "we have a
+  third-party plugin somewhere."** AWS and GCP land as first-class
+  providers too (v0.7 and v0.8 per [ROADMAP.md](ROADMAP.md)) but the
+  audience compliancekit was built for is the indie-SaaS founder, not
+  the F500 security org.
 - **Linux droplets over SSH.** Not "install our agent" — agentless,
   works on the boxes you already have.
 - **Outputs an auditor will actually accept.** A JSON dump is not evidence.
@@ -140,9 +145,12 @@ Full per-check reference (auto-generated, IDs / severities / framework mappings 
 |---|---|---:|---|
 | DigitalOcean | first-party | 5 | account, droplets, firewalls; full droplet inventory + per-firewall rule analysis |
 | Linux over SSH | first-party | 15 | agentless; CIS Ubuntu/Debian benchmark subset; covers sshd, ufw/nftables, auditd, filesystem, users, kernel |
-| Hetzner Cloud | v0.7 | — | planned |
-| Kubernetes + DOKS | v0.8 | — | planned |
-| AWS, GCP, Cloudflare, GitHub, Workspace, Vercel, Linode, Vultr | v1.7 | — | planned |
+| AWS | v0.7 | ~30 | planned (IAM / EC2 / S3 / RDS / CloudTrail / KMS / Config / GuardDuty) |
+| GCP | v0.8 | ~25 | planned (IAM / Compute / GCS / Cloud SQL / Logging / KMS / BigQuery) |
+| DigitalOcean deepening | v0.9 | +20 | planned (Spaces / LBs / VPCs / managed DBs / DOKS / Container Registry / App Platform) |
+| Hetzner Cloud | v0.10 | ~15 | planned |
+| Kubernetes + EKS / GKE / DOKS-deep | v0.11 | ~35 | planned |
+| Cloudflare, GitHub, Google Workspace, Vercel, Linode, Vultr | v1.7 | — | tail clouds |
 
 ### Frameworks
 
@@ -154,7 +162,7 @@ Every check maps to all three frameworks shipping today:
 | ISO/IEC 27001 Annex A | 2022 | full A.8 Technological theme (34 controls) + A.5.9, A.5.15, A.5.30 |
 | CIS Controls v8 | v8 | subset referenced by current checks |
 
-NIST 800-53 r5, HIPAA, PCI-DSS, and MITRE ATT&CK land at **v0.9**.
+NIST 800-53 r5, HIPAA, PCI-DSS v4, and MITRE ATT&CK land at **v0.12**.
 
 ### Output formats
 
@@ -213,7 +221,7 @@ parsed locally. No daemons, no auto-update, no callbacks.
 
 **Will it touch my infrastructure?**
 No. `compliancekit` is read-only by design (ADR-005 in
-[DECISIONS.md](DECISIONS.md)). Remediation generators land at v0.12 and even
+[DECISIONS.md](DECISIONS.md)). Remediation generators land at v0.15 and even
 then they emit commands for you to run — they do not execute anything.
 
 **My auditor wants Drata / Vanta / AuditBoard. Does this play nicely?**
@@ -243,7 +251,7 @@ you can self-host without writing a new server.
 They target enterprise security teams on the big three clouds. We target
 indie SaaS teams on DigitalOcean, Hetzner, and Linux. They emit JSON;
 we emit an evidence folder. There is overlap and we plan to ingest their
-outputs from v0.10 onwards.
+outputs from v0.13 onwards.
 
 **License?**
 [MIT](LICENSE). The bundled framework YAML files are derivative summaries

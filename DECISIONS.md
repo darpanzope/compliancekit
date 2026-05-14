@@ -28,11 +28,11 @@ Split at v0.1. A typed `Resource` graph sits between `Collector` and `Evaluator`
 
 ### Consequences
 - v0.1 ships with `Collector` and `Evaluator` interfaces. `Provider` is retired as a concept; what was "the DO provider" is now "the DO collector plus a set of DO checks."
-- Rego adoption at v0.13 is a new `Evaluator` impl, not a check-signature change.
+- Rego adoption at v0.16 is a new `Evaluator` impl, not a check-signature change. (Originally slated for v0.13; moved to v0.16 per ADR-007 cloud-sequencing pivot.)
 
 ---
 
-## ADR-002 — Policy DSL is Rego, landing at v0.13
+## ADR-002 — Policy DSL is Rego, landing at v0.16
 **Date:** 2026-05-13
 **Status:** Accepted
 
@@ -40,7 +40,7 @@ Split at v0.1. A typed `Resource` graph sits between `Collector` and `Evaluator`
 Stay Go-only forever, or add a policy DSL? If a DSL, which — Rego (OPA), CEL, Cloud Custodian's YAML, or our own?
 
 ### Decision
-Add Rego at v0.13. Until then, Go-only checks. The `Evaluator` interface is shaped so a `RegoEvaluator` slots in without touching existing checks.
+Add Rego at v0.16. Until then, Go-only checks. The `Evaluator` interface is shaped so a `RegoEvaluator` slots in without touching existing checks. (Originally planned for v0.13; rescheduled to v0.16 by ADR-007 to make room for AWS / GCP / DigitalOcean depth / Hetzner ahead of it.)
 
 ### Reasoning
 - Rego is the industry standard: Trivy, KICS, Terrascan, Gatekeeper, Conftest all use it. Security teams already know it.
@@ -51,22 +51,22 @@ Add Rego at v0.13. Until then, Go-only checks. The `Evaluator` interface is shap
 
 ### Rejected alternatives
 - **Rego from v0.1.** Adds the OPA dependency and a parallel codepath before we have proof anyone will write a check. Defer.
-- **CEL.** Better syntax, smaller adoption. If Rego turns out to be a bad fit at v0.13, CEL is the fallback.
+- **CEL.** Better syntax, smaller adoption. If Rego turns out to be a bad fit at v0.16, CEL is the fallback.
 - **Cloud Custodian–style YAML policy.** Couples policy to action; we want them separable.
 - **Stay Go-only forever.** Caps contributor velocity. Hard no.
 
 ### Consequences
 - v0.1 `Check` and `Evaluator` interfaces must not assume Go-native logic. A check is metadata + a reference to *something that produces findings* — initially a Go function, eventually a Rego policy.
-- v0.13 is a real release, not a refactor — by then we'll have ~100 Go checks, and converting the simpler 30-40 to Rego validates the model.
+- v0.16 is a real release, not a refactor — by then we'll have ~150 Go checks across DO, AWS, GCP, Hetzner, and Linux, and converting the simpler 40-50 to Rego validates the model.
 
 ---
 
-## ADR-003 — OCSF output lands at v0.3, not v0.10
+## ADR-003 — OCSF output lands at v0.3, not v0.13
 **Date:** 2026-05-13
 **Status:** Accepted
 
 ### Question
-When do we ship JSON-OCSF (Open Cybersecurity Schema Framework)? Original roadmap had it implicit in v0.10's "framework expansion."
+When do we ship JSON-OCSF (Open Cybersecurity Schema Framework)? Original roadmap had it implicit in v0.13's "ingest + emit" milestone (originally numbered v0.10 before the ADR-007 reorder).
 
 ### Decision
 Ship JSON-OCSF as a first-class output format at v0.3, alongside SARIF.
@@ -77,7 +77,7 @@ Ship JSON-OCSF as a first-class output format at v0.3, alongside SARIF.
 - "SARIF + OCSF + JSON + HTML + Markdown" is the right output portfolio. Anything less leaves a downstream SIEM user stuck.
 
 ### Rejected alternatives
-- **Defer to v0.10.** Cheap now, expensive later. Rejected.
+- **Defer to v0.13.** Cheap now, expensive later. Rejected.
 - **Skip OCSF, OCSF will lose to something else.** Possible but unlikely given the backers. Bet on it.
 
 ### Consequences
@@ -151,15 +151,67 @@ Opt-in at v2.x. Permanently behind `--apply-fix` or `--yes-i-mean-it`. Dry-run b
 - Cloud Custodian proves the model: declarative scan + opt-in act. Useful for some teams, terrifying for others.
 - The single feature that turns a SaaS subscription into a one-time install is the one where the tool can *close* findings, not just identify them.
 - Permanently splitting the project into "audit-only" (default, safe) and "act-on-it" (advanced) keeps the safety invariant intact: someone who just installs the binary cannot accidentally mutate their infrastructure.
-- v0.12 ships remediation *generators* (Bash/Terraform/Ansible/doctl snippets the human applies). The leap from "generated snippet" to "applied snippet" is small in code, large in trust — hence the v2.x gate.
+- v0.15 ships remediation *generators* (Bash/Terraform/Ansible/aws/gcloud/doctl/hcloud snippets the human applies). The leap from "generated snippet" to "applied snippet" is small in code, large in trust — hence the v2.x gate. (Originally slated for v0.12; rescheduled to v0.15 by ADR-007.)
 
 ### Rejected alternatives
 - **Never.** Caps the project's long-term value ceiling.
 - **At v0.x or v1.x.** Premature — credibility comes from being right about findings first, then being trusted to act on them.
 
 ### Consequences
-- v0.12 must produce machine-applicable remediation artifacts (not just human prose) so v2.x's `--apply-fix` reuses them.
+- v0.15 must produce machine-applicable remediation artifacts (not just human prose) so v2.x's `--apply-fix` reuses them.
 - v2.x ships with `compliancekit remediate --dry-run` as the default; `--apply` requires both `--yes-i-mean-it` and explicit resource-level allowlist in config.
+
+---
+
+## ADR-007 — Cloud sequencing: AWS, GCP, DigitalOcean depth before Hetzner
+**Date:** 2026-05-14 (post-v0.5 launch)
+**Status:** Accepted
+
+### Question
+The pre-launch roadmap had Hetzner at v0.7, Containers + K8s at v0.8, and AWS / GCP / Cloudflare / Vercel / Linode / Vultr collapsed into a single v1.7 "more clouds" milestone. Is that the right order after the v0.5 launch signal?
+
+### Decision
+Re-sequence v0.6 → v1.0 so the cloud arc lands as:
+
+| Slot | Was | Now |
+|---|---|---|
+| v0.7 | Hetzner | **AWS** |
+| v0.8 | Containers + K8s | **GCP** |
+| v0.9 | Framework expansion | **DigitalOcean deepening** |
+| v0.10 | IaC / OCSF / OSCAL ingest | **Hetzner** |
+| v0.11 | Vuln / secret / SCA ingest | Containers + K8s + EKS / GKE / DOKS-deep |
+| v0.12 | Remediation generators | Framework expansion (NIST / HIPAA / PCI / ATT&CK) |
+| v0.13 | Rego DSL | IaC / OCSF / OSCAL ingest |
+| v0.14 | Notifications | Vuln / secret / SCA ingest |
+| v0.15 | Waivers | Remediation generators |
+| v0.16 | (not previously numbered) | Rego policy DSL |
+| v0.17 | (not previously numbered) | Notifications |
+| v0.18 | (not previously numbered) | Waivers + skip annotations |
+
+The old v1.7 "more clouds" entry collapses: AWS and GCP land at v0.7-v0.8 as first-class providers. The tail (Cloudflare, GitHub, Workspace, Vercel, Linode, Vultr) stays at v1.7 as a smaller "expand-the-tail" milestone. v1.0 (API stability) is unchanged.
+
+### Reasoning
+- The v0.5 HN launch was the first real audience-selection event. The single most common feedback theme — outpacing every other category combined — was *"would love to use this but we're on AWS."* Same indie-SaaS demographic that put compliancekit on the map, different provider.
+- GCP fits the same pattern. The "we're portable, but on GCP at the moment" SaaS shops are the same readership. Pairing AWS (v0.7) and GCP (v0.8) in successive releases lets the cloud-common abstractions amortise — region/account attribution, SDK client pooling, OIDC auth shape — instead of getting two cold-start cloud collectors 18 months apart.
+- DigitalOcean owes its audience a depth pass. Five DO checks was enough to launch; a real DO production fleet has Spaces, LBs, VPCs, managed DBs, App Platform, DOKS, Container Registry. v0.9 catches up so the audience that funded the launch is not left at the v0.5 surface for two years.
+- Hetzner is still in scope. It moves to v0.10 — after the AWS / GCP / DO arc — because (a) it serves the same indie-cloud demographic that already gets value from v0.5 DO support, and (b) the cloud abstractions established at v0.7-v0.9 absorb the Hetzner-specific bits in much less time than going Hetzner-first would.
+- K8s + EKS / GKE / DOKS-deep moves from v0.8 to v0.11 because EKS / GKE / DOKS each meaningfully need their owning cloud's collector. Shipping K8s before any of those clouds means shipping a kubeconfig-only scanner and then refactoring three times when each cloud lands. Landing K8s after all four clouds means one coherent K8s arc with cloud-specific glue per provider.
+
+### Rejected alternatives
+- **Stay the pre-launch course.** Rejected. The HN signal was too specific to ignore, and the cost of pivoting is one ADR plus a roadmap rewrite.
+- **Pull only AWS forward, leave GCP and DO-deep where they were.** Rejected. The SDK amortisation argument requires GCP while the AWS abstractions are fresh in the code and in our heads. Splitting GCP out by 18 months loses the amortisation.
+- **Front-load every cloud (AWS + GCP + Hetzner + DO-deep at v0.7 as one release).** Rejected. v0.7 already risks a two-weekend budget; a four-cloud v0.7 risks two months.
+- **Pull K8s forward to v0.7.5 as a generic-K8s-only release.** Rejected. Cloud-specific K8s is the value; a generic kubeconfig scanner without IRSA / Workload Identity / DOKS-specific glue is a half-finished feature.
+
+### Consequences
+- The "v1.7 more clouds" milestone shrinks to just the tail (Cloudflare, GitHub, Workspace, Vercel, Linode, Vultr).
+- The previously deferred *AWS provider depth* open question is now answered: depth at v0.7 is "the 30 highest-leverage checks that map cleanly to the three shipping frameworks." Full scope enumerated in ROADMAP.md v0.7.
+- ADR-002 (Rego policy DSL) shifts from v0.13 to v0.16. The interface design and the rationale are unchanged; only the release slot moves. The `Evaluator` seam from v0.1 still pays off, just three minor versions later.
+- ADR-003 (OCSF) is unaffected on the *emit* side (shipped at v0.3). The *ingest* side moves from the old v0.10 slot to v0.13 alongside the rest of the ingest work.
+- ADR-006 (auto-remediation at v2.x) is unaffected directly, but v0.15 (remediation *generators*, the v2.x prerequisite) moves from v0.12 to v0.15.
+- Downstream consumers who were waiting for AWS at v1.7 now see it at v0.7. Strict improvement.
+- Downstream consumers who were waiting for Hetzner at v0.7 now wait until v0.10. The cost of the pivot.
+- The README "Providers" table and the FAQ are rewritten in lockstep so the public marketing matches the engineering schedule.
 
 ---
 
@@ -169,4 +221,3 @@ Opt-in at v2.x. Permanently behind `--apply-fix` or `--yes-i-mean-it`. Dry-run b
 - **Storage backend default for `serve`:** SQLite or Postgres? Probably SQLite default, Postgres opt-in. Decide at v1.1.
 - **CIS Certification pursuit:** worth the paperwork for credibility? Decide post-launch once audience traction is known.
 - **Web UI framework for `serve`:** server-rendered HTML (htmx?) vs. a real SPA. Stay server-rendered as long as we can.
-- **AWS provider depth:** Prowler-parity is out of scope. Where exactly do we stop? Defer to v1.7.

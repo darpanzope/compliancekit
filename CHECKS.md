@@ -1,6 +1,6 @@
 # Authoring a check
 
-Every check is two artifacts: YAML metadata and Go scanner logic. From v0.13, Rego is a third option for logic.
+Every check is two artifacts: YAML metadata and Go scanner logic. From v0.16, Rego is a third option for logic.
 
 This guide walks through the contributor flow.
 
@@ -37,7 +37,7 @@ internal/collectors/digitalocean/testdata/spaces_*.json   ← fixtures
     For each public bucket:
       doctl spaces update <name> --acl private
 
-  remediations:                   # v0.12+: machine-applicable snippets
+  remediations:                   # v0.15+: machine-applicable snippets
     bash: |
       doctl spaces update {{ .Resource.Name }} --acl private
     terraform: |
@@ -64,7 +64,7 @@ internal/collectors/digitalocean/testdata/spaces_*.json   ← fixtures
 
   scanner: spaces.PublicACL       # required at v0.1: Go function reference
 
-  # v0.13+: alternative Rego policy
+  # v0.16+: alternative Rego policy
   # policy: file://policies/do-spaces-public-acl.rego
 ```
 
@@ -243,7 +243,7 @@ When adding a check:
 - [ ] `make check` passes locally
 - [ ] If introducing a new tag or MITRE technique, update docs
 
-## v0.13+: writing a check in Rego
+## v0.16+: writing a check in Rego
 
 When Rego support lands, simpler checks can ship as `.rego` files:
 
@@ -273,7 +273,7 @@ deny[finding] {
 
 Choose Rego when the logic is declarative (matching, filtering, set membership). Stay with Go when you need cross-resource queries, performance optimization, or complex state.
 
-## v0.12+: machine-applicable remediation
+## v0.15+: machine-applicable remediation
 
 `remediations.<tool>` becomes a Go template rendered with the failing resource as context:
 

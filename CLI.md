@@ -37,8 +37,8 @@ Available on every subcommand:
 | `baseline` | v0.6 | capture current state as accepted baseline |
 | `doctor` | v0.1 | smoke test config, secrets, connectivity |
 | `version` | v0.1 | print version + commit + build date |
-| `remediate` | v0.12 | generate remediation snippets |
-| `ingest` | v0.10 | import Trivy / Checkov / SCAP outputs |
+| `remediate` | v0.15 | generate remediation snippets |
+| `ingest` | v0.13 | import Trivy / Checkov / OCSF / OSCAL / SCAP |
 | `serve` | v1.1 | continuous monitoring daemon |
 | `trust-center` | v1.3 | generate public security page |
 | `plugins` | v2.0 | manage plugin packages |
@@ -139,7 +139,7 @@ Flags:
 | `--period <label>` | current quarter | audit period embedded in the pack (e.g. `2026-Q2`) |
 | `--include-raw` | `false` | skip redaction of sensitive tokens (AWS keys, GitHub PATs, Slack tokens, bearer headers, emails) in messages |
 
-Frameworks shipped at v0.4: SOC 2 (TSC), ISO 27001:2022 Annex A, CIS Controls v8. Future frameworks (NIST 800-53, HIPAA, PCI-DSS, MITRE ATT&CK) land at v0.9 and are picked up automatically once their YAML lands under `internal/frameworks/`.
+Frameworks shipped at v0.4: SOC 2 (TSC), ISO 27001:2022 Annex A, CIS Controls v8. Future frameworks (NIST 800-53 r5, HIPAA, PCI-DSS v4, MITRE ATT&CK) land at v0.12 and are picked up automatically once their YAML lands under `internal/frameworks/`.
 
 Example:
 
@@ -271,7 +271,7 @@ Flags:
 
 ---
 
-### `compliancekit remediate` (v0.12+)
+### `compliancekit remediate` (v0.15+)
 
 Generate remediation snippets for a finding.
 
@@ -285,13 +285,13 @@ Flags:
 |---|---|
 | `--in <path>` | input findings file |
 | `--finding <id>` | specific finding ID |
-| `--as <tool>` | output language: `bash`, `terraform`, `ansible`, `doctl` |
+| `--as <tool>` | output language: `bash`, `terraform`, `ansible`, `aws`, `gcloud`, `doctl`, `hcloud` |
 | `--out <path>` | write to file (default: stdout) |
 | `--apply` | (v2.x, opt-in) actually execute the remediation; requires `--yes-i-mean-it` |
 
 ---
 
-### `compliancekit ingest` (v0.10+)
+### `compliancekit ingest` (v0.13+)
 
 Import findings from external scanners and normalize to compliancekit format.
 

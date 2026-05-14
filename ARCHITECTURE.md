@@ -58,8 +58,9 @@ Alternatives considered:
 │         ┌────────────────┼────────────────┐           │    │
 │         ▼                ▼                ▼           │    │
 │   Provider          Provider         Provider         │    │
-│   digitalocean      linux            (future: aws,    │    │
-│   (godo)            (SSH)             hetzner, k8s)   │    │
+│   digitalocean      linux            (v0.7+: aws,     │    │
+│   (godo)            (SSH)             gcp, hetzner,   │    │
+│                                       k8s)            │    │
 │                                                       │    │
 │         │                │                │           │    │
 │         └────────────────┴────────────────┘           │    │
@@ -105,7 +106,7 @@ type Resource struct {
 }
 
 // Evaluator runs checks against the Resource graph and emits Findings.
-// Day-1 evaluator is Go-only; Rego slot lands at v0.13 without
+// Day-1 evaluator is Go-only; Rego slot lands at v0.16 without
 // breaking the Check signature.
 type Evaluator interface {
     Evaluate(ctx context.Context, graph ResourceGraph) ([]Finding, error)
@@ -127,7 +128,7 @@ type StateStore interface {
 }
 ```
 
-Adding a cloud is a new `Collector`. Adding an output is a new `Reporter`. Adding a framework is a YAML mapping plus a thin `Framework` impl. Adding a policy language (Rego) at v0.13 is a new `Evaluator`. No core changes.
+Adding a cloud is a new `Collector`. Adding an output is a new `Reporter`. Adding a framework is a YAML mapping plus a thin `Framework` impl. Adding a policy language (Rego) at v0.16 is a new `Evaluator`. No core changes.
 
 **Why split Collector from Evaluator on day 1:** the natural shape of the v0.1 code is "fetch → check → emit." That works for 10 checks. By v0.6 we'll want check-level fact reuse, cross-resource queries, and Rego policies that read a graph — all easier if the seam exists from the start. Cost: ~50 extra LoC in v0.1. Benefit: no painful refactor at v0.6.
 
@@ -196,7 +197,7 @@ compliancekit/
 │   │   ├── soc2.yaml
 │   │   ├── iso27001.yaml
 │   │   ├── cis-v8.yaml
-│   │   └── nist-800-53.yaml       # v0.6+
+│   │   └── nist-800-53.yaml       # v0.12+
 │   ├── checks/
 │   │   ├── digitalocean/*.yaml
 │   │   └── linux/*.yaml
@@ -456,7 +457,7 @@ The GitHub Action is the highest-leverage distribution: it bundles "run on PR, c
 These were open questions; each is now decided. Full reasoning lives in [DECISIONS.md](DECISIONS.md).
 
 - **Resource graph:** designed in at v0.1 via the `Collector` + `Resource` split. Avoids a painful v0.6 refactor for ~50 LoC of upfront cost.
-- **Policy DSL:** Rego (via OPA Go library), landing at v0.13. The `Evaluator` interface is shaped from day 1 so Rego slots in without breaking check signatures. Go remains the option for complex / perf-sensitive checks.
+- **Policy DSL:** Rego (via OPA Go library), landing at v0.16. The `Evaluator` interface is shaped from day 1 so Rego slots in without breaking check signatures. Go remains the option for complex / perf-sensitive checks.
 - **OCSF output:** lands at v0.3 alongside SARIF. Cheap to add early, painful to retrofit; aligns with Prowler's downstream-SIEM story.
 - **GRC layer (risk register, vendor register, CAIQ/SIG templates):** in scope, at v1.4. Scanning maturity precedes GRC features so we earn technical credibility before the soft-skills layer.
 - **`serve` mode:** optional, never required. The CLI must always be feature-complete. Day-1 internal interfaces are daemon-aware (no globals, context-cancellable) so v1.1 is a feature add, not a rewrite.
