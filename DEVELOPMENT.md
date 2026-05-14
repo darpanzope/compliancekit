@@ -34,7 +34,13 @@ make build        # produces bin/compliancekit
 
 If `make setup` complains about missing system tools (make, docker), install them via your package manager — we don't auto-install OS-level dependencies.
 
-**Note on lefthook + PATH**: `make setup` installs lefthook via `go install` into `$(go env GOPATH)/bin`. Git's hooks run with a stripped PATH that won't include `~/go/bin`, so without the export tip above (or a system-wide install) you'll see "Can't find lefthook in PATH" on every push and the pre-push gate will be skipped. On macOS the cleanest fix is `brew install lefthook` (lands at `/usr/local/bin/lefthook`, which git's PATH does see). On Linux either symlink the go-installed binary into `/usr/local/bin/` or add `~/go/bin` to the system PATH.
+**Note on go-installed tools + PATH**: `make setup` installs lefthook, golangci-lint, and goimports via `go install` into `$(go env GOPATH)/bin`. Git's hooks run with a stripped PATH that does NOT include `~/go/bin`, so the pre-commit (lint/imports) and pre-push (`make check`) hooks need those binaries reachable from a system path. Three options:
+
+1. **Add `~/go/bin` to your system-wide PATH** (recommended for Linux): edit `/etc/profile` or shell-init so every process — including git hooks — sees it.
+2. **`brew install lefthook`** on macOS: lands the launcher at `/usr/local/bin/lefthook`. Note: `brew install golangci-lint` installs v2.x which is incompatible with this repo's v1-style `.golangci.yaml`; symlink the go-installed v1 binary instead: `ln -s $(go env GOPATH)/bin/golangci-lint /usr/local/bin/golangci-lint`.
+3. **Symlink the lot into `/usr/local/bin/`**: `for t in lefthook golangci-lint goimports; do ln -s $(go env GOPATH)/bin/$t /usr/local/bin/$t; done`. Cheapest fix; survives Go reinstalls because the symlink picks up whichever binary is at the target path.
+
+If you see `Can't find lefthook in PATH` on push, you're hitting this — the push silently skips the pre-push gate. Fix one of the three ways above before relying on the hook.
 
 ## Daily loop
 
