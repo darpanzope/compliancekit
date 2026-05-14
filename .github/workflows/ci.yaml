@@ -41,6 +41,12 @@ jobs:
       - name: Test
         run: go test -race -timeout=60s ./...
 
+      # Fails when the committed docs/checks.md drifts from the live
+      # check registry. Forces a new or renamed check to ship with a
+      # regenerated catalogue in the same PR.
+      - name: Check catalogue freshness
+        run: go run ./cmd/gencheckdocs -check
+
       - name: Build (linux/amd64)
         env:
           CGO_ENABLED: "0"

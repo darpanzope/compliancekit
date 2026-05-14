@@ -132,6 +132,8 @@ Full CLI reference in [CLI.md](CLI.md). Config schema in [CONFIGURATION.md](CONF
 
 ## What's in the box at v0.5
 
+Full per-check reference (auto-generated, IDs / severities / framework mappings / remediation): [docs/checks.md](docs/checks.md).
+
 ### Providers
 
 | Provider | Status | Checks | Notes |

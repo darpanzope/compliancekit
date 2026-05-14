@@ -1,4 +1,4 @@
-.PHONY: build run test lint fmt tidy clean setup check help
+.PHONY: build run test lint fmt tidy clean setup check docs docs-check help
 .DEFAULT_GOAL := help
 
 # Tools installed via `go install` land in $GOPATH/bin which is often
@@ -56,7 +56,13 @@ setup: ## install development tools (golangci-lint, goimports, lefthook) and ins
 	@echo "Tip: add this to your shell rc so the tools are on PATH everywhere:"
 	@echo "  export PATH=\"\$$(go env GOPATH)/bin:\$$PATH\""
 
-check: lint test build ## pre-push gate: lint + test + build
+docs: ## regenerate docs/checks.md from the live registry
+	go run ./cmd/gencheckdocs
+
+docs-check: ## fail if docs/checks.md is stale (CI gate)
+	go run ./cmd/gencheckdocs -check
+
+check: lint test build docs-check ## pre-push gate: lint + test + build + docs freshness
 
 help: ## show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
