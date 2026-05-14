@@ -125,19 +125,22 @@ Control mapping: /abs/evidence/2026-Q2/control-mapping.csv
 
 ---
 
-## v0.5 — Public launch (weekend 5)
+## v0.5 — Public launch (weekend 5) 🟡 code complete, awaiting launch
 **Goal:** ship to the public and earn the first 500 stars.
 
 ### Deliverables
-- README: hero asciinema, install one-liner, the audience pitch ("Prowler for the people Prowler forgot"), framework table, sample evidence pack, FAQ.
-- `goreleaser` for cross-compiled binaries + Homebrew tap + Docker image (`ghcr.io/darpanzope/compliancekit`).
-- GitHub Action `darpanzope/compliancekit-action@v1` with composable inputs (token, frameworks, output formats, fail-on-severity).
-- Cosign-signed releases + SBOM via goreleaser.
-- `CONTRIBUTING.md`, `SECURITY.md`, issue templates, PR template.
-- Auto-generated check catalogue at `docs/checks/`.
-- Companion blog post on `darpan.cloud`.
+- README: hero asciinema (placeholder until recorded), install one-liner, the audience pitch ("Prowler for the people Prowler forgot"), framework table, sample evidence pack, FAQ. ✅
+- `goreleaser` for cross-compiled binaries + Homebrew tap + Docker image (`ghcr.io/darpanzope/compliancekit`). ✅
+- GitHub Action `darpanzope/compliancekit-action@v1` (source-of-truth under `action/`, copy-to-dedicated-repo at release time). ✅
+- Cosign-signed releases (keyless via GitHub OIDC) + SBOM via goreleaser. ✅
+- `CONTRIBUTING.md`, `SECURITY.md`, issue templates, PR template. ✅
+- Auto-generated check catalog at `docs/checks.md` (CI gate enforces freshness). ✅
+- Companion blog post on `darpan.cloud`. ⏳ (drafted as part of LAUNCH.md, not yet posted)
 
 ### Launch sequence (single day)
+See [LAUNCH.md](LAUNCH.md) for the full playbook (pre-flight checklist,
+pre-written posts, rollback plan). Summary:
+
 1. Tag `v0.5.0`. Goreleaser publishes Homebrew formula, Docker image, GitHub Release with binaries.
 2. Post on Hacker News: *"Show HN: compliancekit — SOC 2 evidence packs for DigitalOcean and Linux."*
 3. Cross-post: r/devops, r/sysadmin, r/cybersecurity, r/digitalocean, r/SaaS, lobste.rs.
@@ -146,9 +149,9 @@ Control mapping: /abs/evidence/2026-Q2/control-mapping.csv
 6. LinkedIn + Twitter post with the demo gif.
 
 ### Definition of done
-- One-line install works on macOS and Linux.
-- `compliancekit-action` runs successfully on a public test repo.
-- README is the kind of README we'd star.
+- One-line install works on macOS and Linux. ⏳ (verified in pre-flight)
+- `compliancekit-action` runs successfully on a public test repo. ⏳ (verified in pre-flight)
+- README is the kind of README we'd star. ✅
 
 ---
 
