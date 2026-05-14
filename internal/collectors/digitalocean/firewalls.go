@@ -46,7 +46,10 @@ func (c *Collector) collectFirewalls(ctx context.Context) ([]core.Resource, erro
 
 	out := make([]core.Resource, 0, len(all))
 	for _, fw := range all {
-		out = append(out, firewallToResource(fw))
+		r := firewallToResource(fw)
+		// Firewalls are account-scoped, no region.
+		c.stamp(&r, "")
+		out = append(out, r)
 	}
 	return out, nil
 }

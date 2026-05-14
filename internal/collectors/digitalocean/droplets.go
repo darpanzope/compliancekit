@@ -42,7 +42,9 @@ func (c *Collector) collectDroplets(ctx context.Context) ([]core.Resource, error
 
 	out := make([]core.Resource, 0, len(all))
 	for _, d := range all {
-		out = append(out, dropletToResource(d))
+		r := dropletToResource(d)
+		c.stamp(&r, r.Region)
+		out = append(out, r)
 	}
 	return out, nil
 }

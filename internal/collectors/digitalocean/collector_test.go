@@ -16,6 +16,7 @@ var _ core.Collector = (*Collector)(nil)
 
 func TestCollector_Collect_Droplets(t *testing.T) {
 	server := newFixtureServer(t, map[string]string{
+		"/v2/account":   "testdata/account.json",
 		"/v2/droplets":  "testdata/droplets.json",
 		"/v2/firewalls": "testdata/firewalls.json",
 	})
@@ -32,13 +33,18 @@ func TestCollector_Collect_Droplets(t *testing.T) {
 		t.Fatalf("Collect: %v", err)
 	}
 
-	// 2 droplets + 1 firewall = 3 resources.
-	if got, want := len(resources), 3; got != want {
+	// 1 account anchor + 2 droplets + 1 firewall = 4 resources.
+	if got, want := len(resources), 4; got != want {
 		t.Fatalf("len(resources) = %d, want %d", got, want)
 	}
 
+	// Account anchor is first.
+	if got, want := resources[0].Type, AccountType; got != want {
+		t.Errorf("resources[0].Type = %q, want %q", got, want)
+	}
+
 	// Droplet 1: web-01, has backups + tags + recent image
-	d1 := resources[0]
+	d1 := resources[1]
 	if want := "digitalocean.droplet.123456"; d1.ID != want {
 		t.Errorf("d1.ID = %q, want %q", d1.ID, want)
 	}
@@ -75,7 +81,7 @@ func TestCollector_Collect_Droplets(t *testing.T) {
 	}
 
 	// Droplet 2: db-01, no public IP, no backups, no tags, older image
-	d2 := resources[1]
+	d2 := resources[2]
 	if d2.Name != "db-01" {
 		t.Errorf("d2.Name = %q, want db-01", d2.Name)
 	}
@@ -94,7 +100,7 @@ func TestCollector_Collect_Droplets(t *testing.T) {
 	}
 
 	// Firewall resource should be present and well-formed.
-	fw := resources[2]
+	fw := resources[3]
 	if fw.Type != FirewallType {
 		t.Errorf("fw.Type = %q, want %q", fw.Type, FirewallType)
 	}
