@@ -6,7 +6,7 @@
   Source of truth: internal/checks/**/*.go (the core.Check vars).
 -->
 
-This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **121 checks** across the providers below.
+This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **124 checks** across the providers below.
 
 Each check below has:
 
@@ -23,10 +23,10 @@ To inspect a single check from the CLI: `compliancekit checks show <id>`.
 | Provider | Checks |
 |---|---:|
 | `aws` | 30 |
-| `digitalocean` | 51 |
+| `digitalocean` | 54 |
 | `gcp` | 25 |
 | `linux` | 15 |
-| **total** | **121** |
+| **total** | **124** |
 
 ## By severity
 
@@ -34,8 +34,8 @@ To inspect a single check from the CLI: `compliancekit checks show <id>`.
 |---|---:|
 | `critical` | 9 |
 | `high` | 37 |
-| `medium` | 46 |
-| `low` | 29 |
+| `medium` | 47 |
+| `low` | 31 |
 
 ## aws
 
@@ -1536,6 +1536,68 @@ _Maps to:_
 | `soc2` | `CC6.1` | Logical and Physical Access Controls |
 
 _Tags:_ `encryption-in-transit`, `lb`, `tls`
+
+---
+
+### `do-registry-empty`
+
+**Container registries should host at least one repository** &middot; severity `low` &middot; service `registry` &middot; resource `digitalocean.registry`
+
+An empty container registry pays its subscription tier for nothing. Either delete the registry or push the images it was provisioned for.
+
+_Remediation:_
+
+> Inspect: 'doctl registry repository list-v2 <registry>'. If genuinely unused, 'doctl registry delete'. Otherwise complete the image-pipeline setup.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `1.1` | Establish and Maintain Detailed Enterprise Asset Inventory |
+| `iso27001` | `A.5.9` | Inventory of Information and Other Associated Assets |
+
+_Tags:_ `cost`, `hygiene`, `registry`
+
+---
+
+### `do-registry-no-recent-gc`
+
+**Container registries should run garbage collection regularly** &middot; severity `medium` &middot; service `registry` &middot; resource `digitalocean.registry`
+
+DO Container Registry does not auto-delete untagged or overwritten image layers; only an explicit garbage-collection run reclaims that storage. A registry with no GC for more than 30 days is paying for orphan blobs and accumulating untracked image content -- both a cost and an audit-trail problem.
+
+_Remediation:_
+
+> 'doctl registry garbage-collection start <registry>'. Schedule this in CI on a weekly cadence (e.g. a GitHub Actions cron job). The DO control panel also exposes a manual run.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.5.9` | Inventory of Information and Other Associated Assets |
+
+_Tags:_ `cost`, `hygiene`, `registry`
+
+---
+
+### `do-registry-starter-tier`
+
+**Production container registries should not run on the Starter tier** &middot; severity `low` &middot; service `registry` &middot; resource `digitalocean.registry`
+
+The Starter subscription tier is capped at 500 MB storage + 1 repository -- adequate for evaluation, not for production. A production registry stuck on Starter is one image push from a quota-exhaustion outage. Upgrade to Basic or Professional before scale matters.
+
+_Remediation:_
+
+> 'doctl registry options subscription-tiers' lists the available tiers. Upgrade via the control panel (Registry > Settings > Plan).
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.6` | Capacity Management |
+| `soc2` | `A1.2` | Availability - Backup and Recovery |
+
+_Tags:_ `capacity`, `registry`
 
 ---
 
