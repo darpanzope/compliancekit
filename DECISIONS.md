@@ -215,6 +215,53 @@ The old v1.7 "more clouds" entry collapses: AWS and GCP land at v0.7-v0.8 as fir
 
 ---
 
+## ADR-008 — Hardening score is a single 0-100 number with fixed severity weights
+**Date:** 2026-05-14 (v0.6 design)
+**Status:** Accepted
+
+### Question
+The v0.6 milestone introduces a "hardening score." What's the formula? Is it configurable? How does it handle skips and errors?
+
+### Decision
+Ship a single 0-100 integer score with **fixed severity weights** at v0.6. Skips are excluded from both numerator and denominator; errors count against the score the same way fails do; pass is the only positive contributor.
+
+Formula:
+```
+weights = { critical: 50, high: 20, medium: 8, low: 3, info: 1 }
+
+evaluable_findings = [f for f in findings if f.status != skip]
+total_weight       = sum(weights[f.severity] for f in evaluable_findings)
+passing_weight     = sum(weights[f.severity] for f in evaluable_findings if f.status == pass)
+
+if total_weight == 0: score = 100
+else:                 score = round(100 * passing_weight / total_weight)
+```
+
+A parallel `coverage` metric reports the fraction of findings that were evaluable (i.e. not skipped) so the operator can tell a 100/100 from "everything skipped."
+
+### Reasoning
+- **Single number is the point.** v0.6's headline is "your score went from 78 to 73 since Friday." A multi-dimensional score (one per framework, plus a coverage, plus a per-severity bar) is more accurate but less actionable. We ship the simple number on the surface and keep the breakdown one CLI flag away (`--score-detail`).
+- **Fixed weights at v0.6.** Configurability is tempting but breaks the cross-fleet comparison story. Two compliancekit users with different weight configs cannot meaningfully compare scores. Lock the weights now; revisit after community pressure if it comes.
+- **The weight curve (50 / 20 / 8 / 3 / 1) is non-linear on purpose.** A single critical finding should obviously hurt more than the same number of low-severity findings. A linear curve (5/4/3/2/1) flattens the signal; the chosen curve is roughly log-ish and matches how operators triage.
+- **Skips excluded** because they reflect "we couldn't evaluate" — neither a pass nor a fail. Counting them as passes inflates the score for misconfigured scans; counting them as fails punishes operators for things they didn't break. Excluding them keeps the number honest.
+- **Errors count as fails** because an error is a failure of the scan, not a successful pass. The operator must investigate either way.
+
+### Rejected alternatives
+- **Configurable weights via `compliancekit.yaml`.** Rejected at v0.6. Breaks cross-fleet comparison. A future v0.X may reintroduce as `score.profile = strict|balanced|lenient` with the weights bound to the profile name, keeping comparisons honest.
+- **Per-framework scores.** Rejected — multiplies the surface, dilutes the headline. The evidence pack already breaks findings down per framework; the score is the cross-framework rollup.
+- **A 0.0-1.0 float or 0-1000 fine-grained score.** Rejected — the integer 0-100 fits the "I went from 78 to 73" use case and is what every dashboard reader expects.
+- **Award credit for fail findings that have a waiver.** Rejected at v0.6. Waivers don't land until v0.18; designing the score around them now is premature.
+
+### Consequences
+- v0.6 ships `internal/score/` as a small, pure package. Inputs: `[]core.Finding`. Outputs: `{Score int, Coverage int, Total, Passing, Failing, Skipped int}`.
+- The number is deterministic by construction — identical input produces identical output. Tests pin this with table-driven cases.
+- The number is monotonic by construction — converting a fail to a pass cannot decrease the score; converting a pass to a fail cannot increase it.
+- v0.7 (AWS) and v0.8 (GCP) inherit the same weights automatically because severity is provider-agnostic. No re-tuning per cloud.
+- The HTML reporter and the evidence pack `summary.html` show the score as the most prominent metric. The CLI `scan` footer prints it on its own line.
+- Baseline files (v0.6 phase 3) record the score so `diff` (v0.6 phase 4) can render the delta: "76 → 73 (-3)."
+
+---
+
 ## Open questions (not yet decided)
 
 - **Plugin host model:** subprocess gRPC (Terraform-provider pattern), WASM via wazero, or both? Decision at v2.0.
