@@ -184,6 +184,7 @@ func (c *Collector) Collect(ctx context.Context) ([]core.Resource, error) {
 			{"network", c.collectNetwork},
 			{"storage", c.collectStorage},
 			{"cluster", c.collectCluster},
+			{"nodes", c.collectNodes},
 		}
 
 		for _, s := range subs {

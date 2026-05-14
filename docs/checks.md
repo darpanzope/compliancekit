@@ -6,7 +6,7 @@
   Source of truth: internal/checks/**/*.go (the core.Check vars).
 -->
 
-This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **254 checks** across the providers below.
+This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **264 checks** across the providers below.
 
 Each check below has:
 
@@ -26,18 +26,18 @@ To inspect a single check from the CLI: `compliancekit checks show <id>`.
 | `digitalocean` | 74 |
 | `gcp` | 25 |
 | `hetzner` | 15 |
-| `kubernetes` | 95 |
+| `kubernetes` | 105 |
 | `linux` | 15 |
-| **total** | **254** |
+| **total** | **264** |
 
 ## By severity
 
 | Severity | Checks |
 |---|---:|
 | `critical` | 17 |
-| `high` | 60 |
-| `medium` | 88 |
-| `low` | 89 |
+| `high` | 61 |
+| `medium` | 94 |
+| `low` | 92 |
 
 ## aws
 
@@ -3924,6 +3924,222 @@ _Maps to:_
 | `soc2` | `CC6.6` | Logical Access Security - Boundaries |
 
 _Tags:_ `k8s`, `network`, `policy`
+
+---
+
+### `k8s-node-container-runtime`
+
+**Nodes should use containerd or cri-o, not dockershim** &middot; severity `medium` &middot; service `nodes` &middot; resource `k8s.node`
+
+Dockershim was removed in K8s 1.24 (2022). Any node still showing a `docker://` runtime is running an unsupported kubelet build. containerd is the modern default; cri-o is the Red Hat-blessed alternative.
+
+_Remediation:_
+
+> Upgrade the kubelet / node image to one shipping containerd. For managed K8s (EKS/GKE/AKS/DOKS), select a containerd node group / image type.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `4.1` | Establish and Maintain a Secure Configuration Process |
+| `iso27001` | `A.8.32` | Change Management |
+| `iso27001` | `A.8.8` | Management of Technical Vulnerabilities |
+| `soc2` | `CC7.1` | System Operations - Vulnerabilities |
+
+_Tags:_ `k8s`, `nodes`, `runtime`
+
+---
+
+### `k8s-node-control-plane-taint`
+
+**Control-plane nodes should carry NoSchedule taint** &middot; severity `medium` &middot; service `nodes` &middot; resource `k8s.node`
+
+Without the standard `node-role.kubernetes.io/control-plane:NoSchedule` taint, application pods can land on master nodes alongside the API server, controllers, and etcd. A workload OOM-killing kube-apiserver is the textbook way to brick a cluster.
+
+_Remediation:_
+
+> `kubectl taint node <name> node-role.kubernetes.io/control-plane=:NoSchedule`. For managed clusters this is set automatically; only flag self-managed setups missing the taint.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `4.1` | Establish and Maintain a Secure Configuration Process |
+| `iso27001` | `A.8.20` | Networks Security |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC7.3` | System Operations - Incident Evaluation |
+
+_Tags:_ `control-plane`, `k8s`, `nodes`
+
+---
+
+### `k8s-node-disk-pressure`
+
+**Nodes should not report DiskPressure** &middot; severity `medium` &middot; service `nodes` &middot; resource `k8s.node`
+
+DiskPressure indicates the node's image filesystem or root filesystem is filling up. Once eviction thresholds are crossed, the kubelet kills pods to reclaim space — typically hitting the largest-image workloads first.
+
+_Remediation:_
+
+> Clean unused images (`crictl rmi`), bump the node's disk size, or migrate workloads to a larger instance type.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.16` | Monitoring Activities |
+| `soc2` | `CC7.3` | System Operations - Incident Evaluation |
+
+_Tags:_ `k8s`, `nodes`, `pressure`
+
+---
+
+### `k8s-node-memory-pressure`
+
+**Nodes should not report MemoryPressure** &middot; severity `medium` &middot; service `nodes` &middot; resource `k8s.node`
+
+MemoryPressure means the kubelet is about to start evicting pods to free memory. Persistent pressure indicates either overcommit or an OOM-prone workload.
+
+_Remediation:_
+
+> Lower pod memory requests, scale down per-node density, or move to a larger instance type.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.16` | Monitoring Activities |
+| `soc2` | `CC7.3` | System Operations - Incident Evaluation |
+
+_Tags:_ `k8s`, `nodes`, `pressure`
+
+---
+
+### `k8s-node-not-ready`
+
+**Nodes should be in Ready state** &middot; severity `high` &middot; service `nodes` &middot; resource `k8s.node`
+
+A NotReady node still consumes cluster capacity (pods are scheduled to it before the condition flips) but cannot actually run workloads. Investigate: kubelet down, network partition, disk full, kernel deadlock.
+
+_Remediation:_
+
+> `kubectl describe node <name>` for the failing condition. Common fixes: restart kubelet, free disk space, reboot the node.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.16` | Monitoring Activities |
+| `soc2` | `CC7.3` | System Operations - Incident Evaluation |
+
+_Tags:_ `k8s`, `nodes`, `reliability`
+
+---
+
+### `k8s-node-old-image`
+
+**Nodes should be replaced within 1 year of creation** &middot; severity `medium` &middot; service `nodes` &middot; resource `k8s.node`
+
+Long-lived nodes accumulate kernel CVEs and miss image-level improvements (containerd version, kubelet bug fixes). Best practice: rotate nodes through replacement on a schedule (managed K8s does this automatically when auto-upgrade is enabled).
+
+_Remediation:_
+
+> For managed K8s, enable node auto-upgrade. For self-managed, schedule periodic image rebuilds and rolling node replacement.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.32` | Change Management |
+| `iso27001` | `A.8.8` | Management of Technical Vulnerabilities |
+| `soc2` | `CC7.1` | System Operations - Vulnerabilities |
+
+_Tags:_ `k8s`, `nodes`, `patching`
+
+---
+
+### `k8s-node-pid-pressure`
+
+**Nodes should not report PIDPressure** &middot; severity `medium` &middot; service `nodes` &middot; resource `k8s.node`
+
+PIDPressure indicates the node is running out of process IDs. This is rare in modern setups but can be triggered by fork-bomb workloads or processes leaking threads.
+
+_Remediation:_
+
+> Identify the offending workload via `kubectl top pod --all-namespaces --sort-by=cpu` and the per-pod process count. Cap with `pids` ResourceQuota or scale.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.16` | Monitoring Activities |
+| `soc2` | `CC7.3` | System Operations - Incident Evaluation |
+
+_Tags:_ `k8s`, `nodes`, `pressure`
+
+---
+
+### `k8s-node-region-label`
+
+**Worker nodes should carry topology.kubernetes.io/region** &middot; severity `low` &middot; service `nodes` &middot; resource `k8s.node`
+
+Multi-region clusters use the region label to scope workloads to specific cloud regions. Single-region clusters still benefit by being explicit; tooling that consumes topology labels (e.g. topology-aware service routing) requires it.
+
+_Remediation:_
+
+> Most cloud controllers set this automatically. `kubectl label node <name> topology.kubernetes.io/region=us-east-1`.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `11.2` | Perform Automated Backups |
+| `iso27001` | `A.8.14` | Redundancy of Information Processing Facilities |
+
+_Tags:_ `k8s`, `nodes`, `topology`
+
+---
+
+### `k8s-node-unschedulable`
+
+**Nodes should not stay cordoned indefinitely** &middot; severity `low` &middot; service `nodes` &middot; resource `k8s.node`
+
+A node with `spec.unschedulable: true` (cordoned) is intentionally taken out of rotation — typical during draining for upgrades or hardware replacement. A node stuck cordoned is usually a forgotten maintenance window.
+
+_Remediation:_
+
+> `kubectl uncordon <name>` to put it back into rotation, or `kubectl delete node <name>` if it was truly removed.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.16` | Monitoring Activities |
+| `soc2` | `CC7.3` | System Operations - Incident Evaluation |
+
+_Tags:_ `hygiene`, `k8s`, `nodes`
+
+---
+
+### `k8s-node-zone-label`
+
+**Worker nodes should carry topology.kubernetes.io/zone** &middot; severity `low` &middot; service `nodes` &middot; resource `k8s.node`
+
+Topology-aware scheduling (`topologyKey: topology.kubernetes.io/zone`) lets controllers spread replicas across availability zones. Without the standard label set, the primitive is unavailable and pod anti-affinity falls back to hostname-only spread.
+
+_Remediation:_
+
+> Most cloud-provider cluster controllers set this automatically. If self-managed, label nodes: `kubectl label node <name> topology.kubernetes.io/zone=us-east-1a`.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `11.2` | Perform Automated Backups |
+| `iso27001` | `A.8.14` | Redundancy of Information Processing Facilities |
+| `soc2` | `A1.2` | Availability - Backup and Recovery |
+
+_Tags:_ `k8s`, `nodes`, `topology`
 
 ---
 
