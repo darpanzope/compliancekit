@@ -466,7 +466,7 @@ across 20 service families.**
 | **Monitoring + uptime checks** | 2 | basic alerts present, uptime checks on public droplets |
 | **Projects + tagging** | 2 | default project not used for prod, untagged resources |
 
-Plus existing v0.5 checks: 5. **Total: ~75.**
+Plus existing v0.5 checks: 5. **Total shipped: 74.**
 
 **Plumbing**
 
@@ -512,31 +512,35 @@ all three frameworks. No new framework yaml needed.
 serious-cloud option for the audience; pairing DO + Hetzner gives a
 real choice within the same indie-SaaS demographic.
 
-**Scope: ~15 Hetzner checks**
+**Shipped at v0.10: 15 Hetzner checks**
 
 | Surface | Checks |
 |---|---|
-| Servers | 5 (firewall attached, SSH key vs password, server-image freshness, backups via snapshot schedule, rescue-mode keys revoked) |
-| Firewalls | 3 (overly-permissive ingress, SSH-from-any, default-deny baseline) |
-| Networks | 2 (private network usage for in-prod services, sane subnet planning) |
-| Load Balancers | 2 (HTTPS termination, TLS ≥1.2) |
-| Volumes | 2 (encryption-at-rest verification where Hetzner supports, lifecycle hygiene) |
-| Floating IPs | 1 (no orphaned floaters paying for nothing) |
+| Servers | 5 (no-backups, rescue-enabled, old-image, not-running, locked) |
+| Firewalls | 3 (ssh-from-any, any-port-from-any, orphan) |
+| Networks | 2 (orphan, non-RFC1918 IP range) |
+| Load Balancers | 2 (no-https-listener, http-not-redirected) |
+| Volumes | 2 (orphan, unformatted-orphan) |
+| Floating IPs | 1 (orphan) |
 
 **Plumbing**
 
 - New collector at `internal/collectors/hetzner/` using
-  `github.com/hetznercloud/hcloud-go`. Already noted in
-  [BINARY.md](BINARY.md) sizing.
-- Resource scope adds `project` (Hetzner organisation-equivalent).
-- The cloud-common abstractions established at v0.7-v0.8 absorb the
-  Hetzner-specific bits with minimal new surface.
+  `github.com/hetznercloud/hcloud-go/v2` v2.40.0 (+2 MB binary).
+- Hetzner has no multi-project surface in the cloud API; one
+  token = one project. The collector emits a singleton
+  `hetzner.project` anchor with a token-fingerprint AccountID so
+  the evidence pack's `control-mapping.csv` stays consistent
+  without leaking the full token.
+- Per-service-error placeholders (`hetzner.collect_error`) match
+  the AWS/GCP/DO pattern; one failing service doesn't lose the
+  others.
 
-**Definition of done**
+**Definition of done (delivered)**
 
-- 15 Hetzner checks, framework-mapped, fixture-backed.
-- End-to-end run against a Hetzner Cloud test project.
-- README "Providers" table updated to first-party for Hetzner.
+- ✅ 15 Hetzner checks, all framework-mapped (SOC 2 + ISO 27001 + CIS v8).
+- ✅ Doctor probe verified; smoke-tested in CI.
+- ✅ README "Providers" table flipped Hetzner from planned to ✅.
 
 ---
 

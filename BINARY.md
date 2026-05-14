@@ -236,7 +236,7 @@ How the artifact changes shape over time:
 | v0.7 | aws-sdk-go-v2 (IAM, EC2, S3, RDS, CloudTrail, KMS, Config, GuardDuty) | +56 MB stripped (~5-7 MB compressed per platform tarball; the predicted +12 MB underestimated the per-service type weight, but compressed binary growth is in the noise) |
 | v0.8 | cloud.google.com/go (IAM, Compute, GCS, KMS, Logging) + google.golang.org/api (SQLAdmin, BigQuery) | +38 MB stripped (~6-8 MB compressed; like AWS the per-service-pb weight ran higher than the original +10 MB prediction — gRPC clients carry a pb companion per service. Still under the AWS-on-AWS-only baseline) |
 | v0.9 | godo expanded surface (74 DO checks across 20 service families: account, droplets, firewalls, VPCs, LBs, DNS, certs, managed DBs, Container Registry, App Platform, Functions, CDN, volumes, snapshots, reserved IPs, SSH keys, images, monitoring, projects). Spaces reuses the aws-sdk-go-v2/s3 client already in the binary at v0.7 (custom endpoint resolver for `<region>.digitaloceanspaces.com`) | negligible (no new SDK module) |
-| v0.10 | hcloud-go (Hetzner) | +2 MB |
+| v0.10 | github.com/hetznercloud/hcloud-go/v2 v2.40.0 (15 Hetzner checks across servers/firewalls/networks/LBs/volumes/floating IPs) | +2 MB stripped (measured at v0.10.0; matches the original prediction exactly) |
 | v0.11 | k8s.io/client-go (EKS / GKE / DOKS adapters as thin glue) | +5 MB |
 | v0.12 | extra framework yamls (NIST 800-53 r5, HIPAA, PCI-DSS v4, MITRE ATT&CK) | negligible (embedded yaml) |
 | v0.13 | OCSF / OSCAL / SARIF / Trivy / Checkov ingest types | +1 MB |
