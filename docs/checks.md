@@ -6,7 +6,7 @@
   Source of truth: internal/checks/**/*.go (the core.Check vars).
 -->
 
-This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **177 checks** across the providers below.
+This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **187 checks** across the providers below.
 
 Each check below has:
 
@@ -26,9 +26,9 @@ To inspect a single check from the CLI: `compliancekit checks show <id>`.
 | `digitalocean` | 74 |
 | `gcp` | 25 |
 | `hetzner` | 15 |
-| `kubernetes` | 18 |
+| `kubernetes` | 28 |
 | `linux` | 15 |
-| **total** | **177** |
+| **total** | **187** |
 
 ## By severity
 
@@ -36,8 +36,8 @@ To inspect a single check from the CLI: `compliancekit checks show <id>`.
 |---|---:|
 | `critical` | 11 |
 | `high` | 48 |
-| `medium` | 62 |
-| `low` | 56 |
+| `medium` | 65 |
+| `low` | 63 |
 
 ## aws
 
@@ -3282,6 +3282,202 @@ _Tags:_ `hygiene`, `volume`
 
 ## kubernetes
 
+### `k8s-cronjob-concurrency`
+
+**CronJobs should not allow concurrent executions** &middot; severity `low` &middot; service `jobs` &middot; resource `k8s.cronjob`
+
+`concurrencyPolicy: Allow` (the default) lets a slow run overlap with the next scheduled run, doubling cluster load and frequently corrupting shared state — backup jobs, cleanup tasks, and any cron that writes data should run one at a time.
+
+_Remediation:_
+
+> Set `concurrencyPolicy: Forbid` (skip overlap) or `Replace` (kill the running instance and start the new one). Allow is appropriate only for read-only, idempotent jobs.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.32` | Change Management |
+| `soc2` | `CC7.3` | System Operations - Incident Evaluation |
+
+_Tags:_ `cron`, `jobs`, `k8s`
+
+---
+
+### `k8s-cronjob-history-limit`
+
+**CronJobs should set successful and failed history limits** &middot; severity `low` &middot; service `jobs` &middot; resource `k8s.cronjob`
+
+Without `successfulJobsHistoryLimit` and `failedJobsHistoryLimit`, the Job objects from every cronjob run accumulate forever. After a year of hourly cronjobs that is 8760 Job + Pod objects per cronjob — etcd bloat plus slow `kubectl get jobs` plus pressure on the controller manager.
+
+_Remediation:_
+
+> Set `spec.successfulJobsHistoryLimit: 3` and `spec.failedJobsHistoryLimit: 5` (or your operational preference). The defaults of 3/1 are usually too small for debugging.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.6` | Capacity Management |
+| `soc2` | `CC7.3` | System Operations - Incident Evaluation |
+
+_Tags:_ `cron`, `etcd-hygiene`, `jobs`, `k8s`
+
+---
+
+### `k8s-cronjob-starting-deadline`
+
+**CronJobs should set startingDeadlineSeconds** &middot; severity `low` &middot; service `jobs` &middot; resource `k8s.cronjob`
+
+Without `startingDeadlineSeconds`, the controller keeps trying to start missed jobs after the scheduled time, and once more than 100 misses accumulate it stops scheduling the cronjob entirely. Setting an explicit deadline (e.g. 200 seconds) lets old runs expire cleanly.
+
+_Remediation:_
+
+> Set `spec.startingDeadlineSeconds` to a value greater than your scheduling interval. 200 is a common starting point for cronjobs that run more often than every 5 minutes.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.16` | Monitoring Activities |
+| `soc2` | `CC7.3` | System Operations - Incident Evaluation |
+
+_Tags:_ `cron`, `jobs`, `k8s`
+
+---
+
+### `k8s-daemonset-control-plane-tolerance`
+
+**Non-system DaemonSets should not tolerate control-plane taints** &middot; severity `low` &middot; service `controllers` &middot; resource `k8s.daemonset`
+
+Tolerating `node-role.kubernetes.io/control-plane` lets the DaemonSet schedule pods on master nodes. That is correct for cluster-critical workloads (CNI agents, log forwarders, node-exporter). For application DaemonSets it is a posture failure: a compromise of the DS pod becomes a control-plane compromise.
+
+_Remediation:_
+
+> Remove the control-plane toleration unless the DS is genuinely cluster-infrastructure. Use namespaces or labels to distinguish infra from workload DaemonSets in policy.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.5.15` | Access Control |
+| `iso27001` | `A.8.2` | Privileged Access Rights |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `control-plane`, `controllers`, `k8s`
+
+---
+
+### `k8s-deployment-anti-affinity`
+
+**Multi-replica Deployments should set podAntiAffinity** &middot; severity `low` &middot; service `controllers` &middot; resource `k8s.deployment`
+
+Two replicas on the same node give the appearance of HA without the reality — a single node failure takes both down. `podAntiAffinity` (preferred or required) spreads replicas across nodes (or AZs, with topology spread) and is the standard way to get genuine fault tolerance.
+
+_Remediation:_
+
+> Add `affinity.podAntiAffinity` to the pod template. `preferredDuringSchedulingIgnoredDuringExecution` with `topologyKey: kubernetes.io/hostname` is the right default; upgrade to `required` for critical workloads.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `11.2` | Perform Automated Backups |
+| `iso27001` | `A.5.30` | ICT Readiness for Business Continuity |
+| `iso27001` | `A.8.14` | Redundancy of Information Processing Facilities |
+| `soc2` | `A1.2` | Availability - Backup and Recovery |
+
+_Tags:_ `controllers`, `ha`, `k8s`
+
+---
+
+### `k8s-deployment-min-replicas`
+
+**Deployments should run with at least 2 replicas for HA** &middot; severity `medium` &middot; service `controllers` &middot; resource `k8s.deployment`
+
+A single-replica Deployment has no HA. A node drain, a rolling update, or an OOM kill creates a window of zero available replicas. Production workloads should run with at least two replicas plus a PodDisruptionBudget that keeps one available during voluntary disruptions.
+
+_Remediation:_
+
+> Set `spec.replicas` to at least 2. For cost-sensitive dev/staging Deployments, exclude via a profile or waiver.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `11.2` | Perform Automated Backups |
+| `iso27001` | `A.5.30` | ICT Readiness for Business Continuity |
+| `iso27001` | `A.8.14` | Redundancy of Information Processing Facilities |
+| `soc2` | `A1.2` | Availability - Backup and Recovery |
+
+_Tags:_ `controllers`, `ha`, `k8s`
+
+---
+
+### `k8s-deployment-pdb-missing`
+
+**Multi-replica Deployments should have a PodDisruptionBudget** &middot; severity `medium` &middot; service `controllers` &middot; resource `k8s.deployment`
+
+Without a PodDisruptionBudget, a node drain (cluster autoscaler scale-down, kernel patch, cluster upgrade) can evict every replica simultaneously. A PDB with `minAvailable: 1` or `maxUnavailable: 1` keeps at least one replica up across voluntary disruptions.
+
+_Remediation:_
+
+> Create a PDB selecting the Deployment's pods: `spec.selector` matching the Deployment label and `spec.minAvailable: 1`. For 3+ replica workloads, prefer `maxUnavailable: 25%` so rollouts are not gated unnecessarily.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `11.2` | Perform Automated Backups |
+| `iso27001` | `A.5.30` | ICT Readiness for Business Continuity |
+| `iso27001` | `A.8.14` | Redundancy of Information Processing Facilities |
+| `soc2` | `A1.2` | Availability - Backup and Recovery |
+
+_Tags:_ `controllers`, `ha`, `k8s`
+
+---
+
+### `k8s-deployment-rolling-update`
+
+**Deployments should use the RollingUpdate strategy** &middot; severity `low` &middot; service `controllers` &middot; resource `k8s.deployment`
+
+`strategy.type: Recreate` tears down every existing pod before starting new ones, guaranteeing downtime during every rollout. RollingUpdate is the safe default for stateless workloads; Recreate is correct only when a stateful invariant prevents two versions from co-existing.
+
+_Remediation:_
+
+> Set `strategy.type: RollingUpdate` and tune `rollingUpdate.maxUnavailable` / `maxSurge` based on capacity. Keep Recreate only when you have a documented reason.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.32` | Change Management |
+
+_Tags:_ `controllers`, `k8s`, `rollout`
+
+---
+
+### `k8s-job-backoff-limit`
+
+**Jobs should set a sensible backoffLimit** &middot; severity `low` &middot; service `jobs` &middot; resource `k8s.job`
+
+A Job with no `backoffLimit` (or an excessively large one) retries a failing pod indefinitely, often masking a real defect and consuming cluster capacity. The K8s default of 6 is a reasonable ceiling; anything materially higher should come with a documented reason.
+
+_Remediation:_
+
+> Set `spec.backoffLimit` to between 0 and 10 depending on whether the work is idempotent. Pair with `activeDeadlineSeconds` for a hard timeout.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.16` | Monitoring Activities |
+| `soc2` | `CC7.3` | System Operations - Incident Evaluation |
+
+_Tags:_ `jobs`, `k8s`, `reliability`
+
+---
+
 ### `k8s-pod-allow-privilege-escalation`
 
 **Containers should not allow privilege escalation** &middot; severity `high` &middot; service `pod-security` &middot; resource `k8s.pod`
@@ -3685,6 +3881,29 @@ _Maps to:_
 | `soc2` | `CC6.6` | Logical Access Security - Boundaries |
 
 _Tags:_ `k8s`, `pod-security`, `seccomp`
+
+---
+
+### `k8s-statefulset-pdb-missing`
+
+**Multi-replica StatefulSets should have a PodDisruptionBudget** &middot; severity `medium` &middot; service `controllers` &middot; resource `k8s.statefulset`
+
+StatefulSets carry persistent state, so simultaneous eviction is even more disruptive than for Deployments. A PDB with `minAvailable: <replicas-1>` keeps quorum across node drains and rolling cluster upgrades.
+
+_Remediation:_
+
+> Create a PDB selecting the StatefulSet's pods. For quorum-based services (etcd, ZooKeeper, Postgres replicas) set `minAvailable` to N-1 where N is replicas.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `11.2` | Perform Automated Backups |
+| `iso27001` | `A.5.30` | ICT Readiness for Business Continuity |
+| `iso27001` | `A.8.14` | Redundancy of Information Processing Facilities |
+| `soc2` | `A1.2` | Availability - Backup and Recovery |
+
+_Tags:_ `controllers`, `ha`, `k8s`, `stateful`
 
 ---
 
