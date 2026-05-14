@@ -1,7 +1,6 @@
 package hetzner
 
 import (
-	"context"
 	"testing"
 
 	"github.com/darpanzope/compliancekit/internal/collectors/cloudcommon"
@@ -25,19 +24,18 @@ func TestNew_ShortToken(t *testing.T) {
 	}
 }
 
-func TestCollect_ProjectAnchorEmitted(t *testing.T) {
-	c := NewWithClient(nil, "hetzner-test-fp")
-	out, err := c.Collect(context.Background())
-	if err != nil {
-		t.Fatalf("Collect: %v", err)
+// TestProjectResource_Shape covers the project-anchor emission
+// directly. The full Collect() integration test belongs at v1.1
+// behind a build tag against a real Hetzner project; faking out
+// every hcloud service client in unit tests would duplicate the
+// SDK surface for no gain (same approach as GCP at v0.8).
+func TestProjectResource_Shape(t *testing.T) {
+	c := &Collector{projectID: "hetzner-test-fp"}
+	r := c.projectResource()
+	if r.Type != ProjectType {
+		t.Errorf("anchor type = %q, want %q", r.Type, ProjectType)
 	}
-	if len(out) != 1 {
-		t.Fatalf("got %d resources, want 1 (just the project anchor)", len(out))
-	}
-	if out[0].Type != ProjectType {
-		t.Errorf("anchor type = %q, want %q", out[0].Type, ProjectType)
-	}
-	coord := cloudcommon.CoordOf(out[0])
+	coord := cloudcommon.CoordOf(r)
 	if coord.AccountID != "hetzner-test-fp" {
 		t.Errorf("account_id = %q, want hetzner-test-fp", coord.AccountID)
 	}

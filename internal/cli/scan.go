@@ -12,6 +12,7 @@ import (
 	awscol "github.com/darpanzope/compliancekit/internal/collectors/aws"
 	do "github.com/darpanzope/compliancekit/internal/collectors/digitalocean"
 	gcpcol "github.com/darpanzope/compliancekit/internal/collectors/gcp"
+	hetznercol "github.com/darpanzope/compliancekit/internal/collectors/hetzner"
 	linuxcol "github.com/darpanzope/compliancekit/internal/collectors/linux"
 	"github.com/darpanzope/compliancekit/internal/config"
 	"github.com/darpanzope/compliancekit/internal/core"
@@ -146,7 +147,8 @@ func buildCollectors(ctx context.Context, cfg *config.Config, providerFilter str
 		buildLinuxCollector,
 		buildAWSCollector,
 		buildGCPCollector,
-		// Future: hetzner (v0.10), kubernetes (v0.11).
+		buildHetznerCollector,
+		// Future: kubernetes (v0.11).
 	} {
 		c, err := build(ctx, cfg, providerFilter)
 		if err != nil {
@@ -223,6 +225,18 @@ func buildGCPCollector(ctx context.Context, cfg *config.Config, filter string) (
 		return nil, NewExitCode(5, "gcp: %v", err)
 	}
 	return gc, nil
+}
+
+func buildHetznerCollector(_ context.Context, cfg *config.Config, filter string) (core.Collector, error) {
+	if !cfg.Providers.Hetzner.Enabled || !providerSelected("hetzner", filter) {
+		return nil, nil
+	}
+	tokenEnv := cfg.Providers.Hetzner.TokenEnv
+	token := os.Getenv(tokenEnv)
+	if token == "" {
+		return nil, NewExitCode(5, "env var %s is unset; cannot scan hetzner", tokenEnv)
+	}
+	return hetznercol.New(token), nil
 }
 
 // applyScanFlagOverrides copies non-empty flag values from opts into

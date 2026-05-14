@@ -6,7 +6,7 @@
   Source of truth: internal/checks/**/*.go (the core.Check vars).
 -->
 
-This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **144 checks** across the providers below.
+This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **149 checks** across the providers below.
 
 Each check below has:
 
@@ -25,8 +25,9 @@ To inspect a single check from the CLI: `compliancekit checks show <id>`.
 | `aws` | 30 |
 | `digitalocean` | 74 |
 | `gcp` | 25 |
+| `hetzner` | 5 |
 | `linux` | 15 |
-| **total** | **144** |
+| **total** | **149** |
 
 ## By severity
 
@@ -34,8 +35,8 @@ To inspect a single check from the CLI: `compliancekit checks show <id>`.
 |---|---:|
 | `critical` | 9 |
 | `high` | 39 |
-| `medium` | 51 |
-| `low` | 45 |
+| `medium` | 53 |
+| `low` | 48 |
 
 ## aws
 
@@ -2946,6 +2947,117 @@ _Maps to:_
 | `soc2` | `CC6.6` | Logical Access Security - Boundaries |
 
 _Tags:_ `backup`, `recovery`, `storage`
+
+---
+
+## hetzner
+
+### `hetzner-server-locked`
+
+**Non-production Hetzner servers should not stay locked indefinitely** &middot; severity `low` &middot; service `servers` &middot; resource `hetzner.server`
+
+Hetzner servers expose a delete-protection lock flag. It's correct to leave prod servers locked. It's a hygiene problem to leave dev/staging/test servers locked — operators typically apply the lock during a sensitive change and forget to remove it, which then blocks routine cleanup. This check is informational; expect to skip it for true prod assets via a profile or a waiver from v0.18 onwards.
+
+_Remediation:_
+
+> Audit locks: `hcloud server list --selector environment=production` (and inverse). For each non-prod locked server, unlock via `hcloud server disable-protection <name> --delete`.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `1.1` | Establish and Maintain Detailed Enterprise Asset Inventory |
+| `iso27001` | `A.5.9` | Inventory of Information and Other Associated Assets |
+
+_Tags:_ `hygiene`, `server`
+
+---
+
+### `hetzner-server-no-backups`
+
+**Hetzner servers should have automated backups enabled** &middot; severity `medium` &middot; service `servers` &middot; resource `hetzner.server`
+
+Hetzner Cloud servers expose a BackupWindow setting; non-empty means a daily snapshot runs in that window. Empty means no automated backups. SOC 2 A1.2 and ISO 27001 A.8.13 both prescribe backup capability for production data.
+
+_Remediation:_
+
+> Enable backups via the Hetzner Cloud Console (Server > Backups > Enable Backups) or `hcloud server enable-backup <name>`. Backups carry a 20% surcharge but that's the standard cost of recoverable production.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `11.2` | Perform Automated Backups |
+| `iso27001` | `A.8.13` | Information Backup |
+| `iso27001` | `A.8.14` | Redundancy of Information Processing Facilities |
+| `soc2` | `A1.2` | Availability - Backup and Recovery |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `backup`, `recovery`, `server`
+
+---
+
+### `hetzner-server-not-running`
+
+**Hetzner servers should be in 'running' status** &middot; severity `low` &middot; service `servers` &middot; resource `hetzner.server`
+
+A Hetzner Cloud server bills regardless of whether it's powered on. A server in `off` or `initializing` status is either a forgotten ops experiment, a half-finished provision, or a fleet item that should have been deleted. Worth reviewing each non-running server.
+
+_Remediation:_
+
+> List + filter: `hcloud server list --output columns=name,status,location`. For each non-running server, either restart it (`hcloud server poweron <name>`) or delete it (`hcloud server delete <name>`).
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `1.1` | Establish and Maintain Detailed Enterprise Asset Inventory |
+| `iso27001` | `A.5.9` | Inventory of Information and Other Associated Assets |
+
+_Tags:_ `cost`, `hygiene`, `server`
+
+---
+
+### `hetzner-server-old-image`
+
+**Hetzner servers should not run from images older than 1 year** &middot; severity `medium` &middot; service `servers` &middot; resource `hetzner.server`
+
+A Hetzner server built from a base image more than a year old will be missing roughly a year of OS-vendor patches unless ongoing apt-upgrade / dnf-upgrade has been bringing the running system forward. Even with package upgrades, kernel + base userland drift is real. Rebuilding from a fresh image forces a clean baseline.
+
+_Remediation:_
+
+> Snapshot the server, build a new server from a current image, restore any custom config, switch DNS / load balancer targets. Hetzner doesn't support in-place rebase. Schedule per server in routine maintenance.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.8` | Management of Technical Vulnerabilities |
+| `soc2` | `CC7.1` | System Operations - Vulnerabilities |
+
+_Tags:_ `patching`, `server`, `supply-chain`
+
+---
+
+### `hetzner-server-rescue-enabled`
+
+**Hetzner servers should not run with rescue mode enabled** &middot; severity `low` &middot; service `servers` &middot; resource `hetzner.server`
+
+Hetzner's rescue mode replaces the boot disk with a recovery image granting temporary root, intended for short maintenance windows. A server stuck in rescue mode is either a forgotten recovery session or a live operator typing into a non-persistent shell — both indicate the resource is not in steady production state.
+
+_Remediation:_
+
+> Power-cycle the server out of rescue: `hcloud server disable-rescue <name>` followed by `hcloud server reset <name>`. Confirm that the underlying issue that triggered rescue mode has been resolved.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `1.1` | Establish and Maintain Detailed Enterprise Asset Inventory |
+| `iso27001` | `A.5.9` | Inventory of Information and Other Associated Assets |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `ops-hygiene`, `server`
 
 ---
 
