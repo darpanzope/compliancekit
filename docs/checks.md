@@ -6,7 +6,7 @@
   Source of truth: internal/checks/**/*.go (the core.Check vars).
 -->
 
-This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **72 checks** across the providers below.
+This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **75 checks** across the providers below.
 
 Each check below has:
 
@@ -24,17 +24,17 @@ To inspect a single check from the CLI: `compliancekit checks show <id>`.
 |---|---:|
 | `aws` | 30 |
 | `digitalocean` | 5 |
-| `gcp` | 22 |
+| `gcp` | 25 |
 | `linux` | 15 |
-| **total** | **72** |
+| **total** | **75** |
 
 ## By severity
 
 | Severity | Checks |
 |---|---:|
-| `critical` | 4 |
-| `high` | 30 |
-| `medium` | 28 |
+| `critical` | 5 |
+| `high` | 31 |
+| `medium` | 29 |
 | `low` | 10 |
 
 ## aws
@@ -854,6 +854,72 @@ _Tags:_ `exposure`, `network`, `ssh`
 ---
 
 ## gcp
+
+### `gcp-bigquery-default-cmek`
+
+**BigQuery datasets must have a default CMEK configured** &middot; severity `medium` &middot; service `bigquery` &middot; resource `gcp.bigquery.dataset`
+
+BigQuery encrypts data at rest by default with Google-managed keys. Setting a default CMEK at the dataset level ensures every newly-created table inherits a customer-managed key, which is required when downstream controls (audit, key rotation, BYOK, key destruction for crypto-shredding) need to apply uniformly across tables in a dataset.
+
+_Remediation:_
+
+> 'bq update --default_kms_key=projects/<proj>/locations/<loc>/keyRings/<ring>/cryptoKeys/<key> <project>:<dataset>'. Grant the BigQuery service account (bq-<project-number>@bigquery-encryption.iam.gserviceaccount.com) the cloudkms.cryptoKeyEncrypterDecrypter role on the key.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.24` | Use of Cryptography |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `bigquery`, `cmek`, `encryption`
+
+---
+
+### `gcp-bigquery-no-all-authenticated-users`
+
+**BigQuery datasets must not grant access to allAuthenticatedUsers** &middot; severity `high` &middot; service `bigquery` &middot; resource `gcp.bigquery.dataset`
+
+Even when public anonymous access (allUsers) is denied, granting allAuthenticatedUsers exposes the dataset to every Google account on the internet, not just your organization. This is rarely the intent and is a common path to credential-stuffing data exfiltration. CIS GCP 7.1 / 7.2 prescribe explicit member lists instead.
+
+_Remediation:_
+
+> Remove the allAuthenticatedUsers grant: 'bq remove-iam-policy-binding <project>:<dataset> --member=allAuthenticatedUsers --role=<role>'. Replace with an explicit group or service-account binding.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `3.3` | Configure Data Access Control Lists |
+| `iso27001` | `A.8.3` | Information Access Restriction |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `bigquery`, `data-exposure`, `public-access`
+
+---
+
+### `gcp-bigquery-no-public-datasets`
+
+**BigQuery datasets must not grant access to allUsers/allAuthenticatedUsers** &middot; severity `critical` &middot; service `bigquery` &middot; resource `gcp.bigquery.dataset`
+
+Granting any role to allUsers or allAuthenticatedUsers on a BigQuery dataset exposes every table, view, and routine inside it. allUsers is the anonymous-internet grant; allAuthenticatedUsers is any Google account. Both are common shapes of public-data leak.
+
+_Remediation:_
+
+> Identify offending access entries: 'bq show --format=prettyjson <project>:<dataset>' and remove any access entry where specialGroup or iamMember is allUsers or allAuthenticatedUsers. Replace with named groups or service accounts scoped to the actual consumers.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `3.3` | Configure Data Access Control Lists |
+| `iso27001` | `A.8.3` | Information Access Restriction |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `bigquery`, `data-exposure`, `public-access`
+
+---
 
 ### `gcp-compute-no-broad-scopes`
 

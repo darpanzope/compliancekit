@@ -85,15 +85,16 @@ func (c *Collector) Collect(ctx context.Context) ([]core.Resource, error) {
 	for _, projectID := range c.projects {
 		out = append(out, c.projectResource(projectID))
 	}
-	// IAM + Compute + GCS + Cloud SQL + Cloud Logging + KMS are
-	// per-project. BigQuery lands in the next phase and plugs
-	// in here.
+	// All seven services are per-project; per-project errors
+	// emit gcp.collect_error placeholders inside each helper
+	// rather than aborting the entire scan.
 	out = c.collectIAM(ctx, out)
 	out = c.collectCompute(ctx, out)
 	out = c.collectStorage(ctx, out)
 	out = c.collectSQL(ctx, out)
 	out = c.collectLogging(ctx, out)
 	out = c.collectKMS(ctx, out)
+	out = c.collectBigQuery(ctx, out)
 	return out, nil
 }
 
