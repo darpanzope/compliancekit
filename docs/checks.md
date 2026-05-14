@@ -6,7 +6,7 @@
   Source of truth: internal/checks/**/*.go (the core.Check vars).
 -->
 
-This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **95 checks** across the providers below.
+This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **101 checks** across the providers below.
 
 Each check below has:
 
@@ -23,19 +23,19 @@ To inspect a single check from the CLI: `compliancekit checks show <id>`.
 | Provider | Checks |
 |---|---:|
 | `aws` | 30 |
-| `digitalocean` | 25 |
+| `digitalocean` | 31 |
 | `gcp` | 25 |
 | `linux` | 15 |
-| **total** | **95** |
+| **total** | **101** |
 
 ## By severity
 
 | Severity | Checks |
 |---|---:|
 | `critical` | 6 |
-| `high` | 35 |
-| `medium` | 37 |
-| `low` | 17 |
+| `high` | 36 |
+| `medium` | 40 |
+| `low` | 19 |
 
 ## aws
 
@@ -795,6 +795,131 @@ _Maps to:_
 | `soc2` | `CC1.4` | Commitment to Competence |
 
 _Tags:_ `account`, `bus-factor`
+
+---
+
+### `do-certificate-near-expiry`
+
+**Certificates should not expire within 30 days** &middot; severity `high` &middot; service `certificates` &middot; resource `digitalocean.certificate`
+
+A cert that expires in less than 30 days is in the renewal-or-outage window. DO managed certs auto-renew but the renewal needs DNS / file-system access that might be broken; uploaded certs need a human to refresh. 30 days is the industry-standard cushion that gives an incident response team time to find the problem.
+
+_Remediation:_
+
+> Managed certs (type=lets_encrypt): verify the cert's DNS challenge can still resolve and reach DO. Uploaded certs: rotate. 'doctl compute certificate create --type lets_encrypt --domains <names>' creates a new managed cert ready to swap into LB forwarding rules.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `3.10` | Encrypt Sensitive Data in Transit |
+| `iso27001` | `A.8.24` | Use of Cryptography |
+
+_Tags:_ `expiry`, `tls`
+
+---
+
+### `do-certificate-uploaded-not-managed`
+
+**Uploaded certificates should be reviewed for migration to managed** &middot; severity `low` &middot; service `certificates` &middot; resource `digitalocean.certificate`
+
+Custom (uploaded) certificates require a human-driven renewal cycle. DO's managed certs (Let's Encrypt) auto-renew every 90 days with zero operator involvement. For LB-attached certs without an EV / wildcard requirement, managed is the strictly safer default -- one fewer thing to fall off the on-call backlog.
+
+_Remediation:_
+
+> If the cert protects domains DO can DNS-challenge, create a managed equivalent and swap: 'doctl compute certificate create --type lets_encrypt --domains <names>'. For wildcard or EV certs that require purchased provenance, document the manual-rotation procedure and assign an owner.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `3.10` | Encrypt Sensitive Data in Transit |
+| `iso27001` | `A.8.24` | Use of Cryptography |
+
+_Tags:_ `managed-cert`, `renewal`, `tls`
+
+---
+
+### `do-domain-caa-wildcard`
+
+**CAA records should name specific CAs, not allow any** &middot; severity `low` &middot; service `domains` &middot; resource `digitalocean.domain`
+
+A CAA record with a literal ';' or empty value effectively says 'any CA may issue.' This is better than no CAA at all (CAA-aware receivers honour the syntax) but defeats the point of CAA. Name your CAs explicitly: letsencrypt.org for managed certs, digicert.com / sectigo.com for purchased certs.
+
+_Remediation:_
+
+> Replace the wildcard CAA entry with explicit issuers. Audit existing records: 'doctl compute domain records list <domain> --format Type,Name,Data | grep CAA'. Remove the wildcard, add explicit issue/issuewild entries for the CAs you actually use.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `3.10` | Encrypt Sensitive Data in Transit |
+| `iso27001` | `A.8.24` | Use of Cryptography |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `ca-hygiene`, `dns`, `tls`
+
+---
+
+### `do-domain-no-caa`
+
+**Managed domains should publish a CAA record** &middot; severity `medium` &middot; service `domains` &middot; resource `digitalocean.domain`
+
+A CAA (Certification Authority Authorization) record declares which public CAs may issue certificates for the domain. Without it, any CA in the public trust store can issue a cert against a successful HTTP/DNS challenge, which a compromised DNS account or an MITM during validation can abuse. CAA is the cheapest single mitigation against rogue issuance.
+
+_Remediation:_
+
+> Publish a CAA record naming your CAs of record. For DO Managed Certs (which use Let's Encrypt): 'doctl compute domain records create <domain> --record-type CAA --record-name @ --record-flags 0 --record-tag issue --record-data letsencrypt.org'. Add additional CAs as needed.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `3.10` | Encrypt Sensitive Data in Transit |
+| `iso27001` | `A.8.24` | Use of Cryptography |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `ca-hygiene`, `dns`, `tls`
+
+---
+
+### `do-domain-no-dmarc`
+
+**Mail-sending domains should publish DMARC** &middot; severity `medium` &middot; service `domains` &middot; resource `digitalocean.domain`
+
+A domain with MX but no DMARC (TXT record on _dmarc.<domain>) tells receivers 'I have no opinion about what to do with mail that fails authentication.' Combined with SPF + DKIM, DMARC publishes the reject/quarantine policy that closes the spoofing loop.
+
+_Remediation:_
+
+> Add a TXT record on _dmarc.<domain>. Start in reporting-only mode: 'v=DMARC1; p=none; rua=mailto:dmarc@example.com'. Once you see clean reports for two weeks, harden to 'p=quarantine' then 'p=reject'.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+
+_Tags:_ `dns`, `email-auth`, `spoofing`
+
+---
+
+### `do-domain-no-spf`
+
+**Mail-sending domains should publish SPF** &middot; severity `medium` &middot; service `domains` &middot; resource `digitalocean.domain`
+
+A domain with an MX record but no SPF (a TXT record on the apex starting 'v=spf1') is trivially spoofable -- the receiver has no policy to consult and any sender claiming to be the domain gets a fair hearing. SPF is the minimum email sender-policy a domain can publish; DMARC + DKIM stack on top.
+
+_Remediation:_
+
+> Add a TXT record on the apex publishing your SPF policy. Minimum: 'v=spf1 -all' to declare 'no mail from this domain.' If you send mail, list your senders: 'v=spf1 include:_spf.mx.example.com -all'.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `dns`, `email-auth`, `spoofing`
 
 ---
 

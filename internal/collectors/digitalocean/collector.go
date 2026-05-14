@@ -107,10 +107,11 @@ func (c *Collector) Collect(ctx context.Context) ([]core.Resource, error) {
 		{"firewalls", c.collectFirewalls},
 		{"vpcs", c.collectVPCs},
 		{"load_balancers", c.collectLoadBalancers},
-		// Future phases add: domains, certificates, databases,
-		// spaces, registry, apps, functions, cdn, volumes,
-		// snapshots, reserved_ips, keys, images, monitoring,
-		// projects.
+		{"domains", c.collectDomains},
+		{"certificates", c.collectCertificates},
+		// Future phases add: databases, spaces, registry, apps,
+		// functions, cdn, volumes, snapshots, reserved_ips,
+		// keys, images, monitoring, projects.
 	}
 
 	// Run every sub-collector first so we can cross-link the
