@@ -112,8 +112,10 @@ func (c *Collector) Collect(ctx context.Context) ([]core.Resource, error) {
 		{"volumes", c.collectVolumes},
 		{"snapshots", c.collectSnapshots},
 		{"databases", c.collectDatabases},
-		// Future phases add: spaces, registry, apps, functions,
-		// cdn, reserved_ips, keys, images, monitoring, projects.
+		{"spaces", c.collectSpaces},
+		{"spaces_keys", c.collectSpacesKeys},
+		// Future phases add: registry, apps, functions, cdn,
+		// reserved_ips, keys, images, monitoring, projects.
 	}
 
 	// Run every sub-collector first so we can cross-link the

@@ -6,7 +6,7 @@
   Source of truth: internal/checks/**/*.go (the core.Check vars).
 -->
 
-This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **113 checks** across the providers below.
+This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **121 checks** across the providers below.
 
 Each check below has:
 
@@ -23,19 +23,19 @@ To inspect a single check from the CLI: `compliancekit checks show <id>`.
 | Provider | Checks |
 |---|---:|
 | `aws` | 30 |
-| `digitalocean` | 43 |
+| `digitalocean` | 51 |
 | `gcp` | 25 |
 | `linux` | 15 |
-| **total** | **113** |
+| **total** | **121** |
 
 ## By severity
 
 | Severity | Checks |
 |---|---:|
-| `critical` | 8 |
+| `critical` | 9 |
 | `high` | 37 |
-| `medium` | 42 |
-| `low` | 26 |
+| `medium` | 46 |
+| `low` | 29 |
 
 ## aws
 
@@ -1579,6 +1579,181 @@ _Maps to:_
 | `soc2` | `A1.2` | Availability - Backup and Recovery |
 
 _Tags:_ `cost`, `hygiene`, `snapshot`
+
+---
+
+### `do-spaces-bucket-cors-wildcard`
+
+**Spaces buckets must not use wildcard CORS origins** &middot; severity `medium` &middot; service `spaces` &middot; resource `digitalocean.spaces_bucket`
+
+A CORS rule with AllowedOrigin '*' lets any browser page on the public Internet fetch + (if PUT/DELETE methods are also allowed) modify objects via XHR. Common shape of accidental public-bucket exposure even when the underlying ACL is correct.
+
+_Remediation:_
+
+> List your application origins explicitly: 'https://app.example.com', 'https://staging.example.com'. Apply via 'aws s3api put-bucket-cors' against the Spaces endpoint. If the workload truly needs '*', restrict methods to GET only.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `3.3` | Configure Data Access Control Lists |
+| `iso27001` | `A.8.20` | Networks Security |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `cors`, `exposure`, `spaces`
+
+---
+
+### `do-spaces-bucket-no-encryption`
+
+**Spaces buckets should have default encryption configured** &middot; severity `medium` &middot; service `spaces` &middot; resource `digitalocean.spaces_bucket`
+
+DO Spaces encrypts every object at rest using AES-256 with platform-managed keys regardless of bucket configuration, but the per-bucket default-encryption setting forces clients to acknowledge encryption on every PUT. A bucket without the default-encryption header set will accept unencrypted PUT requests that downgrade to platform-default, which is compliance-detectable.
+
+_Remediation:_
+
+> Apply default encryption via s3-compatible API: 'aws s3api put-bucket-encryption --bucket <name> --server-side-encryption-configuration ...' against the Spaces endpoint.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.24` | Use of Cryptography |
+
+_Tags:_ `encryption-at-rest`, `spaces`
+
+---
+
+### `do-spaces-bucket-no-lifecycle`
+
+**Spaces buckets should have lifecycle rules configured** &middot; severity `low` &middot; service `spaces` &middot; resource `digitalocean.spaces_bucket`
+
+Without lifecycle rules, every object lives forever -- including incomplete multipart uploads, old non-current versions, and superseded build artifacts. Most production buckets benefit from a lifecycle policy that expires transient data and tier-shifts cold objects.
+
+_Remediation:_
+
+> Define a lifecycle XML and apply via s3-compatible API. Minimum baseline: expire incomplete multipart uploads after 1 day, expire non-current versions after 90 days. Tune to the workload.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.5.9` | Inventory of Information and Other Associated Assets |
+
+_Tags:_ `cost`, `hygiene`, `spaces`
+
+---
+
+### `do-spaces-bucket-no-logging`
+
+**Spaces buckets should have access logging configured** &middot; severity `low` &middot; service `spaces` &middot; resource `digitalocean.spaces_bucket`
+
+Spaces server-access logs are the forensic trail when a bucket is the source of a security incident. Without them, 'who accessed this object at this timestamp' is unanswerable. Apply to data-plane buckets; control-plane logs cover the DO API surface separately.
+
+_Remediation:_
+
+> Enable logging into a dedicated log-aggregation bucket via the s3 PUT bucket logging API. The destination bucket must be different from the source bucket (loop prevention).
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `8.10` | Retain Audit Logs |
+| `cis-v8` | `8.5` | Collect Detailed Audit Logs |
+| `iso27001` | `A.8.15` | Logging |
+| `soc2` | `CC7.2` | System Operations - Monitoring |
+
+_Tags:_ `audit-logging`, `spaces`
+
+---
+
+### `do-spaces-bucket-no-versioning`
+
+**Spaces buckets should have versioning enabled** &middot; severity `medium` &middot; service `spaces` &middot; resource `digitalocean.spaces_bucket`
+
+Object versioning preserves previous versions on overwrite or delete -- the only recovery path for accidental deletes or ransomware-style encrypt-in-place attacks against Spaces. Pair with a lifecycle policy that expires old non- current versions to bound storage cost.
+
+_Remediation:_
+
+> Enable via s3-compatible API: 's3cmd --access_key=$SPACES_KEY --secret_key=$SPACES_SECRET --host=<region>.digitaloceanspaces.com setversioning s3://<bucket> Enabled' (or the equivalent aws-cli put-bucket-versioning).
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `11.2` | Perform Automated Backups |
+| `iso27001` | `A.8.13` | Information Backup |
+| `iso27001` | `A.8.14` | Redundancy of Information Processing Facilities |
+| `soc2` | `A1.2` | Availability - Backup and Recovery |
+
+_Tags:_ `backup`, `recovery`, `spaces`
+
+---
+
+### `do-spaces-bucket-public-acl`
+
+**Spaces buckets must not grant public ACLs** &middot; severity `critical` &middot; service `spaces` &middot; resource `digitalocean.spaces_bucket`
+
+A bucket ACL that grants AllUsers or AuthenticatedUsers exposes every object to the public Internet. Spaces buckets default to private but a copied-from-AWS ACL snippet or a CDN-setup misstep can flip them open. The single highest-impact misconfiguration on object storage.
+
+_Remediation:_
+
+> Remove the public ACL: 's3cmd setacl s3://<bucket> --acl-private' (s3cmd-compatible) or use the DO control panel Settings > Permissions. Audit every object that was public during the exposure window.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `3.3` | Configure Data Access Control Lists |
+| `iso27001` | `A.8.3` | Information Access Restriction |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `data-exposure`, `public-access`, `spaces`
+
+---
+
+### `do-spaces-key-fullaccess`
+
+**Spaces keys should be scoped, not fullaccess** &middot; severity `medium` &middot; service `spaces` &middot; resource `digitalocean.spaces_key`
+
+DO Spaces keys can be scoped to specific buckets + permissions (read / readwrite / fullaccess). A fullaccess key or a key with zero grants (which legacy keys default to) can reach every bucket in the account. Lost or leaked, the blast radius is everything.
+
+_Remediation:_
+
+> Rotate to a scoped key: 'doctl spaces keys create <name> --grants bucket=<bucket>,permission=readwrite'. Update the application credential. Revoke the old fullaccess key.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `3.3` | Configure Data Access Control Lists |
+| `iso27001` | `A.5.15` | Access Control |
+| `iso27001` | `A.8.2` | Privileged Access Rights |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `key-scope`, `least-privilege`, `spaces`
+
+---
+
+### `do-spaces-key-too-old`
+
+**Spaces keys should be rotated at least once a year** &middot; severity `low` &middot; service `spaces` &middot; resource `digitalocean.spaces_key`
+
+Long-lived credentials accumulate exposure risk: more log entries containing the key, more code paths that have loaded it, more former employees who once had it. Rotate Spaces keys at least annually. SOC 2 CC6.1 + ISO 27001 A.5.16 both prescribe periodic credential rotation.
+
+_Remediation:_
+
+> Create a new key with the same grants: 'doctl spaces keys create <new-name> --grants ...'. Update the application credential. Delete the old key once traffic has migrated.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `credential-rotation`, `spaces`
 
 ---
 
