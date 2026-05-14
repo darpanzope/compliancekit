@@ -119,7 +119,7 @@ machine-generated, the contributor signs for the work.
 **No, or not yet:**
 - New providers before the version that's slated to add them (see
   [ROADMAP.md](ROADMAP.md)). Locked sequence: AWS at v0.7, GCP at v0.8,
-  DigitalOcean depth pass at v0.9 (~75 checks, every DO surface except
+  DigitalOcean depth pass at v0.9 (74 checks, every DO surface except
   DOKS), Hetzner at v0.10, K8s + EKS/GKE/DOKS at v0.11. Tail clouds
   (Cloudflare, GitHub, Google Workspace, Vercel, Linode, Vultr) at
   v1.7. Pulling any of these forward needs a conversation -- the

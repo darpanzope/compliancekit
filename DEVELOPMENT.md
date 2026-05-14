@@ -34,6 +34,8 @@ make build        # produces bin/compliancekit
 
 If `make setup` complains about missing system tools (make, docker), install them via your package manager — we don't auto-install OS-level dependencies.
 
+**Note on lefthook + PATH**: `make setup` installs lefthook via `go install` into `$(go env GOPATH)/bin`. Git's hooks run with a stripped PATH that won't include `~/go/bin`, so without the export tip above (or a system-wide install) you'll see "Can't find lefthook in PATH" on every push and the pre-push gate will be skipped. On macOS the cleanest fix is `brew install lefthook` (lands at `/usr/local/bin/lefthook`, which git's PATH does see). On Linux either symlink the go-installed binary into `/usr/local/bin/` or add `~/go/bin` to the system PATH.
+
 ## Daily loop
 
 | Command | What it does |

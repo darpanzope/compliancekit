@@ -438,8 +438,8 @@ scope was expanded to ~75 during the v0.8 → v0.9 transition because
 the cloudcommon abstractions from v0.7-v0.8 mean each additional DO
 check costs ~50-60% of what it would have at v0.7.
 
-**Today (v0.8):** 5 DO checks — droplets-no-firewall, ssh-from-any,
-backups-disabled, no-tags, old-image. **Goal at v0.9: ~75 DO checks
+**At v0.5 (launch):** 5 DO checks — droplets-no-firewall, ssh-from-any,
+backups-disabled, no-tags, old-image. **Shipped at v0.9: 74 DO checks
 across 20 service families.**
 
 | Surface | New | Notes |
@@ -488,12 +488,12 @@ Plus existing v0.5 checks: 5. **Total: ~75.**
 **Framework mappings**
 
 The CIS Controls v8 + SOC 2 TSC + ISO 27001:2022 Annex A catalogs
-already absorb 75 DO checks without expansion. Each check maps to
+already absorb 74 DO checks without expansion. Each check maps to
 all three frameworks. No new framework yaml needed.
 
 **Definition of done**
 
-- ~75 DO checks, every check framework-mapped, every check
+- 74 DO checks, every check framework-mapped, every check
   fixture-backed (graph-test pattern from v0.7/v0.8).
 - `cloudcommon.Stamp` on every DO resource; account_id + region
   populated in the evidence pack `control-mapping.csv`.
