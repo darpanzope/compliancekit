@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/internal/score"
 )
 
 // FormatJSON is the lowercase identifier used in config files and the
@@ -80,12 +81,18 @@ type jsonEnvelope struct {
 	Findings  []core.Finding `json:"findings"`
 }
 
-// summary aggregates findings counts. Keys are stable strings so
-// consumers can index into by_status / by_severity without enum decode.
+// summary aggregates findings counts and the v0.6 hardening score.
+// Keys are stable strings so consumers can index into by_status /
+// by_severity without enum decode. The score / coverage fields are
+// the headline numbers from DECISIONS.md ADR-008; downstream tooling
+// (the v0.6 diff command, dashboards, CI gates) reads them straight
+// from this envelope rather than recomputing.
 type summary struct {
 	Total      int            `json:"total"`
 	ByStatus   map[string]int `json:"by_status"`
 	BySeverity map[string]int `json:"by_severity"`
+	Score      int            `json:"score"`
+	Coverage   int            `json:"coverage"`
 }
 
 func computeSummary(findings []core.Finding) summary {
@@ -98,5 +105,8 @@ func computeSummary(findings []core.Finding) summary {
 		s.ByStatus[string(f.Status)]++
 		s.BySeverity[f.Severity.String()]++
 	}
+	r := score.Compute(findings)
+	s.Score = r.Score
+	s.Coverage = r.Coverage
 	return s
 }

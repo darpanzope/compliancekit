@@ -247,6 +247,7 @@ footer.report-foot {
   <h1>compliancekit scan report</h1>
   <div class="meta">Generated {{.Generated}} &middot; {{.TotalCount}} findings ({{.ActionableCount}} actionable)</div>
   <ul class="counts">
+    <li class="score" style="min-width:140px"><span class="label">Hardening score</span><span class="value">{{.Score}}<span style="font-size:13px;color:var(--muted);font-weight:400">/100 &middot; {{.Coverage}}% coverage</span></span></li>
     <li class="critical"><span class="label">Critical</span><span class="value">{{.Counts.critical}}</span></li>
     <li class="high"><span class="label">High</span><span class="value">{{.Counts.high}}</span></li>
     <li class="medium"><span class="label">Medium</span><span class="value">{{.Counts.medium}}</span></li>

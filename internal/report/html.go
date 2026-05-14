@@ -10,6 +10,7 @@ import (
 
 	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/frameworks"
+	"github.com/darpanzope/compliancekit/internal/score"
 )
 
 // FormatHTML is the lowercase identifier used in config / CLI.
@@ -59,6 +60,8 @@ type htmlView struct {
 	TotalCount      int
 	ActionableCount int
 	HasFindings     bool
+	Score           int            // v0.6 hardening score per DECISIONS.md ADR-008
+	Coverage        int            // v0.6 parallel metric: % of finding weight evaluable
 	Counts          map[string]int // by lowercase severity name
 	Sections        []htmlSection
 }
@@ -110,12 +113,15 @@ func buildHTMLView(findings []core.Finding) htmlView {
 	}
 
 	sections := buildHTMLSections(findings)
+	s := score.Compute(findings)
 
 	return htmlView{
 		Generated:       time.Now().UTC().Format(time.RFC3339),
 		TotalCount:      len(findings),
 		ActionableCount: actionable,
 		HasFindings:     len(findings) > 0,
+		Score:           s.Score,
+		Coverage:        s.Coverage,
 		Counts:          counts,
 		Sections:        sections,
 	}

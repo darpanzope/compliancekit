@@ -133,6 +133,16 @@ footer.pack code {
     · {{.TotalFindings}} findings across {{.TotalControls}} controls
     {{if .Redacted}}· <span style="color:var(--warn)">redacted</span>{{else}}· <span style="color:var(--warn)">raw included</span>{{end}}
   </div>
+  <div style="margin-top:14px; display:flex; gap:24px; align-items:baseline;">
+    <div>
+      <span style="font-size:11px;text-transform:uppercase;color:var(--muted);letter-spacing:0.04em">Hardening score</span><br>
+      <span style="font-size:32px;font-weight:600;font-variant-numeric:tabular-nums">{{.Score}}<span style="font-size:14px;color:var(--muted);font-weight:400">/100</span></span>
+    </div>
+    <div>
+      <span style="font-size:11px;text-transform:uppercase;color:var(--muted);letter-spacing:0.04em">Coverage</span><br>
+      <span style="font-size:32px;font-weight:600;font-variant-numeric:tabular-nums">{{.Coverage}}<span style="font-size:14px;color:var(--muted);font-weight:400">%</span></span>
+    </div>
+  </div>
 </header>
 
 <section class="frameworks">

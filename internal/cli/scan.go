@@ -15,6 +15,7 @@ import (
 	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/engine"
 	"github.com/darpanzope/compliancekit/internal/report"
+	"github.com/darpanzope/compliancekit/internal/score"
 )
 
 type scanOptions struct {
@@ -264,4 +265,10 @@ func printSummary(w io.Writer, findings []core.Finding) {
 		fmt.Fprintf(w, ")")
 	}
 	fmt.Fprintln(w)
+
+	// Hardening score per DECISIONS.md ADR-008. Always emitted, even
+	// when there are zero findings (empty scan reads as 100/100,
+	// honest given the Coverage parallel metric).
+	s := score.Compute(findings)
+	fmt.Fprintf(w, "Hardening score: %d/100 (coverage %d%%)\n", s.Score, s.Coverage)
 }

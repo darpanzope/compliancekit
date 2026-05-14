@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/internal/score"
 )
 
 // summaryHTMLName is the filename used for the auditor-readable index
@@ -33,6 +34,8 @@ type summaryView struct {
 	Generated     string
 	TotalFindings int
 	TotalControls int
+	Score         int // v0.6 hardening score per DECISIONS.md ADR-008
+	Coverage      int // v0.6 % of finding weight that was evaluable
 	Redacted      bool
 	Frameworks    []summaryFramework
 }
@@ -117,7 +120,15 @@ func buildSummaryView(result *Result, opts Options) summaryView {
 	// contains. A finding appearing under multiple controls is the
 	// same artifact in audit terms, so we de-duplicate via the
 	// Fingerprint helper that the diff engine (v0.6+) will use.
-	view.TotalFindings = countUniqueFindings(result.ControlIndex)
+	unique := uniqueFindings(result.ControlIndex)
+	view.TotalFindings = len(unique)
+
+	// v0.6 hardening score, computed over the de-duplicated finding
+	// set so a finding referenced under three frameworks does not
+	// triple-count against the score.
+	s := score.Compute(unique)
+	view.Score = s.Score
+	view.Coverage = s.Coverage
 	return view
 }
 
@@ -131,14 +142,25 @@ func countStatus(findings []core.Finding, status core.Status) int {
 	return n
 }
 
-func countUniqueFindings(index map[string][]ControlRef) int {
+// uniqueFindings de-duplicates the pack's findings via their stable
+// Fingerprint (check_id + resource_id + status). A finding referenced
+// under multiple framework controls is the same artifact in audit
+// terms; this helper returns the canonical set for downstream
+// summarisation (total count, hardening score).
+func uniqueFindings(index map[string][]ControlRef) []core.Finding {
 	seen := map[string]struct{}{}
+	out := []core.Finding{}
 	for _, refs := range index {
 		for _, c := range refs {
 			for _, f := range c.Findings {
-				seen[f.Fingerprint()] = struct{}{}
+				fp := f.Fingerprint()
+				if _, ok := seen[fp]; ok {
+					continue
+				}
+				seen[fp] = struct{}{}
+				out = append(out, f)
 			}
 		}
 	}
-	return len(seen)
+	return out
 }
