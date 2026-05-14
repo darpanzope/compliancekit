@@ -6,7 +6,7 @@
   Source of truth: internal/checks/**/*.go (the core.Check vars).
 -->
 
-This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **20 checks** across the providers below.
+This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **28 checks** across the providers below.
 
 Each check below has:
 
@@ -22,17 +22,203 @@ To inspect a single check from the CLI: `compliancekit checks show <id>`.
 
 | Provider | Checks |
 |---|---:|
+| `aws` | 8 |
 | `digitalocean` | 5 |
 | `linux` | 15 |
-| **total** | **20** |
+| **total** | **28** |
 
 ## By severity
 
 | Severity | Checks |
 |---|---:|
-| `high` | 8 |
-| `medium` | 6 |
-| `low` | 6 |
+| `critical` | 1 |
+| `high` | 12 |
+| `medium` | 8 |
+| `low` | 7 |
+
+## aws
+
+### `aws-iam-access-key-age`
+
+**IAM user access keys must be rotated within 90 days** &middot; severity `high` &middot; service `iam` &middot; resource `aws.iam.user`
+
+Long-lived access keys are the source of the majority of AWS breaches in the public record. Rotating them every 90 days limits the blast radius of an undetected disclosure. CIS AWS Foundations Benchmark 1.14.
+
+_Remediation:_
+
+> Run 'aws iam list-access-keys --user-name <name>' to find the key, create a replacement, deploy it everywhere, then deactivate the old key (aws iam update-access-key --status Inactive) before deleting it. Consider rotating to short-lived STS credentials via role assumption instead of long-lived keys.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `5.4` | Restrict Administrator Privileges to Dedicated Accounts |
+| `iso27001` | `A.8.2` | Privileged Access Rights |
+| `iso27001` | `A.8.5` | Secure Authentication |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `credentials`, `iam`, `rotation`
+
+---
+
+### `aws-iam-console-user-mfa`
+
+**IAM users with console access must have MFA enabled** &middot; severity `high` &middot; service `iam` &middot; resource `aws.iam.user`
+
+Console-enabled IAM users without MFA are the most common AWS breach vector after leaked access keys. The password reduces to a single factor an attacker only needs to phish once. CIS AWS Foundations Benchmark 1.10.
+
+_Remediation:_
+
+> Have the user sign in and enable MFA at IAM -> Users -> Security credentials -> Multi-factor authentication. Enforce organisationally via an IAM policy with 'aws:MultiFactorAuthPresent: true' on the actions that matter.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `6.5` | Require MFA for Administrative Access |
+| `iso27001` | `A.8.5` | Secure Authentication |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `console`, `iam`, `mfa`
+
+---
+
+### `aws-iam-no-star-inline-policies`
+
+**IAM inline policies must not grant `*:*` permissions** &middot; severity `high` &middot; service `iam` &middot; resource `aws.iam.user`
+
+An inline policy with Action='*' and Resource='*' grants the user the equivalent of root on the account. Such policies are a common shortcut during incident response that gets forgotten. CIS AWS Foundations Benchmark 1.17 (full-administrative privileges).
+
+_Remediation:_
+
+> Replace the inline policy with a least-privilege managed policy and attach it via group/role: 'aws iam delete-user-policy --user-name <user> --policy-name <name>', then create a scoped policy with only the actions the user actually needs.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `5.4` | Restrict Administrator Privileges to Dedicated Accounts |
+| `iso27001` | `A.5.15` | Access Control |
+| `iso27001` | `A.8.2` | Privileged Access Rights |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `audit-risk`, `iam`, `least-privilege`
+
+---
+
+### `aws-iam-no-user-managed-policies`
+
+**IAM policies must attach to groups or roles, not users** &middot; severity `low` &middot; service `iam` &middot; resource `aws.iam.user`
+
+Attaching managed policies directly to IAM users scatters permission management across user accounts; group / role attachments consolidate it. CIS AWS Foundations Benchmark 1.16 prescribes no direct user-managed-policy attachments. (Inline policies on users are covered by a separate check.)
+
+_Remediation:_
+
+> Move the policy to an IAM group: 'aws iam create-group --group-name <name>', 'aws iam attach-group-policy', then 'aws iam add-user-to-group --user-name <user> --group-name <group>', finally 'aws iam detach-user-policy --user-name <user> --policy-arn <arn>'.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `5.4` | Restrict Administrator Privileges to Dedicated Accounts |
+| `iso27001` | `A.5.15` | Access Control |
+| `iso27001` | `A.8.2` | Privileged Access Rights |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `governance`, `iam`, `least-privilege`
+
+---
+
+### `aws-iam-password-policy`
+
+**AWS account must enforce a strong password policy** &middot; severity `medium` &middot; service `iam` &middot; resource `aws.account`
+
+A strong password policy raises the cost of brute-force and credential-stuffing attacks. The AWS account password policy applies to IAM users with console access. CIS AWS Foundations Benchmark 1.8 prescribes minimum length 14, requires lowercase / uppercase / numbers / symbols, reuse prevention >= 24, max age <= 90 days.
+
+_Remediation:_
+
+> Sign in to IAM, navigate to Account settings -> Password policy, and set: minimum length 14, require all character classes, prevent reuse of last 24, expire after 90 days, allow users to change own password.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `5.2` | Use Unique Passwords |
+| `iso27001` | `A.8.5` | Secure Authentication |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `iam`, `password-policy`
+
+---
+
+### `aws-iam-root-access-key`
+
+**AWS root account must have no access keys** &middot; severity `critical` &middot; service `iam` &middot; resource `aws.account`
+
+The AWS root account has un-revokable permissions across every service. Access keys for root cannot be scoped, cannot be rotated to a least-privilege subset, and leak the entire account on disclosure. CIS AWS Foundations Benchmark 1.4 prescribes that no access keys exist for root.
+
+_Remediation:_
+
+> Sign in as root, navigate to IAM -> My security credentials -> Access keys, and delete every key. Use IAM users + roles for any programmatic access instead.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `5.4` | Restrict Administrator Privileges to Dedicated Accounts |
+| `cis-v8` | `6.5` | Require MFA for Administrative Access |
+| `iso27001` | `A.8.2` | Privileged Access Rights |
+| `iso27001` | `A.8.5` | Secure Authentication |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `credentials`, `iam`, `root`
+
+---
+
+### `aws-iam-root-mfa`
+
+**AWS root account must have MFA enabled** &middot; severity `high` &middot; service `iam` &middot; resource `aws.account`
+
+MFA on the root account is the single most effective control against root-account takeover. Without MFA, root reduces to a password the attacker only needs to phish once. CIS AWS Foundations Benchmark 1.5.
+
+_Remediation:_
+
+> Sign in as root, navigate to IAM -> My security credentials -> Multi-factor authentication, and activate a virtual or hardware MFA device. Prefer a hardware key (YubiKey) for production accounts.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `6.5` | Require MFA for Administrative Access |
+| `iso27001` | `A.8.5` | Secure Authentication |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `iam`, `mfa`, `root`
+
+---
+
+### `aws-iam-unused-users`
+
+**IAM users inactive for 90 days must be removed** &middot; severity `medium` &middot; service `iam` &middot; resource `aws.iam.user`
+
+Dormant IAM users are an attack surface with no business benefit. CIS AWS Foundations Benchmark 1.13 prescribes removing users with no activity for 90 days. Consider quarterly access reviews to flag candidates for removal.
+
+_Remediation:_
+
+> Confirm with the user's manager that the account is no longer needed, then delete it: 'aws iam delete-user --user-name <name>' after deleting access keys, MFA devices, and policies attached to that user.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.2` | Privileged Access Rights |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `iam`, `least-privilege`, `lifecycle`
+
+---
 
 ## digitalocean
 

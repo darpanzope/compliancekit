@@ -106,12 +106,23 @@ func (c *Collector) Collect(ctx context.Context) ([]core.Resource, error) {
 		return nil, fmt.Errorf("aws: no regions resolved (credential cannot see any region)")
 	}
 
-	// Phase 1 emits only the synthetic account resource. Per-service
-	// collectors append starting at phase 2. The account resource
-	// gives the engine + reporters a single place to anchor
-	// account-scoped checks (e.g. password-policy) before any
-	// region-specific resource lands.
-	out := []core.Resource{c.accountResource(regions)}
+	// The account resource anchors account-scoped checks
+	// (password-policy, root-MFA, etc.). Per-service collectors
+	// either enrich this resource with their account-level facts
+	// (IAM) or append per-resource entries (S3 buckets, EC2
+	// instances, etc.).
+	account := c.accountResource(regions)
+	out := []core.Resource{}
+
+	// IAM is account-scoped, not region-scoped, so it runs once
+	// regardless of the region scope.
+	updated, err := c.collectIAM(ctx, &account, out)
+	if err != nil {
+		return nil, err
+	}
+	out = updated
+
+	out = append(out, account)
 	return out, nil
 }
 

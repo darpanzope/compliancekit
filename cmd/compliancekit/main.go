@@ -18,6 +18,7 @@ import (
 	// CheckFuncs into the default registry so the scan command can find
 	// them. Adding a new provider's checks package means adding one
 	// import line here.
+	_ "github.com/darpanzope/compliancekit/internal/checks/aws"
 	_ "github.com/darpanzope/compliancekit/internal/checks/digitalocean"
 	_ "github.com/darpanzope/compliancekit/internal/checks/linux"
 )

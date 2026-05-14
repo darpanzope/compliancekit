@@ -33,6 +33,7 @@ import (
 	// cmd/compliancekit/main.go; if a new provider is added there, it
 	// must be added here too -- the docs-check CI gate will fail if
 	// the catalog is generated without all provider inits running.
+	_ "github.com/darpanzope/compliancekit/internal/checks/aws"
 	_ "github.com/darpanzope/compliancekit/internal/checks/digitalocean"
 	_ "github.com/darpanzope/compliancekit/internal/checks/linux"
 
