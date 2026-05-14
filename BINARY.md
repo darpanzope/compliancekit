@@ -237,7 +237,7 @@ How the artifact changes shape over time:
 | v0.8 | cloud.google.com/go (IAM, Compute, GCS, KMS, Logging) + google.golang.org/api (SQLAdmin, BigQuery) | +38 MB stripped (~6-8 MB compressed; like AWS the per-service-pb weight ran higher than the original +10 MB prediction — gRPC clients carry a pb companion per service. Still under the AWS-on-AWS-only baseline) |
 | v0.9 | godo expanded surface (74 DO checks across 20 service families: account, droplets, firewalls, VPCs, LBs, DNS, certs, managed DBs, Container Registry, App Platform, Functions, CDN, volumes, snapshots, reserved IPs, SSH keys, images, monitoring, projects). Spaces reuses the aws-sdk-go-v2/s3 client already in the binary at v0.7 (custom endpoint resolver for `<region>.digitaloceanspaces.com`) | negligible (no new SDK module) |
 | v0.10 | github.com/hetznercloud/hcloud-go/v2 v2.40.0 (15 Hetzner checks across servers/firewalls/networks/LBs/volumes/floating IPs) | +2 MB stripped (measured at v0.10.0; matches the original prediction exactly) |
-| v0.11 | k8s.io/client-go (EKS / GKE / DOKS adapters as thin glue) | +5 MB |
+| v0.11 | k8s.io/client-go v0.32.1 + k8s.io/api + k8s.io/apimachinery (generic K8s collector) + aws-sdk-go-v2/service/eks v1.83.0 + cloud.google.com/go/container v1.51.0 (EKS / GKE / DOKS adapters; DOKS reuses existing godo) | **+~100 MB stripped / ~30 MB compressed per platform tarball** (vs predicted +5 MB — client-go ships the entire typed-client surface for every K8s API group; the K8s package weight dwarfs every other SDK we depend on). The binary jumps from ~50 MB → ~154 MB. Release-pipeline impact: multi-arch Docker build under QEMU is the bottleneck; future option is to switch to native arm64 runner (`runs-on: ubuntu-24.04-arm64`) to remove QEMU emulation. |
 | v0.12 | extra framework yamls (NIST 800-53 r5, HIPAA, PCI-DSS v4, MITRE ATT&CK) | negligible (embedded yaml) |
 | v0.13 | OCSF / OSCAL / SARIF / Trivy / Checkov ingest types | +1 MB |
 | v0.14 | (no new deps; ingest already covers vuln/secret/SCA shapes) | negligible |
@@ -248,7 +248,7 @@ How the artifact changes shape over time:
 | v1.1 | SQLite (pure Go), HTTP server, REST handlers | +3 MB |
 | v2.0 | wazero (WASM), gRPC | +4 MB |
 
-Even at v2.0, the binary stays under ~50 MB and remains a single artifact. Comparable: Trivy is ~75 MB, Prowler (Python) ships as a 200+ MB Docker image.
+At v2.0, the binary trajectory lands around 170 MB single artifact — the v0.11 client-go dependency dominates from here on. Comparable: Trivy is ~75 MB (no K8s typed clients), kubescape ~110 MB (uses client-go like we do), Prowler (Python) ships as a 200+ MB Docker image.
 
 ## 11. What's deliberately *not* in the binary
 

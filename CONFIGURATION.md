@@ -84,9 +84,25 @@ providers:                      # object, required. At least one provider must b
 
   kubernetes:                   # v0.11+
     enabled: false
+    # Auth uses the standard kubeconfig chain:
+    #   1. `kubeconfig` field below (explicit path), or
+    #   2. KUBECONFIG env var, or
+    #   3. ~/.kube/config (default).
+    # Each scanned context's in-cluster credentials are loaded via
+    # client-go's standard chain; no extra credentials live in this
+    # config. AccountID = kubeconfig context name; Region = parsed
+    # API server host.
     kubeconfig: ~/.kube/config
-    contexts: []                # array<string>, default: current-context
-    namespaces: []              # default: all
+    contexts: []                # array<string>, default: current-context.
+                                # List multiple to scan many clusters
+                                # in one pass.
+    namespaces: []              # array<string>, default: all namespaces
+                                # subject to exclude_namespaces below.
+    exclude_namespaces: []      # array<string>, strips matching
+                                # namespaces after `namespaces` is
+                                # applied. Useful for skipping
+                                # platform namespaces (e.g. kube-system,
+                                # kube-public, kube-node-lease).
 
   hetzner:                      # v0.10+
     enabled: false

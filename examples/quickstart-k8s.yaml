@@ -1,0 +1,56 @@
+# compliancekit.yaml — Kubernetes quickstart.
+#
+# Prereq: ~/.kube/config (or KUBECONFIG env var) pointing at any
+#         cluster you can already reach with `kubectl`. compliancekit
+#         uses the same kubeconfig chain — no extra credentials.
+#
+# v0.11 ships 139 K8s checks: 95 generic Kubernetes (pods, controllers,
+# RBAC, network, storage, namespaces/admission, nodes) + EKS (12) +
+# GKE (13) + DOKS (9) cloud enrichment.
+#
+# Quick patterns:
+#
+#   compliancekit doctor                    # confirms the current-context resolves
+#   compliancekit scan kubernetes           # scan just the cluster
+#   kubectl config use-context <other>      # switch and scan a different cluster
+#
+# For multi-cluster scans, list contexts explicitly below.
+
+providers:
+  kubernetes:
+    enabled: true
+    # Empty contexts == scan the current-context only.
+    # Set this list to scan multiple clusters in one pass:
+    # contexts:
+    #   - do-fra1-supra-prod-cluster
+    #   - arn:aws:eks:us-east-1:123:cluster/staging
+    contexts: []
+    # Strip noisy platform namespaces. Application namespaces still scan.
+    exclude_namespaces:
+      - kube-system
+      - kube-public
+      - kube-node-lease
+
+  # For EKS enrichment, also enable AWS so EKS clusters are discovered
+  # from the AWS side and EKS-specific checks fire.
+  # aws:
+  #   enabled: true
+
+  # For GKE enrichment, also enable GCP.
+  # gcp:
+  #   enabled: true
+
+  # For DOKS enrichment, also enable DigitalOcean.
+  # digitalocean:
+  #   enabled: true
+  #   token_env: DO_API_TOKEN
+
+frameworks: [soc2, iso27001, cis-v8]
+
+severity:
+  fail_on: high
+  min_report: info
+
+output:
+  format: [json, html, markdown]
+  out_dir: ./out

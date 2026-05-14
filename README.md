@@ -167,6 +167,7 @@ curl -O https://raw.githubusercontent.com/darpanzope/compliancekit/main/examples
 curl -O https://raw.githubusercontent.com/darpanzope/compliancekit/main/examples/quickstart-aws.yaml
 curl -O https://raw.githubusercontent.com/darpanzope/compliancekit/main/examples/quickstart-gcp.yaml
 curl -O https://raw.githubusercontent.com/darpanzope/compliancekit/main/examples/quickstart-hetzner.yaml
+curl -O https://raw.githubusercontent.com/darpanzope/compliancekit/main/examples/quickstart-k8s.yaml
 
 mv quickstart-*.yaml compliancekit.yaml
 ```

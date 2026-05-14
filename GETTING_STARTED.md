@@ -33,6 +33,7 @@ If you want to verify the supply chain, see the [cosign block in the README](REA
 | AWS | Standard SDK chain (env / profile / IMDSv2 / OIDC) | [§AWS](#aws) |
 | GCP | Application Default Credentials | [§GCP](#gcp) |
 | Hetzner Cloud | `HCLOUD_TOKEN` env var | [§Hetzner](#hetzner) |
+| Kubernetes | `~/.kube/config` chain (works with EKS / GKE / DOKS / kind / etc.) | [§Kubernetes](#kubernetes) |
 | Linux fleet (via SSH) | Inventory file + SSH key | [§Linux](#linux-over-ssh) |
 
 Each provider section below assumes you've installed the binary and works
@@ -102,7 +103,7 @@ compliancekit scan digitalocean
 Expected (numbers depend on your account):
 
 ```
-scanning digitalocean (159 checks)...
+scanning digitalocean (298 checks)...
 wrote ./out/findings.json
 wrote ./out/findings.html
 wrote ./out/findings.markdown
@@ -238,6 +239,47 @@ different `HCLOUD_TOKEN` exports), or run multiple scans with
 
 ---
 
+### Kubernetes
+
+**1. You already have credentials.** compliancekit uses the standard
+kubeconfig chain — `kubectl` works, compliancekit works. EKS, GKE,
+DOKS, kind, k3s, on-prem — all reachable through the same path.
+
+```sh
+kubectl config current-context        # confirms which cluster you'll scan
+```
+
+**2. Grab the config + scan:**
+
+```sh
+curl -O https://raw.githubusercontent.com/darpanzope/compliancekit/main/examples/quickstart-k8s.yaml
+mv quickstart-k8s.yaml compliancekit.yaml
+compliancekit doctor                  # confirms the kubeconfig context resolves
+compliancekit scan kubernetes
+```
+
+You'll get the **139 K8s checks** (95 generic Kubernetes + EKS/GKE/DOKS
+enrichment) across every workload, RBAC binding, NetworkPolicy,
+Secret, namespace, and node in the cluster.
+
+**Multi-cluster:** list contexts explicitly under
+`providers.kubernetes.contexts:` to scan many clusters in one pass.
+
+**Cloud enrichment:** to get the EKS / GKE / DOKS posture checks
+(public endpoint, secrets KMS, Workload Identity, HA control plane,
+auto-upgrade, etc.) firing alongside the generic K8s checks, also
+enable the matching cloud provider in the same config — for example
+`digitalocean` for DOKS, `aws` for EKS, `gcp` for GKE. The cloud
+collector discovers the cluster's cloud-side configuration; the K8s
+collector reads what's inside.
+
+**Noisy namespaces:** the quickstart excludes `kube-system`,
+`kube-public`, and `kube-node-lease` by default. Drop these from
+`exclude_namespaces:` if you want to scan platform components too —
+expect a wave of pod-security findings on managed addons.
+
+---
+
 ### Linux over SSH
 
 The Linux provider scans your droplet/EC2/server fleet over SSH — no
@@ -363,8 +405,9 @@ merges on it.
   one (Go for now; Rego coming at v0.16).
 - **[docs/checks.md](docs/checks.md)** — auto-generated per-check
   reference: IDs, severities, framework mappings, remediation.
-- **[ROADMAP.md](ROADMAP.md)** — what's shipping next; v0.11
-  (Kubernetes) is the current target.
+- **[ROADMAP.md](ROADMAP.md)** — what's shipping next; v0.12
+  (NIST 800-53 r5 + HIPAA + PCI-DSS v4 + MITRE ATT&CK framework
+  expansion) is the current target. Kubernetes shipped at v0.11.
 
 If something in this guide is wrong or unclear, that's a bug — please
 [open an issue](https://github.com/darpanzope/compliancekit/issues/new)

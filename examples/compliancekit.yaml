@@ -40,6 +40,20 @@ providers:
   #   enabled: true
   #   token_env: HCLOUD_TOKEN     # project-scoped API token
 
+  # Uncomment to enable Kubernetes scanning (v0.11+). Auth uses the
+  # standard kubeconfig chain: explicit path below, then KUBECONFIG
+  # env, then ~/.kube/config. Pair with aws/gcp/digitalocean to get
+  # the EKS / GKE / DOKS enrichment checks firing alongside the 95
+  # generic K8s checks.
+  # kubernetes:
+  #   enabled: true
+  #   # kubeconfig: ~/.kube/config
+  #   contexts: []                  # empty = current-context only
+  #   exclude_namespaces:
+  #     - kube-system
+  #     - kube-public
+  #     - kube-node-lease
+
 frameworks:
   - soc2
   - cis-v8
