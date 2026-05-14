@@ -6,7 +6,7 @@
   Source of truth: internal/checks/**/*.go (the core.Check vars).
 -->
 
-This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **154 checks** across the providers below.
+This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **156 checks** across the providers below.
 
 Each check below has:
 
@@ -25,17 +25,17 @@ To inspect a single check from the CLI: `compliancekit checks show <id>`.
 | `aws` | 30 |
 | `digitalocean` | 74 |
 | `gcp` | 25 |
-| `hetzner` | 10 |
+| `hetzner` | 12 |
 | `linux` | 15 |
-| **total** | **154** |
+| **total** | **156** |
 
 ## By severity
 
 | Severity | Checks |
 |---|---:|
 | `critical` | 10 |
-| `high` | 40 |
-| `medium` | 54 |
+| `high` | 41 |
+| `medium` | 55 |
 | `low` | 50 |
 
 ## aws
@@ -3017,6 +3017,48 @@ _Maps to:_
 | `soc2` | `CC6.6` | Logical Access Security - Boundaries |
 
 _Tags:_ `exposure`, `firewall`, `ssh`
+
+---
+
+### `hetzner-lb-http-not-redirected`
+
+**Hetzner LB HTTP services must redirect to HTTPS** &middot; severity `medium` &middot; service `load_balancers` &middot; resource `hetzner.load_balancer`
+
+A Hetzner LB with an HTTP service that does not set redirect_http=true accepts cleartext requests and serves the response back in cleartext. Modern hardening pattern is to accept HTTP only to 301-redirect to HTTPS; never to actually serve content over HTTP.
+
+_Remediation:_
+
+> Set redirect_http on the http service: 'hcloud load-balancer update-service <lb> --listen-port 80 --http-redirect-http=true'.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `3.10` | Encrypt Sensitive Data in Transit |
+| `iso27001` | `A.8.24` | Use of Cryptography |
+
+_Tags:_ `encryption-in-transit`, `lb`, `tls`
+
+---
+
+### `hetzner-lb-no-https-listener`
+
+**Hetzner load balancers should serve at least one HTTPS listener** &middot; severity `high` &middot; service `load_balancers` &middot; resource `hetzner.load_balancer`
+
+A Hetzner Cloud Load Balancer without an HTTPS service serves every request in cleartext to any on-path observer. At minimum, a public LB should have an `https` service with at least one Certificate attached.
+
+_Remediation:_
+
+> Add an HTTPS service via the Cloud Console or `hcloud load-balancer add-service <name> --protocol https --listen-port 443 --certificates <cert-id>`. Hetzner managed certs are free via the Cloud Console > Certificates page.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `3.10` | Encrypt Sensitive Data in Transit |
+| `iso27001` | `A.8.24` | Use of Cryptography |
+
+_Tags:_ `encryption-in-transit`, `lb`, `tls`
 
 ---
 
