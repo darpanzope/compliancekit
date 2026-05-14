@@ -6,7 +6,7 @@
   Source of truth: internal/checks/**/*.go (the core.Check vars).
 -->
 
-This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **101 checks** across the providers below.
+This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **105 checks** across the providers below.
 
 Each check below has:
 
@@ -23,10 +23,10 @@ To inspect a single check from the CLI: `compliancekit checks show <id>`.
 | Provider | Checks |
 |---|---:|
 | `aws` | 30 |
-| `digitalocean` | 31 |
+| `digitalocean` | 35 |
 | `gcp` | 25 |
 | `linux` | 15 |
-| **total** | **101** |
+| **total** | **105** |
 
 ## By severity
 
@@ -35,7 +35,7 @@ To inspect a single check from the CLI: `compliancekit checks show <id>`.
 | `critical` | 6 |
 | `high` | 36 |
 | `medium` | 40 |
-| `low` | 19 |
+| `low` | 23 |
 
 ## aws
 
@@ -844,7 +844,7 @@ _Tags:_ `managed-cert`, `renewal`, `tls`
 
 **CAA records should name specific CAs, not allow any** &middot; severity `low` &middot; service `domains` &middot; resource `digitalocean.domain`
 
-A CAA record with a literal ';' or empty value effectively says 'any CA may issue.' This is better than no CAA at all (CAA-aware receivers honour the syntax) but defeats the point of CAA. Name your CAs explicitly: letsencrypt.org for managed certs, digicert.com / sectigo.com for purchased certs.
+A CAA record with a literal ';' or empty value effectively says 'any CA may issue.' This is better than no CAA at all (CAA-aware receivers honor the syntax) but defeats the point of CAA. Name your CAs explicitly: letsencrypt.org for managed certs, digicert.com / sectigo.com for purchased certs.
 
 _Remediation:_
 
@@ -1359,6 +1359,91 @@ _Maps to:_
 | `soc2` | `CC6.1` | Logical and Physical Access Controls |
 
 _Tags:_ `encryption-in-transit`, `lb`, `tls`
+
+---
+
+### `do-snapshot-orphan-source`
+
+**Snapshots should have a still-existing source resource** &middot; severity `low` &middot; service `snapshots` &middot; resource `digitalocean.snapshot`
+
+A snapshot whose source resource (droplet or volume) has been deleted is the only copy of that data. This is sometimes intentional (cold-storage snapshot of a retired workload) but often indicates a forgotten cleanup. Worth reviewing in case the data still matters.
+
+_Remediation:_
+
+> List: 'doctl compute snapshot list --format Name,ResourceType,ResourceID'. Cross-reference each ResourceID with the active droplets/volumes. For genuinely cold-storage snapshots, document the retention reason; for forgotten ones, delete.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `1.1` | Establish and Maintain Detailed Enterprise Asset Inventory |
+| `iso27001` | `A.8.13` | Information Backup |
+
+_Tags:_ `hygiene`, `snapshot`
+
+---
+
+### `do-snapshot-too-old`
+
+**Snapshots older than one year should be reviewed** &middot; severity `low` &middot; service `snapshots` &middot; resource `digitalocean.snapshot`
+
+Snapshots are normally taken before a risky change or as part of a weekly backup rotation. A snapshot older than a year is almost always obsolete: the source droplet's base image has long since shifted, restoring it would produce a system way out of patch compliance, and it still bills.
+
+_Remediation:_
+
+> List + filter: 'doctl compute snapshot list --format Name,ResourceType,Created'. Decide whether each old snapshot is needed; delete the rest with 'doctl compute snapshot delete <id>'. Document the retention policy for the rest.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `11.2` | Perform Automated Backups |
+| `iso27001` | `A.8.13` | Information Backup |
+| `soc2` | `A1.2` | Availability - Backup and Recovery |
+
+_Tags:_ `cost`, `hygiene`, `snapshot`
+
+---
+
+### `do-volume-orphan`
+
+**Block volumes should be attached to a droplet** &middot; severity `low` &middot; service `volumes` &middot; resource `digitalocean.volume`
+
+A DO block volume bills regardless of whether it is attached to a droplet. Unattached volumes accumulate when droplets are destroyed without their volumes; they cost money for nothing and clutter the resource list.
+
+_Remediation:_
+
+> Inspect: 'doctl compute volume list --format Name,DropletIDs,SizeGigabytes'. If the data is no longer needed, 'doctl compute volume delete <id>'. If it is, take a snapshot and document where the data lives.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `1.1` | Establish and Maintain Detailed Enterprise Asset Inventory |
+| `iso27001` | `A.5.9` | Inventory of Information and Other Associated Assets |
+
+_Tags:_ `cost`, `hygiene`, `volume`
+
+---
+
+### `do-volume-unformatted-orphan`
+
+**Unformatted detached volumes should be cleaned up** &middot; severity `low` &middot; service `volumes` &middot; resource `digitalocean.volume`
+
+A volume with no filesystem_type set AND no droplet attached has never been mounted by anything. These are almost always failed-provision artifacts or test-and-forget leftovers; they bill forever, contain no data, and confuse the audit trail.
+
+_Remediation:_
+
+> 'doctl compute volume delete <id>' for any unformatted, detached volume. If you intend to use the volume, attach it to a droplet and mkfs.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `1.1` | Establish and Maintain Detailed Enterprise Asset Inventory |
+| `iso27001` | `A.5.9` | Inventory of Information and Other Associated Assets |
+
+_Tags:_ `hygiene`, `volume`
 
 ---
 
