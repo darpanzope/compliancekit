@@ -6,7 +6,7 @@
   Source of truth: internal/checks/**/*.go (the core.Check vars).
 -->
 
-This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **156 checks** across the providers below.
+This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **158 checks** across the providers below.
 
 Each check below has:
 
@@ -25,9 +25,9 @@ To inspect a single check from the CLI: `compliancekit checks show <id>`.
 | `aws` | 30 |
 | `digitalocean` | 74 |
 | `gcp` | 25 |
-| `hetzner` | 12 |
+| `hetzner` | 14 |
 | `linux` | 15 |
-| **total** | **156** |
+| **total** | **158** |
 
 ## By severity
 
@@ -36,7 +36,7 @@ To inspect a single check from the CLI: `compliancekit checks show <id>`.
 | `critical` | 10 |
 | `high` | 41 |
 | `medium` | 55 |
-| `low` | 50 |
+| `low` | 52 |
 
 ## aws
 
@@ -3213,6 +3213,48 @@ _Maps to:_
 | `soc2` | `CC6.1` | Logical and Physical Access Controls |
 
 _Tags:_ `ops-hygiene`, `server`
+
+---
+
+### `hetzner-volume-orphan`
+
+**Hetzner volumes should be attached to a server** &middot; severity `low` &middot; service `volumes` &middot; resource `hetzner.volume`
+
+A Hetzner Cloud volume bills regardless of whether it's attached to a server. Unattached volumes accumulate when servers are deleted but their volumes are left behind; they cost money for nothing.
+
+_Remediation:_
+
+> Either attach to a server ('hcloud volume attach --server <name> <volume>') or delete ('hcloud volume delete <volume>'). If the data matters, snapshot first.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `1.1` | Establish and Maintain Detailed Enterprise Asset Inventory |
+| `iso27001` | `A.5.9` | Inventory of Information and Other Associated Assets |
+
+_Tags:_ `cost`, `hygiene`, `volume`
+
+---
+
+### `hetzner-volume-unformatted-orphan`
+
+**Unformatted detached Hetzner volumes should be cleaned up** &middot; severity `low` &middot; service `volumes` &middot; resource `hetzner.volume`
+
+A Hetzner Cloud volume with no filesystem format AND no attached server has never been mounted. These are almost always failed-provision artifacts or test-and-forget leftovers — they bill forever and contain no data.
+
+_Remediation:_
+
+> 'hcloud volume delete <volume>'. If you intend to use the volume, attach it ('hcloud volume attach --server <name> <volume>') and mkfs.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `1.1` | Establish and Maintain Detailed Enterprise Asset Inventory |
+| `iso27001` | `A.5.9` | Inventory of Information and Other Associated Assets |
+
+_Tags:_ `hygiene`, `volume`
 
 ---
 
