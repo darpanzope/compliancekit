@@ -39,13 +39,16 @@ env:
 jobs:
   release:
     # v0.11 (Kubernetes) added k8s.io/client-go and tripled the binary
-    # size from ~50MB -> ~154MB. Building the arm64 Docker image under
-    # QEMU emulation on an amd64 runner is too slow for the previous
-    # 30-min cap. Switched to a native arm64 runner: the arm64 image
-    # now builds natively, and the amd64 image is built via QEMU on
-    # arm — which is ~3-4x faster than the reverse direction.
-    # See reference-supplychain memory for context.
-    runs-on: ubuntu-24.04-arm
+    # size ~50MB -> ~154MB. Earlier theory: arm64 Docker build under
+    # QEMU was the bottleneck, switch to native arm64 runner. That
+    # was wrong — the Dockerfile is just `COPY binary` (no Go compile
+    # inside Docker), so QEMU only assembles OCI layers, which is fast.
+    # The real cost is 4× cross-compiled Go binaries (~154MB each)
+    # plus Syft SBOM scans, all CPU-bound. Free arm runners only have
+    # 2 vCPU vs 4 on `ubuntu-latest`, so the switch HALVED our compile
+    # parallelism. Staying on ubuntu-latest and relying on cached Go
+    # modules + cached Go build output is the right fix.
+    runs-on: ubuntu-latest
     timeout-minutes: 90
     permissions:
       contents: write
@@ -57,11 +60,33 @@ jobs:
         with:
           fetch-depth: 0  # full history for goreleaser's changelog
 
+      # actions/setup-go@v5 enables module + build cache by default
+      # (keyed on go.sum), but pinning the cache-dependency-path
+      # is explicit-is-better-than-implicit and lets us reason about
+      # cache misses if any.
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
           check-latest: true
+          cache: true
+          cache-dependency-path: go.sum
+
+      # Belt-and-suspenders cache for Go's build cache directory.
+      # setup-go covers $GOPATH/pkg/mod (downloaded modules) AND
+      # $GOCACHE (compiled package cache); we add an extra layer
+      # of caching here keyed against the goreleaser config so that
+      # changes to ldflags or build tags also force a rebuild.
+      - name: Cache goreleaser build artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+            ./dist
+          key: goreleaser-${{ runner.os }}-${{ hashFiles('go.sum', '.goreleaser.yaml') }}
+          restore-keys: |
+            goreleaser-${{ runner.os }}-
 
       # Expose ACTIONS_RUNTIME_TOKEN + ACTIONS_CACHE_URL to subprocesses
       # so buildx can read/write the GitHub Actions cache backend the
@@ -74,10 +99,7 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # QEMU is now used to emulate amd64 on the arm64 runner (a
-      # ~3-4x faster direction than the reverse). The step name
-      # below kept its v0.10-era wording for git-history clarity.
-      - name: Set up QEMU (for cross-arch image build)
+      - name: Set up QEMU (for arm64 image build on amd64 runner)
         uses: docker/setup-qemu-action@v3
 
       - name: Login to GHCR
