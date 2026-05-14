@@ -115,7 +115,8 @@ func (c *Collector) Collect(ctx context.Context) ([]core.Resource, error) {
 		{"spaces", c.collectSpaces},
 		{"spaces_keys", c.collectSpacesKeys},
 		{"registry", c.collectRegistry},
-		// Future phases add: apps, functions, cdn, reserved_ips,
+		{"apps", c.collectApps},
+		// Future phases add: functions, cdn, reserved_ips,
 		// keys, images, monitoring, projects.
 	}
 

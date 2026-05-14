@@ -6,7 +6,7 @@
   Source of truth: internal/checks/**/*.go (the core.Check vars).
 -->
 
-This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **124 checks** across the providers below.
+This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **129 checks** across the providers below.
 
 Each check below has:
 
@@ -23,19 +23,19 @@ To inspect a single check from the CLI: `compliancekit checks show <id>`.
 | Provider | Checks |
 |---|---:|
 | `aws` | 30 |
-| `digitalocean` | 54 |
+| `digitalocean` | 59 |
 | `gcp` | 25 |
 | `linux` | 15 |
-| **total** | **124** |
+| **total** | **129** |
 
 ## By severity
 
 | Severity | Checks |
 |---|---:|
 | `critical` | 9 |
-| `high` | 37 |
-| `medium` | 47 |
-| `low` | 31 |
+| `high` | 38 |
+| `medium` | 48 |
+| `low` | 34 |
 
 ## aws
 
@@ -795,6 +795,116 @@ _Maps to:_
 | `soc2` | `CC1.4` | Commitment to Competence |
 
 _Tags:_ `account`, `bus-factor`
+
+---
+
+### `do-app-domain-weak-tls`
+
+**App Platform custom domains must require TLS 1.2 or higher** &middot; severity `medium` &middot; service `apps` &middot; resource `digitalocean.app`
+
+App Platform domains expose a minimum_tls_version setting per domain. Default at v1.2 today; explicitly setting "1.2" or "1.3" makes the policy auditable. Empty or "1.0"/"1.1" is the regression-prone shape.
+
+_Remediation:_
+
+> In each domain block under the app spec, set minimum_tls_version: "1.2" (or "1.3" for modern apps with no legacy client requirements). Apply via 'doctl apps update'.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `3.10` | Encrypt Sensitive Data in Transit |
+| `iso27001` | `A.8.24` | Use of Cryptography |
+
+_Tags:_ `app-platform`, `tls`
+
+---
+
+### `do-app-no-alerts`
+
+**App Platform apps should have alerts configured** &middot; severity `low` &middot; service `apps` &middot; resource `digitalocean.app`
+
+Alerts on App Platform apps fire on deploy failure, crash loop, or restart rate. Without them an app can fail silently with the only signal being the user complaint. Configure at least DEPLOYMENT_FAILED + RESTART_COUNT.
+
+_Remediation:_
+
+> Add alerts to the app spec: 'alerts: - rule: DEPLOYMENT_FAILED' etc. The DO docs list the available rule types; pair with a notification destination (slack, email).
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.16` | Monitoring Activities |
+| `soc2` | `CC7.2` | System Operations - Monitoring |
+| `soc2` | `CC7.3` | System Operations - Incident Evaluation |
+
+_Tags:_ `alerting`, `app-platform`
+
+---
+
+### `do-app-no-custom-domain`
+
+**Production App Platform apps should have a custom domain** &middot; severity `low` &middot; service `apps` &middot; resource `digitalocean.app`
+
+App Platform apps default to the ondigitalocean.app subdomain. Production apps should serve from a custom domain for branding, certificate ownership, and DNS-level traffic control. No custom domain is fine for dev/preview deployments but a posture-anti-pattern for prod.
+
+_Remediation:_
+
+> Add a domain in the App spec under 'domains:'. Point your DNS at the app's CNAME and DO will provision a managed Let's Encrypt cert automatically.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `3.10` | Encrypt Sensitive Data in Transit |
+| `iso27001` | `A.8.20` | Networks Security |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `app-platform`, `branding`
+
+---
+
+### `do-app-no-vpc`
+
+**App Platform apps should bind to a VPC** &middot; severity `low` &middot; service `apps` &middot; resource `digitalocean.app`
+
+App Platform supports binding the egress side of an app to a specific VPC so the app can reach private droplets or managed DBs via private addressing. Apps without a VPC bind can only reach public endpoints -- forcing prod DB connections through the public internet.
+
+_Remediation:_
+
+> Add a vpc: block to the app spec naming the target VPC. Applies on next deployment.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `12.2` | Establish and Maintain a Secure Network Architecture |
+| `iso27001` | `A.8.20` | Networks Security |
+| `iso27001` | `A.8.22` | Segregation of Networks |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `app-platform`, `network`
+
+---
+
+### `do-app-plain-env-vars`
+
+**App Platform apps must mark secrets as SECRET type** &middot; severity `high` &middot; service `apps` &middot; resource `digitalocean.app`
+
+App Platform variable definitions have a type field: GENERAL (plaintext, visible in spec) or SECRET (encrypted at rest, never returned). Storing API keys / DB passwords / OAuth secrets as GENERAL plaintext leaks them to anyone with app:read permission on the project. Mark every credential SECRET.
+
+_Remediation:_
+
+> Edit the app spec, change type from GENERAL to SECRET on every credential-bearing env var. Either through the DO control panel or 'doctl apps spec' + 'doctl apps update'. After the change, rotate any credential that was previously plaintext -- assume it was logged somewhere.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.10` | Information Deletion |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `app-platform`, `secrets`
 
 ---
 
