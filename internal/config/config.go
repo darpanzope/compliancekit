@@ -140,12 +140,38 @@ type Bastion struct {
 	Port int    `mapstructure:"port" yaml:"port,omitempty"`
 }
 
-// KubernetesConfig configures the Kubernetes collector (v0.8+).
+// KubernetesConfig configures the Kubernetes collector (v0.11+).
+//
+// Authentication uses the standard kubeconfig chain: explicit
+// Kubeconfig field if set, otherwise KUBECONFIG env, otherwise
+// ~/.kube/config. The collector emits one cluster anchor per
+// scanned context and fans out per-service sub-collectors against
+// each. See ROADMAP.md § v0.11 for the per-service check breakdown.
 type KubernetesConfig struct {
-	Enabled    bool     `mapstructure:"enabled"    yaml:"enabled"`
-	Kubeconfig string   `mapstructure:"kubeconfig" yaml:"kubeconfig,omitempty"`
-	Contexts   []string `mapstructure:"contexts"   yaml:"contexts,omitempty"`
+	// Enabled flips the provider on. Default false (consistent with
+	// every other provider — the scanner does nothing for K8s until
+	// explicitly enabled).
+	Enabled bool `mapstructure:"enabled" yaml:"enabled"`
+
+	// Kubeconfig optionally overrides the kubeconfig file path.
+	// Empty (the default) follows the standard chain: KUBECONFIG
+	// env, then ~/.kube/config.
+	Kubeconfig string `mapstructure:"kubeconfig" yaml:"kubeconfig,omitempty"`
+
+	// Contexts narrows the scan to a fixed list of kubeconfig
+	// context names. Empty (the default) scans just the
+	// current-context; operators who want to scan multiple
+	// clusters list them explicitly here.
+	Contexts []string `mapstructure:"contexts" yaml:"contexts,omitempty"`
+
+	// Namespaces narrows the scan within each context. Empty means
+	// "all namespaces" subject to ExcludeNamespaces.
 	Namespaces []string `mapstructure:"namespaces" yaml:"namespaces,omitempty"`
+
+	// ExcludeNamespaces strips matching namespaces after Namespaces
+	// is applied. Useful for skipping noisy platform namespaces
+	// (kube-system, kube-public).
+	ExcludeNamespaces []string `mapstructure:"exclude_namespaces" yaml:"exclude_namespaces,omitempty"`
 }
 
 // HetznerConfig configures the Hetzner Cloud collector (v0.7+).

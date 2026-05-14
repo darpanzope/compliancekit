@@ -22,6 +22,7 @@ import (
 	_ "github.com/darpanzope/compliancekit/internal/checks/digitalocean"
 	_ "github.com/darpanzope/compliancekit/internal/checks/gcp"
 	_ "github.com/darpanzope/compliancekit/internal/checks/hetzner"
+	_ "github.com/darpanzope/compliancekit/internal/checks/k8s"
 	_ "github.com/darpanzope/compliancekit/internal/checks/linux"
 )
 

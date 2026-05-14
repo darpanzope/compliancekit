@@ -13,6 +13,7 @@ import (
 	do "github.com/darpanzope/compliancekit/internal/collectors/digitalocean"
 	gcpcol "github.com/darpanzope/compliancekit/internal/collectors/gcp"
 	hetznercol "github.com/darpanzope/compliancekit/internal/collectors/hetzner"
+	k8scol "github.com/darpanzope/compliancekit/internal/collectors/k8s"
 	linuxcol "github.com/darpanzope/compliancekit/internal/collectors/linux"
 	"github.com/darpanzope/compliancekit/internal/config"
 	"github.com/darpanzope/compliancekit/internal/core"
@@ -148,7 +149,7 @@ func buildCollectors(ctx context.Context, cfg *config.Config, providerFilter str
 		buildAWSCollector,
 		buildGCPCollector,
 		buildHetznerCollector,
-		// Future: kubernetes (v0.11).
+		buildKubernetesCollector,
 	} {
 		c, err := build(ctx, cfg, providerFilter)
 		if err != nil {
@@ -237,6 +238,25 @@ func buildHetznerCollector(_ context.Context, cfg *config.Config, filter string)
 		return nil, NewExitCode(5, "env var %s is unset; cannot scan hetzner", tokenEnv)
 	}
 	return hetznercol.New(token), nil
+}
+
+func buildKubernetesCollector(_ context.Context, cfg *config.Config, filter string) (core.Collector, error) {
+	if !cfg.Providers.Kubernetes.Enabled || !providerSelected("kubernetes", filter) {
+		return nil, nil
+	}
+	// Kubeconfig resolution follows the standard chain: explicit
+	// path from config, then KUBECONFIG env, then ~/.kube/config.
+	// Auth failure surfaces as exit code 5 like the other clouds.
+	col, err := k8scol.New(k8scol.Options{
+		KubeconfigPath:    cfg.Providers.Kubernetes.Kubeconfig,
+		Contexts:          cfg.Providers.Kubernetes.Contexts,
+		Namespaces:        cfg.Providers.Kubernetes.Namespaces,
+		ExcludeNamespaces: cfg.Providers.Kubernetes.ExcludeNamespaces,
+	})
+	if err != nil {
+		return nil, NewExitCode(5, "kubernetes: %v", err)
+	}
+	return col, nil
 }
 
 // applyScanFlagOverrides copies non-empty flag values from opts into

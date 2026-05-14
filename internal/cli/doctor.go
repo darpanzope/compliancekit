@@ -13,6 +13,7 @@ import (
 
 	do "github.com/darpanzope/compliancekit/internal/collectors/digitalocean"
 	gcpcol "github.com/darpanzope/compliancekit/internal/collectors/gcp"
+	k8scol "github.com/darpanzope/compliancekit/internal/collectors/k8s"
 	linuxcol "github.com/darpanzope/compliancekit/internal/collectors/linux"
 	"github.com/darpanzope/compliancekit/internal/config"
 )
@@ -107,7 +108,10 @@ func runDoctor(ctx context.Context, w io.Writer, opts doctorOptions) error {
 			func() error {
 				return reportGCPProvider(ctx, w, cfg.Providers.GCP, opts.checkConfig)
 			}),
-		reportProvider(w, "kubernetes", cfg.Providers.Kubernetes.Enabled, nil),
+		reportProvider(w, "kubernetes", cfg.Providers.Kubernetes.Enabled,
+			func() error {
+				return reportKubernetesProvider(w, cfg.Providers.Kubernetes, opts.checkConfig)
+			}),
 		reportProvider(w, "hetzner", cfg.Providers.Hetzner.Enabled,
 			func() error {
 				return reportHetznerProvider(w, cfg.Providers.Hetzner, opts.checkConfig)
@@ -192,6 +196,34 @@ func reportHetznerProvider(w io.Writer, cfg config.HetznerConfig, checkConfigOnl
 	}
 	fmt.Fprintf(w, "%s providers.hetzner: %s resolved (token length: %d)\n",
 		iconPass, cfg.TokenEnv, len(token))
+	return nil
+}
+
+func reportKubernetesProvider(w io.Writer, cfg config.KubernetesConfig, checkConfigOnly bool) error {
+	source := cfg.Kubeconfig
+	if source == "" {
+		if env := os.Getenv("KUBECONFIG"); env != "" {
+			source = env + " (from KUBECONFIG)"
+		} else {
+			source = "~/.kube/config (default)"
+		}
+	}
+	if checkConfigOnly {
+		fmt.Fprintf(w, "%s providers.kubernetes: enabled, kubeconfig=%s (skipping context resolution)\n",
+			iconInfo, source)
+		return nil
+	}
+	col, err := k8scol.New(k8scol.Options{
+		KubeconfigPath:    cfg.Kubeconfig,
+		Contexts:          cfg.Contexts,
+		Namespaces:        cfg.Namespaces,
+		ExcludeNamespaces: cfg.ExcludeNamespaces,
+	})
+	if err != nil {
+		return err
+	}
+	fmt.Fprintf(w, "%s providers.kubernetes: %d context(s): %s\n",
+		iconPass, len(col.Contexts()), strings.Join(col.Contexts(), ", "))
 	return nil
 }
 
