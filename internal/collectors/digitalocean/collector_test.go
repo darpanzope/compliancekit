@@ -16,9 +16,12 @@ var _ core.Collector = (*Collector)(nil)
 
 func TestCollector_Collect_Droplets(t *testing.T) {
 	server := newFixtureServer(t, map[string]string{
-		"/v2/account":   "testdata/account.json",
-		"/v2/droplets":  "testdata/droplets.json",
-		"/v2/firewalls": "testdata/firewalls.json",
+		"/v2/account":        "testdata/account.json",
+		"/v2/droplets":       "testdata/droplets.json",
+		"/v2/firewalls":      "testdata/firewalls.json",
+		"/v2/vpcs":           "testdata/empty_vpcs.json",
+		"/v2/vpcs/peerings":  "testdata/empty_vpc_peerings.json",
+		"/v2/load_balancers": "testdata/empty_load_balancers.json",
 	})
 	defer server.Close()
 
@@ -34,6 +37,7 @@ func TestCollector_Collect_Droplets(t *testing.T) {
 	}
 
 	// 1 account anchor + 2 droplets + 1 firewall = 4 resources.
+	// (VPC + LB services return empty arrays from the fixtures.)
 	if got, want := len(resources), 4; got != want {
 		t.Fatalf("len(resources) = %d, want %d", got, want)
 	}

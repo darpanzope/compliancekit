@@ -6,7 +6,7 @@
   Source of truth: internal/checks/**/*.go (the core.Check vars).
 -->
 
-This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **87 checks** across the providers below.
+This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **95 checks** across the providers below.
 
 Each check below has:
 
@@ -23,19 +23,19 @@ To inspect a single check from the CLI: `compliancekit checks show <id>`.
 | Provider | Checks |
 |---|---:|
 | `aws` | 30 |
-| `digitalocean` | 17 |
+| `digitalocean` | 25 |
 | `gcp` | 25 |
 | `linux` | 15 |
-| **total** | **87** |
+| **total** | **95** |
 
 ## By severity
 
 | Severity | Checks |
 |---|---:|
 | `critical` | 6 |
-| `high` | 33 |
-| `medium` | 34 |
-| `low` | 14 |
+| `high` | 35 |
+| `medium` | 37 |
+| `low` | 17 |
 
 ## aws
 
@@ -1123,6 +1123,185 @@ _Maps to:_
 | `soc2` | `CC6.6` | Logical Access Security - Boundaries |
 
 _Tags:_ `exposure`, `network`, `ssh`
+
+---
+
+### `do-lb-health-check-cleartext`
+
+**Load balancer health checks should not use cleartext HTTP** &middot; severity `medium` &middot; service `load_balancers` &middot; resource `digitalocean.load_balancer`
+
+When the LB terminates HTTPS to its targets, the health check should also use HTTPS (or TCP). An HTTP health check against an HTTPS-only backend hits a TLS-redirect or 400, flapping the LB membership during normal operation and masking real outages.
+
+_Remediation:_
+
+> Update the health check: 'doctl compute load-balancer update <id> --health-check protocol:https,port:443,path:/health'. If the backend is plain HTTP behind a TLS-terminating LB, http health check on the backend port is correct.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.16` | Monitoring Activities |
+| `soc2` | `CC7.2` | System Operations - Monitoring |
+
+_Tags:_ `healthcheck`, `lb`
+
+---
+
+### `do-lb-no-https-listener`
+
+**Load balancers must serve at least one HTTPS listener** &middot; severity `high` &middot; service `load_balancers` &middot; resource `digitalocean.load_balancer`
+
+A load balancer with no HTTPS forwarding rule is either an internal-only LB on a private VPC (rare) or, far more commonly, a public LB that forgot to terminate TLS. Either way, the modern baseline is at least one entry on port 443 with a certificate.
+
+_Remediation:_
+
+> Provision a managed cert + add an https forwarding rule: 'doctl compute certificate create --type lets_encrypt --domains example.com,www.example.com' then attach the resulting cert ID to a new https forwarding rule on port 443.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `3.10` | Encrypt Sensitive Data in Transit |
+| `iso27001` | `A.8.24` | Use of Cryptography |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `encryption-in-transit`, `lb`, `tls`
+
+---
+
+### `do-lb-no-vpc`
+
+**Load balancers must belong to a VPC** &middot; severity `medium` &middot; service `load_balancers` &middot; resource `digitalocean.load_balancer`
+
+Load balancers created before the DO VPC GA may sit outside any VPC, exposing the backend droplets via the region-wide shared private network. Modern LBs are VPC-bound; a missing vpc_uuid is almost certainly a legacy resource.
+
+_Remediation:_
+
+> DO does not support changing a load balancer's VPC in place. Recreate the LB inside the target VPC and re-point DNS at the new floating IP. Use Terraform to make the cutover atomic.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `12.2` | Establish and Maintain a Secure Network Architecture |
+| `iso27001` | `A.8.20` | Networks Security |
+| `iso27001` | `A.8.22` | Segregation of Networks |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `lb`, `network`, `segmentation`
+
+---
+
+### `do-lb-orphan`
+
+**Load balancers should have at least one backend** &middot; severity `low` &middot; service `load_balancers` &middot; resource `digitalocean.load_balancer`
+
+A load balancer with zero attached droplets and no droplet-tag selector responds 503 Service Unavailable to every request. It bills as if it were serving, shows up in DNS and TLS audit trails, and confuses incident response. Either attach backends or delete.
+
+_Remediation:_
+
+> Inspect: 'doctl compute load-balancer get <id> --format Name,DropletIDs,Tag'. If the LB is legitimately retired, 'doctl compute load-balancer delete <id>'. Otherwise attach the backend droplets or the matching tag.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `1.1` | Establish and Maintain Detailed Enterprise Asset Inventory |
+| `iso27001` | `A.5.9` | Inventory of Information and Other Associated Assets |
+
+_Tags:_ `hygiene`, `lb`
+
+---
+
+### `do-lb-redirect-http-to-https`
+
+**Load balancers serving HTTP must redirect to HTTPS** &middot; severity `high` &middot; service `load_balancers` &middot; resource `digitalocean.load_balancer`
+
+A load balancer that accepts cleartext HTTP on port 80 and does not redirect to HTTPS sends every request, including every auth cookie + bearer token, over the wire in plaintext to any on-path observer. The redirect_http_to_https flag makes the LB issue a 301 from port 80 to the equivalent https URL.
+
+_Remediation:_
+
+> Enable the redirect via the LB Edit screen, 'doctl compute load-balancer update <id> --redirect-http-to-https', or set redirect_http_to_https = true on the Terraform digitalocean_loadbalancer resource.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `3.10` | Encrypt Sensitive Data in Transit |
+| `iso27001` | `A.8.20` | Networks Security |
+| `iso27001` | `A.8.24` | Use of Cryptography |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `encryption-in-transit`, `lb`, `tls`
+
+---
+
+### `do-vpc-default-not-in-use`
+
+**Default VPC should not host production droplets** &middot; severity `medium` &middot; service `vpcs` &middot; resource `digitalocean.vpc`
+
+DigitalOcean creates a default VPC per region the first time an account creates a resource there. The default VPC is convenient for experiments but a posture-anti-pattern for production: any droplet without an explicit VPC choice lands in it, mixing prod and dev traffic on the same broadcast domain. A named VPC per environment is the modern baseline.
+
+_Remediation:_
+
+> Create a named VPC per environment: 'doctl vpcs create --name prod-nyc3 --region nyc3 --ip-range 10.10.0.0/16'. Move droplets by snapshotting + recreating into the named VPC (DO does not support in-place VPC migration).
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `12.2` | Establish and Maintain a Secure Network Architecture |
+| `iso27001` | `A.8.20` | Networks Security |
+| `iso27001` | `A.8.22` | Segregation of Networks |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `network`, `segmentation`
+
+---
+
+### `do-vpc-orphan`
+
+**Non-default VPCs should have at least one member** &middot; severity `low` &middot; service `vpcs` &middot; resource `digitalocean.vpc`
+
+A non-default VPC with zero members is dead weight: it reserves an IP range, shows up in firewall and routing audits, and contributes to incident-response confusion ('which VPC protects this droplet?'). Either attach resources or delete it.
+
+_Remediation:_
+
+> List VPCs and members: 'doctl vpcs list' followed by 'doctl vpcs members <vpc-id>'. For empty named VPCs, either move resources in or 'doctl vpcs delete <vpc-id>'.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `1.1` | Establish and Maintain Detailed Enterprise Asset Inventory |
+| `iso27001` | `A.5.9` | Inventory of Information and Other Associated Assets |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `hygiene`, `network`
+
+---
+
+### `do-vpc-peering-not-active`
+
+**VPC peerings should be in ACTIVE status** &middot; severity `low` &middot; service `vpcs` &middot; resource `digitalocean.vpc_peering`
+
+A VPC peering in PENDING or other non-ACTIVE status is either a half-completed setup (the peering was initiated and never accepted on the other side) or an in-progress administrative action. Stuck peerings can hide misrouted traffic; clean them up.
+
+_Remediation:_
+
+> List peerings: 'doctl vpcs peerings list'. For non-ACTIVE entries, either complete the peering (accept on the other side) or delete: 'doctl vpcs peerings delete <id>'.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `12.2` | Establish and Maintain a Secure Network Architecture |
+| `iso27001` | `A.8.22` | Segregation of Networks |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `hygiene`, `network`, `peering`
 
 ---
 
