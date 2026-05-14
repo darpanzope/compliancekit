@@ -122,6 +122,15 @@ func (c *Collector) Collect(ctx context.Context) ([]core.Resource, error) {
 	}
 	out = updated
 
+	// S3 is account-global (the API itself runs against any region)
+	// but each bucket has its own home region. The collector resolves
+	// per-bucket region during buildBucketResource.
+	updated, err = c.collectS3(ctx, out)
+	if err != nil {
+		return nil, err
+	}
+	out = updated
+
 	out = append(out, account)
 	return out, nil
 }

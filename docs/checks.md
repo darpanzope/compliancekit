@@ -6,7 +6,7 @@
   Source of truth: internal/checks/**/*.go (the core.Check vars).
 -->
 
-This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **28 checks** across the providers below.
+This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **33 checks** across the providers below.
 
 Each check below has:
 
@@ -22,19 +22,19 @@ To inspect a single check from the CLI: `compliancekit checks show <id>`.
 
 | Provider | Checks |
 |---|---:|
-| `aws` | 8 |
+| `aws` | 13 |
 | `digitalocean` | 5 |
 | `linux` | 15 |
-| **total** | **28** |
+| **total** | **33** |
 
 ## By severity
 
 | Severity | Checks |
 |---|---:|
-| `critical` | 1 |
-| `high` | 12 |
-| `medium` | 8 |
-| `low` | 7 |
+| `critical` | 2 |
+| `high` | 14 |
+| `medium` | 9 |
+| `low` | 8 |
 
 ## aws
 
@@ -217,6 +217,122 @@ _Maps to:_
 | `soc2` | `CC6.1` | Logical and Physical Access Controls |
 
 _Tags:_ `iam`, `least-privilege`, `lifecycle`
+
+---
+
+### `aws-s3-default-encryption`
+
+**S3 buckets must have default server-side encryption** &middot; severity `high` &middot; service `s3` &middot; resource `aws.s3.bucket`
+
+Default encryption ensures every object written to the bucket is encrypted at rest without requiring the caller to set the header. SSE-S3 (AES256) is the minimum; SSE-KMS gives per-key audit trails for sensitive data. AWS has enabled SSE-S3 by default on new buckets since January 2023 but pre-existing buckets retain their original setting. CIS AWS Foundations 2.1.2.
+
+_Remediation:_
+
+> Enable default encryption: 'aws s3api put-bucket-encryption --bucket <name> --server-side-encryption-configuration '"Rules":[{"ApplyServerSideEncryptionByDefault":{"SSEAlgorithm":"AES256"}}]}'. Use SSEAlgorithm=aws:kms for KMS-managed keys.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.24` | Use of Cryptography |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `data-at-rest`, `encryption`, `s3`
+
+---
+
+### `aws-s3-logging`
+
+**S3 buckets must have server access logging enabled** &middot; severity `low` &middot; service `s3` &middot; resource `aws.s3.bucket`
+
+Server access logs are the forensic trail when a bucket is the source of a security incident. Without them, 'who accessed this bucket at this timestamp' is unanswerable. CIS AWS Foundations 3.6 (formerly 2.6 in v1.x of the benchmark).
+
+_Remediation:_
+
+> Enable logging to a dedicated log-aggregation bucket: 'aws s3api put-bucket-logging --bucket <name> --bucket-logging-status '{"LoggingEnabled":{"TargetBucket":"<log-bucket>","TargetPrefix":"<prefix>/"}}'. The target bucket should NOT be the source bucket (creates a logging loop).
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `8.10` | Retain Audit Logs |
+| `cis-v8` | `8.5` | Collect Detailed Audit Logs |
+| `iso27001` | `A.8.15` | Logging |
+| `soc2` | `CC7.2` | System Operations - Monitoring |
+
+_Tags:_ `audit-logging`, `forensics`, `s3`
+
+---
+
+### `aws-s3-no-public-acls`
+
+**S3 buckets must not have public ACLs** &middot; severity `high` &middot; service `s3` &middot; resource `aws.s3.bucket`
+
+S3 ACLs that grant the AllUsers or AuthenticatedUsers groups make a bucket publicly readable or writable. Combined with a misconfigured Public Access Block (PAB), this is the most common path to a public bucket. PAB is the safety net; this check catches buckets where PAB is off and an ACL has slipped public.
+
+_Remediation:_
+
+> Remove the public grant: 'aws s3api put-bucket-acl --bucket <name> --acl private'. If specific objects need to be public, prefer a least-privilege bucket policy over an ACL.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `3.3` | Configure Data Access Control Lists |
+| `iso27001` | `A.8.20` | Networks Security |
+| `iso27001` | `A.8.3` | Information Access Restriction |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `acl`, `data-exposure`, `s3`
+
+---
+
+### `aws-s3-public-access-block`
+
+**S3 buckets must have Block Public Access fully enabled** &middot; severity `critical` &middot; service `s3` &middot; resource `aws.s3.bucket`
+
+S3 Public Access Block is the account-and-bucket-level safety net against accidental data exposure: even if a bucket policy or ACL tries to grant public access, PAB overrides. All four flags (block_public_acls, ignore_public_acls, block_public_policy, restrict_public_buckets) must be true. CIS AWS Foundations 2.1.1.
+
+_Remediation:_
+
+> Enable all four settings: 'aws s3api put-public-access-block --bucket <name> --public-access-block-configuration BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true'. Consider account-level PAB ('aws s3control put-public-access-block --account-id ...') for defense-in-depth.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `3.3` | Configure Data Access Control Lists |
+| `iso27001` | `A.8.20` | Networks Security |
+| `iso27001` | `A.8.3` | Information Access Restriction |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `data-exposure`, `public-access`, `s3`
+
+---
+
+### `aws-s3-versioning`
+
+**S3 buckets must have versioning enabled** &middot; severity `medium` &middot; service `s3` &middot; resource `aws.s3.bucket`
+
+Bucket versioning preserves prior versions of every object, recovering from ransomware encryption-in-place, accidental deletion, and silent corruption. Versioning is a prerequisite for S3 Object Lock and MFA Delete -- enabling it now is the minimum viable backup story for S3.
+
+_Remediation:_
+
+> Enable versioning: 'aws s3api put-bucket-versioning --bucket <name> --versioning-configuration Status=Enabled'. Consider lifecycle rules to expire old non-current versions if storage cost is a concern.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `11.2` | Perform Automated Backups |
+| `iso27001` | `A.8.13` | Information Backup |
+| `iso27001` | `A.8.14` | Redundancy of Information Processing Facilities |
+| `soc2` | `A1.2` | Availability - Backup and Recovery |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `backup`, `recovery`, `s3`
 
 ---
 
