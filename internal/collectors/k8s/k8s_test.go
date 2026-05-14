@@ -6,8 +6,22 @@ import (
 	"path/filepath"
 	"testing"
 
+	"k8s.io/client-go/kubernetes/fake"
+
 	"github.com/darpanzope/compliancekit/internal/core"
 )
+
+// fakeScope returns a ContextScope wired to an empty fake clientset.
+// Tests use it to exercise the orchestration without hitting a real
+// cluster.
+func fakeScope(t *testing.T, name, server string) *ContextScope {
+	t.Helper()
+	return &ContextScope{
+		Name:   name,
+		Server: server,
+		Client: fake.NewSimpleClientset(),
+	}
+}
 
 // writeKubeconfig writes a minimal but valid kubeconfig at path,
 // returning the resulting path. The cert-data fields are not real
@@ -112,21 +126,24 @@ func TestContextScope_Region(t *testing.T) {
 }
 
 func TestCollect_EmitsClusterAnchor(t *testing.T) {
-	dir := t.TempDir()
-	kc := filepath.Join(dir, "kubeconfig")
-	writeKubeconfig(t, kc, []string{"prod", "dev"}, "prod")
-
-	col, err := New(Options{KubeconfigPath: kc, Contexts: []string{"prod", "dev"}})
-	if err != nil {
-		t.Fatalf("New: %v", err)
+	// Build scopes manually with empty fake clientsets so the
+	// workloads sub-collector returns 0 pods cleanly. Tests that
+	// drive listPods against a backing object set live in
+	// workloads_test.go.
+	scopes := []*ContextScope{
+		fakeScope(t, "prod", "https://prod.example.invalid:6443"),
+		fakeScope(t, "dev", "https://dev.example.invalid:6443"),
 	}
+	col := NewWithScopes(scopes)
 
 	resources, err := col.Collect(context.Background())
 	if err != nil {
 		t.Fatalf("Collect: %v", err)
 	}
+	// Two anchors expected. Phase 1 adds workloads but with empty
+	// fake clientsets there are zero pods to emit.
 	if len(resources) != 2 {
-		t.Fatalf("Collect: %d resources, want 2 anchors (Phase 0 ships anchors only)", len(resources))
+		t.Fatalf("Collect: %d resources, want 2 anchors", len(resources))
 	}
 	for i, want := range []string{"prod", "dev"} {
 		r := resources[i]

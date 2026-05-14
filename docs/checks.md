@@ -6,7 +6,7 @@
   Source of truth: internal/checks/**/*.go (the core.Check vars).
 -->
 
-This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **159 checks** across the providers below.
+This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **177 checks** across the providers below.
 
 Each check below has:
 
@@ -26,17 +26,18 @@ To inspect a single check from the CLI: `compliancekit checks show <id>`.
 | `digitalocean` | 74 |
 | `gcp` | 25 |
 | `hetzner` | 15 |
+| `kubernetes` | 18 |
 | `linux` | 15 |
-| **total** | **159** |
+| **total** | **177** |
 
 ## By severity
 
 | Severity | Checks |
 |---|---:|
-| `critical` | 10 |
-| `high` | 41 |
-| `medium` | 55 |
-| `low` | 53 |
+| `critical` | 11 |
+| `high` | 48 |
+| `medium` | 62 |
+| `low` | 56 |
 
 ## aws
 
@@ -3276,6 +3277,414 @@ _Maps to:_
 | `iso27001` | `A.5.9` | Inventory of Information and Other Associated Assets |
 
 _Tags:_ `hygiene`, `volume`
+
+---
+
+## kubernetes
+
+### `k8s-pod-allow-privilege-escalation`
+
+**Containers should not allow privilege escalation** &middot; severity `high` &middot; service `pod-security` &middot; resource `k8s.pod`
+
+`allowPrivilegeEscalation: true` (or unset, which defaults to true) means the container's process can gain more privileges than its parent via setuid binaries or capabilities. The hardened baseline sets this to false on every container.
+
+_Remediation:_
+
+> Add `securityContext.allowPrivilegeEscalation: false` to every container spec. Enforce cluster-wide via the Pod Security Admission `restricted` profile.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.2` | Privileged Access Rights |
+| `iso27001` | `A.8.9` | Configuration Management |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `k8s`, `pod-security`, `privilege-escalation`
+
+---
+
+### `k8s-pod-automount-sa-token`
+
+**Pods that don't call the API should disable SA token mount** &middot; severity `medium` &middot; service `pod-security` &middot; resource `k8s.pod`
+
+Every pod by default has the namespace's default ServiceAccount token mounted at /var/run/secrets/.../token. Pods that never call the Kubernetes API gain nothing from that token but expose it to any code-execution compromise. Setting `automountServiceAccountToken: false` is the safe baseline; opt back in per-workload that legitimately needs API access.
+
+_Remediation:_
+
+> Set `automountServiceAccountToken: false` at the pod level. For workloads that need API access, dedicate a ServiceAccount with the minimum required Role and set `automountServiceAccountToken: true` explicitly on the SA.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `6.8` | Define and Maintain Role-Based Access Control |
+| `iso27001` | `A.5.15` | Access Control |
+| `iso27001` | `A.8.2` | Privileged Access Rights |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `k8s`, `pod-security`, `service-account`
+
+---
+
+### `k8s-pod-capabilities-drop-all`
+
+**Containers should drop all Linux capabilities by default** &middot; severity `medium` &middot; service `pod-security` &middot; resource `k8s.pod`
+
+Containers inherit a default Linux capability set from the runtime, including CHOWN, DAC_OVERRIDE, FSETID, KILL, SETUID, and others. Dropping ALL and then adding back only what is needed (the restricted PSA profile requires this) is the canonical hardening baseline.
+
+_Remediation:_
+
+> Add `securityContext.capabilities.drop: [ALL]` to every container. Then add the minimum needed back via `capabilities.add`; many web apps need none.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.2` | Privileged Access Rights |
+| `iso27001` | `A.8.9` | Configuration Management |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `capabilities`, `k8s`, `pod-security`
+
+---
+
+### `k8s-pod-dangerous-capabilities`
+
+**Containers should not add high-risk Linux capabilities** &middot; severity `high` &middot; service `pod-security` &middot; resource `k8s.pod`
+
+Capabilities like NET_ADMIN, SYS_ADMIN, SYS_PTRACE, SYS_MODULE, and BPF give the container near-root access to network state, kernel internals, or arbitrary processes on the node. Granting one of these is a legitimate but high-bar choice; a workload that adds them without justification is a posture failure.
+
+_Remediation:_
+
+> Audit `capabilities.add` on every container. Keep only NET_BIND_SERVICE (for binding to ports <1024) without further review; everything else requires a written justification.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.2` | Privileged Access Rights |
+| `iso27001` | `A.8.9` | Configuration Management |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `capabilities`, `k8s`, `pod-security`
+
+---
+
+### `k8s-pod-host-ipc`
+
+**Pods should not share the host IPC namespace** &middot; severity `high` &middot; service `pod-security` &middot; resource `k8s.pod`
+
+`spec.hostIPC: true` shares the node's SysV IPC and POSIX shared memory with the pod. Almost no production workload needs this; it exists for legacy unix-IPC integrations.
+
+_Remediation:_
+
+> Remove `spec.hostIPC` (defaults to false).
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `4.1` | Establish and Maintain a Secure Configuration Process |
+| `iso27001` | `A.8.20` | Networks Security |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `host-namespace`, `k8s`, `pod-security`
+
+---
+
+### `k8s-pod-host-network`
+
+**Pods should not use the host network** &middot; severity `high` &middot; service `pod-security` &middot; resource `k8s.pod`
+
+`spec.hostNetwork: true` puts the pod in the node's network namespace. It can bind to any node-local port, sniff traffic on any node interface, and bypass NetworkPolicy entirely. Only system add-ons (kube-proxy, CNI agents) need it.
+
+_Remediation:_
+
+> Remove `spec.hostNetwork` (defaults to false). For node-local services, use a `hostPort` declaration on a specific container port instead — narrower blast radius.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `4.1` | Establish and Maintain a Secure Configuration Process |
+| `iso27001` | `A.8.20` | Networks Security |
+| `iso27001` | `A.8.22` | Segregation of Networks |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `host-namespace`, `k8s`, `pod-security`
+
+---
+
+### `k8s-pod-host-path-volume`
+
+**Pods should not mount sensitive hostPath volumes** &middot; severity `high` &middot; service `pod-security` &middot; resource `k8s.pod`
+
+`hostPath` mounts give the pod direct read/write access to a path on the node's filesystem. A hostPath onto /, /etc, /var/run/docker.sock, or /proc is a container escape in slow motion. Even narrowly-scoped hostPath mounts are an audit liability — there is almost always a better K8s primitive.
+
+_Remediation:_
+
+> Replace hostPath with a CSI-provided PersistentVolume, a ConfigMap, or a Secret depending on the use case. The `local-path` CSI provisioner is the right substitute for node-local persistent data.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.13` | Information Backup |
+| `iso27001` | `A.8.20` | Networks Security |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `host-fs`, `k8s`, `pod-security`
+
+---
+
+### `k8s-pod-host-pid`
+
+**Pods should not share the host PID namespace** &middot; severity `high` &middot; service `pod-security` &middot; resource `k8s.pod`
+
+`spec.hostPID: true` lets the pod see every process on the node — useful for debugging, dangerous for production. An attacker with code execution in a hostPID pod can read environment variables and /proc/<pid>/cmdline of every other process on the node.
+
+_Remediation:_
+
+> Remove `spec.hostPID` (defaults to false). For diagnostic workloads, use `kubectl debug` or an ephemeral debug container instead of a permanent hostPID-enabled pod.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `4.1` | Establish and Maintain a Secure Configuration Process |
+| `iso27001` | `A.8.20` | Networks Security |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `host-namespace`, `k8s`, `pod-security`
+
+---
+
+### `k8s-pod-host-port`
+
+**Containers should not declare hostPort** &middot; severity `medium` &middot; service `pod-security` &middot; resource `k8s.pod`
+
+A container with `hostPort` binds to a port on the underlying node, bypassing the Service abstraction and NetworkPolicy. Two hostPort pods cannot land on the same node. Only DaemonSets implementing node-local infrastructure (CNI agents, log forwarders) have a legitimate need.
+
+_Remediation:_
+
+> Remove `hostPort` from every container port. For externally-reachable workloads, use a Service of type NodePort or LoadBalancer.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.20` | Networks Security |
+| `iso27001` | `A.8.22` | Segregation of Networks |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `k8s`, `network`, `pod-security`
+
+---
+
+### `k8s-pod-image-pull-policy`
+
+**Containers with mutable tags should set imagePullPolicy=Always** &middot; severity `low` &middot; service `pod-security` &middot; resource `k8s.pod`
+
+When using a mutable tag (`:latest` or any non-pinned tag), the cached image on a node can drift from the registry. `imagePullPolicy: Always` forces the kubelet to consult the registry on every pod start, defeating cache poisoning and making rollouts deterministic. Pinned-digest images can use IfNotPresent safely.
+
+_Remediation:_
+
+> Either pin to a digest (preferred) or set `imagePullPolicy: Always` on every container using a tag that can mutate.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.30` | Outsourced Development |
+
+_Tags:_ `image`, `k8s`, `pod-security`, `supply-chain`
+
+---
+
+### `k8s-pod-image-tag-latest`
+
+**Container images should not use the :latest tag** &middot; severity `medium` &middot; service `pod-security` &middot; resource `k8s.pod`
+
+`:latest` is a mutable, untracked tag — what runs on Tuesday may not be what runs on Wednesday. It breaks rollback, breaks reproducibility, and silently delivers supply-chain updates without operator review. A pinned tag or, better, an image digest is the only defensible choice in production.
+
+_Remediation:_
+
+> Pin every image to a specific tag (`v1.2.3`) or a digest (`@sha256:...`). Digests are tamper-proof; tags are not.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.30` | Outsourced Development |
+| `iso27001` | `A.8.8` | Management of Technical Vulnerabilities |
+| `soc2` | `CC7.1` | System Operations - Vulnerabilities |
+
+_Tags:_ `image`, `k8s`, `pod-security`, `supply-chain`
+
+---
+
+### `k8s-pod-liveness-probe`
+
+**Containers should declare a liveness probe** &middot; severity `low` &middot; service `pod-security` &middot; resource `k8s.pod`
+
+Without a livenessProbe, a container stuck in a deadlock or wedged on a downstream timeout will sit in 'Ready' forever — the kubelet has no signal to restart it. A simple HTTP /healthz probe is enough to catch most production wedges and is essentially free.
+
+_Remediation:_
+
+> Add `livenessProbe` (HTTP GET against a /healthz endpoint is the common pattern) to every long-running container. Init and short-lived job containers are exempt.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.16` | Monitoring Activities |
+| `soc2` | `CC7.3` | System Operations - Incident Evaluation |
+
+_Tags:_ `k8s`, `pod-security`, `reliability`
+
+---
+
+### `k8s-pod-privileged`
+
+**Pods should not run privileged containers** &middot; severity `critical` &middot; service `pod-security` &middot; resource `k8s.pod`
+
+A container with `securityContext.privileged: true` runs with all Linux capabilities, full device access, and SELinux/AppArmor disabled by default. A break-out from a privileged pod gives the attacker root on the underlying node and across every pod scheduled on it.
+
+_Remediation:_
+
+> Set `securityContext.privileged: false` on every container. If a workload needs hardware access (GPU, raw disk), grant only the specific Linux capability it requires via `securityContext.capabilities.add: [...]`.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `4.1` | Establish and Maintain a Secure Configuration Process |
+| `iso27001` | `A.8.2` | Privileged Access Rights |
+| `iso27001` | `A.8.20` | Networks Security |
+| `iso27001` | `A.8.9` | Configuration Management |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `k8s`, `pod-security`, `privileged`
+
+---
+
+### `k8s-pod-readonly-root-fs`
+
+**Containers should use a read-only root filesystem** &middot; severity `medium` &middot; service `pod-security` &middot; resource `k8s.pod`
+
+A writable root filesystem lets a compromised process drop persistent malware, rewrite system binaries, or fill the disk. Setting `readOnlyRootFilesystem: true` forces apps to declare writable mounts explicitly via emptyDir or PVCs, which is also a clarity win at review time.
+
+_Remediation:_
+
+> Set `securityContext.readOnlyRootFilesystem: true`. Mount `emptyDir` volumes for paths the app actually writes to (typically /tmp, /var/run, sometimes /var/log).
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.13` | Information Backup |
+| `iso27001` | `A.8.32` | Change Management |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `immutable`, `k8s`, `pod-security`
+
+---
+
+### `k8s-pod-resource-limits`
+
+**Containers should declare CPU and memory limits** &middot; severity `medium` &middot; service `pod-security` &middot; resource `k8s.pod`
+
+A container without `resources.limits` can consume all CPU and all memory on the node, starving every other workload and frequently triggering OOM kills against neighbors. Limits are the K8s noisy-neighbor primitive; running without them is a denial-of-service hazard.
+
+_Remediation:_
+
+> Set `resources.limits.cpu` and `resources.limits.memory` on every container. Use a LimitRange on the namespace to give defaults to workloads that don't declare their own.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.32` | Change Management |
+| `iso27001` | `A.8.6` | Capacity Management |
+| `soc2` | `CC7.3` | System Operations - Incident Evaluation |
+
+_Tags:_ `k8s`, `pod-security`, `resources`
+
+---
+
+### `k8s-pod-resource-requests`
+
+**Containers should declare CPU and memory requests** &middot; severity `low` &middot; service `pod-security` &middot; resource `k8s.pod`
+
+`resources.requests` informs the scheduler how much capacity to reserve for the pod. Without requests, the scheduler treats the pod as having zero footprint, which leads to over-subscribed nodes, evictions, and unpredictable performance.
+
+_Remediation:_
+
+> Set `resources.requests.cpu` and `resources.requests.memory` on every container based on observed steady-state usage. The Vertical Pod Autoscaler (recommender mode) is a good starting point.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.6` | Capacity Management |
+| `soc2` | `CC7.3` | System Operations - Incident Evaluation |
+
+_Tags:_ `k8s`, `pod-security`, `resources`
+
+---
+
+### `k8s-pod-run-as-non-root`
+
+**Containers should run as a non-root user** &middot; severity `high` &middot; service `pod-security` &middot; resource `k8s.pod`
+
+Containers default to running as the image's USER, which for many community images is root. A root process compromised inside the container has more useful capabilities to chain into a node compromise. Setting `runAsNonRoot: true` makes the kubelet refuse to start the pod if the image's UID is 0.
+
+_Remediation:_
+
+> Set `securityContext.runAsNonRoot: true` at the pod or container level, and set `runAsUser` to a non-zero UID. Rebuild images with a non-root USER if needed.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.5.15` | Access Control |
+| `iso27001` | `A.8.2` | Privileged Access Rights |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `k8s`, `pod-security`, `root`
+
+---
+
+### `k8s-pod-seccomp-profile`
+
+**Containers should set a non-default seccomp profile** &middot; severity `medium` &middot; service `pod-security` &middot; resource `k8s.pod`
+
+Without `seccompProfile`, containers run with the container runtime's default seccomp policy, which on most distributions still permits a large attack surface (chmod, mount, unshare, keyctl, etc.). Setting type=RuntimeDefault applies a curated allowlist; type=Localhost lets you point at your own profile.
+
+_Remediation:_
+
+> Set `securityContext.seccompProfile.type: RuntimeDefault` at the pod level. Override per-container only when a specific workload needs more syscalls.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.20` | Networks Security |
+| `iso27001` | `A.8.32` | Change Management |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `k8s`, `pod-security`, `seccomp`
 
 ---
 
