@@ -258,7 +258,11 @@ $ compliancekit scan --profile ci-fast    # 8 checks instead of 35
 
 ---
 
-### v0.7 — AWS (weekend 7 — almost certainly two weekends)
+### v0.7 — AWS (weekend 7 — almost certainly two weekends) 🟡 rc1 cut at end of weekend 1
+
+**rc1 scope:** Foundation + IAM (8) + S3 (5) + EC2 (5) = 18 of 30 checks.
+**v0.7.0 (final) scope:** + RDS (4) + CloudTrail (3) + KMS (2) + Config + GuardDuty (3) = 30.
+
 
 **Goal:** first-class AWS hardening. Stop the "would love to use this
 but we're on AWS" replies on the launch HN thread.

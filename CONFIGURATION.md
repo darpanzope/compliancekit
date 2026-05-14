@@ -57,13 +57,26 @@ providers:                      # object, required. At least one provider must b
         user: ops
         port: 22
 
-  kubernetes:                   # v0.8+
+  aws:                          # v0.7+
+    enabled: false
+    # Authentication uses the standard SDK chain (env vars,
+    # AWS_PROFILE, AWS_ROLE_ARN, IMDSv2, OIDC). Nothing to configure
+    # here for auth. The fields below narrow the scan only.
+    regions: []                 # array<string>, e.g. ["us-east-1", "us-west-2"].
+                                # Empty = all regions visible to the credential
+                                # (resolved via EC2 DescribeRegions; opt-in
+                                # regions that aren't enabled are filtered out).
+    profile: ""                 # optional. Overrides AWS_PROFILE.
+    role_arn: ""                # optional. Equivalent to AWS_ROLE_ARN
+                                # (assume-role for cross-account scanning).
+
+  kubernetes:                   # v0.11+
     enabled: false
     kubeconfig: ~/.kube/config
     contexts: []                # array<string>, default: current-context
     namespaces: []              # default: all
 
-  hetzner:                      # v0.7+
+  hetzner:                      # v0.10+
     enabled: false
     token_env: HCLOUD_TOKEN
 
