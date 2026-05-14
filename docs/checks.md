@@ -6,7 +6,7 @@
   Source of truth: internal/checks/**/*.go (the core.Check vars).
 -->
 
-This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **105 checks** across the providers below.
+This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **113 checks** across the providers below.
 
 Each check below has:
 
@@ -23,19 +23,19 @@ To inspect a single check from the CLI: `compliancekit checks show <id>`.
 | Provider | Checks |
 |---|---:|
 | `aws` | 30 |
-| `digitalocean` | 35 |
+| `digitalocean` | 43 |
 | `gcp` | 25 |
 | `linux` | 15 |
-| **total** | **105** |
+| **total** | **113** |
 
 ## By severity
 
 | Severity | Checks |
 |---|---:|
-| `critical` | 6 |
-| `high` | 36 |
-| `medium` | 40 |
-| `low` | 23 |
+| `critical` | 8 |
+| `high` | 37 |
+| `medium` | 42 |
+| `low` | 26 |
 
 ## aws
 
@@ -837,6 +837,183 @@ _Maps to:_
 | `iso27001` | `A.8.24` | Use of Cryptography |
 
 _Tags:_ `managed-cert`, `renewal`, `tls`
+
+---
+
+### `do-db-engine-eol`
+
+**Managed databases should not run EOL engine versions** &middot; severity `medium` &middot; service `databases` &middot; resource `digitalocean.database`
+
+DO accepts older engine versions at create time but once an engine version is upstream-EOL, security patches stop. Examples: Postgres 13 is EOL Nov 2025; MySQL 5.7 is EOL Oct 2023. Running these means the DB is missing fixes that will never ship.
+
+_Remediation:_
+
+> Upgrade in place: 'doctl databases upgrade-major <db-id> --version <new>'. Always take a backup first. Plan for application-side compatibility testing.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.8` | Management of Technical Vulnerabilities |
+| `soc2` | `CC7.1` | System Operations - Vulnerabilities |
+
+_Tags:_ `database`, `eol`, `patching`
+
+---
+
+### `do-db-firewall-includes-public`
+
+**Managed databases must not allow public CIDRs in trusted sources** &middot; severity `critical` &middot; service `databases` &middot; resource `digitalocean.database`
+
+A trusted-source rule of type ip_addr with value 0.0.0.0/0 or ::/0 is the explicit shape of 'allow the entire internet.' This is the catastrophic database misconfiguration; it leaves TLS + password as the only defense against everyone who can find your hostname (which is on a predictable do-managed namespace).
+
+_Remediation:_
+
+> Remove the public rule: 'doctl databases firewalls remove <db-id> --uuid <rule-uuid>'. Replace with narrow droplet/tag/cluster references.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.20` | Networks Security |
+| `iso27001` | `A.8.22` | Segregation of Networks |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `catastrophic`, `database`, `network-exposure`
+
+---
+
+### `do-db-ip-only-trust`
+
+**Managed databases should trust named resources, not raw IPs** &middot; severity `low` &middot; service `databases` &middot; resource `digitalocean.database`
+
+Trusted-source rules of type ip_addr break silently when droplets are recreated and get new IPs. Named references (droplet:<id>, tag:<name>, k8s:<cluster-id>) survive recreation; IPs need manual update on every droplet rotation. Mixing both is fine; relying only on IPs is fragile.
+
+_Remediation:_
+
+> Convert ip_addr rules to droplet/tag refs: 'doctl databases firewalls append <db-id> --rule droplet:<id>'. Remove the corresponding ip_addr rule.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `1.1` | Establish and Maintain Detailed Enterprise Asset Inventory |
+| `iso27001` | `A.5.30` | ICT Readiness for Business Continuity |
+| `iso27001` | `A.8.31` | Separation of Development, Test and Production Environments |
+
+_Tags:_ `database`, `operations`
+
+---
+
+### `do-db-no-firewall-rules`
+
+**Managed databases should have at least one trusted source** &middot; severity `critical` &middot; service `databases` &middot; resource `digitalocean.database`
+
+DO managed databases default to a public hostname + port. The trusted-sources allowlist (DatabaseFirewallRule) is what restricts inbound. An empty list means the DB is open to every IP the DO platform accepts -- effectively the public internet, modulo TLS + password.
+
+_Remediation:_
+
+> Restrict to your droplet, K8s cluster, or tag: 'doctl databases firewalls append <db-id> --rule droplet:<id>' (or 'tag:<tag>', 'k8s:<cluster-id>', or 'ip_addr:<cidr>').
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `12.2` | Establish and Maintain a Secure Network Architecture |
+| `cis-v8` | `3.3` | Configure Data Access Control Lists |
+| `iso27001` | `A.8.20` | Networks Security |
+| `iso27001` | `A.8.22` | Segregation of Networks |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `database`, `network-exposure`
+
+---
+
+### `do-db-no-maintenance-window`
+
+**Managed databases should have a configured maintenance window** &middot; severity `low` &middot; service `databases` &middot; resource `digitalocean.database`
+
+Without an explicit maintenance window, DO chooses one based on the DB's region default. If the default lands during your business hours, scheduled patches cause unexpected outages. Set an explicit off-hours window.
+
+_Remediation:_
+
+> 'doctl databases maintenance-window update <db-id> --day sunday --hour 02:00'. Pick a low-traffic window for your application.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.8` | Management of Technical Vulnerabilities |
+
+_Tags:_ `database`, `operations`, `patching`
+
+---
+
+### `do-db-no-vpc`
+
+**Managed databases must belong to a VPC** &middot; severity `medium` &middot; service `databases` &middot; resource `digitalocean.database`
+
+A managed DB without a VPC sits on the legacy region-wide private network shared by every droplet -- the private endpoint isn't private anymore. Recreating in a VPC restores the segmentation guarantee.
+
+_Remediation:_
+
+> Recreate the DB inside a named VPC. DO does not support changing the VPC after creation; the migration is app-downtime + restore-from-backup. Schedule accordingly.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `12.2` | Establish and Maintain a Secure Network Architecture |
+| `iso27001` | `A.8.20` | Networks Security |
+| `iso27001` | `A.8.22` | Segregation of Networks |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `database`, `network`, `segmentation`
+
+---
+
+### `do-db-single-node`
+
+**Production databases should run with replicas** &middot; severity `low` &middot; service `databases` &middot; resource `digitalocean.database`
+
+A single-node managed DB has no HA story: any host- or zone-level failure takes the DB offline until DO reschedules. Multi-node clusters (DO supports up to 3-node high-availability) survive single-host failure transparently. Skip for dev/staging.
+
+_Remediation:_
+
+> Scale up: 'doctl databases resize <db-id> --num-nodes 2' (or 3 for high-availability clusters). Plan a brief maintenance window; DO promotes a standby and the failover is fast but not instant.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.13` | Information Backup |
+| `iso27001` | `A.8.14` | Redundancy of Information Processing Facilities |
+| `soc2` | `A1.2` | Availability - Backup and Recovery |
+
+_Tags:_ `availability`, `database`
+
+---
+
+### `do-db-tls-disabled`
+
+**Managed databases must require TLS on public endpoints** &middot; severity `high` &middot; service `databases` &middot; resource `digitalocean.database`
+
+The connection.ssl flag toggles whether the public endpoint accepts unencrypted connections. With ssl=false, a DB user's password is sent in plaintext over the wire on every connection -- catastrophic for any DB reachable from anywhere other than localhost.
+
+_Remediation:_
+
+> DO managed DBs ship with TLS support but the per-DB override on this flag can disable it. Verify in the DO control panel under Settings > Connection Details; require SSL for all users.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `3.10` | Encrypt Sensitive Data in Transit |
+| `iso27001` | `A.8.24` | Use of Cryptography |
+
+_Tags:_ `database`, `encryption-in-transit`, `tls`
 
 ---
 
