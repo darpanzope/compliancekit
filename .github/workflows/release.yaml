@@ -63,10 +63,21 @@ jobs:
           go-version: ${{ env.GO_VERSION }}
           check-latest: true
 
+      # Expose ACTIONS_RUNTIME_TOKEN + ACTIONS_CACHE_URL to subprocesses
+      # so buildx can read/write the GitHub Actions cache backend the
+      # docker `--cache-from/to=type=gha` flags in .goreleaser.yaml
+      # rely on. Without this step the cache silently misses (no error,
+      # just no speedup).
+      - name: Expose GitHub Actions runtime to buildx
+        uses: crazy-max/ghaction-github-runtime@v3
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Set up QEMU (for arm64 image build on amd64 runner)
+      # QEMU is now used to emulate amd64 on the arm64 runner (a
+      # ~3-4x faster direction than the reverse). The step name
+      # below kept its v0.10-era wording for git-history clarity.
+      - name: Set up QEMU (for cross-arch image build)
         uses: docker/setup-qemu-action@v3
 
       - name: Login to GHCR

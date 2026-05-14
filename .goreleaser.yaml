@@ -96,6 +96,13 @@ dockers:
     goarch: amd64
     dockerfile: Dockerfile
     build_flag_templates:
+      # GitHub Actions buildx cache. First release on this scope is a
+      # miss; subsequent releases skip the unchanged dep layer. Needs
+      # ACTIONS_RUNTIME_TOKEN + ACTIONS_CACHE_URL exposed by the
+      # workflow (see "Expose GitHub Actions runtime to buildx" step
+      # in release.yaml).
+      - "--cache-from=type=gha,scope=compliancekit-amd64"
+      - "--cache-to=type=gha,mode=max,scope=compliancekit-amd64"
       - "--platform=linux/amd64"
       - "--label=org.opencontainers.image.title={{ .ProjectName }}"
       - "--label=org.opencontainers.image.description=Open-source compliance scanner for cloud and Linux infrastructure"
@@ -114,6 +121,9 @@ dockers:
     goarch: arm64
     dockerfile: Dockerfile
     build_flag_templates:
+      # See amd64 block above for the GHA cache rationale.
+      - "--cache-from=type=gha,scope=compliancekit-arm64"
+      - "--cache-to=type=gha,mode=max,scope=compliancekit-arm64"
       - "--platform=linux/arm64"
       - "--label=org.opencontainers.image.title={{ .ProjectName }}"
       - "--label=org.opencontainers.image.description=Open-source compliance scanner for cloud and Linux infrastructure"
