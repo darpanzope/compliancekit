@@ -6,7 +6,7 @@
   Source of truth: internal/checks/**/*.go (the core.Check vars).
 -->
 
-This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **45 checks** across the providers below.
+This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **47 checks** across the providers below.
 
 Each check below has:
 
@@ -22,18 +22,18 @@ To inspect a single check from the CLI: `compliancekit checks show <id>`.
 
 | Provider | Checks |
 |---|---:|
-| `aws` | 25 |
+| `aws` | 27 |
 | `digitalocean` | 5 |
 | `linux` | 15 |
-| **total** | **45** |
+| **total** | **47** |
 
 ## By severity
 
 | Severity | Checks |
 |---|---:|
 | `critical` | 3 |
-| `high` | 20 |
-| `medium` | 14 |
+| `high` | 21 |
+| `medium` | 15 |
 | `low` | 8 |
 
 ## aws
@@ -405,6 +405,51 @@ _Maps to:_
 | `soc2` | `CC6.1` | Logical and Physical Access Controls |
 
 _Tags:_ `iam`, `least-privilege`, `lifecycle`
+
+---
+
+### `aws-kms-cmk-rotation`
+
+**Customer-managed symmetric KMS keys must have rotation enabled** &middot; severity `medium` &middot; service `kms` &middot; resource `aws.kms.key`
+
+KMS key rotation automatically rotates the underlying cryptographic material every year, capping the exposure window of any leaked key. Only customer-managed symmetric keys support rotation; AWS-managed and asymmetric keys are out of scope for this check. Pending-deletion keys are also skipped (rotation during pending-deletion would be misleading). CIS AWS Foundations 3.8.
+
+_Remediation:_
+
+> Enable: 'aws kms enable-key-rotation --key-id <key-id>'. Rotation is free and transparent to applications; the old key material remains decryptable for already-encrypted data.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.24` | Use of Cryptography |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `encryption`, `kms`, `rotation`
+
+---
+
+### `aws-kms-no-pending-deletion`
+
+**Customer-managed KMS keys must not be pending deletion** &middot; severity `high` &middot; service `kms` &middot; resource `aws.kms.key`
+
+A KMS key in PendingDeletion state will be permanently deleted at the end of its waiting window (7-30 days, default 30). Once deleted, all data encrypted with that key becomes undecryptable forever. This check catches in-flight deletes before the window closes -- the cost of catching one false positive is trivial, the cost of missing one true positive is catastrophic.
+
+_Remediation:_
+
+> Cancel the deletion: 'aws kms cancel-key-deletion --key-id <key-id>'. Then audit who scheduled it and why; that's almost always an incident worth investigating.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `11.2` | Perform Automated Backups |
+| `iso27001` | `A.8.13` | Information Backup |
+| `iso27001` | `A.8.24` | Use of Cryptography |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `data-loss`, `kms`
 
 ---
 
