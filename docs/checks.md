@@ -6,7 +6,7 @@
   Source of truth: internal/checks/**/*.go (the core.Check vars).
 -->
 
-This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **82 checks** across the providers below.
+This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **87 checks** across the providers below.
 
 Each check below has:
 
@@ -23,19 +23,19 @@ To inspect a single check from the CLI: `compliancekit checks show <id>`.
 | Provider | Checks |
 |---|---:|
 | `aws` | 30 |
-| `digitalocean` | 12 |
+| `digitalocean` | 17 |
 | `gcp` | 25 |
 | `linux` | 15 |
-| **total** | **82** |
+| **total** | **87** |
 
 ## By severity
 
 | Severity | Checks |
 |---|---:|
-| `critical` | 5 |
-| `high` | 32 |
-| `medium` | 33 |
-| `low` | 12 |
+| `critical` | 6 |
+| `high` | 33 |
+| `medium` | 34 |
+| `low` | 14 |
 
 ## aws
 
@@ -982,6 +982,123 @@ _Maps to:_
 | `soc2` | `CC6.1` | Logical and Physical Access Controls |
 
 _Tags:_ `droplet`, `hygiene`
+
+---
+
+### `do-firewall-any-port-from-any`
+
+**Firewalls must not allow any-port from the public internet** &middot; severity `critical` &middot; service `firewalls` &middot; resource `digitalocean.firewall`
+
+A firewall rule with sources 0.0.0.0/0 (or ::/0) AND portRange of 'all' or every-port effectively disables the firewall. This is the catastrophic shape of an accidental 'allow everything' rule -- usually pasted in during incident triage and never reverted. CIS Controls v8 4.5 prescribes explicit deny baselines with narrowly-scoped allow rules.
+
+_Remediation:_
+
+> Open the firewall and remove or scope down any rule with 'ports: all' from a public source. Replace with the specific ports + sources actually needed. Audit by source: 'doctl compute firewall get <id> --format Name,Inbound,Outbound'.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `12.2` | Establish and Maintain a Secure Network Architecture |
+| `iso27001` | `A.8.20` | Networks Security |
+| `iso27001` | `A.8.22` | Segregation of Networks |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `catastrophic`, `exposure`, `network`
+
+---
+
+### `do-firewall-broad-port-range`
+
+**Firewalls must not open broad port ranges to the public internet** &middot; severity `medium` &middot; service `firewalls` &middot; resource `digitalocean.firewall`
+
+An inbound rule from a public source that spans more than 1024 ports is almost always a mistake -- the intent was a single port (or a small contiguous family) and the typo opened the whole unprivileged range. The check fails on any public-internet inbound rule whose port count exceeds 1024.
+
+_Remediation:_
+
+> Narrow the port range. 'doctl compute firewall update <id>' with the actual port(s) you intended. Audit the rule history if available; broad ranges in firewall rules tend to land via copy/paste error during incident triage.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `12.2` | Establish and Maintain a Secure Network Architecture |
+| `cis-v8` | `4.4` | Implement and Manage a Firewall on Servers |
+| `iso27001` | `A.8.20` | Networks Security |
+| `iso27001` | `A.8.22` | Segregation of Networks |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `exposure`, `network`, `port-hygiene`
+
+---
+
+### `do-firewall-orphan`
+
+**Firewalls should be attached to at least one droplet or tag** &middot; severity `low` &middot; service `firewalls` &middot; resource `digitalocean.firewall`
+
+A firewall with zero attached droplets and zero matched tags protects nothing -- it shows up in the audit trail and in incident response readouts but its rules apply to no workload. These accumulate as droplets are destroyed and the firewall is left behind. Cleaning them up makes 'what firewall protects this resource?' answerable in one query.
+
+_Remediation:_
+
+> Either attach the firewall to droplets/tags that actually need it, or delete it: 'doctl compute firewall delete <id>'. Match firewall lifecycle to the tag or droplet group it protects.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `1.1` | Establish and Maintain Detailed Enterprise Asset Inventory |
+| `iso27001` | `A.5.9` | Inventory of Information and Other Associated Assets |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `hygiene`, `network`
+
+---
+
+### `do-firewall-outbound-any-to-any`
+
+**Firewalls should not allow outbound any-to-any** &middot; severity `low` &middot; service `firewalls` &middot; resource `digitalocean.firewall`
+
+An outbound rule with destinations 0.0.0.0/0 (or ::/0) AND portRange 'all' is the egress-allow-everything shape. Data exfiltration leaves over outbound; restricting outbound to known destinations (Spaces endpoint, GitHub Container Registry, NTP, your own DNS resolver) is the standard hardening step. This check is informational at v0.9 because most droplets legitimately need broad outbound for OS package updates -- but the rule should be explicit, not catch-all.
+
+_Remediation:_
+
+> Replace the catch-all with explicit destinations + ports. At minimum: outbound to your update mirrors, to your observability provider, to known internal subnets. Drop the 0.0.0.0/0 / 'all' combo.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.21` | Security of Network Services |
+| `iso27001` | `A.8.22` | Segregation of Networks |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `egress`, `exfiltration`, `network`
+
+---
+
+### `do-firewall-rdp-from-any`
+
+**Firewalls must not allow RDP (port 3389) from the public internet** &middot; severity `high` &middot; service `firewalls` &middot; resource `digitalocean.firewall`
+
+Public-Internet RDP exposure on port 3389 is the single highest-velocity ransomware entry vector in the field. Even with rate-limiting, valid-credential discovery by botnet is measured in days. Restrict RDP to bastion / jump-host IPs or a managed VPN range; never expose it to 0.0.0.0/0 / ::/0.
+
+_Remediation:_
+
+> Narrow the source list: 'doctl compute firewall update <id> --inbound-rules "protocol:tcp,ports:3389,sources:address:203.0.113.0/24"'. Better: put Windows hosts behind a VPN concentrator and remove the 3389 rule entirely.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `12.2` | Establish and Maintain a Secure Network Architecture |
+| `cis-v8` | `4.4` | Implement and Manage a Firewall on Servers |
+| `iso27001` | `A.8.20` | Networks Security |
+| `iso27001` | `A.8.21` | Security of Network Services |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC6.6` | Logical Access Security - Boundaries |
+
+_Tags:_ `exposure`, `network`, `rdp`
 
 ---
 
