@@ -39,7 +39,7 @@ You don't have a security team. You don't have an SRE. You have a Saturday.
 
 ```
 $ compliancekit scan
-scanning digitalocean, linux (159 checks)...
+scanning digitalocean, linux (298 checks)...
 ✗ web-01: no firewall attached                       (high, soc2/CC6.6)
 ✗ web-01: SSH allowed from 0.0.0.0/0                 (high, iso27001/A.8.21)
 ✓ web-01: backups enabled                            (medium)
@@ -181,7 +181,7 @@ compliancekit scan                  # writes findings.{json,html,markdown} into 
 Expected output (numbers vary by account):
 
 ```
-scanning digitalocean (159 checks)...
+scanning digitalocean (298 checks)...
 wrote ./out/findings.json
 wrote ./out/findings.html
 wrote ./out/findings.markdown
@@ -219,7 +219,7 @@ Full per-check reference (auto-generated, IDs / severities / framework mappings 
 | AWS | v0.7 ✅ | 30 | IAM (8) + S3 (5) + EC2 (5) + RDS (4) + CloudTrail (3) + KMS (2) + Config (2) + GuardDuty (1) |
 | GCP | v0.8 ✅ | 25 | IAM (6) + Compute (5) + GCS (4) + Cloud SQL (3) + Logging (2) + KMS (2) + BigQuery (3) |
 | Hetzner Cloud | v0.10 ✅ | 15 | servers (5) + firewalls (3) + networks (2) + load balancers (2) + volumes (2) + floating IPs (1) |
-| Kubernetes + EKS / GKE / DOKS-deep | v0.11 | ~35 | planned |
+| Kubernetes + EKS / GKE / DOKS-deep | v0.11 ✅ | 139 | generic K8s (95) — pods/controllers/RBAC/network/storage/namespaces/admission/nodes — plus EKS (12) + GKE (13) + DOKS (9) enrichment |
 | Cloudflare, GitHub, Google Workspace, Vercel, Linode, Vultr | v1.7 | — | tail clouds |
 
 ### Frameworks

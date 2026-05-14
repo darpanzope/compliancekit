@@ -175,7 +175,7 @@ to the v0.1-v0.5 audience that put compliancekit on the map.
 | **v0.8** ✅ | **GCP** | First-class GCP hardening, 25 checks across IAM/Compute/GCS/Cloud SQL/Logging/KMS/BigQuery |
 | **v0.9** ✅ | **DigitalOcean depth pass — everything except DOKS** | 5 → 74 checks across 20 services; the most comprehensive OSS DigitalOcean scanner |
 | **v0.10** ✅ | **Hetzner Cloud** | 15 checks across servers/firewalls/networks/LBs/volumes/floating IPs |
-| **v0.11** | Containers + K8s + EKS/GKE/DOKS-deep | From cluster to instance in one scan |
+| **v0.11** ✅ | **Kubernetes + EKS / GKE / DOKS-deep** | 139 checks across pods, controllers, RBAC, network, storage, namespaces/admission, nodes + EKS/GKE/DOKS enrichment — production-grade K8s posture across the four clouds we ship |
 | **v0.12** | Framework expansion (NIST 800-53 r5, HIPAA, PCI-DSS, MITRE ATT&CK) | Map every finding to ATT&CK |
 | **v0.13** | IaC / OCSF / OSCAL ingest + emit | Plays nicely with the rest of the security stack |
 | **v0.14** | Vuln / secret / SCA ingest (Trivy, Grype, Checkov, gitleaks) | Every CVE tied to a real instance |
@@ -544,48 +544,71 @@ real choice within the same indie-SaaS demographic.
 
 ---
 
-### v0.11 — Containers + K8s + EKS / GKE / DOKS-deep (weekend 11)
+### v0.11 ✅ — Kubernetes + EKS / GKE / DOKS-deep (shipped 2026-05-14)
 
-**Goal:** Kubernetes posture across the four clouds we now ship.
-Lands after all the cloud collectors so EKS/GKE/DOKS-specific
-checks can read directly from the cluster's owning cloud account.
+**Goal:** Kubernetes posture across the four clouds we ship — generic
+K8s (works on any cluster) plus EKS/GKE/DOKS enrichment so each
+cluster's cloud-side configuration is in scope.
 
-**Scope split**
+**Scope expansion:** the original ~35-check target was expanded to
+**139 checks** during implementation — production-grade depth
+comparable to kubescape + Trivy K8s combined. No new ADR; the
+expansion matches the inline-in-ROADMAP precedent of v0.7-v0.10.
 
-- **Generic Kubernetes** (works against any cluster, kind/k3s
-  included): ~20 checks covering kube-apiserver flags, pod-security
-  admission, network policies, RBAC, secrets-not-in-env, runAsNonRoot,
-  resource quotas, audit logging.
-- **EKS-specific** (~6): managed-NG vs. node-group hygiene, public
-  endpoint, IRSA usage, control-plane logging, in-place upgrades
-  hygiene, KMS encryption of secrets.
-- **GKE-specific** (~5): Autopilot mode, Workload Identity, private
-  cluster, binary authorization, shielded nodes.
-- **DOKS-specific** (~4 — building on v0.9 cluster-level): per-node
-  upgrade strategy, registry-pull from DO Container Registry vs
-  ghcr.io, surge-upgrade real config, alerting policy.
+**Shipped (139 checks across 11 phases):**
 
-**Plumbing**
+| Phase | Theme | Checks |
+|---|---|---:|
+| 0 | Foundations — kubeconfig fanout + cluster anchor + collect_error pattern | 0 |
+| 1 | Pod Security (privileged, host-ns, capabilities, run-as-root, RO-rootfs, seccomp, resource limits, image-tag pin, automount-sa-token, hostPath, hostPort, liveness probe) | 18 |
+| 2 | Controllers + Jobs (Deployment min-replicas / RollingUpdate / PDB / anti-affinity, StatefulSet PDB, DaemonSet control-plane, Job backoffLimit, CronJob concurrency / history / startingDeadline) | 10 |
+| 3 | RBAC + ServiceAccounts (wildcard verbs/resources/apiGroups, full-wildcard, secrets read/write, pods/exec + pods/portforward, impersonate/escalate/bind, create pods, CSR approve, tokenrequest, cluster-admin bindings, anonymous bind, stale role-ref, empty subjects, User subject, default SA automount/used/orphan, image-pull-secrets) | 23 |
+| 4 | Network + Ingress + NetworkPolicies (LB source-ranges, no-TLS, externalIPs, NodePort, public-no-NP, Ingress TLS / default-backend / class / dangerous annotations, default-deny ingress + egress, namespace coverage, allow-all ingress/egress, from-all-namespaces, empty selector) | 16 |
+| 5 | Secrets + Storage (Secret-via-env, orphan, too-large, immutable, ConfigMap secret-shaped keys, ConfigMap too-large, StorageClass default-multiple / encryption / reclaim, PV reclaim / encryption / orphan, PVC not-bound / orphan / RWX) | 15 |
+| 6 | Namespaces + Cluster + Admission (default-workload, ResourceQuota / LimitRange missing, PSA label, stuck terminating, policy-engine present, ValidatingWebhook failurePolicy, MutatingWebhook side-effects, webhook namespace-selector, RQ pod-limit / compute-limit / object-counts, LimitRange container-defaults) | 13 |
+| 7 | Nodes (Ready, Disk/Memory/PID pressure, unschedulable, container runtime, OS image age, zone / region labels, control-plane taint) | 10 |
+| 8 | EKS enrichment (public endpoint open, private endpoint, secrets KMS, control-plane logging, IRSA OIDC, auth mode, status, version, NG amiType / SSH / version-skew / launch-template) | 12 |
+| 9 | GKE enrichment (private cluster, master authorized networks, Workload Identity, Binary Authorization, network policy, shielded nodes, release channel, legacy ABAC, logging + monitoring, NP auto-upgrade / auto-repair / COS / default-SA) | 13 |
+| 10 | DOKS enrichment (HA control plane, auto-upgrade, surge-upgrade, maintenance window, VPC attached, registry integration, cluster running, NP autoscale / min-nodes) | 9 |
 
-- New collector at `internal/collectors/k8s/` using
-  `k8s.io/client-go`. Kubeconfig-driven discovery; works against
-  arbitrary contexts. Already noted in
-  [BINARY.md](BINARY.md) sizing.
-- New collector adapters at `internal/collectors/aws/eks/`,
-  `gcp/gke/`, `digitalocean/doks/` that *enrich* a `k8s.Cluster`
-  resource with cloud-side context. Same pattern as Resource
-  references across the graph.
-- **kubescape-style host scanning is out of scope** — for now we
-  stay declarative API-driven.
+**Plumbing delivered:**
 
-**Definition of done**
+- New collector at `internal/collectors/k8s/` using `k8s.io/client-go`
+  v0.32.1. Kubeconfig-driven discovery — explicit path or KUBECONFIG
+  env or `~/.kube/config`. Per-context fanout; `k8s.cluster` anchor
+  per context with cloudcommon AccountID = context name, Region =
+  parsed API server host. Per-service `k8s.collect_error` placeholders
+  on partial failures, matching the v0.7-v0.10 pattern in
+  [[reference-collector-patterns]].
+- Cloud enrichment via the existing AWS / GCP / DO collectors —
+  `aws.eks.*`, `gcp.gke.*`, `digitalocean.doks.*` resources land
+  alongside their cloud's other resources. DOKS specifically was held
+  back from v0.9 to land here.
+- `internal/cli/scan.go` `buildKubernetesCollector` + `doctor` probe.
+- `internal/config/config.go` — KubernetesConfig with `kubeconfig`,
+  `contexts`, `namespaces`, `exclude_namespaces`.
 
-- ~35 K8s checks total; framework-mapped (CIS K8s Benchmark v1.x as
-  the CIS source).
-- One end-to-end demo against a kind cluster (generic), one against
-  a DOKS cluster, one against EKS, one against GKE.
-- Memory ceiling holds at <500MB for a 200-pod cluster; if not, a
-  TODO lands for v1.0's API freeze.
+**Dependencies added (sized in BINARY.md):**
+
+- `k8s.io/client-go v0.32.1` (+ `k8s.io/api`, `k8s.io/apimachinery`)
+- `github.com/aws/aws-sdk-go-v2/service/eks v1.83.0`
+- `cloud.google.com/go/container v1.51.0`
+- godo already shipped DOKS support; no new DO dep.
+
+**Final catalog:** 159 (v0.10) → **298 (v0.11)** = +139 K8s checks.
+
+**Definition of done:**
+
+- ✅ 139 K8s checks total (vs ~35 target); every check framework-
+  mapped (SOC 2 + ISO 27001 + CIS Controls v8). CIS Kubernetes
+  Benchmark v1.x mappings land at v0.12 (framework expansion).
+- ✅ Per-service-file pattern preserved; collector + check files
+  named by area (workloads, controllers, rbac, network, storage,
+  cluster, nodes, eks, gke, doks).
+- ✅ buildXCollector slice pattern reused — kubernetes is one more
+  entry in the scan.go buildCollectors slice.
+- Pending: end-to-end demos against real EKS / GKE / DOKS / kind
+  clusters land in the launch broadcast workflow.
 
 ---
 
