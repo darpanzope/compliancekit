@@ -1,0 +1,48 @@
+{
+  "SchemaVersion": 2,
+  "ArtifactName": "alpine:3.18.0",
+  "ArtifactType": "container_image",
+  "Metadata": {
+    "OS": { "Family": "alpine", "Name": "3.18.0" },
+    "ImageID": "sha256:c5b1261d6d3e43071626931fc004f70149baeba2c8ec672bd4f27761f8e1ad6b",
+    "RepoTags": ["alpine:3.18.0"],
+    "RepoDigests": ["alpine@sha256:82d1e9d7ed48a7523bdebc18cf6290bdb97b82302a8a9c27d4fe885949ea94d1"]
+  },
+  "Results": [
+    {
+      "Target": "alpine:3.18.0 (alpine 3.18.0)",
+      "Class": "os-pkgs",
+      "Type": "alpine",
+      "Vulnerabilities": [
+        {
+          "VulnerabilityID": "CVE-2024-12345",
+          "PkgName": "openssl",
+          "PkgIdentifier": { "PURL": "pkg:apk/alpine/openssl@3.0.7?distro=3.18.0" },
+          "InstalledVersion": "3.0.7",
+          "FixedVersion": "3.0.8",
+          "Severity": "HIGH",
+          "PrimaryURL": "https://avd.aquasec.com/nvd/cve-2024-12345",
+          "Title": "openssl: heap-buffer-overflow in X.509 verification",
+          "Description": "An attacker can craft a malicious certificate that causes openssl to write past the end of an allocated buffer.",
+          "CVSS": {
+            "nvd": { "V3Score": 8.1, "V3Vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:H/A:H" },
+            "redhat": { "V3Score": 7.5, "V3Vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H" }
+          },
+          "References": ["https://github.com/openssl/openssl/security/advisories/GHSA-..."],
+          "PublishedDate": "2024-08-15T18:00:00Z",
+          "LastModifiedDate": "2024-08-20T12:00:00Z"
+        },
+        {
+          "VulnerabilityID": "CVE-2024-99999",
+          "PkgName": "musl",
+          "InstalledVersion": "1.2.4-r0",
+          "Severity": "LOW",
+          "Title": "musl: minor stack-overflow in regex parsing",
+          "CVSS": {
+            "nvd": { "V3Score": 3.7 }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -22,6 +22,7 @@ import (
 	_ "github.com/darpanzope/compliancekit/internal/ingest/ocsf"
 	_ "github.com/darpanzope/compliancekit/internal/ingest/oscal"
 	_ "github.com/darpanzope/compliancekit/internal/ingest/sarif"
+	_ "github.com/darpanzope/compliancekit/internal/ingest/trivy"
 )
 
 // newIngestCmd builds `compliancekit ingest`, which reads an external
