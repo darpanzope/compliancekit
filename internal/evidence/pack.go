@@ -86,6 +86,7 @@ type Result struct {
 	TailoringPath    string                  // <OutDir>/tailoring.json (v0.12+); empty when no rules
 	TailoringCount   int                     // number of tailoring rules recorded
 	OSCALARPath      string                  // <OutDir>/assessment-results.oscal.json (v0.13+)
+	OSCALProfilePath string                  // <OutDir>/profile.oscal.json (v0.13+)
 	Generated        time.Time               // header timestamp actually used
 	ControlIndex     map[string][]ControlRef // framework -> controls covered (display order)
 }
@@ -186,6 +187,13 @@ func Generate(_ context.Context, findings []core.Finding, opts Options) (Result,
 		return Result{}, err
 	}
 	result.OSCALARPath = oscalARPath
+	result.FilesWritten++
+
+	oscalProfilePath, err := writeProfileOSCAL(abs, &result, opts)
+	if err != nil {
+		return Result{}, err
+	}
+	result.OSCALProfilePath = oscalProfilePath
 	result.FilesWritten++
 
 	manifestPath, err := WriteManifest(abs)
