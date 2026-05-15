@@ -79,7 +79,7 @@ func loadAllBuiltins() (map[string]*ingest.MappingTable, error) {
 
 // BuiltinTools returns the sorted list of tools the package ships
 // embedded mappings for. Exposed for `compliancekit ingest --list`
-// and for the future `compliancekit mapping` subcommand (Phase 7).
+// and for the `compliancekit mapping` subcommand.
 func BuiltinTools() []string {
 	builtinMappingOnce.Do(func() {
 		builtinMappingTables, builtinMappingErr = loadAllBuiltins()
@@ -92,4 +92,24 @@ func BuiltinTools() []string {
 		out = append(out, k)
 	}
 	return out
+}
+
+// Mapping returns the built-in mapping table for the given tool id,
+// or (nil, false) if no built-in covers it.
+func Mapping(toolID string) (*ingest.MappingTable, bool) {
+	if tab := lookupBuiltinMapping(toolID); tab != nil {
+		return tab, true
+	}
+	return nil, false
+}
+
+// provider satisfies ingest.MappingProvider so the parent ingest
+// package's unified registry can enumerate this package's mappings.
+type provider struct{}
+
+func (provider) BuiltinTools() []string                             { return BuiltinTools() }
+func (provider) Mapping(toolID string) (*ingest.MappingTable, bool) { return Mapping(toolID) }
+
+func init() {
+	ingest.RegisterMappingProvider(provider{})
 }

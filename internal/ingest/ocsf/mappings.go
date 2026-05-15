@@ -71,3 +71,23 @@ func BuiltinProducts() []string {
 	}
 	return out
 }
+
+// Mapping returns the built-in mapping table for the given product
+// id (e.g. "aws-security-hub"), or (nil, false) if no built-in
+// covers it.
+func Mapping(productID string) (*ingest.MappingTable, bool) {
+	if tab := lookupBuiltinMapping(productID); tab != nil {
+		return tab, true
+	}
+	return nil, false
+}
+
+// provider satisfies ingest.MappingProvider for the unified registry.
+type provider struct{}
+
+func (provider) BuiltinTools() []string                                { return BuiltinProducts() }
+func (provider) Mapping(productID string) (*ingest.MappingTable, bool) { return Mapping(productID) }
+
+func init() {
+	ingest.RegisterMappingProvider(provider{})
+}
