@@ -55,12 +55,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `8.10` | Retain Audit Logs |
-| `cis-v8` | `8.5` | Collect Detailed Audit Logs |
-| `iso27001` | `A.8.15` | Logging |
-| `iso27001` | `A.8.16` | Monitoring activities |
-| `soc2` | `CC7.2` | System Component Monitoring |
-| `soc2` | `CC7.3` | Security Incident Evaluation |
 
 _Tags:_ `audit-logging`, `cloudtrail`
 
@@ -80,10 +74,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `8.5` | Collect Detailed Audit Logs |
-| `iso27001` | `A.8.15` | Logging |
-| `soc2` | `CC7.2` | System Component Monitoring |
-| `soc2` | `CC7.3` | Security Incident Evaluation |
 
 _Tags:_ `cloudtrail`, `integrity`
 
@@ -103,9 +93,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `8.5` | Collect Detailed Audit Logs |
-| `iso27001` | `A.8.15` | Logging |
-| `soc2` | `CC7.2` | System Component Monitoring |
 
 _Tags:_ `audit-logging`, `cloudtrail`, `multi-region`
 
@@ -125,10 +112,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `8.10` | Retain Audit Logs |
-| `cis-v8` | `8.5` | Collect Detailed Audit Logs |
-| `iso27001` | `A.8.15` | Logging |
-| `soc2` | `CC7.2` | System Component Monitoring |
 
 _Tags:_ `audit-logging`, `config`
 
@@ -148,11 +131,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `8.5` | Collect Detailed Audit Logs |
-| `iso27001` | `A.8.15` | Logging |
-| `iso27001` | `A.8.16` | Monitoring activities |
-| `soc2` | `CC7.2` | System Component Monitoring |
-| `soc2` | `CC7.3` | Security Incident Evaluation |
 
 _Tags:_ `audit-logging`, `change-tracking`, `config`
 
@@ -172,10 +150,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `3.11` | Encrypt Sensitive Data at Rest |
-| `iso27001` | `A.8.24` | Use of cryptography |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.7` | Transmission, Movement, and Disposal of Information |
 
 _Tags:_ `data-at-rest`, `ebs`, `ec2`, `encryption`
 
@@ -195,11 +169,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `4.1` | Establish and Maintain a Secure Configuration Process |
-| `cis-v8` | `4.4` | Implement and Manage a Firewall on Servers |
-| `iso27001` | `A.8.20` | Networks security |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `ec2`, `metadata-service`, `ssrf`
 
@@ -219,11 +188,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `12.2` | Establish and Maintain a Secure Network Architecture |
-| `cis-v8` | `4.4` | Implement and Manage a Firewall on Servers |
-| `iso27001` | `A.8.20` | Networks security |
-| `iso27001` | `A.8.22` | Segregation of networks |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `ec2`, `network`, `vpc`
 
@@ -243,12 +207,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `3.3` | Configure Data Access Control Lists |
-| `cis-v8` | `3.4` | Enforce Data Retention |
-| `iso27001` | `A.8.12` | Data leakage prevention |
-| `iso27001` | `A.8.3` | Information access restriction |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `ami`, `data-exposure`, `ec2`
 
@@ -268,12 +226,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `12.2` | Establish and Maintain a Secure Network Architecture |
-| `cis-v8` | `4.4` | Implement and Manage a Firewall on Servers |
-| `iso27001` | `A.8.20` | Networks security |
-| `iso27001` | `A.8.21` | Security of network services |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `ec2`, `exposure`, `network`
 
@@ -293,11 +245,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `13.1` | Centralize Security Event Alerting |
-| `cis-v8` | `8.5` | Collect Detailed Audit Logs |
-| `iso27001` | `A.8.16` | Monitoring activities |
-| `soc2` | `CC7.2` | System Component Monitoring |
-| `soc2` | `CC7.3` | Security Incident Evaluation |
 
 _Tags:_ `guardduty`, `threat-detection`
 
@@ -317,10 +264,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `5.4` | Restrict Administrator Privileges to Dedicated Administrator Accounts |
-| `iso27001` | `A.8.2` | Privileged access rights |
-| `iso27001` | `A.8.5` | Secure authentication |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
 
 _Tags:_ `credentials`, `iam`, `rotation`
 
@@ -340,11 +283,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `6.3` | Require MFA for Externally-Exposed Applications |
-| `cis-v8` | `6.5` | Require MFA for Administrative Access |
-| `iso27001` | `A.8.5` | Secure authentication |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `console`, `iam`, `mfa`
 
@@ -364,12 +302,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `5.4` | Restrict Administrator Privileges to Dedicated Administrator Accounts |
-| `cis-v8` | `6.7` | Centralize Access Control |
-| `iso27001` | `A.5.15` | Access control |
-| `iso27001` | `A.8.2` | Privileged access rights |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.3` | Authorization, Modification, and Removal |
 
 _Tags:_ `audit-risk`, `iam`, `least-privilege`
 
@@ -389,12 +321,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `5.4` | Restrict Administrator Privileges to Dedicated Administrator Accounts |
-| `cis-v8` | `6.7` | Centralize Access Control |
-| `iso27001` | `A.5.15` | Access control |
-| `iso27001` | `A.8.2` | Privileged access rights |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.3` | Authorization, Modification, and Removal |
 
 _Tags:_ `governance`, `iam`, `least-privilege`
 
@@ -414,10 +340,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `5.2` | Use Unique Passwords |
-| `cis-v8` | `6.3` | Require MFA for Externally-Exposed Applications |
-| `iso27001` | `A.8.5` | Secure authentication |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
 
 _Tags:_ `iam`, `password-policy`
 
@@ -437,11 +359,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `5.4` | Restrict Administrator Privileges to Dedicated Administrator Accounts |
-| `cis-v8` | `6.5` | Require MFA for Administrative Access |
-| `iso27001` | `A.8.2` | Privileged access rights |
-| `iso27001` | `A.8.5` | Secure authentication |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
 
 _Tags:_ `credentials`, `iam`, `root`
 
@@ -461,11 +378,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `6.3` | Require MFA for Externally-Exposed Applications |
-| `cis-v8` | `6.5` | Require MFA for Administrative Access |
-| `iso27001` | `A.8.5` | Secure authentication |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `iam`, `mfa`, `root`
 
@@ -485,12 +397,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `5.3` | Disable Dormant Accounts |
-| `cis-v8` | `6.2` | Establish an Access Revoking Process |
-| `iso27001` | `A.5.16` | Identity management |
-| `iso27001` | `A.8.2` | Privileged access rights |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.3` | Authorization, Modification, and Removal |
 
 _Tags:_ `iam`, `least-privilege`, `lifecycle`
 
@@ -510,10 +416,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `3.11` | Encrypt Sensitive Data at Rest |
-| `iso27001` | `A.8.24` | Use of cryptography |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.7` | Transmission, Movement, and Disposal of Information |
 
 _Tags:_ `encryption`, `kms`, `rotation`
 
@@ -533,12 +435,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `11.2` | Perform Automated Backups |
-| `cis-v8` | `3.11` | Encrypt Sensitive Data at Rest |
-| `iso27001` | `A.8.13` | Information backup |
-| `iso27001` | `A.8.24` | Use of cryptography |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `data-loss`, `kms`
 
@@ -558,10 +454,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `11.2` | Perform Automated Backups |
-| `iso27001` | `A.8.13` | Information backup |
-| `soc2` | `A1.2` | Backup and Recovery Infrastructure |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `backup`, `rds`, `recovery`
 
@@ -581,10 +473,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `3.3` | Configure Data Access Control Lists |
-| `cis-v8` | `5.4` | Restrict Administrator Privileges to Dedicated Administrator Accounts |
-| `iso27001` | `A.8.13` | Information backup |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `guard-rail`, `lifecycle`, `rds`
 
@@ -604,10 +492,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `3.11` | Encrypt Sensitive Data at Rest |
-| `iso27001` | `A.8.24` | Use of cryptography |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.7` | Transmission, Movement, and Disposal of Information |
 
 _Tags:_ `data-at-rest`, `encryption`, `rds`
 
@@ -627,12 +511,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `12.2` | Establish and Maintain a Secure Network Architecture |
-| `cis-v8` | `4.4` | Implement and Manage a Firewall on Servers |
-| `iso27001` | `A.8.20` | Networks security |
-| `iso27001` | `A.8.21` | Security of network services |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `exposure`, `network`, `rds`
 
@@ -652,10 +530,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `3.11` | Encrypt Sensitive Data at Rest |
-| `iso27001` | `A.8.24` | Use of cryptography |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.7` | Transmission, Movement, and Disposal of Information |
 
 _Tags:_ `data-at-rest`, `encryption`, `s3`
 
@@ -675,10 +549,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `8.10` | Retain Audit Logs |
-| `cis-v8` | `8.5` | Collect Detailed Audit Logs |
-| `iso27001` | `A.8.15` | Logging |
-| `soc2` | `CC7.2` | System Component Monitoring |
 
 _Tags:_ `audit-logging`, `forensics`, `s3`
 
@@ -698,11 +568,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `3.3` | Configure Data Access Control Lists |
-| `iso27001` | `A.8.20` | Networks security |
-| `iso27001` | `A.8.3` | Information access restriction |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `acl`, `data-exposure`, `s3`
 
@@ -722,12 +587,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `3.11` | Encrypt Sensitive Data at Rest |
-| `cis-v8` | `3.3` | Configure Data Access Control Lists |
-| `iso27001` | `A.8.20` | Networks security |
-| `iso27001` | `A.8.3` | Information access restriction |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `data-exposure`, `public-access`, `s3`
 
@@ -747,11 +606,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `11.2` | Perform Automated Backups |
-| `iso27001` | `A.8.13` | Information backup |
-| `iso27001` | `A.8.14` | Redundancy of information processing facilities |
-| `soc2` | `A1.2` | Backup and Recovery Infrastructure |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `backup`, `recovery`, `s3`
 
@@ -773,12 +627,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `6.1` | Establish an Access Granting Process |
-| `cis-v8` | `6.7` | Centralize Access Control |
-| `iso27001` | `A.5.16` | Identity management |
-| `iso27001` | `A.5.17` | Authentication information |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.7` | Transmission, Movement, and Disposal of Information |
 
 _Tags:_ `account`, `identity`
 
@@ -798,11 +646,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `11.1` | Establish and Maintain a Data Recovery Process |
-| `iso27001` | `A.5.30` | ICT readiness for business continuity |
-| `iso27001` | `A.8.6` | Capacity management |
-| `soc2` | `A1.2` | Backup and Recovery Infrastructure |
-| `soc2` | `CC9.1` | Identifies and Mitigates Business Disruptions |
 
 _Tags:_ `account`, `platform-health`
 
@@ -822,12 +665,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `6.7` | Centralize Access Control |
-| `cis-v8` | `6.8` | Define and Maintain Role-Based Access Control |
-| `iso27001` | `A.5.15` | Access control |
-| `iso27001` | `A.5.2` | Information security roles and responsibilities |
-| `soc2` | `CC1.4` | Commitment to Competence |
-| `soc2` | `CC6.3` | Authorization, Modification, and Removal |
 
 _Tags:_ `account`, `bus-factor`
 
@@ -847,9 +684,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `3.10` | Encrypt Sensitive Data in Transit |
-| `iso27001` | `A.8.24` | Use of cryptography |
-| `soc2` | `CC6.7` | Transmission, Movement, and Disposal of Information |
 
 _Tags:_ `app-platform`, `tls`
 
@@ -869,10 +703,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `8.11` | Conduct Audit Log Reviews |
-| `iso27001` | `A.8.16` | Monitoring activities |
-| `soc2` | `CC7.2` | System Component Monitoring |
-| `soc2` | `CC7.3` | Security Incident Evaluation |
 
 _Tags:_ `alerting`, `app-platform`
 
@@ -892,9 +722,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `3.10` | Encrypt Sensitive Data in Transit |
-| `iso27001` | `A.8.20` | Networks security |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
 
 _Tags:_ `app-platform`, `branding`
 
@@ -914,11 +741,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `12.2` | Establish and Maintain a Secure Network Architecture |
-| `iso27001` | `A.8.20` | Networks security |
-| `iso27001` | `A.8.22` | Segregation of networks |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `app-platform`, `network`
 
@@ -938,12 +760,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `3.1` | Establish and Maintain a Data Management Process |
-| `cis-v8` | `3.11` | Encrypt Sensitive Data at Rest |
-| `iso27001` | `A.5.17` | Authentication information |
-| `iso27001` | `A.8.10` | Information deletion |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.7` | Transmission, Movement, and Disposal of Information |
 
 _Tags:_ `app-platform`, `secrets`
 
@@ -963,9 +779,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `3.10` | Encrypt Sensitive Data in Transit |
-| `iso27001` | `A.8.24` | Use of cryptography |
-| `soc2` | `CC6.7` | Transmission, Movement, and Disposal of Information |
 
 _Tags:_ `cdn`, `tls`
 
@@ -985,9 +798,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `3.10` | Encrypt Sensitive Data in Transit |
-| `iso27001` | `A.8.20` | Networks security |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
 
 _Tags:_ `cdn`
 
@@ -1007,9 +817,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `3.10` | Encrypt Sensitive Data in Transit |
-| `iso27001` | `A.8.24` | Use of cryptography |
-| `soc2` | `CC6.7` | Transmission, Movement, and Disposal of Information |
 
 _Tags:_ `expiry`, `tls`
 
@@ -1029,9 +836,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `3.10` | Encrypt Sensitive Data in Transit |
-| `iso27001` | `A.8.24` | Use of cryptography |
-| `soc2` | `CC6.7` | Transmission, Movement, and Disposal of Information |
 
 _Tags:_ `managed-cert`, `renewal`, `tls`
 
@@ -1051,10 +855,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `2.2` | Ensure Authorized Software is Currently Supported |
-| `cis-v8` | `7.4` | Perform Automated Application Patch Management |
-| `iso27001` | `A.8.8` | Management of technical vulnerabilities |
-| `soc2` | `CC7.1` | Detection and Monitoring of Vulnerabilities |
 
 _Tags:_ `database`, `eol`, `patching`
 
@@ -1074,10 +874,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `4.5` | Implement and Manage a Firewall on End-User Devices |
-| `iso27001` | `A.8.20` | Networks security |
-| `iso27001` | `A.8.22` | Segregation of networks |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `catastrophic`, `database`, `network-exposure`
 
@@ -1097,10 +893,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `1.1` | Establish and Maintain Detailed Enterprise Asset Inventory |
-| `iso27001` | `A.5.30` | ICT readiness for business continuity |
-| `iso27001` | `A.8.31` | Separation of development, test, and production environments |
-| `soc2` | `CC9.1` | Identifies and Mitigates Business Disruptions |
 
 _Tags:_ `database`, `operations`
 
@@ -1120,12 +912,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `12.2` | Establish and Maintain a Secure Network Architecture |
-| `cis-v8` | `3.3` | Configure Data Access Control Lists |
-| `iso27001` | `A.8.20` | Networks security |
-| `iso27001` | `A.8.22` | Segregation of networks |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `database`, `network-exposure`
 
@@ -1145,9 +931,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `7.3` | Perform Automated Operating System Patch Management |
-| `iso27001` | `A.8.8` | Management of technical vulnerabilities |
-| `soc2` | `CC7.5` | Recovery from Security Incidents |
 
 _Tags:_ `database`, `operations`, `patching`
 
@@ -1167,11 +950,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `12.2` | Establish and Maintain a Secure Network Architecture |
-| `iso27001` | `A.8.20` | Networks security |
-| `iso27001` | `A.8.22` | Segregation of networks |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `database`, `network`, `segmentation`
 
@@ -1191,11 +969,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `11.3` | Protect Recovery Data |
-| `iso27001` | `A.8.13` | Information backup |
-| `iso27001` | `A.8.14` | Redundancy of information processing facilities |
-| `soc2` | `A1.2` | Backup and Recovery Infrastructure |
-| `soc2` | `CC7.5` | Recovery from Security Incidents |
 
 _Tags:_ `availability`, `database`
 
@@ -1215,9 +988,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `3.10` | Encrypt Sensitive Data in Transit |
-| `iso27001` | `A.8.24` | Use of cryptography |
-| `soc2` | `CC6.7` | Transmission, Movement, and Disposal of Information |
 
 _Tags:_ `database`, `encryption-in-transit`, `tls`
 
@@ -1237,10 +1007,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `3.10` | Encrypt Sensitive Data in Transit |
-| `iso27001` | `A.8.24` | Use of cryptography |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.7` | Transmission, Movement, and Disposal of Information |
 
 _Tags:_ `ca-hygiene`, `dns`, `tls`
 
@@ -1260,10 +1026,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `3.10` | Encrypt Sensitive Data in Transit |
-| `iso27001` | `A.8.24` | Use of cryptography |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.7` | Transmission, Movement, and Disposal of Information |
 
 _Tags:_ `ca-hygiene`, `dns`, `tls`
 
@@ -1283,10 +1045,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `9.1` | Ensure Use of Only Fully Supported Browsers and Email Clients |
-| `cis-v8` | `9.2` | Use DNS Filtering Services |
-| `iso27001` | `A.5.14` | Information transfer |
-| `soc2` | `CC6.7` | Transmission, Movement, and Disposal of Information |
 
 _Tags:_ `dns`, `email-auth`, `spoofing`
 
@@ -1306,11 +1064,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `9.1` | Ensure Use of Only Fully Supported Browsers and Email Clients |
-| `cis-v8` | `9.2` | Use DNS Filtering Services |
-| `iso27001` | `A.5.14` | Information transfer |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.7` | Transmission, Movement, and Disposal of Information |
 
 _Tags:_ `dns`, `email-auth`, `spoofing`
 
@@ -1330,11 +1083,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `11.2` | Perform Automated Backups |
-| `iso27001` | `A.5.30` | ICT readiness for business continuity |
-| `iso27001` | `A.8.13` | Information backup |
-| `soc2` | `A1.2` | Backup and Recovery Infrastructure |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `backup`, `recovery`
 
@@ -1354,10 +1102,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `8.11` | Conduct Audit Log Reviews |
-| `iso27001` | `A.8.16` | Monitoring activities |
-| `soc2` | `CC7.2` | System Component Monitoring |
-| `soc2` | `CC7.3` | Security Incident Evaluation |
 
 _Tags:_ `alerting`, `droplet`, `monitoring`
 
@@ -1377,11 +1121,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `12.2` | Establish and Maintain a Secure Network Architecture |
-| `cis-v8` | `4.4` | Implement and Manage a Firewall on Servers |
-| `iso27001` | `A.8.21` | Security of network services |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `cross-resource`, `exposure`, `network`
 
@@ -1401,10 +1140,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `1.1` | Establish and Maintain Detailed Enterprise Asset Inventory |
-| `iso27001` | `A.5.9` | Inventory of information and other associated assets |
-| `soc2` | `CC1.4` | Commitment to Competence |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
 
 _Tags:_ `attribution`, `inventory`
 
@@ -1424,12 +1159,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `12.2` | Establish and Maintain a Secure Network Architecture |
-| `cis-v8` | `12.4` | Establish and Maintain Architecture Diagram(s) |
-| `iso27001` | `A.8.20` | Networks security |
-| `iso27001` | `A.8.22` | Segregation of networks |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `droplet`, `network`, `segmentation`
 
@@ -1449,11 +1178,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `7.5` | Perform Automated Vulnerability Scans of Internal Enterprise Assets |
-| `iso27001` | `A.8.19` | Installation of software on operational systems |
-| `iso27001` | `A.8.8` | Management of technical vulnerabilities |
-| `soc2` | `CC7.1` | Detection and Monitoring of Vulnerabilities |
-| `soc2` | `CC7.2` | System Component Monitoring |
 
 _Tags:_ `patching`, `vulnerability`
 
@@ -1473,12 +1197,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `12.2` | Establish and Maintain a Secure Network Architecture |
-| `cis-v8` | `12.4` | Establish and Maintain Architecture Diagram(s) |
-| `iso27001` | `A.8.20` | Networks security |
-| `iso27001` | `A.8.22` | Segregation of networks |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `droplet`, `network`, `private-networking`
 
@@ -1498,10 +1216,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `1.1` | Establish and Maintain Detailed Enterprise Asset Inventory |
-| `cis-v8` | `1.2` | Address Unauthorized Assets |
-| `iso27001` | `A.5.9` | Inventory of information and other associated assets |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
 
 _Tags:_ `droplet`, `hygiene`
 
@@ -1521,12 +1235,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `12.2` | Establish and Maintain a Secure Network Architecture |
-| `cis-v8` | `4.5` | Implement and Manage a Firewall on End-User Devices |
-| `iso27001` | `A.8.20` | Networks security |
-| `iso27001` | `A.8.22` | Segregation of networks |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `catastrophic`, `exposure`, `network`
 
@@ -1546,11 +1254,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `12.2` | Establish and Maintain a Secure Network Architecture |
-| `cis-v8` | `4.4` | Implement and Manage a Firewall on Servers |
-| `iso27001` | `A.8.20` | Networks security |
-| `iso27001` | `A.8.22` | Segregation of networks |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `exposure`, `network`, `port-hygiene`
 
@@ -1570,9 +1273,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `1.1` | Establish and Maintain Detailed Enterprise Asset Inventory |
-| `iso27001` | `A.5.9` | Inventory of information and other associated assets |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `hygiene`, `network`
 
@@ -1592,12 +1292,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `13.4` | Perform Traffic Filtering Between Network Segments |
-| `cis-v8` | `13.6` | Collect Network Traffic Flow Logs |
-| `iso27001` | `A.8.21` | Security of network services |
-| `iso27001` | `A.8.22` | Segregation of networks |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.7` | Transmission, Movement, and Disposal of Information |
 
 _Tags:_ `egress`, `exfiltration`, `network`
 
@@ -1617,12 +1311,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `12.2` | Establish and Maintain a Secure Network Architecture |
-| `cis-v8` | `4.4` | Implement and Manage a Firewall on Servers |
-| `iso27001` | `A.8.20` | Networks security |
-| `iso27001` | `A.8.21` | Security of network services |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `exposure`, `network`, `rdp`
 
@@ -1642,11 +1330,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `12.2` | Establish and Maintain a Secure Network Architecture |
-| `cis-v8` | `4.4` | Implement and Manage a Firewall on Servers |
-| `iso27001` | `A.8.21` | Security of network services |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `exposure`, `network`, `ssh`
 
@@ -1666,9 +1349,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `1.1` | Establish and Maintain Detailed Enterprise Asset Inventory |
-| `iso27001` | `A.5.9` | Inventory of information and other associated assets |
-| `soc2` | `CC9.1` | Identifies and Mitigates Business Disruptions |
 
 _Tags:_ `functions`, `hygiene`
 
@@ -1688,9 +1368,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `1.1` | Establish and Maintain Detailed Enterprise Asset Inventory |
-| `iso27001` | `A.5.9` | Inventory of information and other associated assets |
-| `soc2` | `CC9.1` | Identifies and Mitigates Business Disruptions |
 
 _Tags:_ `functions`, `hygiene`
 
@@ -1710,10 +1387,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `5.4` | Restrict Administrator Privileges to Dedicated Administrator Accounts |
-| `iso27001` | `A.5.15` | Access control |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.3` | Authorization, Modification, and Removal |
 
 _Tags:_ `credential-hygiene`, `functions`
 
@@ -1733,10 +1406,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `3.3` | Configure Data Access Control Lists |
-| `iso27001` | `A.8.3` | Information access restriction |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `data-exposure`, `images`
 
@@ -1756,9 +1425,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `7.4` | Perform Automated Application Patch Management |
-| `iso27001` | `A.8.8` | Management of technical vulnerabilities |
-| `soc2` | `CC7.1` | Detection and Monitoring of Vulnerabilities |
 
 _Tags:_ `images`, `patching`
 
@@ -1778,9 +1444,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `8.11` | Conduct Audit Log Reviews |
-| `iso27001` | `A.8.16` | Monitoring activities |
-| `soc2` | `CC7.2` | System Component Monitoring |
 
 _Tags:_ `healthcheck`, `lb`
 
@@ -1800,10 +1463,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `3.10` | Encrypt Sensitive Data in Transit |
-| `iso27001` | `A.8.24` | Use of cryptography |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.7` | Transmission, Movement, and Disposal of Information |
 
 _Tags:_ `encryption-in-transit`, `lb`, `tls`
 
@@ -1823,12 +1482,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `12.2` | Establish and Maintain a Secure Network Architecture |
-| `cis-v8` | `12.4` | Establish and Maintain Architecture Diagram(s) |
-| `iso27001` | `A.8.20` | Networks security |
-| `iso27001` | `A.8.22` | Segregation of networks |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `lb`, `network`, `segmentation`
 
@@ -1848,9 +1501,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `1.1` | Establish and Maintain Detailed Enterprise Asset Inventory |
-| `iso27001` | `A.5.9` | Inventory of information and other associated assets |
-| `soc2` | `CC7.4` | Incident Response |
 
 _Tags:_ `hygiene`, `lb`
 
@@ -1870,12 +1520,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `12.6` | Use of Secure Network Management and Communication Protocols |
-| `cis-v8` | `3.10` | Encrypt Sensitive Data in Transit |
-| `iso27001` | `A.8.20` | Networks security |
-| `iso27001` | `A.8.24` | Use of cryptography |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.7` | Transmission, Movement, and Disposal of Information |
 
 _Tags:_ `encryption-in-transit`, `lb`, `tls`
 
@@ -1895,9 +1539,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `8.11` | Conduct Audit Log Reviews |
-| `iso27001` | `A.8.16` | Monitoring activities |
-| `soc2` | `CC7.2` | System Component Monitoring |
 
 _Tags:_ `alerting`, `hygiene`, `monitoring`
 
@@ -1917,10 +1558,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `8.11` | Conduct Audit Log Reviews |
-| `iso27001` | `A.8.16` | Monitoring activities |
-| `soc2` | `CC7.2` | System Component Monitoring |
-| `soc2` | `CC7.3` | Security Incident Evaluation |
 
 _Tags:_ `alerting`, `monitoring`
 
@@ -1940,9 +1577,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `1.1` | Establish and Maintain Detailed Enterprise Asset Inventory |
-| `iso27001` | `A.5.9` | Inventory of information and other associated assets |
-| `soc2` | `CC1.4` | Commitment to Competence |
 
 _Tags:_ `projects`
 
@@ -1962,9 +1596,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `1.1` | Establish and Maintain Detailed Enterprise Asset Inventory |
-| `iso27001` | `A.5.9` | Inventory of information and other associated assets |
-| `soc2` | `CC1.4` | Commitment to Competence |
 
 _Tags:_ `projects`
 
@@ -1984,9 +1615,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `1.1` | Establish and Maintain Detailed Enterprise Asset Inventory |
-| `iso27001` | `A.5.9` | Inventory of information and other associated assets |
-| `soc2` | `CC9.1` | Identifies and Mitigates Business Disruptions |
 
 _Tags:_ `cost`, `hygiene`, `registry`
 
@@ -2006,9 +1634,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `3.5` | Securely Dispose of Data |
-| `iso27001` | `A.5.9` | Inventory of information and other associated assets |
-| `soc2` | `CC9.1` | Identifies and Mitigates Business Disruptions |
 
 _Tags:_ `cost`, `hygiene`, `registry`
 
@@ -2028,9 +1653,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `11.1` | Establish and Maintain a Data Recovery Process |
-| `iso27001` | `A.8.6` | Capacity management |
-| `soc2` | `A1.2` | Backup and Recovery Infrastructure |
 
 _Tags:_ `capacity`, `registry`
 
@@ -2050,9 +1672,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `1.1` | Establish and Maintain Detailed Enterprise Asset Inventory |
-| `iso27001` | `A.5.9` | Inventory of information and other associated assets |
-| `soc2` | `CC1.4` | Commitment to Competence |
 
 _Tags:_ `projects`, `reserved-ip`
 
@@ -2072,9 +1691,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `1.1` | Establish and Maintain Detailed Enterprise Asset Inventory |
-| `iso27001` | `A.5.9` | Inventory of information and other associated assets |
-| `soc2` | `CC9.1` | Identifies and Mitigates Business Disruptions |
 
 _Tags:_ `cost`, `hygiene`, `reserved-ip`
 
@@ -2094,9 +1710,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `1.1` | Establish and Maintain Detailed Enterprise Asset Inventory |
-| `iso27001` | `A.8.13` | Information backup |
-| `soc2` | `CC9.1` | Identifies and Mitigates Business Disruptions |
 
 _Tags:_ `hygiene`, `snapshot`
 
@@ -2116,10 +1729,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `11.2` | Perform Automated Backups |
-| `cis-v8` | `11.5` | Test Data Recovery |
-| `iso27001` | `A.8.13` | Information backup |
-| `soc2` | `A1.2` | Backup and Recovery Infrastructure |
 
 _Tags:_ `cost`, `hygiene`, `snapshot`
 
@@ -2139,10 +1748,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `3.3` | Configure Data Access Control Lists |
-| `iso27001` | `A.8.20` | Networks security |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `cors`, `exposure`, `spaces`
 
@@ -2162,9 +1767,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `3.11` | Encrypt Sensitive Data at Rest |
-| `iso27001` | `A.8.24` | Use of cryptography |
-| `soc2` | `CC6.7` | Transmission, Movement, and Disposal of Information |
 
 _Tags:_ `encryption-at-rest`, `spaces`
 
@@ -2184,9 +1786,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `3.5` | Securely Dispose of Data |
-| `iso27001` | `A.5.9` | Inventory of information and other associated assets |
-| `soc2` | `CC9.1` | Identifies and Mitigates Business Disruptions |
 
 _Tags:_ `cost`, `hygiene`, `spaces`
 
@@ -2206,10 +1805,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `8.10` | Retain Audit Logs |
-| `cis-v8` | `8.5` | Collect Detailed Audit Logs |
-| `iso27001` | `A.8.15` | Logging |
-| `soc2` | `CC7.2` | System Component Monitoring |
 
 _Tags:_ `audit-logging`, `spaces`
 
@@ -2229,11 +1824,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `11.2` | Perform Automated Backups |
-| `iso27001` | `A.8.13` | Information backup |
-| `iso27001` | `A.8.14` | Redundancy of information processing facilities |
-| `soc2` | `A1.2` | Backup and Recovery Infrastructure |
-| `soc2` | `CC7.4` | Incident Response |
 
 _Tags:_ `backup`, `recovery`, `spaces`
 
@@ -2253,12 +1843,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `3.11` | Encrypt Sensitive Data at Rest |
-| `cis-v8` | `3.3` | Configure Data Access Control Lists |
-| `iso27001` | `A.5.10` | Acceptable use of information and other associated assets |
-| `iso27001` | `A.8.3` | Information access restriction |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `data-exposure`, `public-access`, `spaces`
 
@@ -2278,12 +1862,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `3.3` | Configure Data Access Control Lists |
-| `cis-v8` | `6.7` | Centralize Access Control |
-| `iso27001` | `A.5.15` | Access control |
-| `iso27001` | `A.8.2` | Privileged access rights |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.3` | Authorization, Modification, and Removal |
 
 _Tags:_ `key-scope`, `least-privilege`, `spaces`
 
@@ -2303,12 +1881,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `5.3` | Disable Dormant Accounts |
-| `cis-v8` | `6.1` | Establish an Access Granting Process |
-| `iso27001` | `A.5.16` | Identity management |
-| `iso27001` | `A.5.17` | Authentication information |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.7` | Transmission, Movement, and Disposal of Information |
 
 _Tags:_ `credential-rotation`, `spaces`
 
@@ -2328,12 +1900,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `5.3` | Disable Dormant Accounts |
-| `cis-v8` | `6.7` | Centralize Access Control |
-| `iso27001` | `A.5.16` | Identity management |
-| `iso27001` | `A.8.2` | Privileged access rights |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.3` | Authorization, Modification, and Removal |
 
 _Tags:_ `credential-hygiene`, `ssh-keys`
 
@@ -2353,12 +1919,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `3.10` | Encrypt Sensitive Data in Transit |
-| `cis-v8` | `5.4` | Restrict Administrator Privileges to Dedicated Administrator Accounts |
-| `iso27001` | `A.8.24` | Use of cryptography |
-| `iso27001` | `A.8.5` | Secure authentication |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.7` | Transmission, Movement, and Disposal of Information |
 
 _Tags:_ `crypto-agility`, `ssh-keys`
 
@@ -2378,10 +1938,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `1.1` | Establish and Maintain Detailed Enterprise Asset Inventory |
-| `cis-v8` | `1.2` | Address Unauthorized Assets |
-| `iso27001` | `A.5.9` | Inventory of information and other associated assets |
-| `soc2` | `CC9.1` | Identifies and Mitigates Business Disruptions |
 
 _Tags:_ `cost`, `hygiene`, `volume`
 
@@ -2401,9 +1957,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `1.1` | Establish and Maintain Detailed Enterprise Asset Inventory |
-| `iso27001` | `A.5.9` | Inventory of information and other associated assets |
-| `soc2` | `CC9.1` | Identifies and Mitigates Business Disruptions |
 
 _Tags:_ `hygiene`, `volume`
 
@@ -2423,12 +1976,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `12.2` | Establish and Maintain a Secure Network Architecture |
-| `cis-v8` | `12.4` | Establish and Maintain Architecture Diagram(s) |
-| `iso27001` | `A.8.20` | Networks security |
-| `iso27001` | `A.8.22` | Segregation of networks |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `network`, `segmentation`
 
@@ -2448,9 +1995,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `1.1` | Establish and Maintain Detailed Enterprise Asset Inventory |
-| `iso27001` | `A.5.9` | Inventory of information and other associated assets |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `hygiene`, `network`
 
@@ -2470,9 +2014,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `12.2` | Establish and Maintain a Secure Network Architecture |
-| `iso27001` | `A.8.22` | Segregation of networks |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `hygiene`, `network`, `peering`
 
@@ -2494,10 +2035,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `3.11` | Encrypt Sensitive Data at Rest |
-| `iso27001` | `A.8.24` | Use of cryptography |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.7` | Transmission, Movement, and Disposal of Information |
 
 _Tags:_ `bigquery`, `cmek`, `encryption`
 
@@ -2517,11 +2054,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `3.3` | Configure Data Access Control Lists |
-| `iso27001` | `A.5.10` | Acceptable use of information and other associated assets |
-| `iso27001` | `A.8.3` | Information access restriction |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.3` | Authorization, Modification, and Removal |
 
 _Tags:_ `bigquery`, `data-exposure`, `public-access`
 
@@ -2541,12 +2073,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `3.11` | Encrypt Sensitive Data at Rest |
-| `cis-v8` | `3.3` | Configure Data Access Control Lists |
-| `iso27001` | `A.5.10` | Acceptable use of information and other associated assets |
-| `iso27001` | `A.8.3` | Information access restriction |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `bigquery`, `data-exposure`, `public-access`
 
@@ -2566,12 +2092,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `5.4` | Restrict Administrator Privileges to Dedicated Administrator Accounts |
-| `cis-v8` | `6.7` | Centralize Access Control |
-| `iso27001` | `A.5.15` | Access control |
-| `iso27001` | `A.8.2` | Privileged access rights |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.3` | Authorization, Modification, and Removal |
 
 _Tags:_ `compute`, `least-privilege`, `service-account`
 
@@ -2591,11 +2111,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `12.2` | Establish and Maintain a Secure Network Architecture |
-| `cis-v8` | `4.4` | Implement and Manage a Firewall on Servers |
-| `iso27001` | `A.8.20` | Networks security |
-| `iso27001` | `A.8.22` | Segregation of networks |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `compute`, `network`
 
@@ -2615,12 +2130,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `12.2` | Establish and Maintain a Secure Network Architecture |
-| `cis-v8` | `4.4` | Implement and Manage a Firewall on Servers |
-| `iso27001` | `A.8.20` | Networks security |
-| `iso27001` | `A.8.21` | Security of network services |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `compute`, `exposure`, `firewall`, `ssh`
 
@@ -2640,12 +2149,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `5.4` | Restrict Administrator Privileges to Dedicated Administrator Accounts |
-| `cis-v8` | `6.5` | Require MFA for Administrative Access |
-| `iso27001` | `A.8.2` | Privileged access rights |
-| `iso27001` | `A.8.5` | Secure authentication |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `compute`, `iam`, `ssh`
 
@@ -2665,12 +2168,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `3.10` | Encrypt Sensitive Data in Transit |
-| `cis-v8` | `4.1` | Establish and Maintain a Secure Configuration Process |
-| `iso27001` | `A.8.7` | Protection against malware |
-| `iso27001` | `A.8.8` | Management of technical vulnerabilities |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
-| `soc2` | `CC7.1` | Detection and Monitoring of Vulnerabilities |
 
 _Tags:_ `boot-integrity`, `compute`, `shielded-vm`
 
@@ -2690,12 +2187,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `8.10` | Retain Audit Logs |
-| `cis-v8` | `8.5` | Collect Detailed Audit Logs |
-| `iso27001` | `A.8.15` | Logging |
-| `iso27001` | `A.8.16` | Monitoring activities |
-| `soc2` | `CC7.2` | System Component Monitoring |
-| `soc2` | `CC7.3` | Security Incident Evaluation |
 
 _Tags:_ `audit-logging`, `iam`
 
@@ -2715,12 +2206,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `5.4` | Restrict Administrator Privileges to Dedicated Administrator Accounts |
-| `cis-v8` | `6.7` | Centralize Access Control |
-| `iso27001` | `A.5.15` | Access control |
-| `iso27001` | `A.8.2` | Privileged access rights |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.3` | Authorization, Modification, and Removal |
 
 _Tags:_ `iam`, `impersonation`, `service-account`
 
@@ -2740,12 +2225,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `5.4` | Restrict Administrator Privileges to Dedicated Administrator Accounts |
-| `cis-v8` | `6.7` | Centralize Access Control |
-| `iso27001` | `A.5.15` | Access control |
-| `iso27001` | `A.8.2` | Privileged access rights |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.3` | Authorization, Modification, and Removal |
 
 _Tags:_ `default-sa`, `iam`, `service-account`
 
@@ -2765,12 +2244,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `5.4` | Restrict Administrator Privileges to Dedicated Administrator Accounts |
-| `cis-v8` | `6.7` | Centralize Access Control |
-| `iso27001` | `A.5.15` | Access control |
-| `iso27001` | `A.8.2` | Privileged access rights |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.3` | Authorization, Modification, and Removal |
 
 _Tags:_ `iam`, `least-privilege`, `primitive-roles`
 
@@ -2790,9 +2263,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `5.4` | Restrict Administrator Privileges to Dedicated Administrator Accounts |
-| `iso27001` | `A.8.5` | Secure authentication |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
 
 _Tags:_ `credentials`, `iam`, `service-account`
 
@@ -2812,10 +2282,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `5.4` | Restrict Administrator Privileges to Dedicated Administrator Accounts |
-| `iso27001` | `A.8.2` | Privileged access rights |
-| `iso27001` | `A.8.5` | Secure authentication |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
 
 _Tags:_ `credentials`, `iam`, `rotation`, `service-account`
 
@@ -2835,12 +2301,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `6.7` | Centralize Access Control |
-| `cis-v8` | `6.8` | Define and Maintain Role-Based Access Control |
-| `iso27001` | `A.5.15` | Access control |
-| `iso27001` | `A.8.2` | Privileged access rights |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.3` | Authorization, Modification, and Removal |
 
 _Tags:_ `kms`, `least-privilege`, `separation-of-duties`
 
@@ -2860,10 +2320,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `3.11` | Encrypt Sensitive Data at Rest |
-| `iso27001` | `A.8.24` | Use of cryptography |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.7` | Transmission, Movement, and Disposal of Information |
 
 _Tags:_ `key-management`, `kms`, `rotation`
 
@@ -2883,10 +2339,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `8.10` | Retain Audit Logs |
-| `iso27001` | `A.8.15` | Logging |
-| `soc2` | `CC7.2` | System Component Monitoring |
-| `soc2` | `CC7.3` | Security Incident Evaluation |
 
 _Tags:_ `audit-trail`, `logging`, `retention`
 
@@ -2906,12 +2358,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `8.10` | Retain Audit Logs |
-| `cis-v8` | `8.2` | Collect Audit Logs |
-| `iso27001` | `A.8.15` | Logging |
-| `iso27001` | `A.8.16` | Monitoring activities |
-| `soc2` | `CC7.2` | System Component Monitoring |
-| `soc2` | `CC7.3` | Security Incident Evaluation |
 
 _Tags:_ `audit-trail`, `logging`, `retention`
 
@@ -2931,12 +2377,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `11.2` | Perform Automated Backups |
-| `cis-v8` | `11.3` | Protect Recovery Data |
-| `iso27001` | `A.8.13` | Information backup |
-| `iso27001` | `A.8.14` | Redundancy of information processing facilities |
-| `soc2` | `A1.2` | Backup and Recovery Infrastructure |
-| `soc2` | `CC7.4` | Incident Response |
 
 _Tags:_ `backup`, `recovery`, `sql`
 
@@ -2956,10 +2396,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `11.2` | Perform Automated Backups |
-| `iso27001` | `A.8.13` | Information backup |
-| `soc2` | `A1.2` | Backup and Recovery Infrastructure |
-| `soc2` | `CC7.4` | Incident Response |
 
 _Tags:_ `data-protection`, `recovery`, `sql`
 
@@ -2979,12 +2415,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `12.6` | Use of Secure Network Management and Communication Protocols |
-| `cis-v8` | `3.3` | Configure Data Access Control Lists |
-| `iso27001` | `A.8.20` | Networks security |
-| `iso27001` | `A.8.22` | Segregation of networks |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `network-exposure`, `public-access`, `sql`
 
@@ -3004,10 +2434,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `8.10` | Retain Audit Logs |
-| `cis-v8` | `8.5` | Collect Detailed Audit Logs |
-| `iso27001` | `A.8.15` | Logging |
-| `soc2` | `CC7.2` | System Component Monitoring |
 
 _Tags:_ `audit-logging`, `storage`
 
@@ -3027,12 +2453,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `3.11` | Encrypt Sensitive Data at Rest |
-| `cis-v8` | `3.3` | Configure Data Access Control Lists |
-| `iso27001` | `A.8.20` | Networks security |
-| `iso27001` | `A.8.3` | Information access restriction |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `data-exposure`, `public-access`, `storage`
 
@@ -3052,11 +2472,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `3.3` | Configure Data Access Control Lists |
-| `iso27001` | `A.8.20` | Networks security |
-| `iso27001` | `A.8.3` | Information access restriction |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `data-exposure`, `iam`, `storage`
 
@@ -3076,11 +2491,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `11.2` | Perform Automated Backups |
-| `iso27001` | `A.8.13` | Information backup |
-| `iso27001` | `A.8.14` | Redundancy of information processing facilities |
-| `soc2` | `A1.2` | Backup and Recovery Infrastructure |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `backup`, `recovery`, `storage`
 
@@ -3102,10 +2512,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `4.5` | Implement and Manage a Firewall on End-User Devices |
-| `iso27001` | `A.8.20` | Networks security |
-| `iso27001` | `A.8.22` | Segregation of networks |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `catastrophic`, `exposure`, `firewall`
 
@@ -3125,9 +2531,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `1.1` | Establish and Maintain Detailed Enterprise Asset Inventory |
-| `iso27001` | `A.5.9` | Inventory of information and other associated assets |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `firewall`, `hygiene`
 
@@ -3147,11 +2550,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `12.2` | Establish and Maintain a Secure Network Architecture |
-| `cis-v8` | `4.4` | Implement and Manage a Firewall on Servers |
-| `iso27001` | `A.8.21` | Security of network services |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `exposure`, `firewall`, `ssh`
 
@@ -3171,9 +2569,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `1.1` | Establish and Maintain Detailed Enterprise Asset Inventory |
-| `iso27001` | `A.5.9` | Inventory of information and other associated assets |
-| `soc2` | `CC9.1` | Identifies and Mitigates Business Disruptions |
 
 _Tags:_ `cost`, `floating-ip`, `hygiene`
 
@@ -3193,9 +2588,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `3.10` | Encrypt Sensitive Data in Transit |
-| `iso27001` | `A.8.24` | Use of cryptography |
-| `soc2` | `CC6.7` | Transmission, Movement, and Disposal of Information |
 
 _Tags:_ `encryption-in-transit`, `lb`, `tls`
 
@@ -3215,9 +2607,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `3.10` | Encrypt Sensitive Data in Transit |
-| `iso27001` | `A.8.24` | Use of cryptography |
-| `soc2` | `CC6.7` | Transmission, Movement, and Disposal of Information |
 
 _Tags:_ `encryption-in-transit`, `lb`, `tls`
 
@@ -3237,10 +2626,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `12.2` | Establish and Maintain a Secure Network Architecture |
-| `iso27001` | `A.8.20` | Networks security |
-| `iso27001` | `A.8.22` | Segregation of networks |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `addressing`, `network`
 
@@ -3260,9 +2645,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `1.1` | Establish and Maintain Detailed Enterprise Asset Inventory |
-| `iso27001` | `A.5.9` | Inventory of information and other associated assets |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `hygiene`, `network`
 
@@ -3282,9 +2664,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `1.1` | Establish and Maintain Detailed Enterprise Asset Inventory |
-| `iso27001` | `A.5.9` | Inventory of information and other associated assets |
-| `soc2` | `CC9.1` | Identifies and Mitigates Business Disruptions |
 
 _Tags:_ `hygiene`, `server`
 
@@ -3304,11 +2683,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `11.2` | Perform Automated Backups |
-| `iso27001` | `A.8.13` | Information backup |
-| `iso27001` | `A.8.14` | Redundancy of information processing facilities |
-| `soc2` | `A1.2` | Backup and Recovery Infrastructure |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `backup`, `recovery`, `server`
 
@@ -3328,9 +2702,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `1.1` | Establish and Maintain Detailed Enterprise Asset Inventory |
-| `iso27001` | `A.5.9` | Inventory of information and other associated assets |
-| `soc2` | `CC9.1` | Identifies and Mitigates Business Disruptions |
 
 _Tags:_ `cost`, `hygiene`, `server`
 
@@ -3350,9 +2721,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `7.4` | Perform Automated Application Patch Management |
-| `iso27001` | `A.8.8` | Management of technical vulnerabilities |
-| `soc2` | `CC7.1` | Detection and Monitoring of Vulnerabilities |
 
 _Tags:_ `patching`, `server`, `supply-chain`
 
@@ -3372,9 +2740,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `1.1` | Establish and Maintain Detailed Enterprise Asset Inventory |
-| `iso27001` | `A.5.9` | Inventory of information and other associated assets |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
 
 _Tags:_ `ops-hygiene`, `server`
 
@@ -3394,9 +2759,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `1.1` | Establish and Maintain Detailed Enterprise Asset Inventory |
-| `iso27001` | `A.5.9` | Inventory of information and other associated assets |
-| `soc2` | `CC9.1` | Identifies and Mitigates Business Disruptions |
 
 _Tags:_ `cost`, `hygiene`, `volume`
 
@@ -3416,9 +2778,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `1.1` | Establish and Maintain Detailed Enterprise Asset Inventory |
-| `iso27001` | `A.5.9` | Inventory of information and other associated assets |
-| `soc2` | `CC9.1` | Identifies and Mitigates Business Disruptions |
 
 _Tags:_ `hygiene`, `volume`
 
@@ -3440,11 +2799,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `3.11` | Encrypt Sensitive Data at Rest |
-| `iso27001` | `A.8.10` | Information deletion |
-| `iso27001` | `A.8.24` | Use of cryptography |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.7` | Transmission, Movement, and Disposal of Information |
 
 _Tags:_ `configmap`, `k8s`, `secrets`
 
@@ -3464,9 +2818,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `4.7` | Manage Default Accounts on Enterprise Assets and Software |
-| `iso27001` | `A.8.6` | Capacity management |
-| `soc2` | `A1.1` | Capacity Management |
 
 _Tags:_ `configmap`, `k8s`, `size`
 
@@ -3486,10 +2837,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `8.11` | Conduct Audit Log Reviews |
-| `iso27001` | `A.8.32` | Change management |
-| `soc2` | `A1.1` | Capacity Management |
-| `soc2` | `CC7.3` | Security Incident Evaluation |
 
 _Tags:_ `cron`, `jobs`, `k8s`
 
@@ -3509,10 +2856,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `8.11` | Conduct Audit Log Reviews |
-| `iso27001` | `A.8.6` | Capacity management |
-| `soc2` | `A1.1` | Capacity Management |
-| `soc2` | `CC7.3` | Security Incident Evaluation |
 
 _Tags:_ `cron`, `etcd-hygiene`, `jobs`, `k8s`
 
@@ -3532,10 +2875,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `8.11` | Conduct Audit Log Reviews |
-| `iso27001` | `A.8.16` | Monitoring activities |
-| `soc2` | `A1.1` | Capacity Management |
-| `soc2` | `CC7.3` | Security Incident Evaluation |
 
 _Tags:_ `cron`, `jobs`, `k8s`
 
@@ -3555,11 +2894,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `6.7` | Centralize Access Control |
-| `iso27001` | `A.5.15` | Access control |
-| `iso27001` | `A.8.2` | Privileged access rights |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `control-plane`, `controllers`, `k8s`
 
@@ -3579,11 +2913,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `11.2` | Perform Automated Backups |
-| `iso27001` | `A.5.30` | ICT readiness for business continuity |
-| `iso27001` | `A.8.14` | Redundancy of information processing facilities |
-| `soc2` | `A1.1` | Capacity Management |
-| `soc2` | `A1.2` | Backup and Recovery Infrastructure |
 
 _Tags:_ `controllers`, `ha`, `k8s`
 
@@ -3603,12 +2932,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `11.2` | Perform Automated Backups |
-| `cis-v8` | `12.5` | Centralize Network Authentication, Authorization, and Auditing (AAA) |
-| `iso27001` | `A.5.30` | ICT readiness for business continuity |
-| `iso27001` | `A.8.14` | Redundancy of information processing facilities |
-| `soc2` | `A1.1` | Capacity Management |
-| `soc2` | `A1.2` | Backup and Recovery Infrastructure |
 
 _Tags:_ `controllers`, `ha`, `k8s`
 
@@ -3628,12 +2951,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `11.2` | Perform Automated Backups |
-| `cis-v8` | `12.5` | Centralize Network Authentication, Authorization, and Auditing (AAA) |
-| `iso27001` | `A.5.30` | ICT readiness for business continuity |
-| `iso27001` | `A.8.14` | Redundancy of information processing facilities |
-| `soc2` | `A1.1` | Capacity Management |
-| `soc2` | `A1.2` | Backup and Recovery Infrastructure |
 
 _Tags:_ `controllers`, `ha`, `k8s`
 
@@ -3653,10 +2970,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `4.7` | Manage Default Accounts on Enterprise Assets and Software |
-| `iso27001` | `A.8.32` | Change management |
-| `soc2` | `A1.1` | Capacity Management |
-| `soc2` | `CC8.1` | Change Management Process |
 
 _Tags:_ `controllers`, `k8s`, `rollout`
 
@@ -3676,9 +2989,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `7.4` | Perform Automated Application Patch Management |
-| `iso27001` | `A.8.8` | Management of technical vulnerabilities |
-| `soc2` | `CC7.1` | Detection and Monitoring of Vulnerabilities |
 
 _Tags:_ `doks`, `k8s`, `upgrade`
 
@@ -3698,10 +3008,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `8.11` | Conduct Audit Log Reviews |
-| `iso27001` | `A.8.16` | Monitoring activities |
-| `soc2` | `A1.1` | Capacity Management |
-| `soc2` | `CC7.3` | Security Incident Evaluation |
 
 _Tags:_ `doks`, `k8s`, `reliability`
 
@@ -3721,10 +3027,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `11.2` | Perform Automated Backups |
-| `iso27001` | `A.8.14` | Redundancy of information processing facilities |
-| `soc2` | `A1.1` | Capacity Management |
-| `soc2` | `A1.2` | Backup and Recovery Infrastructure |
 
 _Tags:_ `doks`, `ha`, `k8s`
 
@@ -3744,9 +3046,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `7.4` | Perform Automated Application Patch Management |
-| `iso27001` | `A.8.16` | Monitoring activities |
-| `soc2` | `CC7.3` | Security Incident Evaluation |
 
 _Tags:_ `doks`, `k8s`, `upgrade`
 
@@ -3766,10 +3065,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `4.7` | Manage Default Accounts on Enterprise Assets and Software |
-| `iso27001` | `A.8.6` | Capacity management |
-| `soc2` | `A1.1` | Capacity Management |
-| `soc2` | `CC7.3` | Security Incident Evaluation |
 
 _Tags:_ `autoscale`, `doks`, `k8s`, `nodepool`
 
@@ -3789,10 +3084,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `11.2` | Perform Automated Backups |
-| `iso27001` | `A.8.14` | Redundancy of information processing facilities |
-| `soc2` | `A1.1` | Capacity Management |
-| `soc2` | `A1.2` | Backup and Recovery Infrastructure |
 
 _Tags:_ `doks`, `ha`, `k8s`, `nodepool`
 
@@ -3812,9 +3103,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `6.8` | Define and Maintain Role-Based Access Control |
-| `iso27001` | `A.8.30` | Outsourced development |
-| `soc2` | `CC8.1` | Change Management Process |
 
 _Tags:_ `doks`, `k8s`, `registry`
 
@@ -3834,9 +3122,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `11.2` | Perform Automated Backups |
-| `iso27001` | `A.8.14` | Redundancy of information processing facilities |
-| `soc2` | `A1.1` | Capacity Management |
 
 _Tags:_ `doks`, `k8s`, `upgrade`
 
@@ -3856,11 +3141,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `12.4` | Establish and Maintain Architecture Diagram(s) |
-| `iso27001` | `A.8.20` | Networks security |
-| `iso27001` | `A.8.22` | Segregation of networks |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `doks`, `k8s`, `network`
 
@@ -3880,11 +3160,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `6.7` | Centralize Access Control |
-| `iso27001` | `A.5.15` | Access control |
-| `iso27001` | `A.8.2` | Privileged access rights |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.3` | Authorization, Modification, and Removal |
 
 _Tags:_ `auth`, `eks`, `k8s`
 
@@ -3904,10 +3179,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `8.11` | Conduct Audit Log Reviews |
-| `iso27001` | `A.8.16` | Monitoring activities |
-| `soc2` | `A1.1` | Capacity Management |
-| `soc2` | `CC7.3` | Security Incident Evaluation |
 
 _Tags:_ `eks`, `k8s`, `reliability`
 
@@ -3927,12 +3198,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `8.10` | Retain Audit Logs |
-| `cis-v8` | `8.5` | Collect Detailed Audit Logs |
-| `iso27001` | `A.8.15` | Logging |
-| `iso27001` | `A.8.16` | Monitoring activities |
-| `soc2` | `CC4.1` | Ongoing and Separate Evaluations |
-| `soc2` | `CC7.2` | System Component Monitoring |
 
 _Tags:_ `eks`, `k8s`, `logging`
 
@@ -3952,11 +3217,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `6.7` | Centralize Access Control |
-| `iso27001` | `A.5.15` | Access control |
-| `iso27001` | `A.8.2` | Privileged access rights |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.3` | Authorization, Modification, and Removal |
 
 _Tags:_ `eks`, `iam`, `irsa`, `k8s`
 
@@ -3976,12 +3236,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `4.1` | Establish and Maintain a Secure Configuration Process |
-| `cis-v8` | `4.7` | Manage Default Accounts on Enterprise Assets and Software |
-| `iso27001` | `A.8.8` | Management of technical vulnerabilities |
-| `iso27001` | `A.8.9` | Configuration management |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.8` | Prevention or Detection of Unauthorized or Malicious Software |
 
 _Tags:_ `ami`, `eks`, `k8s`, `nodegroup`
 
@@ -4001,10 +3255,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `4.1` | Establish and Maintain a Secure Configuration Process |
-| `iso27001` | `A.8.2` | Privileged access rights |
-| `iso27001` | `A.8.9` | Configuration management |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
 
 _Tags:_ `eks`, `imds`, `k8s`, `nodegroup`
 
@@ -4024,12 +3274,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `12.5` | Centralize Network Authentication, Authorization, and Auditing (AAA) |
-| `cis-v8` | `4.1` | Establish and Maintain a Secure Configuration Process |
-| `iso27001` | `A.8.2` | Privileged access rights |
-| `iso27001` | `A.8.20` | Networks security |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `eks`, `k8s`, `nodegroup`, `ssh`
 
@@ -4049,10 +3293,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `7.4` | Perform Automated Application Patch Management |
-| `iso27001` | `A.8.8` | Management of technical vulnerabilities |
-| `soc2` | `CC7.1` | Detection and Monitoring of Vulnerabilities |
-| `soc2` | `CC8.1` | Change Management Process |
 
 _Tags:_ `eks`, `k8s`, `nodegroup`, `upgrade`
 
@@ -4072,11 +3312,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `12.5` | Centralize Network Authentication, Authorization, and Auditing (AAA) |
-| `iso27001` | `A.8.20` | Networks security |
-| `iso27001` | `A.8.22` | Segregation of networks |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.7` | Transmission, Movement, and Disposal of Information |
 
 _Tags:_ `eks`, `endpoint`, `k8s`
 
@@ -4096,12 +3331,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `12.5` | Centralize Network Authentication, Authorization, and Auditing (AAA) |
-| `cis-v8` | `13.6` | Collect Network Traffic Flow Logs |
-| `iso27001` | `A.8.20` | Networks security |
-| `iso27001` | `A.8.22` | Segregation of networks |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `critical`, `eks`, `exposure`, `k8s`
 
@@ -4121,11 +3350,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `3.11` | Encrypt Sensitive Data at Rest |
-| `iso27001` | `A.8.10` | Information deletion |
-| `iso27001` | `A.8.24` | Use of cryptography |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.7` | Transmission, Movement, and Disposal of Information |
 
 _Tags:_ `eks`, `encryption`, `k8s`, `secrets`
 
@@ -4145,9 +3369,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `7.4` | Perform Automated Application Patch Management |
-| `iso27001` | `A.8.8` | Management of technical vulnerabilities |
-| `soc2` | `CC7.1` | Detection and Monitoring of Vulnerabilities |
 
 _Tags:_ `eks`, `k8s`, `upgrade`
 
@@ -4167,10 +3388,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `16.4` | Establish and Manage an Inventory of Third-Party Software Components |
-| `cis-v8` | `16.6` | Establish and Maintain a Severity Rating System and Process for Application Vulnerabilities |
-| `iso27001` | `A.8.30` | Outsourced development |
-| `soc2` | `CC8.1` | Change Management Process |
 
 _Tags:_ `gke`, `k8s`, `supply-chain`
 
@@ -4190,12 +3407,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `6.7` | Centralize Access Control |
-| `cis-v8` | `6.8` | Define and Maintain Role-Based Access Control |
-| `iso27001` | `A.5.15` | Access control |
-| `iso27001` | `A.8.2` | Privileged access rights |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.3` | Authorization, Modification, and Removal |
 
 _Tags:_ `gke`, `k8s`, `legacy`, `rbac`
 
@@ -4215,12 +3426,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `8.10` | Retain Audit Logs |
-| `cis-v8` | `8.5` | Collect Detailed Audit Logs |
-| `iso27001` | `A.8.15` | Logging |
-| `iso27001` | `A.8.16` | Monitoring activities |
-| `soc2` | `CC4.1` | Ongoing and Separate Evaluations |
-| `soc2` | `CC7.2` | System Component Monitoring |
 
 _Tags:_ `gke`, `k8s`, `logging`
 
@@ -4240,12 +3445,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `12.5` | Centralize Network Authentication, Authorization, and Auditing (AAA) |
-| `cis-v8` | `13.6` | Collect Network Traffic Flow Logs |
-| `iso27001` | `A.8.20` | Networks security |
-| `iso27001` | `A.8.22` | Segregation of networks |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `exposure`, `gke`, `k8s`
 
@@ -4265,12 +3464,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `12.4` | Establish and Maintain Architecture Diagram(s) |
-| `cis-v8` | `4.1` | Establish and Maintain a Secure Configuration Process |
-| `iso27001` | `A.8.20` | Networks security |
-| `iso27001` | `A.8.22` | Segregation of networks |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `gke`, `k8s`, `network-policy`
 
@@ -4290,10 +3483,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `8.11` | Conduct Audit Log Reviews |
-| `iso27001` | `A.8.16` | Monitoring activities |
-| `soc2` | `A1.1` | Capacity Management |
-| `soc2` | `CC7.3` | Security Incident Evaluation |
 
 _Tags:_ `gke`, `k8s`, `nodepool`, `reliability`
 
@@ -4313,10 +3502,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `7.4` | Perform Automated Application Patch Management |
-| `iso27001` | `A.8.8` | Management of technical vulnerabilities |
-| `soc2` | `CC7.1` | Detection and Monitoring of Vulnerabilities |
-| `soc2` | `CC8.1` | Change Management Process |
 
 _Tags:_ `gke`, `k8s`, `nodepool`, `upgrade`
 
@@ -4336,11 +3521,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `4.1` | Establish and Maintain a Secure Configuration Process |
-| `iso27001` | `A.8.2` | Privileged access rights |
-| `iso27001` | `A.8.8` | Management of technical vulnerabilities |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.8` | Prevention or Detection of Unauthorized or Malicious Software |
 
 _Tags:_ `gke`, `k8s`, `nodepool`, `os`
 
@@ -4360,11 +3540,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `6.7` | Centralize Access Control |
-| `iso27001` | `A.5.15` | Access control |
-| `iso27001` | `A.8.2` | Privileged access rights |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.3` | Authorization, Modification, and Removal |
 
 _Tags:_ `gke`, `iam`, `k8s`, `nodepool`
 
@@ -4384,11 +3559,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `12.5` | Centralize Network Authentication, Authorization, and Auditing (AAA) |
-| `iso27001` | `A.8.20` | Networks security |
-| `iso27001` | `A.8.22` | Segregation of networks |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `gke`, `k8s`, `private`
 
@@ -4408,9 +3578,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `7.4` | Perform Automated Application Patch Management |
-| `iso27001` | `A.8.8` | Management of technical vulnerabilities |
-| `soc2` | `CC7.1` | Detection and Monitoring of Vulnerabilities |
 
 _Tags:_ `gke`, `k8s`, `upgrade`
 
@@ -4430,11 +3597,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `4.1` | Establish and Maintain a Secure Configuration Process |
-| `iso27001` | `A.8.2` | Privileged access rights |
-| `iso27001` | `A.8.9` | Configuration management |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.8` | Prevention or Detection of Unauthorized or Malicious Software |
 
 _Tags:_ `gke`, `k8s`, `shielded`
 
@@ -4454,11 +3616,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `6.7` | Centralize Access Control |
-| `iso27001` | `A.5.15` | Access control |
-| `iso27001` | `A.8.2` | Privileged access rights |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.3` | Authorization, Modification, and Removal |
 
 _Tags:_ `gke`, `iam`, `k8s`
 
@@ -4478,9 +3635,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `4.1` | Establish and Maintain a Secure Configuration Process |
-| `iso27001` | `A.8.20` | Networks security |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `hygiene`, `ingress`, `k8s`, `network`
 
@@ -4500,14 +3654,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `12.5` | Centralize Network Authentication, Authorization, and Auditing (AAA) |
-| `cis-v8` | `16.13` | Conduct Application Penetration Testing |
-| `iso27001` | `A.8.2` | Privileged access rights |
-| `iso27001` | `A.8.32` | Change management |
-| `iso27001` | `A.8.9` | Configuration management |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
-| `soc2` | `CC6.8` | Prevention or Detection of Unauthorized or Malicious Software |
 
 _Tags:_ `critical`, `ingress`, `k8s`, `network`, `rce`
 
@@ -4527,9 +3673,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `12.5` | Centralize Network Authentication, Authorization, and Auditing (AAA) |
-| `iso27001` | `A.8.20` | Networks security |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `ingress`, `k8s`, `network`
 
@@ -4549,10 +3692,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `3.10` | Encrypt Sensitive Data in Transit |
-| `iso27001` | `A.8.20` | Networks security |
-| `iso27001` | `A.8.24` | Use of cryptography |
-| `soc2` | `CC6.7` | Transmission, Movement, and Disposal of Information |
 
 _Tags:_ `ingress`, `k8s`, `network`, `tls`
 
@@ -4572,10 +3711,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `8.11` | Conduct Audit Log Reviews |
-| `iso27001` | `A.8.16` | Monitoring activities |
-| `soc2` | `A1.1` | Capacity Management |
-| `soc2` | `CC7.3` | Security Incident Evaluation |
 
 _Tags:_ `jobs`, `k8s`, `reliability`
 
@@ -4595,9 +3730,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `4.7` | Manage Default Accounts on Enterprise Assets and Software |
-| `iso27001` | `A.8.6` | Capacity management |
-| `soc2` | `A1.1` | Capacity Management |
 
 _Tags:_ `k8s`, `limitrange`
 
@@ -4617,9 +3749,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `4.1` | Establish and Maintain a Secure Configuration Process |
-| `iso27001` | `A.8.32` | Change management |
-| `soc2` | `CC8.1` | Change Management Process |
 
 _Tags:_ `admission`, `k8s`, `webhook`
 
@@ -4639,12 +3768,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `4.1` | Establish and Maintain a Secure Configuration Process |
-| `cis-v8` | `6.7` | Centralize Access Control |
-| `iso27001` | `A.5.15` | Access control |
-| `iso27001` | `A.8.2` | Privileged access rights |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.3` | Authorization, Modification, and Removal |
 
 _Tags:_ `default`, `k8s`, `namespace`
 
@@ -4664,10 +3787,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `4.7` | Manage Default Accounts on Enterprise Assets and Software |
-| `iso27001` | `A.8.6` | Capacity management |
-| `soc2` | `A1.1` | Capacity Management |
-| `soc2` | `CC7.3` | Security Incident Evaluation |
 
 _Tags:_ `k8s`, `namespace`, `quota`
 
@@ -4687,12 +3806,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `4.1` | Establish and Maintain a Secure Configuration Process |
-| `iso27001` | `A.8.2` | Privileged access rights |
-| `iso27001` | `A.8.20` | Networks security |
-| `iso27001` | `A.8.9` | Configuration management |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `k8s`, `namespace`, `psa`
 
@@ -4712,10 +3825,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `4.7` | Manage Default Accounts on Enterprise Assets and Software |
-| `iso27001` | `A.8.6` | Capacity management |
-| `soc2` | `A1.1` | Capacity Management |
-| `soc2` | `CC7.3` | Security Incident Evaluation |
 
 _Tags:_ `k8s`, `namespace`, `quota`
 
@@ -4735,9 +3844,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `8.11` | Conduct Audit Log Reviews |
-| `iso27001` | `A.8.16` | Monitoring activities |
-| `soc2` | `CC7.3` | Security Incident Evaluation |
 
 _Tags:_ `hygiene`, `k8s`, `namespace`
 
@@ -4757,12 +3863,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `12.4` | Establish and Maintain Architecture Diagram(s) |
-| `cis-v8` | `4.1` | Establish and Maintain a Secure Configuration Process |
-| `iso27001` | `A.8.20` | Networks security |
-| `iso27001` | `A.8.22` | Segregation of networks |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `egress`, `k8s`, `network`, `policy`
 
@@ -4782,12 +3882,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `12.4` | Establish and Maintain Architecture Diagram(s) |
-| `cis-v8` | `4.1` | Establish and Maintain a Secure Configuration Process |
-| `iso27001` | `A.8.20` | Networks security |
-| `iso27001` | `A.8.22` | Segregation of networks |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `k8s`, `network`, `policy`
 
@@ -4807,13 +3901,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `12.4` | Establish and Maintain Architecture Diagram(s) |
-| `cis-v8` | `4.1` | Establish and Maintain a Secure Configuration Process |
-| `iso27001` | `A.8.20` | Networks security |
-| `iso27001` | `A.8.22` | Segregation of networks |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
-| `soc2` | `CC6.7` | Transmission, Movement, and Disposal of Information |
 
 _Tags:_ `default-deny`, `egress`, `k8s`, `network`, `policy`
 
@@ -4833,13 +3920,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `12.4` | Establish and Maintain Architecture Diagram(s) |
-| `cis-v8` | `4.1` | Establish and Maintain a Secure Configuration Process |
-| `iso27001` | `A.8.20` | Networks security |
-| `iso27001` | `A.8.22` | Segregation of networks |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
-| `soc2` | `CC6.7` | Transmission, Movement, and Disposal of Information |
 
 _Tags:_ `default-deny`, `k8s`, `network`, `policy`
 
@@ -4859,9 +3939,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `4.1` | Establish and Maintain a Secure Configuration Process |
-| `iso27001` | `A.8.20` | Networks security |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
 
 _Tags:_ `informational`, `k8s`, `network`, `policy`
 
@@ -4881,12 +3958,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `12.4` | Establish and Maintain Architecture Diagram(s) |
-| `cis-v8` | `4.1` | Establish and Maintain a Secure Configuration Process |
-| `iso27001` | `A.8.20` | Networks security |
-| `iso27001` | `A.8.22` | Segregation of networks |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `k8s`, `network`, `policy`
 
@@ -4906,12 +3977,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `12.4` | Establish and Maintain Architecture Diagram(s) |
-| `cis-v8` | `4.1` | Establish and Maintain a Secure Configuration Process |
-| `iso27001` | `A.8.20` | Networks security |
-| `iso27001` | `A.8.22` | Segregation of networks |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `k8s`, `network`, `policy`
 
@@ -4931,12 +3996,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `4.1` | Establish and Maintain a Secure Configuration Process |
-| `cis-v8` | `7.4` | Perform Automated Application Patch Management |
-| `iso27001` | `A.8.32` | Change management |
-| `iso27001` | `A.8.8` | Management of technical vulnerabilities |
-| `soc2` | `CC7.1` | Detection and Monitoring of Vulnerabilities |
-| `soc2` | `CC8.1` | Change Management Process |
 
 _Tags:_ `k8s`, `nodes`, `runtime`
 
@@ -4956,10 +4015,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `4.1` | Establish and Maintain a Secure Configuration Process |
-| `iso27001` | `A.8.20` | Networks security |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC7.3` | Security Incident Evaluation |
 
 _Tags:_ `control-plane`, `k8s`, `nodes`
 
@@ -4979,10 +4034,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `8.11` | Conduct Audit Log Reviews |
-| `iso27001` | `A.8.16` | Monitoring activities |
-| `soc2` | `A1.1` | Capacity Management |
-| `soc2` | `CC7.3` | Security Incident Evaluation |
 
 _Tags:_ `k8s`, `nodes`, `pressure`
 
@@ -5002,10 +4053,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `8.11` | Conduct Audit Log Reviews |
-| `iso27001` | `A.8.16` | Monitoring activities |
-| `soc2` | `A1.1` | Capacity Management |
-| `soc2` | `CC7.3` | Security Incident Evaluation |
 
 _Tags:_ `k8s`, `nodes`, `pressure`
 
@@ -5025,10 +4072,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `8.11` | Conduct Audit Log Reviews |
-| `iso27001` | `A.8.16` | Monitoring activities |
-| `soc2` | `A1.1` | Capacity Management |
-| `soc2` | `CC7.3` | Security Incident Evaluation |
 
 _Tags:_ `k8s`, `nodes`, `reliability`
 
@@ -5048,11 +4091,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `7.4` | Perform Automated Application Patch Management |
-| `iso27001` | `A.8.32` | Change management |
-| `iso27001` | `A.8.8` | Management of technical vulnerabilities |
-| `soc2` | `CC7.1` | Detection and Monitoring of Vulnerabilities |
-| `soc2` | `CC8.1` | Change Management Process |
 
 _Tags:_ `k8s`, `nodes`, `patching`
 
@@ -5072,10 +4110,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `8.11` | Conduct Audit Log Reviews |
-| `iso27001` | `A.8.16` | Monitoring activities |
-| `soc2` | `A1.1` | Capacity Management |
-| `soc2` | `CC7.3` | Security Incident Evaluation |
 
 _Tags:_ `k8s`, `nodes`, `pressure`
 
@@ -5095,9 +4129,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `11.2` | Perform Automated Backups |
-| `iso27001` | `A.8.14` | Redundancy of information processing facilities |
-| `soc2` | `A1.1` | Capacity Management |
 
 _Tags:_ `k8s`, `nodes`, `topology`
 
@@ -5117,9 +4148,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `8.11` | Conduct Audit Log Reviews |
-| `iso27001` | `A.8.16` | Monitoring activities |
-| `soc2` | `CC7.3` | Security Incident Evaluation |
 
 _Tags:_ `hygiene`, `k8s`, `nodes`
 
@@ -5139,10 +4167,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `11.2` | Perform Automated Backups |
-| `iso27001` | `A.8.14` | Redundancy of information processing facilities |
-| `soc2` | `A1.1` | Capacity Management |
-| `soc2` | `A1.2` | Backup and Recovery Infrastructure |
 
 _Tags:_ `k8s`, `nodes`, `topology`
 
@@ -5162,12 +4186,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `4.7` | Manage Default Accounts on Enterprise Assets and Software |
-| `cis-v8` | `6.3` | Require MFA for Externally-Exposed Applications |
-| `iso27001` | `A.8.2` | Privileged access rights |
-| `iso27001` | `A.8.9` | Configuration management |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `k8s`, `pod-security`, `privilege-escalation`
 
@@ -5187,12 +4205,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `6.7` | Centralize Access Control |
-| `cis-v8` | `6.8` | Define and Maintain Role-Based Access Control |
-| `iso27001` | `A.5.15` | Access control |
-| `iso27001` | `A.8.2` | Privileged access rights |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `k8s`, `pod-security`, `service-account`
 
@@ -5212,11 +4224,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `4.7` | Manage Default Accounts on Enterprise Assets and Software |
-| `iso27001` | `A.8.2` | Privileged access rights |
-| `iso27001` | `A.8.9` | Configuration management |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `capabilities`, `k8s`, `pod-security`
 
@@ -5236,12 +4243,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `4.7` | Manage Default Accounts on Enterprise Assets and Software |
-| `cis-v8` | `6.3` | Require MFA for Externally-Exposed Applications |
-| `iso27001` | `A.8.2` | Privileged access rights |
-| `iso27001` | `A.8.9` | Configuration management |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `capabilities`, `k8s`, `pod-security`
 
@@ -5261,10 +4262,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `4.1` | Establish and Maintain a Secure Configuration Process |
-| `iso27001` | `A.8.20` | Networks security |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `host-namespace`, `k8s`, `pod-security`
 
@@ -5284,12 +4281,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `12.5` | Centralize Network Authentication, Authorization, and Auditing (AAA) |
-| `cis-v8` | `4.1` | Establish and Maintain a Secure Configuration Process |
-| `iso27001` | `A.8.20` | Networks security |
-| `iso27001` | `A.8.22` | Segregation of networks |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `host-namespace`, `k8s`, `pod-security`
 
@@ -5309,11 +4300,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `4.7` | Manage Default Accounts on Enterprise Assets and Software |
-| `iso27001` | `A.8.13` | Information backup |
-| `iso27001` | `A.8.20` | Networks security |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `host-fs`, `k8s`, `pod-security`
 
@@ -5333,10 +4319,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `4.1` | Establish and Maintain a Secure Configuration Process |
-| `iso27001` | `A.8.20` | Networks security |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `host-namespace`, `k8s`, `pod-security`
 
@@ -5356,10 +4338,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `12.5` | Centralize Network Authentication, Authorization, and Auditing (AAA) |
-| `iso27001` | `A.8.20` | Networks security |
-| `iso27001` | `A.8.22` | Segregation of networks |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `k8s`, `network`, `pod-security`
 
@@ -5379,9 +4357,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `16.4` | Establish and Manage an Inventory of Third-Party Software Components |
-| `iso27001` | `A.8.30` | Outsourced development |
-| `soc2` | `CC8.1` | Change Management Process |
 
 _Tags:_ `image`, `k8s`, `pod-security`, `supply-chain`
 
@@ -5401,12 +4376,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `16.4` | Establish and Manage an Inventory of Third-Party Software Components |
-| `cis-v8` | `2.3` | Address Unauthorized Software |
-| `iso27001` | `A.8.30` | Outsourced development |
-| `iso27001` | `A.8.8` | Management of technical vulnerabilities |
-| `soc2` | `CC7.1` | Detection and Monitoring of Vulnerabilities |
-| `soc2` | `CC8.1` | Change Management Process |
 
 _Tags:_ `image`, `k8s`, `pod-security`, `supply-chain`
 
@@ -5426,10 +4395,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `8.11` | Conduct Audit Log Reviews |
-| `iso27001` | `A.8.16` | Monitoring activities |
-| `soc2` | `A1.1` | Capacity Management |
-| `soc2` | `CC7.3` | Security Incident Evaluation |
 
 _Tags:_ `k8s`, `pod-security`, `reliability`
 
@@ -5449,14 +4414,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `4.1` | Establish and Maintain a Secure Configuration Process |
-| `cis-v8` | `4.7` | Manage Default Accounts on Enterprise Assets and Software |
-| `iso27001` | `A.8.2` | Privileged access rights |
-| `iso27001` | `A.8.20` | Networks security |
-| `iso27001` | `A.8.9` | Configuration management |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
-| `soc2` | `CC6.8` | Prevention or Detection of Unauthorized or Malicious Software |
 
 _Tags:_ `k8s`, `pod-security`, `privileged`
 
@@ -5476,11 +4433,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `4.7` | Manage Default Accounts on Enterprise Assets and Software |
-| `iso27001` | `A.8.13` | Information backup |
-| `iso27001` | `A.8.32` | Change management |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
-| `soc2` | `CC6.8` | Prevention or Detection of Unauthorized or Malicious Software |
 
 _Tags:_ `immutable`, `k8s`, `pod-security`
 
@@ -5500,11 +4452,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `4.7` | Manage Default Accounts on Enterprise Assets and Software |
-| `iso27001` | `A.8.32` | Change management |
-| `iso27001` | `A.8.6` | Capacity management |
-| `soc2` | `A1.1` | Capacity Management |
-| `soc2` | `CC7.3` | Security Incident Evaluation |
 
 _Tags:_ `k8s`, `pod-security`, `resources`
 
@@ -5524,10 +4471,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `4.7` | Manage Default Accounts on Enterprise Assets and Software |
-| `iso27001` | `A.8.6` | Capacity management |
-| `soc2` | `A1.1` | Capacity Management |
-| `soc2` | `CC7.3` | Security Incident Evaluation |
 
 _Tags:_ `k8s`, `pod-security`, `resources`
 
@@ -5547,12 +4490,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `4.7` | Manage Default Accounts on Enterprise Assets and Software |
-| `cis-v8` | `6.7` | Centralize Access Control |
-| `iso27001` | `A.5.15` | Access control |
-| `iso27001` | `A.8.2` | Privileged access rights |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `k8s`, `pod-security`, `root`
 
@@ -5572,10 +4509,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `4.7` | Manage Default Accounts on Enterprise Assets and Software |
-| `iso27001` | `A.8.20` | Networks security |
-| `iso27001` | `A.8.32` | Change management |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `k8s`, `pod-security`, `seccomp`
 
@@ -5595,12 +4528,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `3.11` | Encrypt Sensitive Data at Rest |
-| `cis-v8` | `6.7` | Centralize Access Control |
-| `iso27001` | `A.8.10` | Information deletion |
-| `iso27001` | `A.8.24` | Use of cryptography |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.7` | Transmission, Movement, and Disposal of Information |
 
 _Tags:_ `env`, `k8s`, `secrets`
 
@@ -5620,13 +4547,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `4.1` | Establish and Maintain a Secure Configuration Process |
-| `cis-v8` | `6.8` | Define and Maintain Role-Based Access Control |
-| `iso27001` | `A.5.15` | Access control |
-| `iso27001` | `A.8.32` | Change management |
-| `iso27001` | `A.8.9` | Configuration management |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `cluster`, `k8s`, `policy`
 
@@ -5646,12 +4566,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `11.3` | Protect Recovery Data |
-| `cis-v8` | `3.11` | Encrypt Sensitive Data at Rest |
-| `iso27001` | `A.8.10` | Information deletion |
-| `iso27001` | `A.8.24` | Use of cryptography |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.7` | Transmission, Movement, and Disposal of Information |
 
 _Tags:_ `encryption`, `k8s`, `storage`
 
@@ -5671,10 +4585,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `4.7` | Manage Default Accounts on Enterprise Assets and Software |
-| `iso27001` | `A.8.6` | Capacity management |
-| `soc2` | `A1.1` | Capacity Management |
-| `soc2` | `CC9.1` | Identifies and Mitigates Business Disruptions |
 
 _Tags:_ `cost`, `hygiene`, `k8s`, `storage`
 
@@ -5694,10 +4604,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `11.2` | Perform Automated Backups |
-| `iso27001` | `A.8.13` | Information backup |
-| `iso27001` | `A.8.14` | Redundancy of information processing facilities |
-| `soc2` | `A1.2` | Backup and Recovery Infrastructure |
 
 _Tags:_ `k8s`, `reclaim`, `storage`
 
@@ -5717,9 +4623,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `8.11` | Conduct Audit Log Reviews |
-| `iso27001` | `A.8.16` | Monitoring activities |
-| `soc2` | `A1.1` | Capacity Management |
 
 _Tags:_ `k8s`, `reliability`, `storage`
 
@@ -5739,10 +4642,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `4.7` | Manage Default Accounts on Enterprise Assets and Software |
-| `iso27001` | `A.8.6` | Capacity management |
-| `soc2` | `A1.1` | Capacity Management |
-| `soc2` | `CC9.1` | Identifies and Mitigates Business Disruptions |
 
 _Tags:_ `cost`, `k8s`, `storage`
 
@@ -5762,9 +4661,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `4.7` | Manage Default Accounts on Enterprise Assets and Software |
-| `iso27001` | `A.8.16` | Monitoring activities |
-| `soc2` | `CC7.3` | Security Incident Evaluation |
 
 _Tags:_ `informational`, `k8s`, `rwx`, `storage`
 
@@ -5784,15 +4680,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `6.7` | Centralize Access Control |
-| `cis-v8` | `6.8` | Define and Maintain Role-Based Access Control |
-| `iso27001` | `A.5.15` | Access control |
-| `iso27001` | `A.8.2` | Privileged access rights |
-| `iso27001` | `A.8.3` | Information access restriction |
-| `iso27001` | `A.8.5` | Secure authentication |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.2` | User Identification and Registration |
-| `soc2` | `CC6.8` | Prevention or Detection of Unauthorized or Malicious Software |
 
 _Tags:_ `anonymous`, `critical`, `k8s`, `rbac`
 
@@ -5812,11 +4699,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `6.8` | Define and Maintain Role-Based Access Control |
-| `iso27001` | `A.5.15` | Access control |
-| `iso27001` | `A.8.2` | Privileged access rights |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.3` | Authorization, Modification, and Removal |
 
 _Tags:_ `bind`, `k8s`, `rbac`
 
@@ -5836,13 +4718,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `6.8` | Define and Maintain Role-Based Access Control |
-| `iso27001` | `A.5.15` | Access control |
-| `iso27001` | `A.8.2` | Privileged access rights |
-| `iso27001` | `A.8.3` | Information access restriction |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.3` | Authorization, Modification, and Removal |
-| `soc2` | `CC6.8` | Prevention or Detection of Unauthorized or Malicious Software |
 
 _Tags:_ `cluster-admin`, `critical`, `k8s`, `rbac`
 
@@ -5862,9 +4737,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `6.8` | Define and Maintain Role-Based Access Control |
-| `iso27001` | `A.8.2` | Privileged access rights |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
 
 _Tags:_ `k8s`, `pods`, `rbac`
 
@@ -5884,11 +4756,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `6.8` | Define and Maintain Role-Based Access Control |
-| `iso27001` | `A.5.15` | Access control |
-| `iso27001` | `A.8.24` | Use of cryptography |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `certificates`, `k8s`, `rbac`
 
@@ -5908,9 +4775,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `6.1` | Establish an Access Granting Process |
-| `iso27001` | `A.5.15` | Access control |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
 
 _Tags:_ `hygiene`, `k8s`, `rbac`
 
@@ -5930,12 +4794,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `6.8` | Define and Maintain Role-Based Access Control |
-| `iso27001` | `A.5.15` | Access control |
-| `iso27001` | `A.8.2` | Privileged access rights |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.3` | Authorization, Modification, and Removal |
-| `soc2` | `CC6.8` | Prevention or Detection of Unauthorized or Malicious Software |
 
 _Tags:_ `escalate`, `k8s`, `rbac`
 
@@ -5955,14 +4813,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `6.1` | Establish an Access Granting Process |
-| `cis-v8` | `6.8` | Define and Maintain Role-Based Access Control |
-| `iso27001` | `A.5.15` | Access control |
-| `iso27001` | `A.8.2` | Privileged access rights |
-| `iso27001` | `A.8.3` | Information access restriction |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.3` | Authorization, Modification, and Removal |
-| `soc2` | `CC6.8` | Prevention or Detection of Unauthorized or Malicious Software |
 
 _Tags:_ `cluster-admin`, `critical`, `k8s`, `rbac`
 
@@ -5982,12 +4832,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `6.8` | Define and Maintain Role-Based Access Control |
-| `iso27001` | `A.5.15` | Access control |
-| `iso27001` | `A.8.2` | Privileged access rights |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.3` | Authorization, Modification, and Removal |
-| `soc2` | `CC6.8` | Prevention or Detection of Unauthorized or Malicious Software |
 
 _Tags:_ `critical`, `impersonate`, `k8s`, `rbac`
 
@@ -6007,11 +4851,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `6.8` | Define and Maintain Role-Based Access Control |
-| `iso27001` | `A.8.16` | Monitoring activities |
-| `iso27001` | `A.8.2` | Privileged access rights |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `exec`, `k8s`, `rbac`
 
@@ -6031,11 +4870,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `6.8` | Define and Maintain Role-Based Access Control |
-| `iso27001` | `A.8.16` | Monitoring activities |
-| `iso27001` | `A.8.2` | Privileged access rights |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `k8s`, `portforward`, `rbac`
 
@@ -6055,13 +4889,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `6.7` | Centralize Access Control |
-| `cis-v8` | `6.8` | Define and Maintain Role-Based Access Control |
-| `iso27001` | `A.5.15` | Access control |
-| `iso27001` | `A.8.10` | Information deletion |
-| `iso27001` | `A.8.2` | Privileged access rights |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `k8s`, `least-privilege`, `rbac`, `secrets`
 
@@ -6081,14 +4908,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `6.7` | Centralize Access Control |
-| `cis-v8` | `6.8` | Define and Maintain Role-Based Access Control |
-| `iso27001` | `A.5.15` | Access control |
-| `iso27001` | `A.8.10` | Information deletion |
-| `iso27001` | `A.8.2` | Privileged access rights |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
-| `soc2` | `CC6.8` | Prevention or Detection of Unauthorized or Malicious Software |
 
 _Tags:_ `k8s`, `rbac`, `secrets`
 
@@ -6108,9 +4927,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `6.1` | Establish an Access Granting Process |
-| `iso27001` | `A.5.15` | Access control |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
 
 _Tags:_ `hygiene`, `k8s`, `rbac`
 
@@ -6130,13 +4946,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `6.7` | Centralize Access Control |
-| `cis-v8` | `6.8` | Define and Maintain Role-Based Access Control |
-| `iso27001` | `A.5.15` | Access control |
-| `iso27001` | `A.8.2` | Privileged access rights |
-| `iso27001` | `A.8.5` | Secure authentication |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `k8s`, `rbac`, `tokens`
 
@@ -6156,12 +4965,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `6.1` | Establish an Access Granting Process |
-| `cis-v8` | `6.2` | Establish an Access Revoking Process |
-| `iso27001` | `A.5.16` | Identity management |
-| `iso27001` | `A.5.18` | Access rights |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.3` | Authorization, Modification, and Removal |
 
 _Tags:_ `hygiene`, `k8s`, `lifecycle`, `rbac`
 
@@ -6181,11 +4984,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `6.1` | Establish an Access Granting Process |
-| `iso27001` | `A.5.15` | Access control |
-| `iso27001` | `A.8.2` | Privileged access rights |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.3` | Authorization, Modification, and Removal |
 
 _Tags:_ `k8s`, `rbac`, `wildcard`
 
@@ -6205,11 +5003,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `6.1` | Establish an Access Granting Process |
-| `iso27001` | `A.5.15` | Access control |
-| `iso27001` | `A.8.2` | Privileged access rights |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.3` | Authorization, Modification, and Removal |
 
 _Tags:_ `k8s`, `rbac`, `wildcard`
 
@@ -6229,13 +5022,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `6.1` | Establish an Access Granting Process |
-| `cis-v8` | `6.8` | Define and Maintain Role-Based Access Control |
-| `iso27001` | `A.5.15` | Access control |
-| `iso27001` | `A.8.2` | Privileged access rights |
-| `iso27001` | `A.8.3` | Information access restriction |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.3` | Authorization, Modification, and Removal |
 
 _Tags:_ `k8s`, `least-privilege`, `rbac`, `wildcard`
 
@@ -6255,10 +5041,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `4.7` | Manage Default Accounts on Enterprise Assets and Software |
-| `iso27001` | `A.8.6` | Capacity management |
-| `soc2` | `A1.1` | Capacity Management |
-| `soc2` | `CC7.3` | Security Incident Evaluation |
 
 _Tags:_ `k8s`, `quota`
 
@@ -6278,9 +5060,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `4.7` | Manage Default Accounts on Enterprise Assets and Software |
-| `iso27001` | `A.8.6` | Capacity management |
-| `soc2` | `A1.1` | Capacity Management |
 
 _Tags:_ `k8s`, `quota`
 
@@ -6300,9 +5079,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `4.7` | Manage Default Accounts on Enterprise Assets and Software |
-| `iso27001` | `A.8.6` | Capacity management |
-| `soc2` | `A1.1` | Capacity Management |
 
 _Tags:_ `k8s`, `quota`
 
@@ -6322,12 +5098,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `6.7` | Centralize Access Control |
-| `cis-v8` | `6.8` | Define and Maintain Role-Based Access Control |
-| `iso27001` | `A.5.15` | Access control |
-| `iso27001` | `A.8.2` | Privileged access rights |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `default-sa`, `k8s`, `rbac`, `service-account`
 
@@ -6347,12 +5117,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `6.7` | Centralize Access Control |
-| `cis-v8` | `6.8` | Define and Maintain Role-Based Access Control |
-| `iso27001` | `A.5.15` | Access control |
-| `iso27001` | `A.8.2` | Privileged access rights |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.3` | Authorization, Modification, and Removal |
 
 _Tags:_ `k8s`, `rbac`, `service-account`
 
@@ -6372,10 +5136,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `6.8` | Define and Maintain Role-Based Access Control |
-| `iso27001` | `A.8.30` | Outsourced development |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC8.1` | Change Management Process |
 
 _Tags:_ `k8s`, `rbac`, `service-account`, `supply-chain`
 
@@ -6395,11 +5155,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `6.1` | Establish an Access Granting Process |
-| `cis-v8` | `6.2` | Establish an Access Revoking Process |
-| `iso27001` | `A.5.15` | Access control |
-| `iso27001` | `A.5.16` | Identity management |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
 
 _Tags:_ `hygiene`, `k8s`, `rbac`, `service-account`
 
@@ -6419,9 +5174,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `6.2` | Establish an Access Revoking Process |
-| `iso27001` | `A.8.10` | Information deletion |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
 
 _Tags:_ `immutable`, `k8s`, `secrets`
 
@@ -6441,11 +5193,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `3.11` | Encrypt Sensitive Data at Rest |
-| `cis-v8` | `6.2` | Establish an Access Revoking Process |
-| `iso27001` | `A.5.16` | Identity management |
-| `iso27001` | `A.8.10` | Information deletion |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
 
 _Tags:_ `hygiene`, `k8s`, `secrets`
 
@@ -6465,10 +5212,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `6.2` | Establish an Access Revoking Process |
-| `iso27001` | `A.8.10` | Information deletion |
-| `iso27001` | `A.8.6` | Capacity management |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `k8s`, `secrets`, `size`
 
@@ -6488,12 +5231,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `12.5` | Centralize Network Authentication, Authorization, and Auditing (AAA) |
-| `cis-v8` | `13.6` | Collect Network Traffic Flow Logs |
-| `iso27001` | `A.8.20` | Networks security |
-| `iso27001` | `A.8.22` | Segregation of networks |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `external-ips`, `k8s`, `network`
 
@@ -6513,11 +5250,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `12.5` | Centralize Network Authentication, Authorization, and Auditing (AAA) |
-| `cis-v8` | `3.10` | Encrypt Sensitive Data in Transit |
-| `iso27001` | `A.8.20` | Networks security |
-| `iso27001` | `A.8.24` | Use of cryptography |
-| `soc2` | `CC6.7` | Transmission, Movement, and Disposal of Information |
 
 _Tags:_ `k8s`, `loadbalancer`, `network`, `tls`
 
@@ -6537,13 +5269,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `12.5` | Centralize Network Authentication, Authorization, and Auditing (AAA) |
-| `cis-v8` | `13.6` | Collect Network Traffic Flow Logs |
-| `iso27001` | `A.8.20` | Networks security |
-| `iso27001` | `A.8.22` | Segregation of networks |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
-| `soc2` | `CC6.7` | Transmission, Movement, and Disposal of Information |
 
 _Tags:_ `exposure`, `k8s`, `loadbalancer`, `network`
 
@@ -6563,10 +5288,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `12.5` | Centralize Network Authentication, Authorization, and Auditing (AAA) |
-| `iso27001` | `A.8.20` | Networks security |
-| `iso27001` | `A.8.22` | Segregation of networks |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `k8s`, `network`, `nodeport`
 
@@ -6586,13 +5307,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `12.4` | Establish and Maintain Architecture Diagram(s) |
-| `cis-v8` | `4.1` | Establish and Maintain a Secure Configuration Process |
-| `iso27001` | `A.8.20` | Networks security |
-| `iso27001` | `A.8.22` | Segregation of networks |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
-| `soc2` | `CC6.7` | Transmission, Movement, and Disposal of Information |
 
 _Tags:_ `defense-in-depth`, `k8s`, `network`, `policy`
 
@@ -6612,12 +5326,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `11.2` | Perform Automated Backups |
-| `cis-v8` | `12.5` | Centralize Network Authentication, Authorization, and Auditing (AAA) |
-| `iso27001` | `A.5.30` | ICT readiness for business continuity |
-| `iso27001` | `A.8.14` | Redundancy of information processing facilities |
-| `soc2` | `A1.1` | Capacity Management |
-| `soc2` | `A1.2` | Backup and Recovery Infrastructure |
 
 _Tags:_ `controllers`, `ha`, `k8s`, `stateful`
 
@@ -6637,9 +5345,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `4.1` | Establish and Maintain a Secure Configuration Process |
-| `iso27001` | `A.8.6` | Capacity management |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
 
 _Tags:_ `hygiene`, `k8s`, `storage`
 
@@ -6659,12 +5364,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `11.3` | Protect Recovery Data |
-| `cis-v8` | `3.11` | Encrypt Sensitive Data at Rest |
-| `iso27001` | `A.8.10` | Information deletion |
-| `iso27001` | `A.8.24` | Use of cryptography |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.7` | Transmission, Movement, and Disposal of Information |
 
 _Tags:_ `encryption`, `k8s`, `storage`
 
@@ -6684,10 +5383,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `11.2` | Perform Automated Backups |
-| `iso27001` | `A.8.13` | Information backup |
-| `iso27001` | `A.8.14` | Redundancy of information processing facilities |
-| `soc2` | `A1.2` | Backup and Recovery Infrastructure |
 
 _Tags:_ `k8s`, `reclaim`, `storage`
 
@@ -6707,12 +5402,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `4.1` | Establish and Maintain a Secure Configuration Process |
-| `cis-v8` | `8.11` | Conduct Audit Log Reviews |
-| `iso27001` | `A.8.16` | Monitoring activities |
-| `iso27001` | `A.8.32` | Change management |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC7.2` | System Component Monitoring |
 
 _Tags:_ `admission`, `k8s`, `webhook`
 
@@ -6732,9 +5421,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `4.1` | Establish and Maintain a Secure Configuration Process |
-| `iso27001` | `A.8.16` | Monitoring activities |
-| `soc2` | `CC7.3` | Security Incident Evaluation |
 
 _Tags:_ `admission`, `control-plane`, `k8s`, `webhook`
 
@@ -6756,9 +5442,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `4.1` | Establish and Maintain a Secure Configuration Process |
-| `iso27001` | `A.8.8` | Management of technical vulnerabilities |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `exploit-mitigation`, `kernel`
 
@@ -6778,10 +5461,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `8.5` | Collect Detailed Audit Logs |
-| `iso27001` | `A.8.15` | Logging |
-| `soc2` | `CC7.2` | System Component Monitoring |
-| `soc2` | `CC7.3` | Security Incident Evaluation |
 
 _Tags:_ `audit`, `logging`
 
@@ -6801,11 +5480,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `12.2` | Establish and Maintain a Secure Network Architecture |
-| `cis-v8` | `4.4` | Implement and Manage a Firewall on Servers |
-| `iso27001` | `A.8.20` | Networks security |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `firewall`, `network`
 
@@ -6825,11 +5499,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `12.2` | Establish and Maintain a Secure Network Architecture |
-| `cis-v8` | `4.4` | Implement and Manage a Firewall on Servers |
-| `iso27001` | `A.8.20` | Networks security |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `default-policy`, `firewall`, `network`
 
@@ -6849,10 +5518,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `8.10` | Retain Audit Logs |
-| `cis-v8` | `8.5` | Collect Detailed Audit Logs |
-| `iso27001` | `A.8.15` | Logging |
-| `soc2` | `CC7.2` | System Component Monitoring |
 
 _Tags:_ `audit`, `journald`, `logging`
 
@@ -6872,9 +5537,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `5.2` | Use Unique Passwords |
-| `iso27001` | `A.8.5` | Secure authentication |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
 
 _Tags:_ `passwords`, `users`
 
@@ -6894,9 +5556,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `12.2` | Establish and Maintain a Secure Network Architecture |
-| `iso27001` | `A.8.20` | Networks security |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `kernel`, `network`
 
@@ -6916,9 +5575,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `3.3` | Configure Data Access Control Lists |
-| `iso27001` | `A.8.3` | Information access restriction |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
 
 _Tags:_ `filesystem`, `passwd`
 
@@ -6938,10 +5594,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `3.3` | Configure Data Access Control Lists |
-| `cis-v8` | `5.1` | Establish and Maintain an Inventory of Accounts |
-| `iso27001` | `A.8.3` | Information access restriction |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
 
 _Tags:_ `filesystem`, `shadow`
 
@@ -6961,11 +5613,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `5.2` | Use Unique Passwords |
-| `cis-v8` | `8.5` | Collect Detailed Audit Logs |
-| `iso27001` | `A.8.20` | Networks security |
-| `iso27001` | `A.8.21` | Security of network services |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
 
 _Tags:_ `resource-exhaustion`, `sshd`
 
@@ -6985,9 +5632,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `5.2` | Use Unique Passwords |
-| `iso27001` | `A.8.21` | Security of network services |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
 
 _Tags:_ `brute-force`, `sshd`
 
@@ -7007,12 +5651,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `5.2` | Use Unique Passwords |
-| `cis-v8` | `6.5` | Require MFA for Administrative Access |
-| `iso27001` | `A.8.21` | Security of network services |
-| `iso27001` | `A.8.5` | Secure authentication |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `authentication`, `sshd`
 
@@ -7032,10 +5670,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `5.4` | Restrict Administrator Privileges to Dedicated Administrator Accounts |
-| `iso27001` | `A.8.21` | Security of network services |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `access-control`, `sshd`
 
@@ -7055,9 +5689,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `3.10` | Encrypt Sensitive Data in Transit |
-| `iso27001` | `A.8.20` | Networks security |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
 
 _Tags:_ `crypto`, `sshd`
 
@@ -7077,11 +5708,6 @@ _Maps to:_
 
 | Framework | Control | Title |
 |---|---|---|
-| `cis-v8` | `5.4` | Restrict Administrator Privileges to Dedicated Administrator Accounts |
-| `cis-v8` | `6.8` | Define and Maintain Role-Based Access Control |
-| `iso27001` | `A.8.2` | Privileged access rights |
-| `soc2` | `CC6.1` | Logical and Physical Access Controls |
-| `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `privilege`, `users`
 

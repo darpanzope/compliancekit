@@ -1,0 +1,540 @@
+# PCI DSS v4.0 — Payment Card Industry Data Security Standard
+#
+# Source: PCI Security Standards Council — Payment Card Industry
+# Data Security Standard, Version 4.0 (March 2022, effective from
+# 31 March 2025 after PCI DSS v3.2.1 retirement).
+#
+# v0.12 ships the cloud-, network-, encryption-, audit-, and
+# software-development-relevant subset of PCI DSS v4. Many sub-
+# requirements address physical security, point-of-sale device
+# tampering, and merchant-staff procedures that an automated
+# scanner of cloud and Linux posture cannot meaningfully assess.
+
+id: pci-dss-v4
+name: PCI DSS v4.0
+version: "4.0"
+category: compliance
+source: PCI Security Standards Council — Payment Card Industry Data Security Standard v4.0
+url: https://www.pcisecuritystandards.org/document_library
+description: |
+  PCI DSS is the industry standard for protecting payment card data.
+  v4.0 introduces a customized-approach option and tightens
+  requirements around multi-factor authentication, encryption, and
+  monitoring. Compliance is required of any entity that stores,
+  processes, or transmits cardholder data. This catalog ships the
+  requirements an automated cloud/Linux scanner can address; full
+  compliance also requires policy, training, and physical-security
+  evidence outside this scanner's scope.
+
+controls:
+  # ---- Requirement 1: Install and Maintain Network Security Controls ----
+
+  "1.1":
+    name: Processes and mechanisms for installing and maintaining network security controls are defined and understood
+    family: network-security
+    description: |
+      All security policies and operational procedures identified in
+      Requirement 1 are documented, kept up to date, in use, and
+      known to all affected parties.
+
+  "1.2":
+    name: Network security controls (NSCs) are configured and maintained
+    family: network-security
+    description: |
+      Configuration standards for NSC rulesets are defined,
+      implemented, and maintained. Changes to NSC configurations are
+      approved, tested, and documented prior to implementation.
+
+  "1.3":
+    name: Network access to and from the cardholder data environment is restricted
+    family: network-security
+    description: |
+      Inbound and outbound traffic to and from the cardholder data
+      environment is restricted to that which is necessary, with all
+      other traffic specifically denied.
+
+  "1.4":
+    name: Network connections between trusted and untrusted networks are controlled
+    family: network-security
+    description: |
+      NSCs are implemented between trusted and untrusted networks
+      and configured to permit only necessary network traffic.
+
+  "1.5":
+    name: Risks to the cardholder data environment from computing devices connecting to both untrusted networks and the CDE are mitigated
+    family: network-security
+    description: |
+      Security controls are implemented on any computing device,
+      including those owned by the entity and those owned by personnel,
+      that connects to both untrusted networks and the cardholder
+      data environment.
+
+  # ---- Requirement 2: Apply Secure Configurations ----
+
+  "2.1":
+    name: Processes and mechanisms for applying secure configurations are defined and understood
+    family: secure-configurations
+    description: |
+      All security policies and operational procedures identified in
+      Requirement 2 are documented, kept up to date, in use, and
+      known to all affected parties.
+
+  "2.2":
+    name: System components are configured and managed securely
+    family: secure-configurations
+    description: |
+      Configuration standards address all known security
+      vulnerabilities and are consistent with industry-accepted
+      hardening standards.
+
+  "2.3":
+    name: Wireless environments are configured and managed securely
+    family: secure-configurations
+    description: |
+      For wireless environments, the default authentication
+      credentials are changed at installation, the default SNMP
+      community strings are changed, and wireless vendor defaults
+      are addressed.
+
+  # ---- Requirement 3: Protect Stored Account Data ----
+
+  "3.1":
+    name: Processes and mechanisms for protecting stored account data are defined and understood
+    family: stored-account-data
+    description: |
+      All security policies and operational procedures identified in
+      Requirement 3 are documented, kept up to date, in use, and
+      known to all affected parties.
+
+  "3.2":
+    name: Storage of account data is kept to a minimum
+    family: stored-account-data
+    description: |
+      Account data storage is kept to a minimum through implementation
+      of data retention and disposal policies, procedures, and
+      processes.
+
+  "3.3":
+    name: Sensitive authentication data (SAD) is not stored after authorization
+    family: stored-account-data
+    description: |
+      Sensitive authentication data is not stored after authorization,
+      even if encrypted. Specifically, full track data, card
+      verification codes, and PINs/PIN blocks are not retained.
+
+  "3.4":
+    name: Access to displays of full PAN and ability to copy cardholder data are restricted
+    family: stored-account-data
+    description: |
+      PAN is masked when displayed, except for those with a legitimate
+      business need to see more than the first six and last four digits
+      of the PAN.
+
+  "3.5":
+    name: Primary account number (PAN) is secured wherever it is stored
+    family: stored-account-data
+    description: |
+      PAN is rendered unreadable wherever stored, using one of the
+      approved methods: one-way hashes, truncation, index tokens, or
+      strong cryptography.
+
+  "3.6":
+    name: Cryptographic keys used to protect stored account data are secured
+    family: stored-account-data
+    description: |
+      Procedures are defined and implemented to protect cryptographic
+      keys used to secure stored account data against disclosure and
+      misuse.
+
+  "3.7":
+    name: Where cryptography is used to protect stored account data, key management processes and procedures are defined and implemented
+    family: stored-account-data
+    description: |
+      Cryptographic key management includes generation, distribution,
+      storage, rotation, retirement, replacement, escrow, archival,
+      and revocation processes.
+
+  # ---- Requirement 4: Protect Cardholder Data with Strong Cryptography During Transmission ----
+
+  "4.1":
+    name: Processes and mechanisms for protecting cardholder data with strong cryptography during transmission over open, public networks are defined and documented
+    family: transmission-protection
+    description: |
+      All security policies and operational procedures identified in
+      Requirement 4 are documented, kept up to date, in use, and
+      known to all affected parties.
+
+  "4.2":
+    name: PAN is protected with strong cryptography during transmission
+    family: transmission-protection
+    description: |
+      Strong cryptography and security protocols are implemented to
+      safeguard PAN during transmission over open, public networks.
+
+  # ---- Requirement 5: Protect All Systems and Networks from Malicious Software ----
+
+  "5.1":
+    name: Processes and mechanisms for protecting all systems and networks from malicious software are defined and understood
+    family: malware-protection
+    description: |
+      All security policies and operational procedures identified in
+      Requirement 5 are documented, kept up to date, in use, and
+      known to all affected parties.
+
+  "5.2":
+    name: Malicious software (malware) is prevented or detected, and addressed
+    family: malware-protection
+    description: |
+      An anti-malware solution is deployed on all system components,
+      except for those identified as not at risk for malware.
+
+  "5.3":
+    name: Anti-malware mechanisms and processes are active, maintained, and monitored
+    family: malware-protection
+    description: |
+      The anti-malware solution is actively running, configured to
+      perform periodic scans and continuous behavioral analysis, and
+      generates audit logs that are retained per Requirement 10.
+
+  "5.4":
+    name: Anti-phishing mechanisms protect users against phishing attacks
+    family: malware-protection
+    description: |
+      Processes and automated mechanisms are in place to detect and
+      protect personnel against phishing attacks.
+
+  # ---- Requirement 6: Develop and Maintain Secure Systems and Software ----
+
+  "6.1":
+    name: Processes and mechanisms for developing and maintaining secure systems and software are defined and understood
+    family: secure-systems-and-software
+    description: |
+      All security policies and operational procedures identified in
+      Requirement 6 are documented, kept up to date, in use, and
+      known to all affected parties.
+
+  "6.2":
+    name: Bespoke and custom software are developed securely
+    family: secure-systems-and-software
+    description: |
+      Software is developed in accordance with PCI DSS and industry-
+      accepted secure-development practices, and software developers
+      are trained at least annually in software security.
+
+  "6.3":
+    name: Security vulnerabilities are identified and addressed
+    family: secure-systems-and-software
+    description: |
+      Security vulnerabilities are identified, prioritized using
+      industry-accepted risk-ranking criteria, and addressed within
+      defined timeframes.
+
+  "6.4":
+    name: Public-facing web applications are protected against attacks
+    family: secure-systems-and-software
+    description: |
+      Public-facing web applications are protected by an automated
+      technical solution that detects and prevents web-based attacks,
+      such as a web application firewall.
+
+  "6.5":
+    name: Changes to all system components are managed securely
+    family: secure-systems-and-software
+    description: |
+      Changes follow established change-control procedures including
+      documentation of impact, approval by authorized parties, testing,
+      and rollback procedures.
+
+  # ---- Requirement 7: Restrict Access by Business Need to Know ----
+
+  "7.1":
+    name: Processes and mechanisms for restricting access to system components and cardholder data by business need to know are defined and understood
+    family: access-control
+    description: |
+      All security policies and operational procedures identified in
+      Requirement 7 are documented, kept up to date, in use, and
+      known to all affected parties.
+
+  "7.2":
+    name: Access to system components and data is appropriately defined and assigned
+    family: access-control
+    description: |
+      An access control model is defined that includes granting access
+      based on job classification and function; least privileges
+      necessary; and documented approval.
+
+  "7.3":
+    name: Access to system components and data is managed via an access control system(s)
+    family: access-control
+    description: |
+      An access control system is in place that enforces granted
+      privileges, denies all access by default, and is configured to
+      enforce permissions assigned to individuals and groups.
+
+  # ---- Requirement 8: Identify Users and Authenticate Access ----
+
+  "8.1":
+    name: Processes and mechanisms for identifying users and authenticating access to system components are defined and understood
+    family: identity-and-authentication
+    description: |
+      All security policies and operational procedures identified in
+      Requirement 8 are documented, kept up to date, in use, and
+      known to all affected parties.
+
+  "8.2":
+    name: User identification and related accounts for users and administrators are strictly managed throughout an account's lifecycle
+    family: identity-and-authentication
+    description: |
+      Users are assigned a unique ID before access is granted; account
+      lifecycle includes provisioning, modification, suspension, and
+      revocation.
+
+  "8.3":
+    name: Strong authentication for users and administrators is established and managed
+    family: identity-and-authentication
+    description: |
+      All authentication factors are at least one of the following:
+      something you know (password/passphrase), something you have
+      (token/smart card), or something you are (biometric).
+
+  "8.4":
+    name: Multi-factor authentication (MFA) is implemented to secure access into the CDE
+    family: identity-and-authentication
+    description: |
+      MFA is implemented for all non-console access into the CDE for
+      personnel with administrative access; MFA is implemented for
+      all remote access into the CDE; MFA is implemented for all
+      access into the CDE from outside the entity's network.
+
+  "8.5":
+    name: Multi-factor authentication (MFA) systems are configured to prevent misuse
+    family: identity-and-authentication
+    description: |
+      MFA systems are not susceptible to replay attacks; MFA systems
+      cannot be bypassed by any users including administrators; at
+      least two different types of authentication factors are used;
+      success of all authentication factors is required before access
+      is granted.
+
+  "8.6":
+    name: Use of application and system accounts and associated authentication factors is strictly managed
+    family: identity-and-authentication
+    description: |
+      Application and system accounts that can be used for
+      interactive login are managed as follows: interactive use is
+      prevented unless needed for an exceptional circumstance.
+
+  # ---- Requirement 9: Restrict Physical Access ----
+
+  "9.1":
+    name: Processes and mechanisms for restricting physical access to cardholder data are defined and understood
+    family: physical-access
+    description: |
+      All security policies and operational procedures identified in
+      Requirement 9 are documented, kept up to date, in use, and
+      known to all affected parties.
+
+  "9.4":
+    name: Media with cardholder data is securely stored, accessed, distributed, and destroyed
+    family: physical-access
+    description: |
+      All media with cardholder data is securely stored; access to
+      media is controlled; media is classified for confidentiality
+      and integrity; movement is logged.
+
+  "9.5":
+    name: Point-of-interaction (POI) devices are protected from tampering and unauthorized substitution
+    family: physical-access
+    description: |
+      POI devices that capture payment card data via direct physical
+      interaction are protected from tampering and unauthorized
+      substitution.
+
+  # ---- Requirement 10: Log and Monitor All Access ----
+
+  "10.1":
+    name: Processes and mechanisms for logging and monitoring all access to system components and cardholder data are defined and documented
+    family: logging-and-monitoring
+    description: |
+      All security policies and operational procedures identified in
+      Requirement 10 are documented, kept up to date, in use, and
+      known to all affected parties.
+
+  "10.2":
+    name: Audit logs are implemented to support the detection of anomalies and suspicious activity, and the forensic analysis of events
+    family: logging-and-monitoring
+    description: |
+      Audit logs are enabled and active for all system components and
+      cardholder data; audit log entries record specific event types
+      defined by PCI DSS for both user and admin activities.
+
+  "10.3":
+    name: Audit logs are protected from destruction and unauthorized modifications
+    family: logging-and-monitoring
+    description: |
+      Read access to audit logs is limited to those with a job-related
+      need; audit log files are protected to prevent modifications by
+      individuals.
+
+  "10.4":
+    name: Audit logs are reviewed to identify anomalies or suspicious activity
+    family: logging-and-monitoring
+    description: |
+      The following audit logs are reviewed at least daily: all
+      security events; logs of all system components that store,
+      process, or transmit CHD/SAD; logs of all critical system
+      components; logs of all servers and system components that
+      perform security functions.
+
+  "10.5":
+    name: Audit log history is retained and available for analysis
+    family: logging-and-monitoring
+    description: |
+      Retain audit log history for at least 12 months, with at least
+      the most recent three months immediately available for analysis.
+
+  "10.6":
+    name: Time-synchronization mechanisms support consistent time settings across all systems
+    family: logging-and-monitoring
+    description: |
+      System clocks and time are synchronized using time-
+      synchronization technology, and are protected against
+      unauthorized modification.
+
+  "10.7":
+    name: Failures of critical security control systems are detected, reported, and responded to promptly
+    family: logging-and-monitoring
+    description: |
+      Failures of critical security control systems are detected,
+      alerted, and addressed promptly to minimize the risk of a
+      breach.
+
+  # ---- Requirement 11: Test Security of Systems and Networks Regularly ----
+
+  "11.1":
+    name: Processes and mechanisms for regularly testing security of systems and networks are defined and understood
+    family: security-testing
+    description: |
+      All security policies and operational procedures identified in
+      Requirement 11 are documented, kept up to date, in use, and
+      known to all affected parties.
+
+  "11.2":
+    name: Wireless access points are identified and monitored, and unauthorized wireless access points are addressed
+    family: security-testing
+    description: |
+      Authorized and unauthorized wireless access points are
+      identified at least quarterly; tested for unauthorized presence;
+      and an incident response plan covers unauthorized wireless
+      access point detection.
+
+  "11.3":
+    name: External and internal vulnerabilities are regularly identified, prioritized, and addressed
+    family: security-testing
+    description: |
+      Internal and external vulnerability scans are performed
+      quarterly and after significant changes; high-risk
+      vulnerabilities are resolved per the vulnerability ranking.
+
+  "11.4":
+    name: External and internal penetration testing is regularly performed, and exploitable vulnerabilities and security weaknesses are corrected
+    family: security-testing
+    description: |
+      Internal and external penetration testing is performed at least
+      annually and after significant changes; testing exploits
+      vulnerabilities discovered in scanning.
+
+  "11.5":
+    name: Network intrusions and unexpected file changes are detected and responded to
+    family: security-testing
+    description: |
+      Intrusion detection and intrusion prevention techniques are used
+      to monitor all traffic at the perimeter and at critical points in
+      the CDE; tools are configured to alert personnel to suspected
+      compromises.
+
+  "11.6":
+    name: Unauthorized changes on payment pages are detected and responded to
+    family: security-testing
+    description: |
+      A change- and tamper-detection mechanism is deployed for payment
+      pages to alert personnel to unauthorized modification.
+
+  # ---- Requirement 12: Support Information Security with Organizational Policies ----
+
+  "12.1":
+    name: A comprehensive information security policy that governs and provides direction for protection of the entity's information assets is known and current
+    family: organizational-policies
+    description: |
+      An overall information security policy is established, published,
+      maintained, and disseminated to all relevant personnel.
+
+  "12.2":
+    name: Acceptable use policies for end-user technologies are defined and implemented
+    family: organizational-policies
+    description: |
+      Acceptable use policies are documented and implemented for
+      end-user technologies.
+
+  "12.3":
+    name: Risks to the cardholder data environment are formally identified, evaluated, and managed
+    family: organizational-policies
+    description: |
+      Risk assessments are performed at least annually and after
+      significant changes; output drives the security program.
+
+  "12.4":
+    name: PCI DSS compliance is managed
+    family: organizational-policies
+    description: |
+      Responsibility is established for the PCI DSS compliance
+      program and assigned to a chief security officer or other
+      designee.
+
+  "12.5":
+    name: PCI DSS scope is documented and validated
+    family: organizational-policies
+    description: |
+      PCI DSS scope is documented and confirmed by the entity at
+      least annually and upon significant changes to the in-scope
+      environment.
+
+  "12.6":
+    name: Security awareness education is an ongoing activity
+    family: organizational-policies
+    description: |
+      A formal security awareness program is implemented to make all
+      personnel aware of the entity's information security policy and
+      procedures, and their role in protecting cardholder data.
+
+  "12.7":
+    name: Personnel are screened to reduce risks from insider threats
+    family: organizational-policies
+    description: |
+      Personnel are screened prior to hire to minimize the risk of
+      attacks from internal sources.
+
+  "12.8":
+    name: Risk to information assets associated with third-party service provider (TPSP) relationships is managed
+    family: organizational-policies
+    description: |
+      Written agreements with third-party service providers include
+      an acknowledgement of their responsibility for the security of
+      cardholder data the TPSP possesses, stores, processes, or
+      transmits.
+
+  "12.9":
+    name: Third-party service providers (TPSPs) support their customers' PCI DSS compliance
+    family: organizational-policies
+    description: |
+      TPSPs acknowledge their responsibility for security of cardholder
+      data the TPSP possesses or otherwise stores, processes, or
+      transmits on behalf of the customer.
+
+  "12.10":
+    name: Suspected and confirmed security incidents that could impact the CDE are responded to immediately
+    family: organizational-policies
+    description: |
+      An incident response plan is implemented and is ready to be
+      activated in the event of a suspected or confirmed security
+      incident.
