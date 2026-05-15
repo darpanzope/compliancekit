@@ -307,6 +307,46 @@ Should compliancekit grow a native CVE / vulnerability scanner — its own NVD /
 
 ---
 
+## ADR-010 — Secret redaction is mandatory; raw values never leave the producing tool
+**Date:** 2026-05-15 (v0.14 wrap)
+**Status:** Accepted
+
+### Question
+v0.14 ingests output from secret scanners (gitleaks, Trivy's secret detector). Every raw match a scanner reports IS the leaked credential, by definition. Where does that raw value live inside compliancekit, and what guarantees do we offer the operator that it stays bounded?
+
+### Decision
+**The raw secret value never enters compliancekit's data plane.** Adapters consume the producing tool's report, derive a non-reversible fingerprint via `ingest.RedactSecret`, and write only the fingerprint into `core.Finding.Secret.Fingerprint`. The raw value is never stored in a Finding field, written to a log line, embedded in an evidence-pack artifact, or transmitted across an HTTP boundary.
+
+`ingest.RedactSecret` is the single canonical helper:
+
+- Empty input → empty output.
+- 16+ chars → first 4 + `"..."` + last 4. Preserves anchor characters for visual correlation across runs.
+- < 16 chars → `"sha256:"` + first 12 hex of SHA-256(raw). Short secrets that survive first4+last4 redaction would leak too much identifying material; the hash collapses them.
+
+Every adapter package (`internal/ingest/{trivy,gitleaks,...}/redact.go`) defines a one-line wrapper around `ingest.RedactSecret`. No adapter is permitted to roll its own redaction.
+
+### Reasoning
+- **Bounding the blast radius is the only credible posture.** Once a secret enters our process memory we cannot prove it stays there; we can however prove it never enters the persistent data plane. The bound is "we read and forget" rather than "we read and protect."
+- **One algorithm across every adapter** is non-negotiable for the property to hold. If Trivy uses first4+last4 but gitleaks uses a hash, an operator running both gets inconsistent fingerprints, can't dedup across tools, and may incorrectly conclude two findings represent different secrets when they're the same.
+- **Why fingerprint at all?** Operators need a stable identifier to (a) suppress duplicates across runs, (b) confirm rotation worked ("the old fingerprint is gone"). A raw hash works for that but loses visual anchorability — operators triaging see "sha256:abc..." for every secret and can't recognize at-a-glance which credential is which. The first4+last4 pattern is the field convention (AWS Console, GitHub's UI, Stripe dashboard all show it).
+- **Why 16 chars as the threshold?** Below 16, first4+last4 leaks 8 chars out of <16 — half or more of the credential. SHA-256 collapse is safer for short secrets even though it loses anchorability.
+- **Why not encryption?** Encryption requires a key; a key requires key management; key management is the problem we're trying not to add to compliancekit. Redaction is one-way and stateless.
+
+### Rejected alternatives
+- **Encrypt with a per-scan key.** Rejected. Requires key storage; raises the question of how to share the key with the auditor who wants to verify the finding; defeats the point of "never persist the raw value."
+- **Truncate to first 8 chars only (no trailing).** Rejected. Many credential formats (AWS access keys, JWTs) have static prefixes — `AKIA` for AWS, `eyJ` for JWT. First-8-only would render every AWS key as `AKIAIOSF`, losing dedup. Last-4 anchors against the variable suffix.
+- **Allow operators to set their own redaction function via plugin.** Rejected at v0.14. Convenient for power users but makes the property impossible to verify centrally. Revisit if the v2.0 plugin system lands and warrants it.
+- **Make redaction opt-in.** Rejected, hard. Defaults that leak credentials are a security footgun nobody wants.
+
+### Consequences
+- `internal/ingest/redact.go` ships `RedactSecret` as the public, ADR-anchored helper. Every adapter aliases it.
+- A property test in each adapter test suite confirms that known fixture secrets (`AKIAIOSFODNN7EXAMPLE`, etc.) never appear as substrings of the produced Finding's Fingerprint. This is the regression-proof layer for the redaction policy.
+- `core.Finding.Secret.Fingerprint` doc-comment carries a redaction notice so future reporter authors know not to "enrich" it.
+- `compliancekit ingest --format=gitleaks-json` will reject a payload where `Match` field is missing only if it would also have to fabricate a fingerprint; otherwise it produces an empty Fingerprint rather than guessing.
+- The OCSF emit's `unmapped.compliancekit_secret` slot carries the redacted Secret struct verbatim — no additional transformation.
+
+---
+
 ## Open questions (not yet decided)
 
 - **Plugin host model:** subprocess gRPC (Terraform-provider pattern), WASM via wazero, or both? Decision at v2.0.
