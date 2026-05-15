@@ -1,126 +1,1321 @@
 # CIS Controls v8
-# Source: Center for Internet Security, Critical Security Controls v8
-# This file lists the subset referenced by compliancekit checks; the
-# full catalog spans 18 Controls with 153 safeguards across IG1 / IG2 / IG3.
+#
+# Source: Center for Internet Security — CIS Critical Security
+# Controls Version 8 (2021). The Implementation Group taxonomy
+# (IG1 / IG2 / IG3) classifies safeguards by the resources and
+# threat profile of the enterprise; IG1 is essential cyber hygiene
+# for organizations with limited dedicated cybersecurity expertise.
+#
+# v0.12 expands cis-v8.yaml from the 15-safeguard subset to the
+# full 153 safeguards across all 18 Controls. Each safeguard
+# carries its minimum Implementation Group as a tag (ig1/ig2/ig3)
+# — a safeguard tagged ig1 is in IG1, IG2, and IG3; ig2 is in
+# IG2 and IG3; ig3 is in IG3 only.
 
 id: cis-v8
 name: CIS Controls v8
 version: "8"
+category: compliance
+source: Center for Internet Security — CIS Critical Security Controls v8
+url: https://www.cisecurity.org/controls/v8
 description: |
   CIS Controls v8 is a prescriptive, prioritized set of cyber defense
   best practices that mitigate the most common attacks against
   systems and networks. Safeguards are organized into 18 Controls;
   each safeguard is assigned to one of three Implementation Groups
   (IG1 / IG2 / IG3) based on enterprise resources and risk profile.
-url: https://www.cisecurity.org/controls/v8
 
 controls:
+  # ---- Control 1: Inventory and Control of Enterprise Assets ----
+
   "1.1":
     name: Establish and Maintain Detailed Enterprise Asset Inventory
+    family: inventory-and-control-of-enterprise-assets
+    tags: [ig1]
     description: |
       Establish and maintain an accurate, detailed, and up-to-date
       inventory of all enterprise assets with the potential to store
-      or process data.
+      or process data, including end-user devices, network devices,
+      non-computing/IoT devices, and servers.
+
+  "1.2":
+    name: Address Unauthorized Assets
+    family: inventory-and-control-of-enterprise-assets
+    tags: [ig1]
+    description: |
+      Ensure that a process exists to address unauthorized assets on
+      a weekly basis. The enterprise may choose to remove the asset
+      from the network, deny the asset from connecting remotely, or
+      quarantine the asset.
+
+  "1.3":
+    name: Utilize an Active Discovery Tool
+    family: inventory-and-control-of-enterprise-assets
+    tags: [ig2]
+    description: |
+      Utilize an active discovery tool to identify assets connected
+      to the enterprise's network. Configure the active discovery
+      tool to execute daily, or more frequently.
+
+  "1.4":
+    name: Use Dynamic Host Configuration Protocol (DHCP) Logging to Update Enterprise Asset Inventory
+    family: inventory-and-control-of-enterprise-assets
+    tags: [ig2]
+    description: |
+      Use DHCP logging on all DHCP servers or IP address management
+      tools to update the enterprise's asset inventory. Review and
+      use logs to update the inventory weekly, or more frequently.
+
+  "1.5":
+    name: Use a Passive Asset Discovery Tool
+    family: inventory-and-control-of-enterprise-assets
+    tags: [ig3]
+    description: |
+      Use a passive discovery tool to identify assets connected to
+      the enterprise's network. Review and use scans to update the
+      inventory weekly, or more frequently.
+
+  # ---- Control 2: Inventory and Control of Software Assets ----
+
+  "2.1":
+    name: Establish and Maintain a Software Inventory
+    family: inventory-and-control-of-software-assets
+    tags: [ig1]
+    description: |
+      Establish and maintain a detailed inventory of all licensed
+      software installed on enterprise assets.
+
+  "2.2":
+    name: Ensure Authorized Software is Currently Supported
+    family: inventory-and-control-of-software-assets
+    tags: [ig1]
+    description: |
+      Ensure that only currently supported software is designated as
+      authorized in the software inventory for enterprise assets.
+
+  "2.3":
+    name: Address Unauthorized Software
+    family: inventory-and-control-of-software-assets
+    tags: [ig1]
+    description: |
+      Ensure that unauthorized software is either removed from use
+      on enterprise assets or receives a documented exception.
+
+  "2.4":
+    name: Utilize Automated Software Inventory Tools
+    family: inventory-and-control-of-software-assets
+    tags: [ig2]
+    description: |
+      Utilize software inventory tools, when possible, throughout
+      the enterprise to automate the discovery and documentation of
+      installed software.
+
+  "2.5":
+    name: Allowlist Authorized Software
+    family: inventory-and-control-of-software-assets
+    tags: [ig2]
+    description: |
+      Use technical controls to ensure that only authorized software
+      can execute or be accessed.
+
+  "2.6":
+    name: Allowlist Authorized Libraries
+    family: inventory-and-control-of-software-assets
+    tags: [ig2]
+    description: |
+      Use technical controls to ensure that only authorized software
+      libraries are allowed to load into a system process.
+
+  "2.7":
+    name: Allowlist Authorized Scripts
+    family: inventory-and-control-of-software-assets
+    tags: [ig3]
+    description: |
+      Use technical controls, such as digital signatures and version
+      control, to ensure that only authorized scripts are allowed to
+      execute.
+
+  # ---- Control 3: Data Protection ----
+
+  "3.1":
+    name: Establish and Maintain a Data Management Process
+    family: data-protection
+    tags: [ig1]
+    description: |
+      Establish and maintain a documented data management process.
+      In the process, address data sensitivity, data owner, handling
+      of data, data retention limits, and disposal requirements.
+
+  "3.2":
+    name: Establish and Maintain a Data Inventory
+    family: data-protection
+    tags: [ig1]
+    description: |
+      Establish and maintain a data inventory based on the
+      enterprise's data management process.
 
   "3.3":
     name: Configure Data Access Control Lists
+    family: data-protection
+    tags: [ig1]
     description: |
       Configure data access control lists based on a user's need to
-      know. Apply data access control lists, also known as access
-      permissions, to local and remote file systems, databases, and
-      applications.
+      know. Apply data access control lists to local and remote file
+      systems, databases, and applications.
+
+  "3.4":
+    name: Enforce Data Retention
+    family: data-protection
+    tags: [ig1]
+    description: |
+      Retain data according to the enterprise's data management
+      process. Data retention must include both minimum and maximum
+      timelines.
+
+  "3.5":
+    name: Securely Dispose of Data
+    family: data-protection
+    tags: [ig1]
+    description: |
+      Securely dispose of data as outlined in the enterprise's data
+      management process. Ensure the disposal process and method
+      are commensurate with the data sensitivity.
+
+  "3.6":
+    name: Encrypt Data on End-User Devices
+    family: data-protection
+    tags: [ig1]
+    description: |
+      Encrypt data on end-user devices containing sensitive data.
+      Example implementations include Windows BitLocker, Apple
+      FileVault, and Linux dm-crypt.
+
+  "3.7":
+    name: Establish and Maintain a Data Classification Scheme
+    family: data-protection
+    tags: [ig2]
+    description: |
+      Establish and maintain an overall data classification scheme
+      for the enterprise.
+
+  "3.8":
+    name: Document Data Flows
+    family: data-protection
+    tags: [ig2]
+    description: |
+      Document data flows. Data flow documentation includes service
+      provider data flows and should be based on the enterprise's
+      data management process.
+
+  "3.9":
+    name: Encrypt Data on Removable Media
+    family: data-protection
+    tags: [ig2]
+    description: |
+      Encrypt data on removable media.
+
+  "3.10":
+    name: Encrypt Sensitive Data in Transit
+    family: data-protection
+    tags: [ig2]
+    description: |
+      Encrypt sensitive data in transit. Example implementations
+      include TLS and OpenSSH.
+
+  "3.11":
+    name: Encrypt Sensitive Data at Rest
+    family: data-protection
+    tags: [ig2]
+    description: |
+      Encrypt sensitive data at rest on servers, applications, and
+      databases containing sensitive data.
+
+  "3.12":
+    name: Segment Data Processing and Storage Based on Sensitivity
+    family: data-protection
+    tags: [ig2]
+    description: |
+      Segment data processing and storage based on the sensitivity
+      of the data.
+
+  "3.13":
+    name: Deploy a Data Loss Prevention Solution
+    family: data-protection
+    tags: [ig3]
+    description: |
+      Implement an automated tool, such as a host-based data loss
+      prevention (DLP) tool to identify all sensitive data stored,
+      processed, or transmitted through enterprise assets.
+
+  "3.14":
+    name: Log Sensitive Data Access
+    family: data-protection
+    tags: [ig3]
+    description: |
+      Log sensitive data access, including modification and disposal.
+
+  # ---- Control 4: Secure Configuration of Enterprise Assets and Software ----
 
   "4.1":
     name: Establish and Maintain a Secure Configuration Process
+    family: secure-configuration
+    tags: [ig1]
     description: |
-      Establish and maintain a secure configuration process for
-      enterprise assets and software. Address configuration drift
-      through automated detection and remediation.
+      Establish and maintain a documented secure configuration
+      process for enterprise assets and software (end-user devices,
+      servers, network devices, etc.).
+
+  "4.2":
+    name: Establish and Maintain a Secure Configuration Process for Network Infrastructure
+    family: secure-configuration
+    tags: [ig1]
+    description: |
+      Establish and maintain a documented secure configuration
+      process for network devices.
+
+  "4.3":
+    name: Configure Automatic Session Locking on Enterprise Assets
+    family: secure-configuration
+    tags: [ig1]
+    description: |
+      Configure automatic session locking on enterprise assets
+      after a defined period of inactivity.
 
   "4.4":
     name: Implement and Manage a Firewall on Servers
+    family: secure-configuration
+    tags: [ig1]
+    description: |
+      Implement and manage a firewall on servers, where supported.
+
+  "4.5":
+    name: Implement and Manage a Firewall on End-User Devices
+    family: secure-configuration
+    tags: [ig1]
     description: |
       Implement and manage a host-based firewall or port-filtering
-      tool on servers, with a default-deny rule that drops all
-      traffic except those services and ports that are explicitly
-      allowed.
+      tool on end-user devices.
+
+  "4.6":
+    name: Securely Manage Enterprise Assets and Software
+    family: secure-configuration
+    tags: [ig1]
+    description: |
+      Securely manage enterprise assets and software. Examples
+      include managing configuration through version-controlled
+      infrastructure-as-code, accessing administrative interfaces
+      over secure network protocols, and not using insecure
+      management protocols such as Telnet and HTTP.
+
+  "4.7":
+    name: Manage Default Accounts on Enterprise Assets and Software
+    family: secure-configuration
+    tags: [ig1]
+    description: |
+      Manage default accounts on enterprise assets and software,
+      such as root, administrator, and other pre-configured vendor
+      accounts.
+
+  "4.8":
+    name: Uninstall or Disable Unnecessary Services on Enterprise Assets and Software
+    family: secure-configuration
+    tags: [ig2]
+    description: |
+      Uninstall or disable unnecessary services on enterprise assets
+      and software, such as an unused file sharing service, web
+      application module, or service function.
+
+  "4.9":
+    name: Configure Trusted DNS Servers on Enterprise Assets
+    family: secure-configuration
+    tags: [ig2]
+    description: |
+      Configure trusted DNS servers on enterprise assets.
+
+  "4.10":
+    name: Enforce Automatic Device Lockout on Portable End-User Devices
+    family: secure-configuration
+    tags: [ig2]
+    description: |
+      Enforce automatic device lockout following a predetermined
+      threshold of local failed authentication attempts on portable
+      end-user devices.
+
+  "4.11":
+    name: Enforce Remote Wipe Capability on Portable End-User Devices
+    family: secure-configuration
+    tags: [ig2]
+    description: |
+      Remotely wipe enterprise data from enterprise-owned portable
+      end-user devices when deemed appropriate.
+
+  "4.12":
+    name: Separate Enterprise Workspaces on Mobile End-User Devices
+    family: secure-configuration
+    tags: [ig3]
+    description: |
+      Ensure separate enterprise workspaces are used on mobile
+      end-user devices, where supported.
+
+  # ---- Control 5: Account Management ----
 
   "5.1":
     name: Establish and Maintain an Inventory of Accounts
+    family: account-management
+    tags: [ig1]
     description: |
       Establish and maintain an inventory of all accounts managed
-      in the enterprise, including both user and administrator
-      accounts.
+      in the enterprise.
 
   "5.2":
     name: Use Unique Passwords
+    family: account-management
+    tags: [ig1]
     description: |
       Use unique passwords for all enterprise assets. Best practice
-      implementation includes a minimum of 8 characters for accounts
-      with MFA enabled and 14 characters for accounts without MFA.
+      implementation includes, at a minimum, an 8-character password
+      for accounts using MFA and a 14-character password for accounts
+      not using MFA.
+
+  "5.3":
+    name: Disable Dormant Accounts
+    family: account-management
+    tags: [ig1]
+    description: |
+      Delete or disable any dormant accounts after a period of 45
+      days of inactivity, where supported.
 
   "5.4":
-    name: Restrict Administrator Privileges to Dedicated Accounts
+    name: Restrict Administrator Privileges to Dedicated Administrator Accounts
+    family: account-management
+    tags: [ig1]
     description: |
       Restrict administrator privileges to dedicated administrator
-      accounts on enterprise assets. Conduct general computing
-      activities, such as internet browsing and email, from the
-      user's primary, non-privileged account.
+      accounts on enterprise assets.
+
+  "5.5":
+    name: Establish and Maintain an Inventory of Service Accounts
+    family: account-management
+    tags: [ig2]
+    description: |
+      Establish and maintain an inventory of service accounts.
+
+  "5.6":
+    name: Centralize Account Management
+    family: account-management
+    tags: [ig2]
+    description: |
+      Centralize account management through a directory or identity
+      service.
+
+  # ---- Control 6: Access Control Management ----
+
+  "6.1":
+    name: Establish an Access Granting Process
+    family: access-control-management
+    tags: [ig1]
+    description: |
+      Establish and follow a process, preferably automated, for
+      granting access to enterprise assets upon new hire, rights
+      grant, or role change.
+
+  "6.2":
+    name: Establish an Access Revoking Process
+    family: access-control-management
+    tags: [ig1]
+    description: |
+      Establish and follow a process, preferably automated, for
+      revoking access to enterprise assets through disabling
+      accounts immediately upon termination, rights revocation, or
+      role change.
+
+  "6.3":
+    name: Require MFA for Externally-Exposed Applications
+    family: access-control-management
+    tags: [ig1]
+    description: |
+      Require all externally-exposed enterprise or third-party
+      applications to enforce MFA, where supported.
+
+  "6.4":
+    name: Require MFA for Remote Network Access
+    family: access-control-management
+    tags: [ig1]
+    description: |
+      Require MFA for remote network access.
 
   "6.5":
     name: Require MFA for Administrative Access
+    family: access-control-management
+    tags: [ig1]
     description: |
-      Require MFA for all administrative access accounts on
-      enterprise assets, whether managed on-site or through a
-      third-party provider.
+      Require MFA for all administrative access accounts, where
+      supported, on all enterprise assets.
+
+  "6.6":
+    name: Establish and Maintain an Inventory of Authentication and Authorization Systems
+    family: access-control-management
+    tags: [ig2]
+    description: |
+      Establish and maintain an inventory of the enterprise's
+      authentication and authorization systems.
+
+  "6.7":
+    name: Centralize Access Control
+    family: access-control-management
+    tags: [ig2]
+    description: |
+      Centralize access control for all enterprise assets through a
+      directory service or SSO provider, where supported.
 
   "6.8":
     name: Define and Maintain Role-Based Access Control
+    family: access-control-management
+    tags: [ig3]
     description: |
-      Define and maintain role-based access control by determining
-      and documenting the access rights necessary for each role in
-      the enterprise to successfully carry out its assigned duties.
+      Define and maintain role-based access control through
+      determining and documenting the access rights necessary for
+      each role within the enterprise to successfully carry out
+      its assigned duties.
+
+  # ---- Control 7: Continuous Vulnerability Management ----
+
+  "7.1":
+    name: Establish and Maintain a Vulnerability Management Process
+    family: continuous-vulnerability-management
+    tags: [ig1]
+    description: |
+      Establish and maintain a documented vulnerability management
+      process for enterprise assets.
+
+  "7.2":
+    name: Establish and Maintain a Remediation Process
+    family: continuous-vulnerability-management
+    tags: [ig1]
+    description: |
+      Establish and maintain a risk-based remediation strategy
+      documented in a remediation process, with monthly, or more
+      frequent, reviews.
+
+  "7.3":
+    name: Perform Automated Operating System Patch Management
+    family: continuous-vulnerability-management
+    tags: [ig1]
+    description: |
+      Perform operating system updates on enterprise assets through
+      automated patch management on a monthly, or more frequent,
+      basis.
+
+  "7.4":
+    name: Perform Automated Application Patch Management
+    family: continuous-vulnerability-management
+    tags: [ig1]
+    description: |
+      Perform application updates on enterprise assets through
+      automated patch management on a monthly, or more frequent,
+      basis.
 
   "7.5":
     name: Perform Automated Vulnerability Scans of Internal Enterprise Assets
+    family: continuous-vulnerability-management
+    tags: [ig2]
     description: |
       Perform automated vulnerability scans of internal enterprise
-      assets on a quarterly or more frequent basis. Conduct both
-      authenticated and unauthenticated scans, using a SCAP-compliant
-      vulnerability scanning tool.
+      assets on a quarterly, or more frequent, basis.
+
+  "7.6":
+    name: Perform Automated Vulnerability Scans of Externally-Exposed Enterprise Assets
+    family: continuous-vulnerability-management
+    tags: [ig2]
+    description: |
+      Perform automated vulnerability scans of externally-exposed
+      enterprise assets using a SCAP-compliant vulnerability
+      scanning tool. Perform scans on a monthly, or more frequent,
+      basis.
+
+  "7.7":
+    name: Remediate Detected Vulnerabilities
+    family: continuous-vulnerability-management
+    tags: [ig2]
+    description: |
+      Remediate detected vulnerabilities in software through
+      processes and tooling on a monthly, or more frequent, basis,
+      based on the remediation process.
+
+  # ---- Control 8: Audit Log Management ----
+
+  "8.1":
+    name: Establish and Maintain an Audit Log Management Process
+    family: audit-log-management
+    tags: [ig1]
+    description: |
+      Establish and maintain a documented audit log management
+      process that defines the enterprise's logging requirements.
+
+  "8.2":
+    name: Collect Audit Logs
+    family: audit-log-management
+    tags: [ig1]
+    description: |
+      Collect audit logs. Ensure that logging has been enabled
+      across enterprise assets.
+
+  "8.3":
+    name: Ensure Adequate Audit Log Storage
+    family: audit-log-management
+    tags: [ig1]
+    description: |
+      Ensure that logging destinations maintain adequate storage to
+      comply with the enterprise's audit log management process.
+
+  "8.4":
+    name: Standardize Time Synchronization
+    family: audit-log-management
+    tags: [ig2]
+    description: |
+      Standardize time synchronization. Configure at least two
+      synchronized time sources across enterprise assets, where
+      supported.
 
   "8.5":
     name: Collect Detailed Audit Logs
+    family: audit-log-management
+    tags: [ig2]
     description: |
       Configure detailed audit logging for enterprise assets
-      containing sensitive data. Include event source, date,
-      username, timestamp, source addresses, destination addresses,
-      and other useful elements that could assist in a forensic
-      investigation.
+      containing sensitive data.
+
+  "8.6":
+    name: Collect DNS Query Audit Logs
+    family: audit-log-management
+    tags: [ig2]
+    description: |
+      Collect DNS query audit logs on enterprise assets, where
+      appropriate and supported.
+
+  "8.7":
+    name: Collect URL Request Audit Logs
+    family: audit-log-management
+    tags: [ig2]
+    description: |
+      Collect URL request audit logs on enterprise assets, where
+      appropriate and supported.
+
+  "8.8":
+    name: Collect Command-Line Audit Logs
+    family: audit-log-management
+    tags: [ig2]
+    description: |
+      Collect command-line audit logs.
+
+  "8.9":
+    name: Centralize Audit Logs
+    family: audit-log-management
+    tags: [ig2]
+    description: |
+      Centralize, to the extent possible, audit log collection and
+      retention across enterprise assets.
 
   "8.10":
     name: Retain Audit Logs
+    family: audit-log-management
+    tags: [ig2]
     description: |
       Retain audit logs across enterprise assets for a minimum of
       90 days.
 
+  "8.11":
+    name: Conduct Audit Log Reviews
+    family: audit-log-management
+    tags: [ig2]
+    description: |
+      Conduct reviews of audit logs to detect anomalies or abnormal
+      events that could indicate a potential threat.
+
+  "8.12":
+    name: Collect Service Provider Logs
+    family: audit-log-management
+    tags: [ig3]
+    description: |
+      Collect service provider logs, where supported.
+
+  # ---- Control 9: Email and Web Browser Protections ----
+
+  "9.1":
+    name: Ensure Use of Only Fully Supported Browsers and Email Clients
+    family: email-and-web-browser-protections
+    tags: [ig1]
+    description: |
+      Ensure only fully supported browsers and email clients are
+      allowed to execute in the enterprise.
+
+  "9.2":
+    name: Use DNS Filtering Services
+    family: email-and-web-browser-protections
+    tags: [ig1]
+    description: |
+      Use DNS filtering services on all enterprise assets to block
+      access to known malicious domains.
+
+  "9.3":
+    name: Maintain and Enforce Network-Based URL Filters
+    family: email-and-web-browser-protections
+    tags: [ig2]
+    description: |
+      Enforce and update network-based URL filters to limit an
+      enterprise asset from connecting to potentially malicious or
+      unapproved websites.
+
+  "9.4":
+    name: Restrict Unnecessary or Unauthorized Browser and Email Client Extensions
+    family: email-and-web-browser-protections
+    tags: [ig2]
+    description: |
+      Restrict any unauthorized or unnecessary browser or email
+      client plugins, extensions, and add-on applications.
+
+  "9.5":
+    name: Implement DMARC
+    family: email-and-web-browser-protections
+    tags: [ig2]
+    description: |
+      Implement DMARC policy and verification, starting with the
+      Sender Policy Framework (SPF) and DomainKeys Identified Mail
+      (DKIM) standards.
+
+  "9.6":
+    name: Block Unnecessary File Types
+    family: email-and-web-browser-protections
+    tags: [ig2]
+    description: |
+      Block unnecessary file types attempting to enter the
+      enterprise's email gateway.
+
+  "9.7":
+    name: Deploy and Maintain Email Server Anti-Malware Protections
+    family: email-and-web-browser-protections
+    tags: [ig3]
+    description: |
+      Deploy and maintain email server anti-malware protections,
+      such as attachment scanning and sandboxing.
+
+  # ---- Control 10: Malware Defenses ----
+
+  "10.1":
+    name: Deploy and Maintain Anti-Malware Software
+    family: malware-defenses
+    tags: [ig1]
+    description: |
+      Deploy and maintain anti-malware software on all enterprise
+      assets.
+
+  "10.2":
+    name: Configure Automatic Anti-Malware Signature Updates
+    family: malware-defenses
+    tags: [ig1]
+    description: |
+      Configure automatic updates for anti-malware signature files
+      on all enterprise assets.
+
+  "10.3":
+    name: Disable Autorun and Autoplay for Removable Media
+    family: malware-defenses
+    tags: [ig1]
+    description: |
+      Disable autorun and autoplay auto-execute functionality for
+      removable media.
+
+  "10.4":
+    name: Configure Automatic Anti-Malware Scanning of Removable Media
+    family: malware-defenses
+    tags: [ig2]
+    description: |
+      Configure anti-malware software to automatically scan
+      removable media.
+
+  "10.5":
+    name: Enable Anti-Exploitation Features
+    family: malware-defenses
+    tags: [ig2]
+    description: |
+      Enable anti-exploitation features on enterprise assets and
+      software, where possible.
+
+  "10.6":
+    name: Centrally Manage Anti-Malware Software
+    family: malware-defenses
+    tags: [ig2]
+    description: |
+      Centrally manage anti-malware software.
+
+  "10.7":
+    name: Use Behavior-Based Anti-Malware Software
+    family: malware-defenses
+    tags: [ig2]
+    description: |
+      Use behavior-based anti-malware software.
+
+  # ---- Control 11: Data Recovery ----
+
+  "11.1":
+    name: Establish and Maintain a Data Recovery Process
+    family: data-recovery
+    tags: [ig1]
+    description: |
+      Establish and maintain a documented data recovery process.
+
   "11.2":
     name: Perform Automated Backups
+    family: data-recovery
+    tags: [ig1]
     description: |
       Perform automated backups of in-scope enterprise assets. Run
       backups weekly, or more frequently, based on the sensitivity
       of the data.
 
+  "11.3":
+    name: Protect Recovery Data
+    family: data-recovery
+    tags: [ig1]
+    description: |
+      Protect recovery data with equivalent controls to the original
+      data. Reference encryption or data separation, based on
+      requirements.
+
+  "11.4":
+    name: Establish and Maintain an Isolated Instance of Recovery Data
+    family: data-recovery
+    tags: [ig1]
+    description: |
+      Establish and maintain an isolated instance of recovery data.
+
+  "11.5":
+    name: Test Data Recovery
+    family: data-recovery
+    tags: [ig2]
+    description: |
+      Test backup recovery quarterly, or more frequently, for a
+      sampling of in-scope enterprise assets.
+
+  # ---- Control 12: Network Infrastructure Management ----
+
+  "12.1":
+    name: Ensure Network Infrastructure is Up-to-Date
+    family: network-infrastructure-management
+    tags: [ig1]
+    description: |
+      Ensure network infrastructure is kept up-to-date.
+
   "12.2":
     name: Establish and Maintain a Secure Network Architecture
+    family: network-infrastructure-management
+    tags: [ig2]
     description: |
-      Establish and maintain a secure network architecture. A secure
-      network architecture must address segmentation, least
-      privilege, and availability, at a minimum.
+      Establish and maintain a secure network architecture
+      addressing segmentation, least privilege, and availability,
+      at a minimum.
 
-  "3.10":
-    name: Encrypt Sensitive Data in Transit
+  "12.3":
+    name: Securely Manage Network Infrastructure
+    family: network-infrastructure-management
+    tags: [ig2]
     description: |
-      Encrypt sensitive data in transit. Example implementations
-      can include: Transport Layer Security (TLS) and Open Secure
-      Shell (OpenSSH).
+      Securely manage network infrastructure. Example implementations
+      include version-controlled infrastructure-as-code, and the use
+      of secure network protocols.
+
+  "12.4":
+    name: Establish and Maintain Architecture Diagram(s)
+    family: network-infrastructure-management
+    tags: [ig2]
+    description: |
+      Establish and maintain architecture diagrams and other network
+      system documentation.
+
+  "12.5":
+    name: Centralize Network Authentication, Authorization, and Auditing (AAA)
+    family: network-infrastructure-management
+    tags: [ig2]
+    description: |
+      Centralize network AAA.
+
+  "12.6":
+    name: Use of Secure Network Management and Communication Protocols
+    family: network-infrastructure-management
+    tags: [ig2]
+    description: |
+      Use secure network management and communication protocols
+      (e.g., 802.1X, Wi-Fi Protected Access 2 (WPA2) Enterprise or
+      greater).
+
+  "12.7":
+    name: Ensure Remote Devices Utilize a VPN and are Connecting to an Enterprise AAA Infrastructure
+    family: network-infrastructure-management
+    tags: [ig2]
+    description: |
+      Require users to authenticate to enterprise-managed VPN and
+      authentication services prior to accessing enterprise resources
+      on end-user devices.
+
+  "12.8":
+    name: Establish and Maintain Dedicated Computing Resources for All Administrative Work
+    family: network-infrastructure-management
+    tags: [ig3]
+    description: |
+      Establish and maintain dedicated computing resources, either
+      physically or logically separated, for all administrative
+      tasks or tasks requiring administrative access.
+
+  # ---- Control 13: Network Monitoring and Defense ----
+
+  "13.1":
+    name: Centralize Security Event Alerting
+    family: network-monitoring-and-defense
+    tags: [ig2]
+    description: |
+      Centralize security event alerting across enterprise assets
+      for log correlation and analysis.
+
+  "13.2":
+    name: Deploy a Host-Based Intrusion Detection Solution
+    family: network-monitoring-and-defense
+    tags: [ig2]
+    description: |
+      Deploy a host-based intrusion detection solution on enterprise
+      assets, where appropriate and supported.
+
+  "13.3":
+    name: Deploy a Network Intrusion Detection Solution
+    family: network-monitoring-and-defense
+    tags: [ig2]
+    description: |
+      Deploy a network intrusion detection solution on enterprise
+      assets, where appropriate.
+
+  "13.4":
+    name: Perform Traffic Filtering Between Network Segments
+    family: network-monitoring-and-defense
+    tags: [ig2]
+    description: |
+      Perform traffic filtering between network segments, where
+      appropriate.
+
+  "13.5":
+    name: Manage Access Control for Remote Assets
+    family: network-monitoring-and-defense
+    tags: [ig2]
+    description: |
+      Manage access control for assets remotely connecting to
+      enterprise resources.
+
+  "13.6":
+    name: Collect Network Traffic Flow Logs
+    family: network-monitoring-and-defense
+    tags: [ig2]
+    description: |
+      Collect network traffic flow logs and/or network traffic to
+      review and alert upon from network devices.
+
+  "13.7":
+    name: Deploy a Host-Based Intrusion Prevention Solution
+    family: network-monitoring-and-defense
+    tags: [ig3]
+    description: |
+      Deploy a host-based intrusion prevention solution on
+      enterprise assets, where appropriate and supported.
+
+  "13.8":
+    name: Deploy a Network Intrusion Prevention Solution
+    family: network-monitoring-and-defense
+    tags: [ig3]
+    description: |
+      Deploy a network intrusion prevention solution.
+
+  "13.9":
+    name: Deploy Port-Level Access Control
+    family: network-monitoring-and-defense
+    tags: [ig3]
+    description: |
+      Deploy port-level access control. Port-level access control
+      utilizes 802.1x or similar network access control protocols.
+
+  "13.10":
+    name: Perform Application Layer Filtering
+    family: network-monitoring-and-defense
+    tags: [ig3]
+    description: |
+      Perform application layer filtering. Example implementations
+      include a filtering proxy, application layer firewall, or
+      gateway.
+
+  "13.11":
+    name: Tune Security Event Alerting Thresholds
+    family: network-monitoring-and-defense
+    tags: [ig3]
+    description: |
+      Tune security event alerting thresholds monthly, or more
+      frequently.
+
+  # ---- Control 14: Security Awareness and Skills Training ----
+
+  "14.1":
+    name: Establish and Maintain a Security Awareness Program
+    family: security-awareness-and-skills-training
+    tags: [ig1]
+    description: |
+      Establish and maintain a security awareness program.
+
+  "14.2":
+    name: Train Workforce Members to Recognize Social Engineering Attacks
+    family: security-awareness-and-skills-training
+    tags: [ig1]
+    description: |
+      Train workforce members to recognize social engineering
+      attacks, such as phishing, business email compromise (BEC),
+      pretexting, and tailgating.
+
+  "14.3":
+    name: Train Workforce Members on Authentication Best Practices
+    family: security-awareness-and-skills-training
+    tags: [ig1]
+    description: |
+      Train workforce members on authentication best practices.
+
+  "14.4":
+    name: Train Workforce on Data Handling Best Practices
+    family: security-awareness-and-skills-training
+    tags: [ig1]
+    description: |
+      Train workforce members on how to identify and properly store,
+      transfer, archive, and destroy sensitive data.
+
+  "14.5":
+    name: Train Workforce Members on Causes of Unintentional Data Exposure
+    family: security-awareness-and-skills-training
+    tags: [ig1]
+    description: |
+      Train workforce members to be aware of causes for unintentional
+      data exposure.
+
+  "14.6":
+    name: Train Workforce Members on Recognizing and Reporting Security Incidents
+    family: security-awareness-and-skills-training
+    tags: [ig1]
+    description: |
+      Train workforce members to be able to recognize a potential
+      incident and to report such an incident.
+
+  "14.7":
+    name: Train Workforce on How to Identify and Report Missing Security Updates
+    family: security-awareness-and-skills-training
+    tags: [ig1]
+    description: |
+      Train workforce to understand how to verify and report
+      out-of-date software patches or any failures in automated
+      processes and tools.
+
+  "14.8":
+    name: Train Workforce on the Dangers of Connecting to Insecure Networks
+    family: security-awareness-and-skills-training
+    tags: [ig1]
+    description: |
+      Train workforce members on the dangers of connecting to, and
+      transmitting data over, insecure networks for enterprise
+      activities.
+
+  "14.9":
+    name: Conduct Role-Specific Security Awareness and Skills Training
+    family: security-awareness-and-skills-training
+    tags: [ig2]
+    description: |
+      Conduct role-specific security awareness and skills training.
+
+  # ---- Control 15: Service Provider Management ----
+
+  "15.1":
+    name: Establish and Maintain an Inventory of Service Providers
+    family: service-provider-management
+    tags: [ig1]
+    description: |
+      Establish and maintain an inventory of service providers.
+
+  "15.2":
+    name: Establish and Maintain a Service Provider Management Policy
+    family: service-provider-management
+    tags: [ig2]
+    description: |
+      Establish and maintain a service provider management policy.
+
+  "15.3":
+    name: Classify Service Providers
+    family: service-provider-management
+    tags: [ig2]
+    description: |
+      Classify service providers based on characteristics such as
+      data sensitivity, data volume, availability requirements,
+      applicable regulations, inherent risk, and mitigated risk.
+
+  "15.4":
+    name: Ensure Service Provider Contracts Include Security Requirements
+    family: service-provider-management
+    tags: [ig2]
+    description: |
+      Ensure service provider contracts include security requirements.
+
+  "15.5":
+    name: Assess Service Providers
+    family: service-provider-management
+    tags: [ig3]
+    description: |
+      Assess service providers consistent with the enterprise's
+      service provider management policy.
+
+  "15.6":
+    name: Monitor Service Providers
+    family: service-provider-management
+    tags: [ig3]
+    description: |
+      Monitor service providers consistent with the enterprise's
+      service provider management policy.
+
+  "15.7":
+    name: Securely Decommission Service Providers
+    family: service-provider-management
+    tags: [ig3]
+    description: |
+      Securely decommission service providers.
+
+  # ---- Control 16: Application Software Security ----
+
+  "16.1":
+    name: Establish and Maintain a Secure Application Development Process
+    family: application-software-security
+    tags: [ig2]
+    description: |
+      Establish and maintain a secure application development process.
+
+  "16.2":
+    name: Establish and Maintain a Process to Accept and Address Software Vulnerabilities
+    family: application-software-security
+    tags: [ig2]
+    description: |
+      Establish and maintain a process to accept and address reports
+      of software vulnerabilities.
+
+  "16.3":
+    name: Perform Root Cause Analysis on Security Vulnerabilities
+    family: application-software-security
+    tags: [ig2]
+    description: |
+      Perform root cause analysis on security vulnerabilities.
+
+  "16.4":
+    name: Establish and Manage an Inventory of Third-Party Software Components
+    family: application-software-security
+    tags: [ig2]
+    description: |
+      Establish and manage an updated inventory of third-party
+      components used in development, often referred to as a "bill
+      of materials," as well as components slated for future use.
+
+  "16.5":
+    name: Use Up-to-Date and Trusted Third-Party Software Components
+    family: application-software-security
+    tags: [ig2]
+    description: |
+      Use up-to-date and trusted third-party software components.
+
+  "16.6":
+    name: Establish and Maintain a Severity Rating System and Process for Application Vulnerabilities
+    family: application-software-security
+    tags: [ig2]
+    description: |
+      Establish and maintain a severity rating system and process
+      for application vulnerabilities that facilitates prioritizing
+      the order in which discovered vulnerabilities are fixed.
+
+  "16.7":
+    name: Use Standard Hardening Configuration Templates for Application Infrastructure
+    family: application-software-security
+    tags: [ig2]
+    description: |
+      Use standard, industry-recommended hardening configuration
+      templates for application infrastructure components.
+
+  "16.8":
+    name: Separate Production and Non-Production Systems
+    family: application-software-security
+    tags: [ig2]
+    description: |
+      Maintain separate environments for production and non-
+      production systems.
+
+  "16.9":
+    name: Train Developers in Application Security Concepts and Secure Coding
+    family: application-software-security
+    tags: [ig2]
+    description: |
+      Ensure that all software development personnel receive training
+      in writing secure code for their specific development
+      environment and responsibilities.
+
+  "16.10":
+    name: Apply Secure Design Principles in Application Architectures
+    family: application-software-security
+    tags: [ig2]
+    description: |
+      Apply secure design principles in application architectures.
+
+  "16.11":
+    name: Leverage Vetted Modules or Services for Application Security Components
+    family: application-software-security
+    tags: [ig2]
+    description: |
+      Leverage vetted modules or services for application security
+      components, such as identity management, encryption, and
+      auditing and logging.
+
+  "16.12":
+    name: Implement Code-Level Security Checks
+    family: application-software-security
+    tags: [ig3]
+    description: |
+      Apply static and dynamic analysis tools within the application
+      life cycle to verify that secure coding practices are being
+      adhered to.
+
+  "16.13":
+    name: Conduct Application Penetration Testing
+    family: application-software-security
+    tags: [ig3]
+    description: |
+      Conduct application penetration testing.
+
+  "16.14":
+    name: Conduct Threat Modeling
+    family: application-software-security
+    tags: [ig3]
+    description: |
+      Conduct threat modeling — the process of identifying and
+      addressing application security design flaws within a design,
+      before code is created.
+
+  # ---- Control 17: Incident Response Management ----
+
+  "17.1":
+    name: Designate Personnel to Manage Incident Handling
+    family: incident-response-management
+    tags: [ig1]
+    description: |
+      Designate one key person, and at least one backup, who will
+      manage the enterprise's incident handling process.
+
+  "17.2":
+    name: Establish and Maintain Contact Information for Reporting Security Incidents
+    family: incident-response-management
+    tags: [ig1]
+    description: |
+      Establish and maintain contact information for parties that
+      need to be informed of security incidents.
+
+  "17.3":
+    name: Establish and Maintain an Enterprise Process for Reporting Incidents
+    family: incident-response-management
+    tags: [ig1]
+    description: |
+      Establish and maintain a documented enterprise process for the
+      workforce to report security incidents.
+
+  "17.4":
+    name: Establish and Maintain an Incident Response Process
+    family: incident-response-management
+    tags: [ig2]
+    description: |
+      Establish and maintain an incident response process that
+      addresses roles and responsibilities, compliance requirements,
+      and a communication plan.
+
+  "17.5":
+    name: Assign Key Roles and Responsibilities
+    family: incident-response-management
+    tags: [ig2]
+    description: |
+      Assign key roles and responsibilities for incident response,
+      including staff from legal, IT, information security,
+      facilities, public relations, human resources, incident
+      responders, and analysts.
+
+  "17.6":
+    name: Define Mechanisms for Communicating During Incident Response
+    family: incident-response-management
+    tags: [ig2]
+    description: |
+      Determine which primary and secondary mechanisms will be used
+      to communicate and report during a security incident.
+
+  "17.7":
+    name: Conduct Routine Incident Response Exercises
+    family: incident-response-management
+    tags: [ig2]
+    description: |
+      Plan and conduct routine incident response exercises and
+      scenarios for key personnel involved in the incident response
+      process to prepare for responding to real-world incidents.
+
+  "17.8":
+    name: Conduct Post-Incident Reviews
+    family: incident-response-management
+    tags: [ig2]
+    description: |
+      Conduct post-incident reviews to identify lessons learned and
+      follow-up action.
+
+  "17.9":
+    name: Establish and Maintain Security Incident Thresholds
+    family: incident-response-management
+    tags: [ig3]
+    description: |
+      Establish and maintain security incident thresholds, including,
+      at a minimum, differentiating between an incident and an event.
+
+  # ---- Control 18: Penetration Testing ----
+
+  "18.1":
+    name: Establish and Maintain a Penetration Testing Program
+    family: penetration-testing
+    tags: [ig2]
+    description: |
+      Establish and maintain a penetration testing program
+      appropriate to the size, complexity, and maturity of the
+      enterprise.
+
+  "18.2":
+    name: Perform Periodic External Penetration Tests
+    family: penetration-testing
+    tags: [ig2]
+    description: |
+      Perform periodic external penetration tests based on program
+      requirements, no less than annually.
+
+  "18.3":
+    name: Remediate Penetration Test Findings
+    family: penetration-testing
+    tags: [ig2]
+    description: |
+      Remediate penetration test findings based on the enterprise's
+      policy for remediation scope and prioritization.
+
+  "18.4":
+    name: Validate Security Measures
+    family: penetration-testing
+    tags: [ig3]
+    description: |
+      Validate security measures after each penetration test.
+
+  "18.5":
+    name: Perform Periodic Internal Penetration Tests
+    family: penetration-testing
+    tags: [ig3]
+    description: |
+      Perform periodic internal penetration tests based on program
+      requirements, no less than annually.
