@@ -68,21 +68,14 @@ func TestRunIngestSources_MultipleSources(t *testing.T) {
 		t.Errorf("graph still empty after ingest — phantom resources not added")
 	}
 
-	// Trivy fixture's CVE rule has no built-in mapping → should
-	// produce a warning; aws-security-hub fixtures are all mapped.
-	if len(warnings) == 0 {
-		t.Errorf("expected at least one warning from unmapped CVE")
-	}
-	foundSarifWarning := false
-	for _, w := range warnings {
-		if strings.HasPrefix(w, "[sarif]") {
-			foundSarifWarning = true
-			break
-		}
-	}
-	if !foundSarifWarning {
-		t.Errorf("expected sarif-prefixed warning, got %v", warnings)
-	}
+	// v0.14+: CVE-prefixed rules route through the default vuln-mgmt
+	// mapping (SOC 2 CC7.1 / NIST SI-2 / ISO A.8.8 / PCI 6.3 / CIS 7.1)
+	// and produce no "unmapped" warning. Other unmappable rules
+	// (CKV_K8S_22 with no built-in entry, etc.) may still emit
+	// warnings; this test no longer asserts their presence because
+	// the fixture content is sourced from Phase 1 and may change.
+	_ = warnings
+	_ = strings.HasPrefix // import retention; used by other tests in this file
 }
 
 // TestRunIngestSources_UnknownFormatErrors covers the config-validation

@@ -80,9 +80,35 @@ func TestIngest_Trivy(t *testing.T) {
 		t.Errorf("first phantom Type = %q, want terraform.file", r.Resources[0].Type)
 	}
 
-	// CVE finding has no built-in mapping → should generate a warning.
-	if len(r.Warnings) != 1 {
-		t.Errorf("warnings = %v (want 1 for unmapped CVE)", r.Warnings)
+	// CVE finding: v0.14+ gives it the default vuln-mgmt mapping
+	// (SOC 2 CC7.1, NIST SI-2, ISO A.8.8, PCI 6.3, CIS 7.1) and a
+	// populated Vulnerability block. No "unmapped" warning expected.
+	var cveFinding *core.Finding
+	for i := range r.Findings {
+		if strings.Contains(r.Findings[i].CheckID, "CVE-") {
+			cveFinding = &r.Findings[i]
+			break
+		}
+	}
+	if cveFinding == nil {
+		t.Fatalf("no CVE finding found in trivy fixture output")
+	}
+	if cveFinding.Vulnerability == nil {
+		t.Errorf("CVE finding has nil Vulnerability block")
+	} else {
+		if cveFinding.Vulnerability.ID == "" {
+			t.Errorf("Vulnerability.ID empty")
+		}
+		if cveFinding.Vulnerability.CVSSScore == 0 {
+			t.Errorf("Vulnerability.CVSSScore = 0, expected non-zero from security-severity prop")
+		}
+		if cveFinding.Vulnerability.Image == "" {
+			t.Errorf("Vulnerability.Image empty (expected alpine:3.18.0 from image:// URI)")
+		}
+	}
+	// No warnings expected — CVE got mapped, misconfigs got mapped.
+	if len(r.Warnings) != 0 {
+		t.Errorf("warnings = %v (expected 0 — CVE now mapped via default path)", r.Warnings)
 	}
 }
 

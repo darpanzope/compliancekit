@@ -56,6 +56,20 @@ type Finding struct {
 	// v0.13+. Populated by either the engine (native) or an
 	// internal/ingest adapter (external).
 	Source *Source `json:"source,omitempty"`
+
+	// Vulnerability is the v0.14+ typed metadata block populated when
+	// the finding represents a CVE / GHSA / vendor advisory rather
+	// than a posture issue. Trivy / Grype / Snyk / Dependabot ingest
+	// adapters populate it; native checks leave it nil. Reporters
+	// render CVE IDs natively when present.
+	Vulnerability *Vulnerability `json:"vulnerability,omitempty"`
+
+	// Secret is the v0.14+ typed metadata block populated when the
+	// finding represents a leaked credential discovered by a secret
+	// scanner (gitleaks, TruffleHog). Always carries a redacted
+	// fingerprint, never the raw secret value — ADR-010 codifies
+	// this hard rule.
+	Secret *Secret `json:"secret,omitempty"`
 }
 
 // Source describes where a Finding came from. Native findings produced

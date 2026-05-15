@@ -131,28 +131,50 @@ func projectResult(
 	tags := []string{}
 	frameworks := map[string][]string{}
 
+	mapped := false
 	if mapping != nil {
 		if m, ok := mapping.Lookup(res.RuleID); ok {
 			for _, c := range m.Controls {
 				frameworks[c.Framework] = append(frameworks[c.Framework], c.Control)
 			}
 			tags = append(tags, m.Tags...)
-		} else if !opts.FailOnUnmapped {
-			warnings = append(warnings,
-				fmt.Sprintf("no mapping for %s rule %q (finding emitted without framework attribution)",
-					toolID, res.RuleID))
+			mapped = true
 		}
+	}
+
+	// CVE / GHSA-prefixed rules from Trivy / Grype / vendor SARIFs get
+	// the v0.14 default vulnerability-management mapping when no
+	// explicit table entry covered them. This is the
+	// "compose-don't-reimplement" cliff: per-CVE mapping is impractical
+	// (Trivy ships tens of thousands), but every CVE attribution
+	// belongs to the same family of vuln-mgmt controls (SOC 2 CC7.1,
+	// NIST SI-2, ISO A.8.8, PCI 6.3.3, CIS 7.x). Operators override
+	// via a custom mapping table when their policy requires finer
+	// attribution.
+	if !mapped && isVulnAdvisoryRuleID(res.RuleID) {
+		for _, c := range defaultVulnControls() {
+			frameworks[c.Framework] = append(frameworks[c.Framework], c.Control)
+		}
+		tags = append(tags, "vulnerability", "cve")
+		mapped = true
+	}
+
+	if !mapped && !opts.FailOnUnmapped && mapping != nil {
+		warnings = append(warnings,
+			fmt.Sprintf("no mapping for %s rule %q (finding emitted without framework attribution)",
+				toolID, res.RuleID))
 	}
 
 	checkID := composeCheckID(toolID, res.RuleID)
 	finding := core.Finding{
-		CheckID:   checkID,
-		Status:    core.StatusFail,
-		Severity:  severity,
-		Resource:  subject,
-		Message:   composeMessage(res, rules),
-		Tags:      tags,
-		Timestamp: opts.Provenance.IngestedAt,
+		CheckID:       checkID,
+		Status:        core.StatusFail,
+		Severity:      severity,
+		Resource:      subject,
+		Message:       composeMessage(res, rules),
+		Tags:          tags,
+		Vulnerability: vulnerabilityFromResult(res, rules),
+		Timestamp:     opts.Provenance.IngestedAt,
 		Source: &core.Source{
 			Type:        "ingest",
 			Tool:        toolID,
@@ -413,6 +435,107 @@ func firstNonEmpty(s ...string) string {
 		}
 	}
 	return ""
+}
+
+// isVulnAdvisoryRuleID reports whether the SARIF rule ID looks like
+// an advisory identifier (CVE-YYYY-NNNNN, GHSA-XXXX-XXXX-XXXX,
+// RHSA-YYYY:NNNN, USN-NNNN-N). When true, the projection path
+// applies the default vuln-mgmt control mapping in the absence of
+// an explicit table entry.
+func isVulnAdvisoryRuleID(ruleID string) bool {
+	u := strings.ToUpper(ruleID)
+	switch {
+	case strings.HasPrefix(u, "CVE-"),
+		strings.HasPrefix(u, "GHSA-"),
+		strings.HasPrefix(u, "RHSA-"),
+		strings.HasPrefix(u, "USN-"),
+		strings.HasPrefix(u, "DSA-"),
+		strings.HasPrefix(u, "DLA-"):
+		return true
+	}
+	return false
+}
+
+// defaultVulnControls returns the standard set of vulnerability-
+// management framework controls every CVE / GHSA finding attributes
+// to in the absence of a per-rule mapping table entry.
+//
+// Per ADR-009, this is the "compose-don't-reimplement" approach to
+// vulnerability mapping: rather than enumerating one row per CVE
+// in our mapping yaml (impossible — Trivy ships tens of thousands),
+// we attribute every CVE-shaped rule to the same set of vuln-mgmt
+// controls. Operators with stricter policies override via a custom
+// mapping table.
+func defaultVulnControls() []ingest.ControlMapping {
+	return []ingest.ControlMapping{
+		{Framework: "soc2", Control: "CC7.1"},
+		{Framework: "iso27001", Control: "A.8.8"},
+		{Framework: "nist-800-53-r5", Control: "SI-2"},
+		{Framework: "pci-dss-v4", Control: "6.3"},
+		{Framework: "cis-v8", Control: "7.1"},
+	}
+}
+
+// vulnerabilityFromResult builds a core.Vulnerability block when the
+// SARIF result describes a CVE / GHSA / advisory finding. Returns
+// nil for non-advisory rules (Trivy AVD misconfigs, Checkov CKV_*,
+// etc.) so reporters can branch cleanly on presence.
+func vulnerabilityFromResult(res result, rules map[string]rule) *core.Vulnerability {
+	if !isVulnAdvisoryRuleID(res.RuleID) {
+		return nil
+	}
+	v := &core.Vulnerability{
+		ID:          res.RuleID,
+		Description: res.Message.Text,
+	}
+	if r, ok := rules[res.RuleID]; ok {
+		v.PrimaryURL = r.HelpURI
+		if v.Description == "" && r.ShortDescription != nil {
+			v.Description = r.ShortDescription.Text
+		}
+		v.CVSSScore = securitySeverityFrom(r.Properties)
+	}
+	if v.CVSSScore == 0 {
+		v.CVSSScore = securitySeverityFrom(res.Properties)
+	}
+	// Extract the image / package from the location URI for Trivy
+	// image scans. URI shape "image://alpine:3.18.0/lib/openssl"
+	// → Image="alpine:3.18.0".
+	if uri, _ := primaryLocation(res); strings.HasPrefix(uri, "image://") {
+		rest := strings.TrimPrefix(uri, "image://")
+		if i := strings.Index(rest, "/"); i > 0 {
+			v.Image = rest[:i]
+		} else {
+			v.Image = rest
+		}
+	}
+	return v
+}
+
+// parseFloat is a best-effort string→float64 conversion that returns
+// 0 on parse failure. Used for CVSS score extraction where the
+// underlying tool's property may be either a string or a number.
+func parseFloat(s string) float64 {
+	var f float64
+	_, _ = fmt.Sscanf(s, "%f", &f)
+	return f
+}
+
+// securitySeverityFrom extracts the "security-severity" property
+// value as a float, handling both string and float64 representations
+// (Trivy emits string; some vendors emit number). Returns 0 if the
+// property is absent or unparseable.
+func securitySeverityFrom(props map[string]any) float64 {
+	if props == nil {
+		return 0
+	}
+	switch v := props["security-severity"].(type) {
+	case string:
+		return parseFloat(v)
+	case float64:
+		return v
+	}
+	return 0
 }
 
 // init self-registers the adapter against the Default registry so
