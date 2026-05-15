@@ -135,6 +135,38 @@ tailoring:                      # v0.12+
       Privacy commitment not yet declared in our SOC 2 report.
       Pre-audit; revisit at next audit window.
 
+# v0.13+. Pull in external tool output during scan. Each entry is
+# decoded by its `format` adapter and its findings merge into the
+# native scan result before reports / evidence pack are written.
+#
+# Supported formats:
+#   sarif           — SARIF 2.1.0 (Trivy / Checkov / KICS / Terrascan / CodeQL / Semgrep)
+#   ocsf            — OCSF 1.x (AWS Security Hub / GCP SCC / Defender)
+#   oscal-catalog   — OSCAL Catalog v1.x (registers as a runtime framework)
+#   trivy-json      — v0.14+ Trivy native JSON (per-package CVE/PURL/CVSS detail)
+#   grype-json      — v0.14+ Grype native JSON (alternate vuln scanner)
+#   checkov-json    — v0.14+ Checkov native JSON (richer than SARIF)
+#   gitleaks-json   — v0.14+ gitleaks native JSON (auto-redacted secrets, ADR-010)
+#
+# v0.14+ adds an image-SHA correlation pass: when a Trivy/Grype
+# image scan reports a CVE on container-image://<sha256> and a
+# K8s/DO/ECS resource in the live graph references that SHA, the
+# finding is cloned onto the running instance with a "running-on"
+# tag so the same CVE appears under both the image and its
+# consumers in the evidence pack.
+ingest:                         # v0.13+
+  - format: trivy-json
+    file: ./out/trivy.json      # path relative to working dir
+    tool: trivy                 # provenance tag on every produced Finding
+    tool_version: v0.50.4       # optional, propagates to vulnerabilities.csv
+  - format: grype-json
+    file: ./out/grype.json
+    tool: grype
+  - format: gitleaks-json
+    file: ./out/gitleaks.json
+    tool: gitleaks
+  # SARIF / OCSF / OSCAL Catalog also supported — see v0.13 examples.
+
 profile: ci-fast                # v0.6+. names a key under `profiles:` below.
 
 # Named subsets of the check catalog. Selectors are AND-composed

@@ -1,0 +1,46 @@
+# compliancekit.yaml — gitleaks ingest quickstart.
+#
+# v0.14+. Secret findings from gitleaks merge into the same evidence
+# pack as native posture findings. Every Secret block carries an
+# AUTO-REDACTED Fingerprint — the raw credential value never enters
+# compliancekit's data plane per ADR-010 (DECISIONS.md).
+#
+# CI flow:
+#
+#   gitleaks detect --report-format=json --report-path=gitleaks.json
+#   compliancekit scan --config=compliancekit.yaml --evidence true
+#
+# The redaction algorithm:
+#   - 16+ characters → first4 + "..." + last4 (e.g. "AKIA...MPLE")
+#   - < 16 characters → "sha256:" + first 12 hex chars (e.g. "sha256:a1b2c3d4e5f6")
+#
+# This preserves enough character for an operator to correlate
+# findings across runs (the same secret hit twice produces the
+# same fingerprint) without making the credential recoverable.
+#
+# Severity heuristic (gitleaks doesn't ship per-rule severity in
+# its output):
+#   - aws-access-key, stripe-*, private-key, rsa-*, ssh-*    → critical
+#   - generic-api-key, generic-token, password, secret-*     → high
+#   - everything else                                        → medium
+
+project: acme-ci
+environment: prod
+
+providers:
+  kubernetes:
+    enabled: false  # secret scanning is repo-local; native cloud scan optional
+
+ingest:
+  - format: gitleaks-json
+    file: ./gitleaks.json
+    tool: gitleaks
+
+severity:
+  fail_on: critical   # leaked credential is always critical
+  min_report: low
+
+output:
+  format: [json, markdown, sarif]
+  out_dir: ./out
+  evidence: true

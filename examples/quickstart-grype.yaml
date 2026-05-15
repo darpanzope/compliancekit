@@ -1,0 +1,45 @@
+# compliancekit.yaml — Grype native JSON ingest quickstart.
+#
+# v0.14+. Grype is the alternate-of-preference for shops that don't
+# run Trivy; its native JSON format is shaped slightly differently
+# (top-level matches[] array vs Trivy's nested Results[]) but the
+# resulting compliancekit Findings carry the same Vulnerability
+# block with CVE-ID, CVSS, fixed-version, PURL, image SHA.
+#
+# CI flow:
+#
+#   grype --output=json --file=grype.json ghcr.io/acme/api:v2.0
+#   compliancekit scan --config=compliancekit.yaml --evidence true
+#
+# Dual-source pattern (Trivy + Grype on the same image): see
+# examples/quickstart-vuln-pipeline.yaml — running both is supported
+# and additive (each tool's findings appear independently, both
+# correlate through the image-SHA join).
+
+project: acme-ci
+environment: prod
+
+providers:
+  kubernetes:
+    enabled: true
+
+frameworks:
+  - soc2
+  - iso27001
+  - nist-800-53-r5
+  - pci-dss-v4
+
+ingest:
+  - format: grype-json
+    file: ./grype.json
+    tool: grype
+    tool_version: v0.74.0
+
+severity:
+  fail_on: high
+  min_report: low
+
+output:
+  format: [json, markdown, sarif]
+  out_dir: ./out
+  evidence: true
