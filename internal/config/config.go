@@ -33,6 +33,15 @@ type Config struct {
 	Output    OutputConfig             `mapstructure:"output"      yaml:"output"`
 	State     StateConfig              `mapstructure:"state"       yaml:"state"`
 
+	// Ingest declares zero or more external-tool output files to
+	// merge into the scan result. Each entry names a format (sarif,
+	// ocsf, oscal-ar, …), a file path, and optionally a mapping
+	// table that translates the external tool's rule IDs into
+	// compliancekit framework controls. Ingest is the v0.13
+	// composition story: native scan + external tool output land
+	// in the same Findings slice and the same evidence pack.
+	Ingest []IngestSource `mapstructure:"ingest" yaml:"ingest,omitempty"`
+
 	// SourcePath is the resolved path of the YAML file Load read from, or ""
 	// if no file was found and defaults plus environment were used alone.
 	// Populated by Load; excluded from marshaling because it is not part
@@ -267,6 +276,42 @@ type TailoringRule struct {
 	Framework     string `mapstructure:"framework"     yaml:"framework"`
 	Control       string `mapstructure:"control"       yaml:"control"`
 	Justification string `mapstructure:"justification" yaml:"justification"`
+}
+
+// IngestSource declares one external-tool output file to merge into
+// the scan result. The CLI's `compliancekit ingest` subcommand
+// consumes a single source from its flags; this struct shape lets a
+// `compliancekit scan --config=...` invocation declare any number
+// of sources to merge after the native scan finishes. v0.13+.
+type IngestSource struct {
+	// Format names the wire format the file uses: "sarif", "ocsf",
+	// "oscal-ar", "oscal-catalog". Matches Ingester.Format() in
+	// internal/ingest exactly. Required.
+	Format string `mapstructure:"format" yaml:"format"`
+
+	// File is the path to the producing tool's output file. Relative
+	// paths resolve against the working directory at scan time.
+	// Required.
+	File string `mapstructure:"file" yaml:"file"`
+
+	// Tool (optional) identifies the producing tool, e.g. "trivy",
+	// "aws-security-hub". When set, the ingester loads the built-in
+	// mapping table for that tool unless Mapping below overrides it.
+	Tool string `mapstructure:"tool" yaml:"tool,omitempty"`
+
+	// ToolVersion (optional) records the version of the producing
+	// tool. Surfaces in the evidence pack provenance trail.
+	ToolVersion string `mapstructure:"tool_version" yaml:"tool_version,omitempty"`
+
+	// Mapping (optional) is the path to a custom mapping yaml that
+	// overrides the built-in table for Tool. Useful when an
+	// organization tailors rule-to-control attribution.
+	Mapping string `mapstructure:"mapping" yaml:"mapping,omitempty"`
+
+	// FailOnUnmapped (optional) makes ingest error if any external
+	// rule has no mapping entry, rather than emitting the finding
+	// with no framework attribution + a warning. Default false.
+	FailOnUnmapped bool `mapstructure:"fail_on_unmapped" yaml:"fail_on_unmapped,omitempty"`
 }
 
 // ProfileConfig is one named subset of the check catalog declared

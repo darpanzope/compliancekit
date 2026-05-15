@@ -43,6 +43,7 @@ Run 'compliancekit doctor' first to validate your config and connectivity.`,
 	cmd.AddCommand(newEvidenceCmd())
 	cmd.AddCommand(newBaselineCmd())
 	cmd.AddCommand(newDiffCmd())
+	cmd.AddCommand(newIngestCmd())
 
 	return cmd
 }

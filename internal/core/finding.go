@@ -46,6 +46,56 @@ type Finding struct {
 	// Timestamp is when the finding was produced (engine end-of-scan time).
 	// All findings from a single scan share the same Timestamp.
 	Timestamp time.Time `json:"timestamp"`
+
+	// Source records the provenance of this finding: native scan, or
+	// ingested from an external tool (Trivy, AWS Security Hub, OSCAL
+	// assessment results, …). nil for legacy findings written before
+	// v0.13; reporters and the evidence pack treat absence as native
+	// for backwards compatibility.
+	//
+	// v0.13+. Populated by either the engine (native) or an
+	// internal/ingest adapter (external).
+	Source *Source `json:"source,omitempty"`
+}
+
+// Source describes where a Finding came from. Native findings produced
+// by the scan engine set Type="native" and leave Tool/ToolVersion/Format
+// empty. Findings produced by an internal/ingest adapter set Type="ingest"
+// plus the tool identifier and the wire format that carried them in.
+//
+// Source travels with the finding through every reporter, the diff
+// engine, and the evidence pack — operators and auditors can see
+// "this control is flagged by both compliancekit's native check and
+// Trivy v0.50.2" without losing either side of the trail.
+type Source struct {
+	// Type is "native" for engine-produced findings or "ingest" for
+	// findings projected from an external tool's output.
+	Type string `json:"type"`
+
+	// Tool identifies the producer when Type=="ingest", e.g. "trivy",
+	// "checkov", "aws-security-hub", "gcp-scc", "defender". Empty
+	// when Type=="native".
+	Tool string `json:"tool,omitempty"`
+
+	// ToolVersion (optional) records the producing tool's version,
+	// e.g. "v0.50.2". Useful for audit-trail reproducibility.
+	ToolVersion string `json:"tool_version,omitempty"`
+
+	// Format names the wire format the finding was decoded from
+	// ("sarif", "ocsf", "oscal-ar"). Empty for native findings.
+	Format string `json:"format,omitempty"`
+
+	// File (optional) is the path of the source file the ingest
+	// adapter read. Aids reproducibility but never relied on for
+	// correctness — the finding is fully described without it.
+	File string `json:"file,omitempty"`
+}
+
+// IsNative reports whether the finding was produced by the scan engine
+// rather than ingested from an external tool. A nil Source counts as
+// native (pre-v0.13 findings).
+func (f Finding) IsNative() bool {
+	return f.Source == nil || f.Source.Type == "native" || f.Source.Type == ""
 }
 
 // Fingerprint returns a stable hex hash over the (check_id, resource.id,
