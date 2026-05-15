@@ -133,16 +133,52 @@ func buildSARIFResults(findings []core.Finding, rules map[string]sarifRule) []sa
 					},
 				},
 			},
-			Properties: map[string]any{
-				"status":        string(f.Status),
-				"severity":      f.Severity.String(),
-				"resource_name": f.Resource.Name,
-				"resource_type": f.Resource.Type,
-				"resource_id":   f.Resource.ID,
-			},
+			Properties: enrichSARIFProps(f),
 		})
 	}
 	return out
+}
+
+// enrichSARIFProps adds v0.14 Vulnerability + Secret fields onto the
+// SARIF result.properties bag when those typed blocks are populated.
+// Code Scanning surfaces "security-severity" specifically as a
+// GitHub-recognized property; the rest are passthrough strings other
+// SARIF consumers can filter on.
+func enrichSARIFProps(f core.Finding) map[string]any {
+	props := map[string]any{
+		"status":        string(f.Status),
+		"severity":      f.Severity.String(),
+		"resource_name": f.Resource.Name,
+		"resource_type": f.Resource.Type,
+		"resource_id":   f.Resource.ID,
+	}
+	if v := f.Vulnerability; v != nil {
+		props["cve_id"] = v.ID
+		if v.CVSSScore > 0 {
+			props["security-severity"] = v.CVSSScore // GitHub recognizes this
+			props["cvss_score"] = v.CVSSScore
+		}
+		if v.CVSSVector != "" {
+			props["cvss_vector"] = v.CVSSVector
+		}
+		if v.FixedVersion != "" {
+			props["fixed_version"] = v.FixedVersion
+		}
+		if v.Package.PURL != "" {
+			props["package_purl"] = v.Package.PURL
+		}
+		if v.Image != "" {
+			props["image"] = v.Image
+		}
+	}
+	if s := f.Secret; s != nil {
+		props["secret_rule_id"] = s.RuleID
+		props["secret_fingerprint"] = s.Fingerprint // already redacted
+		if s.Author != "" {
+			props["secret_author"] = s.Author
+		}
+	}
+	return props
 }
 
 // rulesAsSlice converts the rule map to the alphabetical slice form

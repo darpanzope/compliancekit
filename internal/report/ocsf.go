@@ -140,8 +140,44 @@ func findingToOCSFEvent(f core.Finding) ocsfEvent {
 		}
 		ev.Unmapped["compliancekit_tags"] = f.Tags
 	}
+	// v0.14+: Vulnerability + Secret typed blocks travel through
+	// unmapped so OCSF parsers see them without having to model the
+	// full Vulnerability Finding class. Production downstreams can
+	// promote these into canonical vulnerabilities[] / secrets[].
+	if f.Vulnerability != nil {
+		if ev.Unmapped == nil {
+			ev.Unmapped = map[string]any{}
+		}
+		ev.Unmapped["compliancekit_vulnerability"] = vulnerabilityToOCSF(f.Vulnerability)
+	}
+	if f.Secret != nil {
+		if ev.Unmapped == nil {
+			ev.Unmapped = map[string]any{}
+		}
+		ev.Unmapped["compliancekit_secret"] = f.Secret // already redacted
+	}
 
 	return ev
+}
+
+func vulnerabilityToOCSF(v *core.Vulnerability) ocsfVulnerability {
+	return ocsfVulnerability{
+		CVE: ocsfCVE{
+			UID:  v.ID,
+			CVSS: v.CVSSScore,
+		},
+		Title:       v.ID,
+		Description: v.Description,
+		FirstSeen:   v.PublishedDate,
+		References:  []string{v.PrimaryURL},
+		Image:       v.Image,
+		Package: ocsfPkg{
+			Name:      v.Package.Name,
+			Version:   v.Package.Version,
+			Ecosystem: v.Package.Ecosystem,
+			PURL:      v.Package.PURL,
+		},
+	}
 }
 
 // titleAndDescription resolves a check title and longer description
@@ -306,6 +342,35 @@ type ocsfResource struct {
 	UID    string     `json:"uid,omitempty"`
 	Region string     `json:"region,omitempty"`
 	Cloud  *ocsfCloud `json:"cloud,omitempty"`
+}
+
+// ocsfVulnerability mirrors the OCSF Vulnerability Finding (class_uid
+// 2002) vulnerabilities[] entry. We emit one of these on the event's
+// unmapped.compliancekit_vulnerability slot when Finding.Vulnerability
+// is non-nil. v0.14+. Production OCSF consumers can lift this into
+// the canonical vulnerabilities[] block if their parser is strict
+// about the OCSF class_uid.
+type ocsfVulnerability struct {
+	CVE         ocsfCVE  `json:"cve,omitempty"`
+	Severity    string   `json:"severity,omitempty"`
+	Title       string   `json:"title,omitempty"`
+	Description string   `json:"desc,omitempty"`
+	FirstSeen   string   `json:"first_seen_time_dt,omitempty"`
+	References  []string `json:"references,omitempty"`
+	Image       string   `json:"image,omitempty"`
+	Package     ocsfPkg  `json:"package,omitempty"`
+}
+
+type ocsfCVE struct {
+	UID  string  `json:"uid,omitempty"`
+	CVSS float64 `json:"cvss,omitempty"`
+}
+
+type ocsfPkg struct {
+	Name      string `json:"name,omitempty"`
+	Version   string `json:"version,omitempty"`
+	Ecosystem string `json:"ecosystem,omitempty"`
+	PURL      string `json:"purl,omitempty"`
 }
 
 type ocsfCloud struct {
