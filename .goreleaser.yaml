@@ -33,15 +33,6 @@ builds:
   - id: compliancekit
     main: ./cmd/compliancekit
     binary: compliancekit
-    # Cap concurrent cross-compiles at 2 (default is runtime.NumCPU
-    # = 4 on ubuntu-latest). v0.12.0's first three release attempts
-    # OOM-pattern-killed the runner with SIGTERM ~8 min into the
-    # silent link phase, all four targets fighting for the same
-    # host. Halving parallelism keeps peak link memory well under
-    # the runner's 16GB ceiling. Wall time goes from ~11m (when 4
-    # parallel succeeded, e.g. v0.11) to ~14-17m — same range as
-    # the last green release, no longer racing the cliff.
-    parallelism: 2
     env:
       - CGO_ENABLED=0
     flags:

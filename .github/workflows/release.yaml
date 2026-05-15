@@ -41,8 +41,8 @@ jobs:
     # v0.11 (Kubernetes) added k8s.io/client-go and tripled the binary
     # size ~50MB -> ~154MB. v0.12.0's first three release attempts
     # OOM-pattern-killed the runner during four parallel goreleaser
-    # cross-compiles on this same host. Fix lives in .goreleaser.yaml
-    # (`builds[].parallelism: 2`), not here: capping concurrent links
+    # cross-compiles on this same host. Fix is the `--parallelism 2`
+    # CLI flag on the goreleaser step below: capping concurrent links
     # keeps the host comfortably under the 16GB RAM ceiling while
     # holding wall time at ~17 min, same as v0.11.
     runs-on: ubuntu-latest
@@ -116,7 +116,15 @@ jobs:
         with:
           distribution: goreleaser
           version: '~> v2'
-          args: release --clean
+          # --parallelism 2 caps concurrent cross-compiles. Default
+          # is runtime.GOMAXPROCS (4 on ubuntu-latest); 4 parallel
+          # Go links of a ~160MB binary saturate the runner's RAM
+          # and triggered SIGTERM-pattern failures in v0.12.0's
+          # first attempts. parallelism is a goreleaser CLI flag,
+          # not a YAML field — `builds[].parallelism` is rejected
+          # at config parse with "field parallelism not found in
+          # type config.Build".
+          args: release --clean --parallelism 2
         env:
           # Ambient token for the GitHub Release + GHCR push.
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
