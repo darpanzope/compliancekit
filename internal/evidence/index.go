@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/internal/frameworks"
 	"github.com/darpanzope/compliancekit/internal/score"
 )
 
@@ -30,19 +31,23 @@ var summaryTemplate = template.Must(template.ParseFS(summaryAssets, "assets/summ
 // in the header; Frameworks renders both the per-framework summary
 // cards and the per-framework control tables below.
 type summaryView struct {
-	Period        string
-	Generated     string
-	TotalFindings int
-	TotalControls int
-	Score         int // v0.6 hardening score per DECISIONS.md ADR-008
-	Coverage      int // v0.6 % of finding weight that was evaluable
-	Redacted      bool
-	Frameworks    []summaryFramework
+	Period               string
+	Generated            string
+	TotalFindings        int
+	TotalControls        int
+	Score                int // v0.6 hardening score per DECISIONS.md ADR-008
+	Coverage             int // v0.6 % of finding weight that was evaluable
+	Redacted             bool
+	TailoringCount       int                  // v0.12: number of controls scoped out
+	TailoringEntries     []tailoringViewEntry // v0.12: human-readable list for the auditor card
+	ComplianceFrameworks []summaryFramework   // v0.12: category=compliance frameworks
+	ThreatModels         []summaryFramework   // v0.12: category=threat_model frameworks (ATT&CK)
 }
 
 type summaryFramework struct {
 	ID               string
 	Name             string
+	Category         string // v0.12: "compliance" or "threat_model"
 	ControlsCovered  int
 	ControlsWithFail int
 	Controls         []summaryControl
@@ -51,8 +56,20 @@ type summaryFramework struct {
 type summaryControl struct {
 	ID                        string
 	Name                      string
-	Dir                       string // <framework>/<control-dir>
+	Family                    string   // v0.12: control family for grouping
+	Tags                      []string // v0.12: CIS IG / HIPAA req-vs-addr / ATT&CK tactic refs
+	Dir                       string   // <framework>/<control-dir>
 	Pass, Fail, Skip, Errored int
+	Tailored                  bool   // v0.12: scoped out by operator
+	TailoringJustification    string // v0.12: operator's reason when tailored
+}
+
+type tailoringViewEntry struct {
+	FrameworkID   string
+	FrameworkName string
+	ControlID     string
+	ControlName   string
+	Justification string
 }
 
 // writeSummaryHTML emits <out>/summary.html using the control index
@@ -88,33 +105,19 @@ func buildSummaryView(result *Result, opts Options) summaryView {
 		Generated: result.Generated.UTC().Format(time.RFC3339),
 		Redacted:  !opts.IncludeRaw,
 	}
+	buildTailoringSection(&view, opts.Tailoring)
 
-	// Sort framework IDs deterministically. result.FrameworkResults is
-	// already sorted by ID; we re-use that order for the controls
-	// section directly below.
+	all, _ := frameworks.All() // best-effort; per-control category lookups skip on error
 	for _, fr := range result.FrameworkResults {
 		refs := result.ControlIndex[fr.FrameworkID]
 		sort.Slice(refs, func(i, j int) bool { return refs[i].ControlID < refs[j].ControlID })
-
-		fwView := summaryFramework{
-			ID:               fr.FrameworkID,
-			Name:             fr.FrameworkName,
-			ControlsCovered:  fr.ControlsCovered,
-			ControlsWithFail: fr.ControlsWithFail,
+		fwView, n := buildFrameworkView(fr, refs, all, opts.Tailoring)
+		view.TotalControls += n
+		if fwView.Category == frameworks.CategoryThreatModel {
+			view.ThreatModels = append(view.ThreatModels, fwView)
+		} else {
+			view.ComplianceFrameworks = append(view.ComplianceFrameworks, fwView)
 		}
-		for _, c := range refs {
-			fwView.Controls = append(fwView.Controls, summaryControl{
-				ID:      c.ControlID,
-				Name:    c.ControlName,
-				Dir:     fmt.Sprintf("%s/%s", c.FrameworkID, c.DirName),
-				Pass:    countStatus(c.Findings, core.StatusPass),
-				Fail:    countStatus(c.Findings, core.StatusFail),
-				Skip:    countStatus(c.Findings, core.StatusSkip),
-				Errored: countStatus(c.Findings, core.StatusError),
-			})
-			view.TotalControls++
-		}
-		view.Frameworks = append(view.Frameworks, fwView)
 	}
 	// TotalFindings counts unique (check, resource) pairs the pack
 	// contains. A finding appearing under multiple controls is the
@@ -130,6 +133,82 @@ func buildSummaryView(result *Result, opts Options) summaryView {
 	view.Score = s.Score
 	view.Coverage = s.Coverage
 	return view
+}
+
+// buildTailoringSection populates view.TailoringCount + entries from
+// the operator-declared rules. No-op when Tailoring is nil/empty.
+func buildTailoringSection(view *summaryView, t *frameworks.Tailoring) {
+	if t == nil || t.Count() == 0 {
+		return
+	}
+	view.TailoringCount = t.Count()
+	all, err := frameworks.All()
+	if err != nil {
+		return
+	}
+	for _, r := range t.Rules {
+		entry := tailoringViewEntry{
+			FrameworkID:   r.Framework,
+			ControlID:     r.Control,
+			Justification: r.Justification,
+		}
+		if fw, ok := all[r.Framework]; ok {
+			entry.FrameworkName = fw.Name
+			if ctrl, ok := fw.Controls[r.Control]; ok {
+				entry.ControlName = ctrl.Name
+			}
+		}
+		view.TailoringEntries = append(view.TailoringEntries, entry)
+	}
+}
+
+// buildFrameworkView builds the per-framework section + returns the
+// view and number of controls added. buildSummaryView aggregates the
+// counts into TotalControls.
+func buildFrameworkView(fr FrameworkResult, refs []ControlRef, all map[string]*frameworks.Framework, t *frameworks.Tailoring) (view summaryFramework, controlCount int) {
+	view = summaryFramework{
+		ID:               fr.FrameworkID,
+		Name:             fr.FrameworkName,
+		Category:         frameworks.CategoryCompliance,
+		ControlsCovered:  fr.ControlsCovered,
+		ControlsWithFail: fr.ControlsWithFail,
+	}
+	var fw *frameworks.Framework
+	if all != nil {
+		fw = all[fr.FrameworkID]
+		if fw != nil && fw.IsThreatModel() {
+			view.Category = frameworks.CategoryThreatModel
+		}
+	}
+	for _, c := range refs {
+		view.Controls = append(view.Controls, buildControlView(c, fw, t))
+	}
+	return view, len(refs)
+}
+
+// buildControlView builds a single control row including the v0.12
+// family/tags and tailoring annotations.
+func buildControlView(c ControlRef, fw *frameworks.Framework, t *frameworks.Tailoring) summaryControl {
+	v := summaryControl{
+		ID:      c.ControlID,
+		Name:    c.ControlName,
+		Dir:     fmt.Sprintf("%s/%s", c.FrameworkID, c.DirName),
+		Pass:    countStatus(c.Findings, core.StatusPass),
+		Fail:    countStatus(c.Findings, core.StatusFail),
+		Skip:    countStatus(c.Findings, core.StatusSkip),
+		Errored: countStatus(c.Findings, core.StatusError),
+	}
+	if fw != nil {
+		if ctrl, ok := fw.Controls[c.ControlID]; ok {
+			v.Family = ctrl.Family
+			v.Tags = ctrl.Tags
+		}
+	}
+	if just, ok := t.Lookup(c.FrameworkID, c.ControlID); ok {
+		v.Tailored = true
+		v.TailoringJustification = just
+	}
+	return v
 }
 
 func countStatus(findings []core.Finding, status core.Status) int {

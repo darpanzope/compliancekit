@@ -18,6 +18,7 @@
   --fail:  #ff5252;
   --skip:  #8a93a3;
   --warn:  #ff8a3d;
+  --info:  #9aa4ff;
 }
 
 * { box-sizing: border-box; }
@@ -56,6 +57,7 @@ header.pack .meta { color: var(--muted); font-size: 13px; }
   border-radius: 8px;
   padding: 14px 16px;
 }
+.fw-card.threat-model { border-color: var(--info); }
 .fw-card .name { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
 .fw-card .id   { font-size: 17px; font-weight: 600; margin: 2px 0 8px; }
 .fw-card .row  { display: flex; justify-content: space-between; font-variant-numeric: tabular-nums; }
@@ -71,7 +73,19 @@ section.framework h2 {
   padding-bottom: 6px;
   border-bottom: 1px solid var(--border);
 }
+section.framework.threat-model h2 { border-bottom-color: var(--info); }
 section.framework h2 .fwid { color: var(--muted); font-weight: 400; font-size: 13px; margin-left: 8px; }
+section.framework h2 .category-chip {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--info);
+  color: var(--info);
+  margin-left: 8px;
+  vertical-align: middle;
+}
 
 table.controls {
   width: 100%;
@@ -107,6 +121,31 @@ table.controls .pill.fail   { color: var(--fail); border-color: var(--fail); }
 table.controls .pill.pass   { color: var(--ok);   border-color: var(--ok); }
 table.controls .pill.skip   { color: var(--skip); }
 table.controls .pill.error  { color: var(--warn); border-color: var(--warn); }
+table.controls .pill.tag    { color: var(--muted); font-size: 10px; }
+table.controls .pill.tailored { color: var(--warn); border-color: var(--warn); }
+table.controls tr.tailored td:first-child::before { content: "⚑ "; color: var(--warn); }
+table.controls tr.tailored .name { color: var(--muted); }
+table.controls .justification {
+  display: block;
+  color: var(--muted);
+  font-style: italic;
+  margin-top: 4px;
+  font-size: 12px;
+  max-width: 60ch;
+}
+
+section.tailoring {
+  background: var(--panel);
+  border: 1px solid var(--warn);
+  border-radius: 8px;
+  padding: 14px 18px;
+  margin: 16px 0 32px;
+}
+section.tailoring h3 { margin: 0 0 8px; font-size: 13px; color: var(--warn); text-transform: uppercase; letter-spacing: 0.06em; }
+section.tailoring ul { margin: 0; padding-left: 18px; }
+section.tailoring li { margin: 4px 0; }
+section.tailoring li code { color: var(--text); }
+section.tailoring li .justification { color: var(--muted); }
 
 footer.pack {
   margin-top: 48px;
@@ -132,6 +171,7 @@ footer.pack code {
     · Generated: <code>{{.Generated}}</code>
     · {{.TotalFindings}} findings across {{.TotalControls}} controls
     {{if .Redacted}}· <span style="color:var(--warn)">redacted</span>{{else}}· <span style="color:var(--warn)">raw included</span>{{end}}
+    {{if .TailoringCount}}· <span style="color:var(--warn)">{{.TailoringCount}} controls tailored out</span>{{end}}
   </div>
   <div style="margin-top:14px; display:flex; gap:24px; align-items:baseline;">
     <div>
@@ -145,18 +185,66 @@ footer.pack code {
   </div>
 </header>
 
+{{if .TailoringEntries}}
+<section class="tailoring">
+  <h3>Tailoring — controls scoped out of audit</h3>
+  <ul>
+    {{range .TailoringEntries}}
+    <li>
+      <code>{{.FrameworkID}}</code> /
+      <code>{{.ControlID}}</code> {{with .ControlName}}— {{.}}{{end}}
+      <span class="justification">— {{.Justification}}</span>
+    </li>
+    {{end}}
+  </ul>
+  <p style="color:var(--muted);font-size:12px;margin:8px 0 0">
+    Full record at <code><a href="tailoring.json">tailoring.json</a></code>.
+  </p>
+</section>
+{{end}}
+
 <section class="frameworks">
-  {{range .Frameworks}}
+  {{range .ComplianceFrameworks}}
   <div class="fw-card">
-    <div class="name">Framework</div>
+    <div class="name">Compliance framework</div>
     <div class="id">{{.Name}} <span style="color:var(--muted);font-weight:400;font-size:13px">({{.ID}})</span></div>
     <div class="row"><span class="label">Controls covered</span><span class="value">{{.ControlsCovered}}</span></div>
     <div class="row"><span class="label">With open findings</span><span class="value {{if .ControlsWithFail}}has-fail{{end}}">{{.ControlsWithFail}}</span></div>
   </div>
   {{end}}
+  {{range .ThreatModels}}
+  <div class="fw-card threat-model">
+    <div class="name">Threat model</div>
+    <div class="id">{{.Name}} <span style="color:var(--muted);font-weight:400;font-size:13px">({{.ID}})</span></div>
+    <div class="row"><span class="label">Techniques mapped</span><span class="value">{{.ControlsCovered}}</span></div>
+    <div class="row"><span class="label">With observed findings</span><span class="value {{if .ControlsWithFail}}has-fail{{end}}">{{.ControlsWithFail}}</span></div>
+  </div>
+  {{end}}
 </section>
 
-{{range .Frameworks}}
+{{define "controlRow"}}
+<tr{{if .Tailored}} class="tailored"{{end}}>
+  <td><code>{{.ID}}</code></td>
+  <td class="name">
+    {{.Name}}
+    {{if .Family}}<span class="pill tag">{{.Family}}</span>{{end}}
+    {{range .Tags}}<span class="pill tag">{{.}}</span>{{end}}
+    {{if .Tailored}}<span class="pill tailored">tailored</span>{{end}}
+    {{if .TailoringJustification}}<span class="justification">{{.TailoringJustification}}</span>{{end}}
+  </td>
+  <td class="counts">
+    <span class="pill pass">pass {{.Pass}}</span>
+    <span class="pill fail">fail {{.Fail}}</span>
+    <span class="pill skip">skip {{.Skip}}</span>
+    {{if .Errored}}<span class="pill error">error {{.Errored}}</span>{{end}}
+  </td>
+  <td>
+    <a href="{{.Dir}}/control.md">control.md</a> · <a href="{{.Dir}}/findings.json">json</a>
+  </td>
+</tr>
+{{end}}
+
+{{range .ComplianceFrameworks}}
 <section class="framework" id="fw-{{.ID}}">
   <h2>{{.Name}} <span class="fwid">{{.ID}}</span></h2>
   <table class="controls">
@@ -169,21 +257,26 @@ footer.pack code {
       </tr>
     </thead>
     <tbody>
-      {{range .Controls}}
+      {{range .Controls}}{{template "controlRow" .}}{{end}}
+    </tbody>
+  </table>
+</section>
+{{end}}
+
+{{range .ThreatModels}}
+<section class="framework threat-model" id="fw-{{.ID}}">
+  <h2>{{.Name}} <span class="fwid">{{.ID}}</span> <span class="category-chip">kill chain</span></h2>
+  <table class="controls">
+    <thead>
       <tr>
-        <td><code>{{.ID}}</code></td>
-        <td>{{.Name}}</td>
-        <td class="counts">
-          <span class="pill pass">pass {{.Pass}}</span>
-          <span class="pill fail">fail {{.Fail}}</span>
-          <span class="pill skip">skip {{.Skip}}</span>
-          {{if .Errored}}<span class="pill error">error {{.Errored}}</span>{{end}}
-        </td>
-        <td>
-          <a href="{{.Dir}}/control.md">control.md</a> · <a href="{{.Dir}}/findings.json">json</a>
-        </td>
+        <th style="width: 120px;">Technique</th>
+        <th>Name</th>
+        <th style="width: 220px;">Counts</th>
+        <th style="width: 120px;">Evidence</th>
       </tr>
-      {{end}}
+    </thead>
+    <tbody>
+      {{range .Controls}}{{template "controlRow" .}}{{end}}
     </tbody>
   </table>
 </section>

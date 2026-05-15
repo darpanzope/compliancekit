@@ -11,8 +11,10 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/darpanzope/compliancekit/internal/config"
 	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/evidence"
+	"github.com/darpanzope/compliancekit/internal/frameworks"
 )
 
 // evidenceOptions are the flags accepted by `compliancekit evidence`.
@@ -21,6 +23,8 @@ type evidenceOptions struct {
 	out        string
 	period     string
 	includeRaw bool
+	configPath string
+	envName    string
 }
 
 func newEvidenceCmd() *cobra.Command {
@@ -56,6 +60,8 @@ Examples:
 	cmd.Flags().StringVar(&opts.out, "out", "", "output directory for the evidence pack (required)")
 	cmd.Flags().StringVar(&opts.period, "period", "", "audit period label, e.g. 2026-Q2 (defaults to current quarter)")
 	cmd.Flags().BoolVar(&opts.includeRaw, "include-raw", false, "skip redaction of sensitive tokens in finding messages")
+	cmd.Flags().StringVar(&opts.configPath, "config", "", "path to compliancekit.yaml (loads tailoring rules from frameworks.tailoring)")
+	cmd.Flags().StringVar(&opts.envName, "env", "", "load compliancekit.<env>.yaml")
 	_ = cmd.MarkFlagRequired("out")
 	return cmd
 }
@@ -80,11 +86,17 @@ func runEvidence(ctx context.Context, w io.Writer, opts evidenceOptions) error {
 
 	fmt.Fprintf(w, "Generating evidence pack from %s (%d findings)...\n", opts.in, len(findings))
 
+	tailoring, err := loadTailoring(opts.configPath, opts.envName, w)
+	if err != nil {
+		return fmt.Errorf("tailoring: %w", err)
+	}
+
 	res, err := evidence.Generate(ctx, findings, evidence.Options{
 		OutDir:     opts.out,
 		Period:     opts.period,
 		IncludeRaw: opts.includeRaw,
 		Generated:  time.Time{}, // let the package stamp it
+		Tailoring:  tailoring,
 	})
 	if err != nil {
 		return fmt.Errorf("evidence: %w", err)
@@ -92,6 +104,45 @@ func runEvidence(ctx context.Context, w io.Writer, opts evidenceOptions) error {
 
 	printEvidenceSummary(w, res)
 	return nil
+}
+
+// loadTailoring reads the v0.12+ frameworks.tailoring block from
+// compliancekit.yaml (when --config is provided), validates it
+// against the loaded framework catalog, and returns the resulting
+// Tailoring. Returns (nil, nil) when no config path or no rules are
+// declared so older flows pass through unchanged.
+func loadTailoring(configPath, envName string, w io.Writer) (*frameworks.Tailoring, error) {
+	if configPath == "" {
+		return nil, nil //nolint:nilnil // intentional: "no config means no tailoring"
+	}
+	cfg, err := config.Load(config.LoadOptions{
+		ConfigPath: configPath,
+		EnvName:    envName,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("load config: %w", err)
+	}
+	if len(cfg.Tailoring) == 0 {
+		return nil, nil //nolint:nilnil // config loaded but no rules declared — pass through unchanged
+	}
+	rules := make([]frameworks.TailoringRule, 0, len(cfg.Tailoring))
+	for _, r := range cfg.Tailoring {
+		rules = append(rules, frameworks.TailoringRule{
+			Framework:     r.Framework,
+			Control:       r.Control,
+			Justification: r.Justification,
+		})
+	}
+	t, err := frameworks.NewTailoring(rules)
+	if err != nil {
+		return nil, err
+	}
+	if probs := t.Validate(); len(probs) > 0 {
+		for _, p := range probs {
+			fmt.Fprintf(w, "  warning: %v\n", p)
+		}
+	}
+	return t, nil
 }
 
 // findingsEnvelope is the minimal shape needed to read a scan's
@@ -146,4 +197,7 @@ func printEvidenceSummary(w io.Writer, res evidence.Result) {
 		res.OutDir, res.FilesWritten)
 	fmt.Fprintf(w, "Auditor index: %s\n", res.SummaryHTMLPath)
 	fmt.Fprintf(w, "Control mapping: %s\n", res.MappingCSVPath)
+	if res.TailoringCount > 0 {
+		fmt.Fprintf(w, "Tailoring: %s (%d controls scoped out)\n", res.TailoringPath, res.TailoringCount)
+	}
 }

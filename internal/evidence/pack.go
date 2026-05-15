@@ -65,6 +65,13 @@ type Options struct {
 	// Tests use this to produce byte-stable output; production
 	// callers leave it zero (Generate substitutes time.Now().UTC()).
 	Generated time.Time
+
+	// Tailoring is the operator-declared list of (framework, control)
+	// pairs scoped out of audit, each with a required justification.
+	// When non-nil and non-empty, the evidence pack writes a
+	// tailoring.json at the root and the control-mapping.csv gains
+	// `tailored` + `tailoring_justification` columns. v0.12+.
+	Tailoring *frameworks.Tailoring
 }
 
 // Result summarizes what Generate wrote so the CLI can render a
@@ -76,6 +83,8 @@ type Result struct {
 	ManifestPath     string                  // <OutDir>/MANIFEST.sha256
 	MappingCSVPath   string                  // <OutDir>/control-mapping.csv
 	SummaryHTMLPath  string                  // <OutDir>/summary.html (empty until phase 4 lands)
+	TailoringPath    string                  // <OutDir>/tailoring.json (v0.12+); empty when no rules
+	TailoringCount   int                     // number of tailoring rules recorded
 	Generated        time.Time               // header timestamp actually used
 	ControlIndex     map[string][]ControlRef // framework -> controls covered (display order)
 }
@@ -147,12 +156,22 @@ func Generate(_ context.Context, findings []core.Finding, opts Options) (Result,
 
 	result.FrameworkResults = computeFrameworkResults(result.ControlIndex)
 
-	mappingPath, err := writeMappingCSV(abs, controls)
+	mappingPath, err := writeMappingCSV(abs, controls, opts.Tailoring)
 	if err != nil {
 		return Result{}, err
 	}
 	result.MappingCSVPath = mappingPath
 	result.FilesWritten++
+
+	tailoringPath, err := writeTailoringJSON(abs, opts.Tailoring, opts)
+	if err != nil {
+		return Result{}, err
+	}
+	if tailoringPath != "" {
+		result.TailoringPath = tailoringPath
+		result.TailoringCount = opts.Tailoring.Count()
+		result.FilesWritten++
+	}
 
 	summaryPath, err := writeSummaryHTML(abs, &result, opts)
 	if err != nil {
