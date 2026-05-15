@@ -253,13 +253,32 @@ Every check maps across **seven shipping frameworks** (v0.12+) — 548 controls 
 
 ```
 evidence/<period>/
-├── MANIFEST.sha256              # sha256sum -c verifiable
-├── control-mapping.csv          # Drata / Vanta / AuditBoard importable
-├── summary.html                 # auditor index
+├── MANIFEST.sha256                # sha256sum -c verifiable
+├── control-mapping.csv            # Drata / Vanta / AuditBoard importable
+├── summary.html                   # auditor index
+├── tailoring.json                 # operator scope-outs + justifications
+├── assessment-results.oscal.json  # OSCAL AR v1.1.2, FedRAMP-style
+├── profile.oscal.json             # OSCAL Profile of tailored framework subset
 ├── soc2/<control>/{findings.json, control.md}
 ├── iso27001/<control>/{findings.json, control.md}
 └── cis-v8/<control>/{findings.json, control.md}
 ```
+
+### Ingest formats (v0.13+)
+
+External tool output merges into the same evidence pack:
+
+| Format          | Use case                                                                           |
+|-----------------|------------------------------------------------------------------------------------|
+| `sarif`         | Trivy, Checkov, KICS, Terrascan, GitHub CodeQL, Semgrep                            |
+| `ocsf`          | AWS Security Hub, GCP Security Command Center, Microsoft Defender for Cloud        |
+| `oscal-catalog` | Customer-supplied OSCAL Catalog → registers as a runtime scannable framework       |
+
+Run standalone (`compliancekit ingest --format=sarif --in=trivy.sarif`),
+or declare an `ingest:` block in `compliancekit.yaml` and the
+`scan` command merges everything before writing the pack. Per-tool
+mapping tables ship embedded; `compliancekit mapping list / show /
+validate / diff` manages overrides.
 
 ## Use it in CI
 

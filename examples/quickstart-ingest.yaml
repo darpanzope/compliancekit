@@ -1,0 +1,81 @@
+# compliancekit.yaml — v0.13 ingest quickstart.
+#
+# v0.13+. The `ingest:` block tells `compliancekit scan` to merge
+# findings from external security tools alongside the native scan.
+# Result: a single findings.json + a single evidence pack covering
+# both compliancekit's native checks AND every external scanner's
+# output, all mapped to the same framework controls.
+#
+# Run:
+#
+#   trivy fs --format=sarif --output=trivy.sarif .
+#   checkov --output sarif --output-file-path checkov.sarif terraform/
+#   compliancekit scan --config=compliancekit.yaml --evidence true
+#
+# The resulting evidence pack at out/evidence/ carries:
+#   - per-control folders mixing native + ingested findings
+#   - control-mapping.csv with finding_source + finding_tool columns
+#   - assessment-results.oscal.json (FedRAMP-style)
+#   - profile.oscal.json (tailored scope expressed in OSCAL)
+
+project: acme-saas
+environment: prod
+
+providers:
+  digitalocean:
+    enabled: true
+    token_env: DO_API_TOKEN
+
+  kubernetes:
+    enabled: true
+
+frameworks:
+  - soc2
+  - iso27001
+  - cis-v8
+  - nist-800-53-r5
+  - pci-dss-v4
+
+ingest:
+  # SARIF from Trivy (filesystem scan or image scan).
+  # Maps via the embedded mappings/trivy.yaml table by default;
+  # override with `mapping: ./mappings/trivy-acme.yaml` to use a
+  # custom table.
+  - format: sarif
+    file: ./out/trivy.sarif
+    tool: trivy
+    tool_version: v0.50.4
+
+  # SARIF from Checkov IaC scan.
+  - format: sarif
+    file: ./out/checkov.sarif
+    tool: checkov
+
+  # OCSF from AWS Security Hub export (JSONL or JSON array).
+  - format: ocsf
+    file: ./out/security-hub-findings.json
+    tool: aws-security-hub
+    tool_version: "2026-04"
+
+  # Operator's bespoke OSCAL Catalog — registers as a runtime
+  # framework so the scan can attribute findings to it.
+  - format: oscal-catalog
+    file: ./catalogs/acme-internal-baseline.oscal.json
+
+# Tailoring still applies — operator scope-outs flow through to the
+# evidence pack AND the OSCAL Profile emit.
+tailoring:
+  - framework: pci-dss-v4
+    control: "10.6.1"
+    justification: |
+      Out of scope — no PAN data. All payments tokenized via Stripe Connect;
+      no Cardholder Data Environment exists.
+
+severity:
+  fail_on: high
+  min_report: low
+
+output:
+  format: [json, markdown, sarif, ocsf, html]
+  out_dir: ./out
+  evidence: true

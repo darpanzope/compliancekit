@@ -63,7 +63,7 @@ Add Rego at v0.16. Until then, Go-only checks. The `Evaluator` interface is shap
 
 ## ADR-003 — OCSF output lands at v0.3, not v0.13
 **Date:** 2026-05-13
-**Status:** Accepted
+**Status:** Resolved — v0.13 closed the loop (2026-05-15)
 
 ### Question
 When do we ship JSON-OCSF (Open Cybersecurity Schema Framework)? Original roadmap had it implicit in v0.13's "ingest + emit" milestone (originally numbered v0.10 before the ADR-007 reorder).
@@ -83,6 +83,22 @@ Ship JSON-OCSF as a first-class output format at v0.3, alongside SARIF.
 ### Consequences
 - v0.3 reporter layer has OCSF mapping baked into Finding → output translation.
 - Future Finding fields (MITRE ATT&CK techniques, confidence scores) must remain OCSF-mappable.
+
+### Resolution at v0.13
+The original v0.3 framing was emit-only. v0.13 finished what the original
+"OCSF is no longer just an output, it is a wire format" goal pointed at:
+
+- OCSF emit was enriched (Phase 3) to populate `finding_info.{title,desc,types}`,
+  `compliance.{standards,requirements}`, resource `region` + `cloud.account`,
+  and a `unmapped.compliancekit_source` slot preserving the original Finding's
+  Source struct.
+- An OCSF ingest adapter (Phase 2) was added that reads AWS Security Hub,
+  GCP SCC, and Defender for Cloud OCSF exports.
+- A round-trip test proves `compliancekit native → OCSF emit → OCSF ingest`
+  recovers every load-bearing Finding field including the diff engine's
+  Fingerprint.
+
+OCSF is now genuinely a wire format. ADR closed.
 
 ---
 
@@ -259,6 +275,35 @@ A parallel `coverage` metric reports the fraction of findings that were evaluabl
 - v0.7 (AWS) and v0.8 (GCP) inherit the same weights automatically because severity is provider-agnostic. No re-tuning per cloud.
 - The HTML reporter and the evidence pack `summary.html` show the score as the most prominent metric. The CLI `scan` footer prints it on its own line.
 - Baseline files (v0.6 phase 3) record the score so `diff` (v0.6 phase 4) can render the delta: "76 → 73 (-3)."
+
+---
+
+## ADR-009 — Vulnerability scanning is composed, not native
+**Date:** 2026-05-15 (v0.13 wrap)
+**Status:** Accepted
+
+### Question
+Should compliancekit grow a native CVE / vulnerability scanner — its own NVD / OSV / GHSA mirror, its own package-version resolver, its own container-image layer extractor — or should the project stay in the composition lane and ingest other tools' output?
+
+### Decision
+**Composition, not detection.** compliancekit ingests Trivy / Grype / Checkov / gitleaks / AWS Security Hub / GCP SCC / Defender for Cloud output through the v0.13 ingest pipeline. We do not maintain a native CVE database, package-version resolver, or container layer parser. The value compliancekit adds is joining external findings to cloud resources + framework controls, not enumerating the CVEs in the first place.
+
+### Reasoning
+- **Maintainer cost is the dominant constraint.** A real CVE detector requires daily ETL across NVD / GHSA / OSV / Red Hat / Debian / Ubuntu / Alpine, ecosystem-specific package version parsers (dpkg/rpm/apk/npm/pip/gem/cargo/Go-modules/Maven), and OCI image layer extraction. Trivy and Grype have paid teams behind them; an indie OSS project should not try to compete on detection quality.
+- **The audience already runs Trivy.** Every customer profile we care about — SOC 2-ready SaaS, FedRAMP-curious shop, indie cloud-native team — has Trivy or an equivalent in CI already. Asking them to swap to a compliancekit-native scanner makes the value proposition harder, not easier.
+- **Our actual differentiation is the join.** Trivy says "image X has CVE-Y." Only compliancekit can say "image X has CVE-Y, runs on droplet Z in SOC 2 CC7.1 scope, the operator's tailoring justification for CC7.1 carries over, and here's the evidence pack with the finding pinned to NIST SI-2 + ISO A.8.8 + PCI 6.3 alongside compliancekit's native posture findings on the same droplet." The join is the moat; detection is commodity.
+- **Audit reality.** Auditors don't reward "one tool that finds CVEs." They reward evidence that the operator runs a vuln scanner and remediates against a policy. compliancekit's role is the policy + control attribution + evidence trail — not the scanner.
+- **Scope discipline.** v0.12 + v0.13 already ship 298 native checks × 7 frameworks × 6 providers + 3 ingest formats + 2 OSCAL emits. Adding a native CVE database multiplies maintenance work by an order of magnitude. Better to deepen what only compliancekit can do.
+
+### Rejected alternatives
+- **Vendor Trivy's CVE database code into the binary.** Rejected. Trivy is open source so we *could* legally do this, but the maintenance burden lands on us — daily DB refresh, ecosystem-parser updates, layer-extraction bug fixes. That is the actual cost.
+- **Add a `compliancekit vuln` subcommand backed by a thin native wrapper around `osv-scanner` / `trivy fs`.** Rejected at v0.13. It still requires us to ship a particular scanner inside our binary, growing the supply-chain surface for marginal user benefit beyond what ingest already provides.
+- **Native CVE-database mirror at v0.14, replacing the ingest path.** Rejected. The original v0.14 ROADMAP framing was already "ingest, not detection"; reversing that here would invalidate the v0.13 work and double the v0.14 scope.
+
+### Consequences
+- v0.13's ingest pipeline (SARIF / OCSF) is the canonical path for vulnerability findings entering compliancekit. v0.14 will extend the same pipeline with explicit adapters for Trivy / Grype / Checkov / gitleaks plus the `core.Finding.Vulnerability` + `core.Finding.Secret` typed metadata blocks so reporters render CVE IDs natively.
+- The evidence pack's `vulnerabilities.csv` index (v0.14 deliverable) joins ingested vuln findings to the cloud resource graph by image SHA, package PURL, and ARN — the join we DO offer, layered over external detection we do not.
+- The ROADMAP design-principle note "Vulnerability scanning is composed, not native" (ROADMAP.md §"Success metrics") is now load-bearing and codified as this ADR. Reopening this decision requires another ADR explicitly reversing it.
 
 ---
 
