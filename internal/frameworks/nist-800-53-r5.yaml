@@ -1,0 +1,1048 @@
+# NIST SP 800-53 Revision 5 — Security and Privacy Controls
+#
+# Source: NIST Special Publication 800-53 Revision 5
+# (Security and Privacy Controls for Information Systems and Organizations).
+#
+# v0.12 ships the cloud + Linux relevant subset of NIST 800-53 r5
+# — approximately 150 controls drawn from the families most exercised
+# by compliancekit's existing check catalog. The full r5 catalog has
+# roughly 1,000 controls across 20 control families; many (Physical
+# and Environmental Protection, Personnel Security, Awareness and
+# Training, etc.) are out of scope for an automated scanner of cloud
+# and Linux posture.
+#
+# Families included in this catalog:
+#   AC (Access Control), AU (Audit and Accountability),
+#   CA (Assessment, Authorization, and Monitoring),
+#   CM (Configuration Management), CP (Contingency Planning),
+#   IA (Identification and Authentication), IR (Incident Response),
+#   MA (Maintenance), MP (Media Protection),
+#   RA (Risk Assessment), SA (System and Services Acquisition),
+#   SC (System and Communications Protection),
+#   SI (System and Information Integrity),
+#   SR (Supply Chain Risk Management).
+
+id: nist-800-53-r5
+name: NIST SP 800-53 r5 Security and Privacy Controls
+version: "r5"
+category: compliance
+source: NIST SP 800-53 Revision 5 — Security and Privacy Controls for Information Systems and Organizations
+url: https://csrc.nist.gov/publications/detail/sp/800-53/rev-5/final
+description: |
+  NIST 800-53 r5 is the US federal catalog of security and privacy
+  controls. It is the technical baseline behind FedRAMP, FISMA, and
+  many state-level frameworks. This catalog ships the subset of
+  control families relevant to cloud and Linux posture; FedRAMP
+  customers should pair compliancekit with the FedRAMP overlay
+  (control selections + parameter values) for full audit coverage.
+
+controls:
+  # ---- AC: Access Control ----
+
+  AC-1:
+    name: Policy and Procedures
+    family: AC
+    description: |
+      Develop, document, and disseminate an access control policy
+      and procedures, and review/update at organization-defined
+      frequencies.
+
+  AC-2:
+    name: Account Management
+    family: AC
+    description: |
+      Identify and select account types; assign managers; require
+      approvals; monitor and review accounts; notify owners on
+      changes; disable inactive accounts.
+
+  AC-3:
+    name: Access Enforcement
+    family: AC
+    description: |
+      Enforce approved authorizations for logical access in
+      accordance with applicable access control policies.
+
+  AC-4:
+    name: Information Flow Enforcement
+    family: AC
+    description: |
+      Enforce approved authorizations for controlling the flow of
+      information within the system and between connected systems.
+
+  AC-5:
+    name: Separation of Duties
+    family: AC
+    description: |
+      Identify and document organization-defined duties of
+      individuals; define system access authorizations to support
+      separation of duties.
+
+  AC-6:
+    name: Least Privilege
+    family: AC
+    description: |
+      Employ the principle of least privilege, allowing only
+      authorized accesses for users that are necessary to accomplish
+      assigned organizational tasks.
+
+  AC-7:
+    name: Unsuccessful Logon Attempts
+    family: AC
+    description: |
+      Enforce a limit of consecutive invalid logon attempts and
+      automatically lock the account or delay the next attempt.
+
+  AC-8:
+    name: System Use Notification
+    family: AC
+    description: |
+      Display a notification message before granting access
+      describing privacy and security warnings.
+
+  AC-10:
+    name: Concurrent Session Control
+    family: AC
+    description: |
+      Limit the number of concurrent sessions for each account
+      and account type.
+
+  AC-11:
+    name: Device Lock
+    family: AC
+    description: |
+      Prevent further access to the system by initiating a device
+      lock after an organization-defined time of inactivity.
+
+  AC-12:
+    name: Session Termination
+    family: AC
+    description: |
+      Automatically terminate a user session after defined
+      conditions or trigger events.
+
+  AC-17:
+    name: Remote Access
+    family: AC
+    description: |
+      Establish and document usage restrictions, configuration
+      requirements, and connection requirements for each type of
+      remote access allowed.
+
+  AC-18:
+    name: Wireless Access
+    family: AC
+    description: |
+      Establish configuration requirements and connection
+      requirements for wireless access; authorize wireless access
+      prior to allowing such connections.
+
+  AC-19:
+    name: Access Control for Mobile Devices
+    family: AC
+    description: |
+      Establish configuration requirements and connection
+      requirements for mobile devices; authorize the connection of
+      mobile devices to organizational systems.
+
+  AC-20:
+    name: Use of External Systems
+    family: AC
+    description: |
+      Establish terms and conditions and configuration requirements
+      for the use of external information systems.
+
+  AC-21:
+    name: Information Sharing
+    family: AC
+    description: |
+      Enable authorized users to determine whether access
+      authorizations of receiving parties match the access
+      restrictions on the information.
+
+  AC-22:
+    name: Publicly Accessible Content
+    family: AC
+    description: |
+      Designate individuals authorized to make information publicly
+      accessible; train them; review content periodically for
+      nonpublic information.
+
+  # ---- AU: Audit and Accountability ----
+
+  AU-1:
+    name: Policy and Procedures
+    family: AU
+    description: |
+      Develop, document, and disseminate an audit and accountability
+      policy and procedures.
+
+  AU-2:
+    name: Event Logging
+    family: AU
+    description: |
+      Identify the types of events that the system is capable of
+      logging in support of the audit function.
+
+  AU-3:
+    name: Content of Audit Records
+    family: AU
+    description: |
+      Ensure that audit records contain information that establishes
+      what type of event occurred, when, where, source, outcome, and
+      identity of any individuals associated with the event.
+
+  AU-4:
+    name: Audit Log Storage Capacity
+    family: AU
+    description: |
+      Allocate audit record storage capacity to accommodate audit
+      record retention requirements.
+
+  AU-5:
+    name: Response to Audit Logging Process Failures
+    family: AU
+    description: |
+      Alert organization-defined personnel in the event of an audit
+      logging process failure.
+
+  AU-6:
+    name: Audit Record Review, Analysis, and Reporting
+    family: AU
+    description: |
+      Review and analyze audit records for indications of
+      unauthorized or unusual activity.
+
+  AU-7:
+    name: Audit Record Reduction and Report Generation
+    family: AU
+    description: |
+      Provide an audit record reduction and report generation
+      capability that supports on-demand audit record review,
+      analysis, and reporting.
+
+  AU-8:
+    name: Time Stamps
+    family: AU
+    description: |
+      Use internal system clocks to generate time stamps for audit
+      records and record time stamps in coordinated universal time
+      (UTC).
+
+  AU-9:
+    name: Protection of Audit Information
+    family: AU
+    description: |
+      Protect audit information and audit logging tools from
+      unauthorized access, modification, and deletion.
+
+  AU-10:
+    name: Non-Repudiation
+    family: AU
+    description: |
+      Protect against an individual falsely denying having performed
+      an organization-defined action covered by non-repudiation.
+
+  AU-11:
+    name: Audit Record Retention
+    family: AU
+    description: |
+      Retain audit records for an organization-defined time period
+      consistent with records retention policy.
+
+  AU-12:
+    name: Audit Record Generation
+    family: AU
+    description: |
+      Provide audit record generation capability for the
+      organization-defined event types on organization-defined
+      system components.
+
+  AU-13:
+    name: Monitoring for Information Disclosure
+    family: AU
+    description: |
+      Monitor open-source information and information sites for
+      evidence of unauthorized disclosure of organizational
+      information.
+
+  # ---- CA: Assessment, Authorization, and Monitoring ----
+
+  CA-1:
+    name: Policy and Procedures
+    family: CA
+    description: |
+      Develop, document, and disseminate an assessment,
+      authorization, and monitoring policy.
+
+  CA-2:
+    name: Control Assessments
+    family: CA
+    description: |
+      Develop, document, and disseminate a control assessment plan;
+      conduct assessments per the plan.
+
+  CA-3:
+    name: Information Exchange
+    family: CA
+    description: |
+      Document information exchanges between the system and other
+      systems using interconnection security agreements or similar.
+
+  CA-5:
+    name: Plan of Action and Milestones
+    family: CA
+    description: |
+      Develop, document, and update a plan of action and milestones
+      for the system to document the planned remediation actions to
+      correct weaknesses or deficiencies.
+
+  CA-7:
+    name: Continuous Monitoring
+    family: CA
+    description: |
+      Develop a system-level continuous monitoring strategy and
+      implement continuous monitoring in accordance with the strategy.
+
+  CA-8:
+    name: Penetration Testing
+    family: CA
+    description: |
+      Conduct penetration testing on the system or system
+      components.
+
+  CA-9:
+    name: Internal System Connections
+    family: CA
+    description: |
+      Authorize internal connections of organization-defined system
+      components or classes of components to the system.
+
+  # ---- CM: Configuration Management ----
+
+  CM-1:
+    name: Policy and Procedures
+    family: CM
+    description: |
+      Develop, document, and disseminate a configuration management
+      policy.
+
+  CM-2:
+    name: Baseline Configuration
+    family: CM
+    description: |
+      Develop, document, and maintain a current baseline configuration
+      of the system; review and update the baseline at organization-
+      defined frequencies.
+
+  CM-3:
+    name: Configuration Change Control
+    family: CM
+    description: |
+      Determine and document the types of changes to the system that
+      are configuration-controlled; review proposed changes; approve
+      with security and privacy impact analyses; document decisions.
+
+  CM-4:
+    name: Impact Analyses
+    family: CM
+    description: |
+      Analyze changes to the system to determine potential security
+      and privacy impacts prior to change implementation.
+
+  CM-5:
+    name: Access Restrictions for Change
+    family: CM
+    description: |
+      Define, document, approve, and enforce physical and logical
+      access restrictions associated with changes to the system.
+
+  CM-6:
+    name: Configuration Settings
+    family: CM
+    description: |
+      Establish and document configuration settings for components
+      employed within the system that reflect the most restrictive
+      mode consistent with operational requirements.
+
+  CM-7:
+    name: Least Functionality
+    family: CM
+    description: |
+      Configure the system to provide only essential capabilities;
+      prohibit or restrict the use of organization-defined functions,
+      ports, protocols, software, and services.
+
+  CM-8:
+    name: System Component Inventory
+    family: CM
+    description: |
+      Develop and document an inventory of system components that
+      accurately reflects the system, includes all components within
+      the authorization boundary, is at the level of granularity
+      deemed necessary for tracking and reporting.
+
+  CM-9:
+    name: Configuration Management Plan
+    family: CM
+    description: |
+      Develop, document, and implement a configuration management
+      plan for the system.
+
+  CM-10:
+    name: Software Usage Restrictions
+    family: CM
+    description: |
+      Use software and associated documentation in accordance with
+      contract agreements and copyright laws; track the use of
+      software and associated documentation protected by quantity
+      licenses.
+
+  CM-11:
+    name: User-Installed Software
+    family: CM
+    description: |
+      Establish policies governing the installation of software by
+      users; enforce software installation policies through methods
+      such as automated mechanisms.
+
+  CM-12:
+    name: Information Location
+    family: CM
+    description: |
+      Identify the location of organization-defined information and
+      the specific system components on which the information is
+      processed and stored.
+
+  # ---- CP: Contingency Planning ----
+
+  CP-1:
+    name: Policy and Procedures
+    family: CP
+    description: |
+      Develop, document, and disseminate a contingency planning
+      policy and procedures.
+
+  CP-2:
+    name: Contingency Plan
+    family: CP
+    description: |
+      Develop a contingency plan for the system that identifies
+      essential mission and business functions and associated
+      contingency requirements.
+
+  CP-3:
+    name: Contingency Training
+    family: CP
+    description: |
+      Provide contingency training to system users consistent with
+      assigned roles and responsibilities.
+
+  CP-4:
+    name: Contingency Plan Testing
+    family: CP
+    description: |
+      Test the contingency plan for the system to determine the
+      effectiveness of the plan and the readiness to execute the
+      plan.
+
+  CP-6:
+    name: Alternate Storage Site
+    family: CP
+    description: |
+      Establish an alternate storage site, including necessary
+      agreements to permit the storage and retrieval of system
+      backup information.
+
+  CP-7:
+    name: Alternate Processing Site
+    family: CP
+    description: |
+      Establish an alternate processing site to permit the transfer
+      and resumption of organization-defined system operations.
+
+  CP-9:
+    name: System Backup
+    family: CP
+    description: |
+      Conduct backups of user-level information, system-level
+      information, and system documentation; protect the
+      confidentiality, integrity, and availability of backup
+      information.
+
+  CP-10:
+    name: System Recovery and Reconstitution
+    family: CP
+    description: |
+      Provide for the recovery and reconstitution of the system to
+      a known state after a disruption, compromise, or failure.
+
+  # ---- IA: Identification and Authentication ----
+
+  IA-1:
+    name: Policy and Procedures
+    family: IA
+    description: |
+      Develop, document, and disseminate an identification and
+      authentication policy and procedures.
+
+  IA-2:
+    name: Identification and Authentication (Organizational Users)
+    family: IA
+    description: |
+      Uniquely identify and authenticate organizational users and
+      associate that unique identification with processes acting on
+      behalf of those users.
+
+  IA-3:
+    name: Device Identification and Authentication
+    family: IA
+    description: |
+      Uniquely identify and authenticate organization-defined devices
+      before establishing a network connection.
+
+  IA-4:
+    name: Identifier Management
+    family: IA
+    description: |
+      Manage system identifiers by receiving authorization from
+      organization-defined personnel to assign an individual,
+      group, role, or device identifier.
+
+  IA-5:
+    name: Authenticator Management
+    family: IA
+    description: |
+      Manage system authenticators by verifying initial authenticator
+      content; establishing administrative procedures for initial
+      distribution; establishing minimum/maximum lifetime restrictions.
+
+  IA-6:
+    name: Authentication Feedback
+    family: IA
+    description: |
+      Obscure feedback of authentication information during the
+      authentication process to protect the information from possible
+      exploitation and use by unauthorized individuals.
+
+  IA-7:
+    name: Cryptographic Module Authentication
+    family: IA
+    description: |
+      Implement mechanisms for authentication to a cryptographic
+      module that meet the requirements of applicable federal laws.
+
+  IA-8:
+    name: Identification and Authentication (Non-Organizational Users)
+    family: IA
+    description: |
+      Uniquely identify and authenticate non-organizational users
+      and processes acting on behalf of those users.
+
+  IA-11:
+    name: Re-authentication
+    family: IA
+    description: |
+      Require users to re-authenticate when organization-defined
+      circumstances or situations require re-authentication.
+
+  IA-12:
+    name: Identity Proofing
+    family: IA
+    description: |
+      Identity proof users that require accounts for logical access
+      to organization-defined systems.
+
+  # ---- IR: Incident Response ----
+
+  IR-1:
+    name: Policy and Procedures
+    family: IR
+    description: |
+      Develop, document, and disseminate an incident response policy
+      and procedures.
+
+  IR-2:
+    name: Incident Response Training
+    family: IR
+    description: |
+      Provide incident response training to system users consistent
+      with assigned roles and responsibilities.
+
+  IR-3:
+    name: Incident Response Testing
+    family: IR
+    description: |
+      Test the effectiveness of the incident response capability for
+      the system at organization-defined frequencies.
+
+  IR-4:
+    name: Incident Handling
+    family: IR
+    description: |
+      Implement an incident handling capability for incidents that
+      is consistent with the incident response plan.
+
+  IR-5:
+    name: Incident Monitoring
+    family: IR
+    description: |
+      Track and document incidents.
+
+  IR-6:
+    name: Incident Reporting
+    family: IR
+    description: |
+      Require personnel to report suspected incidents to the
+      organizational incident response capability within
+      organization-defined time periods.
+
+  IR-7:
+    name: Incident Response Assistance
+    family: IR
+    description: |
+      Provide an incident response support resource, integral to the
+      organizational incident response capability, that offers advice
+      and assistance to users.
+
+  IR-8:
+    name: Incident Response Plan
+    family: IR
+    description: |
+      Develop an incident response plan that provides the
+      organization with a roadmap for implementing its incident
+      response capability.
+
+  # ---- MA: Maintenance ----
+
+  MA-2:
+    name: Controlled Maintenance
+    family: MA
+    description: |
+      Schedule, document, and review records of maintenance, repair,
+      and replacement on system components in accordance with
+      manufacturer or vendor specifications and organizational
+      requirements.
+
+  MA-3:
+    name: Maintenance Tools
+    family: MA
+    description: |
+      Approve, control, and monitor the use of system maintenance
+      tools.
+
+  MA-4:
+    name: Nonlocal Maintenance
+    family: MA
+    description: |
+      Approve and monitor nonlocal maintenance and diagnostic
+      activities.
+
+  # ---- MP: Media Protection ----
+
+  MP-2:
+    name: Media Access
+    family: MP
+    description: |
+      Restrict access to organization-defined types of digital and
+      non-digital media to authorized individuals.
+
+  MP-4:
+    name: Media Storage
+    family: MP
+    description: |
+      Physically control and securely store organization-defined
+      types of digital and non-digital media.
+
+  MP-5:
+    name: Media Transport
+    family: MP
+    description: |
+      Protect and control organization-defined types of digital and
+      non-digital media during transport outside controlled areas.
+
+  MP-6:
+    name: Media Sanitization
+    family: MP
+    description: |
+      Sanitize organization-defined system media prior to disposal,
+      release out of organizational control, or release for reuse.
+
+  MP-7:
+    name: Media Use
+    family: MP
+    description: |
+      Restrict the use of organization-defined types of system media
+      on organization-defined systems or system components.
+
+  # ---- RA: Risk Assessment ----
+
+  RA-1:
+    name: Policy and Procedures
+    family: RA
+    description: |
+      Develop, document, and disseminate a risk assessment policy
+      and procedures.
+
+  RA-2:
+    name: Security Categorization
+    family: RA
+    description: |
+      Categorize the system and information processed, stored, and
+      transmitted using FIPS 199 categorization.
+
+  RA-3:
+    name: Risk Assessment
+    family: RA
+    description: |
+      Conduct a risk assessment, including the likelihood and
+      magnitude of harm from unauthorized access, use, disclosure,
+      disruption, modification, or destruction.
+
+  RA-5:
+    name: Vulnerability Monitoring and Scanning
+    family: RA
+    description: |
+      Monitor and scan for vulnerabilities in the system and hosted
+      applications at organization-defined frequencies and update
+      vulnerabilities as required.
+
+  RA-7:
+    name: Risk Response
+    family: RA
+    description: |
+      Respond to findings from security and privacy assessments,
+      monitoring, and audits.
+
+  # ---- SA: System and Services Acquisition ----
+
+  SA-3:
+    name: System Development Life Cycle
+    family: SA
+    description: |
+      Manage the system using a defined system development life cycle
+      that incorporates information security and privacy
+      considerations.
+
+  SA-4:
+    name: Acquisition Process
+    family: SA
+    description: |
+      Include security and privacy functional, strength, and
+      assurance requirements in the acquisition contract for the
+      system, system component, or system service.
+
+  SA-8:
+    name: Security and Privacy Engineering Principles
+    family: SA
+    description: |
+      Apply systems security and privacy engineering principles in
+      the specification, design, development, implementation, and
+      modification of the system.
+
+  SA-9:
+    name: External System Services
+    family: SA
+    description: |
+      Require external system service providers to comply with
+      organizational security and privacy requirements and employ
+      organization-defined controls.
+
+  SA-10:
+    name: Developer Configuration Management
+    family: SA
+    description: |
+      Require the developer of the system, system component, or
+      system service to perform configuration management during
+      development, implementation, and operation.
+
+  SA-11:
+    name: Developer Testing and Evaluation
+    family: SA
+    description: |
+      Require the developer of the system to develop and implement
+      a security and privacy assessment plan and conduct testing
+      and evaluation.
+
+  SA-15:
+    name: Development Process, Standards, and Tools
+    family: SA
+    description: |
+      Require the developer of the system, system component, or
+      system service to follow a documented development process
+      that explicitly addresses security and privacy requirements.
+
+  # ---- SC: System and Communications Protection ----
+
+  SC-1:
+    name: Policy and Procedures
+    family: SC
+    description: |
+      Develop, document, and disseminate a system and communications
+      protection policy and procedures.
+
+  SC-2:
+    name: Separation of System and User Functionality
+    family: SC
+    description: |
+      Separate user functionality from system management
+      functionality.
+
+  SC-3:
+    name: Security Function Isolation
+    family: SC
+    description: |
+      Isolate security functions from non-security functions.
+
+  SC-4:
+    name: Information in Shared System Resources
+    family: SC
+    description: |
+      Prevent unauthorized and unintended information transfer via
+      shared system resources.
+
+  SC-5:
+    name: Denial-of-Service Protection
+    family: SC
+    description: |
+      Protect against or limit the effects of organization-defined
+      types of denial-of-service events.
+
+  SC-7:
+    name: Boundary Protection
+    family: SC
+    description: |
+      Monitor and control communications at the external managed
+      interfaces to the system and at key internal managed
+      interfaces within the system.
+
+  SC-8:
+    name: Transmission Confidentiality and Integrity
+    family: SC
+    description: |
+      Protect the confidentiality and integrity of transmitted
+      information.
+
+  SC-10:
+    name: Network Disconnect
+    family: SC
+    description: |
+      Terminate the network connection associated with a
+      communications session at the end of the session or after
+      a period of inactivity.
+
+  SC-12:
+    name: Cryptographic Key Establishment and Management
+    family: SC
+    description: |
+      Establish and manage cryptographic keys when cryptography is
+      employed within the system in accordance with key generation,
+      distribution, storage, access, and destruction requirements.
+
+  SC-13:
+    name: Cryptographic Protection
+    family: SC
+    description: |
+      Determine cryptographic uses; implement organization-defined
+      types of cryptography for each specified cryptographic use.
+
+  SC-15:
+    name: Collaborative Computing Devices and Applications
+    family: SC
+    description: |
+      Prohibit remote activation of collaborative computing devices
+      and applications with the following exceptions: organization-
+      defined exceptions.
+
+  SC-17:
+    name: Public Key Infrastructure Certificates
+    family: SC
+    description: |
+      Issue public key certificates under organization-defined
+      certificate policy or obtain public key certificates from an
+      approved service provider.
+
+  SC-18:
+    name: Mobile Code
+    family: SC
+    description: |
+      Define acceptable and unacceptable mobile code and mobile code
+      technologies and authorize, monitor, and control the use of
+      mobile code within the system.
+
+  SC-20:
+    name: Secure Name/Address Resolution Service (Authoritative Source)
+    family: SC
+    description: |
+      Provide additional data origin authentication and integrity
+      verification artifacts along with the authoritative name
+      resolution data the system returns in response to external
+      name/address resolution queries.
+
+  SC-21:
+    name: Secure Name/Address Resolution Service (Recursive or Caching Resolver)
+    family: SC
+    description: |
+      Request and perform data origin authentication and data
+      integrity verification on the name/address resolution responses
+      the system receives from authoritative sources.
+
+  SC-22:
+    name: Architecture and Provisioning for Name/Address Resolution Service
+    family: SC
+    description: |
+      Ensure the systems that collectively provide name/address
+      resolution service for an organization are fault-tolerant and
+      implement internal and external role separation.
+
+  SC-23:
+    name: Session Authenticity
+    family: SC
+    description: |
+      Protect the authenticity of communications sessions.
+
+  SC-28:
+    name: Protection of Information at Rest
+    family: SC
+    description: |
+      Protect the confidentiality and integrity of information at
+      rest.
+
+  SC-39:
+    name: Process Isolation
+    family: SC
+    description: |
+      Maintain a separate execution domain for each executing
+      system process.
+
+  # ---- SI: System and Information Integrity ----
+
+  SI-1:
+    name: Policy and Procedures
+    family: SI
+    description: |
+      Develop, document, and disseminate a system and information
+      integrity policy and procedures.
+
+  SI-2:
+    name: Flaw Remediation
+    family: SI
+    description: |
+      Identify, report, and correct system flaws; test software and
+      firmware updates related to flaw remediation for effectiveness
+      and potential side effects before installation.
+
+  SI-3:
+    name: Malicious Code Protection
+    family: SI
+    description: |
+      Implement malicious code protection mechanisms at system entry
+      and exit points to detect and eradicate malicious code.
+
+  SI-4:
+    name: System Monitoring
+    family: SI
+    description: |
+      Monitor the system to detect attacks and indicators of potential
+      attacks; identify unauthorized use of the system.
+
+  SI-5:
+    name: Security Alerts, Advisories, and Directives
+    family: SI
+    description: |
+      Receive security alerts, advisories, and directives from
+      organization-defined external organizations on an ongoing
+      basis.
+
+  SI-7:
+    name: Software, Firmware, and Information Integrity
+    family: SI
+    description: |
+      Employ integrity verification tools to detect unauthorized
+      changes to organization-defined software, firmware, and
+      information.
+
+  SI-8:
+    name: Spam Protection
+    family: SI
+    description: |
+      Employ spam protection mechanisms at system entry and exit
+      points to detect and act on unsolicited messages.
+
+  SI-10:
+    name: Information Input Validation
+    family: SI
+    description: |
+      Check the validity of organization-defined information inputs.
+
+  SI-11:
+    name: Error Handling
+    family: SI
+    description: |
+      Generate error messages that provide information necessary for
+      corrective actions without revealing information that could be
+      exploited.
+
+  SI-12:
+    name: Information Management and Retention
+    family: SI
+    description: |
+      Manage and retain information within the system and information
+      output from the system in accordance with applicable laws,
+      executive orders, directives, regulations, policies, standards,
+      guidelines, and operational requirements.
+
+  SI-16:
+    name: Memory Protection
+    family: SI
+    description: |
+      Implement organization-defined controls to protect the system
+      memory from unauthorized code execution.
+
+  # ---- SR: Supply Chain Risk Management ----
+
+  SR-1:
+    name: Policy and Procedures
+    family: SR
+    description: |
+      Develop, document, and disseminate a supply chain risk
+      management policy and procedures.
+
+  SR-2:
+    name: Supply Chain Risk Management Plan
+    family: SR
+    description: |
+      Develop a plan for managing supply chain risks associated with
+      the research and development, design, manufacturing,
+      acquisition, delivery, integration, operations and maintenance,
+      and disposal of the system.
+
+  SR-3:
+    name: Supply Chain Controls and Processes
+    family: SR
+    description: |
+      Establish a process or processes to identify and address
+      weaknesses or deficiencies in the supply chain elements and
+      processes.
+
+  SR-5:
+    name: Acquisition Strategies, Tools, and Methods
+    family: SR
+    description: |
+      Employ acquisition strategies, contract tools, and procurement
+      methods to protect against, identify, and mitigate supply chain
+      risks.
+
+  SR-6:
+    name: Supplier Assessments and Reviews
+    family: SR
+    description: |
+      Assess and review the supply chain-related risks associated
+      with suppliers or contractors and the system.
+
+  SR-11:
+    name: Component Authenticity
+    family: SR
+    description: |
+      Develop and implement anti-counterfeit policies and procedures
+      that include the means to detect and prevent counterfeit
+      components from entering the system.
