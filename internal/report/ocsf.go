@@ -3,10 +3,12 @@ package report
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"time"
 
 	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/internal/frameworks"
 )
 
 // FormatOCSF is the lowercase identifier matching ROADMAP.md /
@@ -38,6 +40,13 @@ const (
 // connector, Elastic) ingest it natively. This is the "machine
 // downstream" output: humans read JSON or HTML; SOC tooling reads
 // OCSF.
+//
+// v0.13+ emit is lossless against the v0.13 ingest adapter:
+// finding_info.types[0] carries the CheckID for ingest's ruleIDFor
+// path; compliance.standards / compliance.requirements carry the
+// framework attribution; metadata.product.feature carries the
+// compliancekit check id verbatim; unmapped.compliancekit_source
+// preserves Source provenance through emit → ingest → re-emit.
 //
 // Per ADR-003, OCSF lands at v0.3 -- adding it post-hoc would force
 // existing consumers to migrate.
@@ -76,12 +85,19 @@ func findingToOCSFEvent(f core.Finding) ocsfEvent {
 	sevID, sevName := ocsfSeverityFor(f.Severity)
 	statusID, statusName := ocsfStatusFor(f.Status)
 
-	return ocsfEvent{
+	title, description := titleAndDescription(f)
+	standards, requirements := complianceFromFinding(f)
+
+	ev := ocsfEvent{
 		Metadata: ocsfMetadata{
 			Version: ocsfVersion,
 			Product: ocsfProduct{
 				Name:       ocsfProductName,
 				VendorName: ocsfProductVendorName,
+				Feature: &ocsfFeature{
+					UID:  f.CheckID,
+					Name: title,
+				},
 			},
 		},
 		CategoryUID: ocsfCategoryFinding,
@@ -92,22 +108,99 @@ func findingToOCSFEvent(f core.Finding) ocsfEvent {
 		Severity:    sevName,
 		StatusID:    statusID,
 		Status:      statusName,
-		// OCSF time is Unix milliseconds.
-		Time:    when.UnixMilli(),
-		Message: f.Message,
+		Time:        when.UnixMilli(),
+		Message:     f.Message,
+		Finding: &ocsfFindingInfo{
+			UID:         f.CheckID,
+			Title:       title,
+			Description: description,
+			Types:       []string{f.CheckID},
+		},
 		Compliance: ocsfCompliance{
-			Control:  f.CheckID,
-			StatusID: statusID,
-			Status:   statusName,
+			Control:      f.CheckID,
+			StatusID:     statusID,
+			Status:       statusName,
+			Standards:    standards,
+			Requirements: requirements,
 		},
-		Resources: []ocsfResource{
-			{
-				Name: f.Resource.Name,
-				Type: f.Resource.Type,
-				UID:  f.Resource.ID,
-			},
-		},
+		Resources: []ocsfResource{resourceFromRef(f.Resource)},
 	}
+
+	// Preserve provenance through round-trip. unmapped is the OCSF
+	// escape hatch for tool-specific data the schema doesn't yet
+	// model; SIEMs ignore unknown keys gracefully.
+	if f.Source != nil {
+		ev.Unmapped = map[string]any{
+			"compliancekit_source": f.Source,
+		}
+	}
+	if len(f.Tags) > 0 {
+		if ev.Unmapped == nil {
+			ev.Unmapped = map[string]any{}
+		}
+		ev.Unmapped["compliancekit_tags"] = f.Tags
+	}
+
+	return ev
+}
+
+// titleAndDescription resolves a check title and longer description
+// from the registry when available, falling back to the CheckID
+// + Message. Empty-string fallbacks keep the OCSF event well-formed
+// even for ingested findings whose checks aren't in our registry.
+func titleAndDescription(f core.Finding) (title, desc string) {
+	if check, ok := core.LookupCheck(f.CheckID); ok {
+		title = check.Title
+		desc = check.Description
+		return title, desc
+	}
+	title = f.CheckID
+	desc = f.Message
+	return title, desc
+}
+
+// complianceFromFinding pulls the (framework, control) attribution
+// for a check from the framework registry. Returns parallel slices:
+// Standards lists each framework's display name; Requirements lists
+// "framework_id:control_id" pairs. Empty slices when the check isn't
+// in the registry or has no framework mapping (typical for ingested
+// findings before mapping-table lookup).
+func complianceFromFinding(f core.Finding) (standards []string, requirements []string) {
+	check, ok := core.LookupCheck(f.CheckID)
+	if !ok {
+		return nil, nil
+	}
+	resolved := frameworks.ResolveCheckControls(check.Frameworks)
+	seen := map[string]bool{}
+	for _, rc := range resolved {
+		if !seen[rc.Framework.Name] {
+			standards = append(standards, rc.Framework.Name)
+			seen[rc.Framework.Name] = true
+		}
+		requirements = append(requirements, fmt.Sprintf("%s:%s", rc.Framework.ID, rc.Control.ID))
+	}
+	return standards, requirements
+}
+
+// resourceFromRef builds an OCSF resource object, propagating region
+// and cloud-account fields from the ResourceRef so SIEM filtering
+// and Phase 8's graph-join round-trip have the data they need.
+func resourceFromRef(ref core.ResourceRef) ocsfResource {
+	res := ocsfResource{
+		Name:   ref.Name,
+		Type:   ref.Type,
+		UID:    ref.ID,
+		Region: ref.Region,
+	}
+	if ref.AccountID != "" || ref.Provider != "" {
+		res.Cloud = &ocsfCloud{
+			Provider: ref.Provider,
+		}
+		if ref.AccountID != "" {
+			res.Cloud.Account = &ocsfAccount{UID: ref.AccountID}
+		}
+	}
+	return res
 }
 
 // ocsfSeverityFor maps our severity enum to OCSF's severity_id /
@@ -159,19 +252,21 @@ func ocsfStatusFor(s core.Status) (id int, label string) {
 // OCSF schema types (subset of 1.5 Compliance Finding).
 
 type ocsfEvent struct {
-	Metadata    ocsfMetadata   `json:"metadata"`
-	CategoryUID int            `json:"category_uid"`
-	ClassUID    int            `json:"class_uid"`
-	TypeUID     int            `json:"type_uid"`
-	ActivityID  int            `json:"activity_id"`
-	SeverityID  int            `json:"severity_id"`
-	Severity    string         `json:"severity"`
-	StatusID    int            `json:"status_id"`
-	Status      string         `json:"status"`
-	Time        int64          `json:"time"`
-	Message     string         `json:"message,omitempty"`
-	Compliance  ocsfCompliance `json:"compliance"`
-	Resources   []ocsfResource `json:"resources,omitempty"`
+	Metadata    ocsfMetadata     `json:"metadata"`
+	CategoryUID int              `json:"category_uid"`
+	ClassUID    int              `json:"class_uid"`
+	TypeUID     int              `json:"type_uid"`
+	ActivityID  int              `json:"activity_id"`
+	SeverityID  int              `json:"severity_id"`
+	Severity    string           `json:"severity"`
+	StatusID    int              `json:"status_id"`
+	Status      string           `json:"status"`
+	Time        int64            `json:"time"`
+	Message     string           `json:"message,omitempty"`
+	Finding     *ocsfFindingInfo `json:"finding_info,omitempty"`
+	Compliance  ocsfCompliance   `json:"compliance"`
+	Resources   []ocsfResource   `json:"resources,omitempty"`
+	Unmapped    map[string]any   `json:"unmapped,omitempty"`
 }
 
 type ocsfMetadata struct {
@@ -180,18 +275,45 @@ type ocsfMetadata struct {
 }
 
 type ocsfProduct struct {
-	Name       string `json:"name"`
-	VendorName string `json:"vendor_name"`
+	Name       string       `json:"name"`
+	VendorName string       `json:"vendor_name"`
+	Feature    *ocsfFeature `json:"feature,omitempty"`
+}
+
+type ocsfFeature struct {
+	UID  string `json:"uid,omitempty"`
+	Name string `json:"name,omitempty"`
+}
+
+type ocsfFindingInfo struct {
+	UID         string   `json:"uid,omitempty"`
+	Title       string   `json:"title,omitempty"`
+	Description string   `json:"desc,omitempty"`
+	Types       []string `json:"types,omitempty"`
 }
 
 type ocsfCompliance struct {
-	Control  string `json:"control"`
-	StatusID int    `json:"status_id"`
-	Status   string `json:"status"`
+	Control      string   `json:"control"`
+	StatusID     int      `json:"status_id"`
+	Status       string   `json:"status"`
+	Standards    []string `json:"standards,omitempty"`
+	Requirements []string `json:"requirements,omitempty"`
 }
 
 type ocsfResource struct {
-	Name string `json:"name"`
-	Type string `json:"type"`
-	UID  string `json:"uid"`
+	Name   string     `json:"name,omitempty"`
+	Type   string     `json:"type,omitempty"`
+	UID    string     `json:"uid,omitempty"`
+	Region string     `json:"region,omitempty"`
+	Cloud  *ocsfCloud `json:"cloud,omitempty"`
+}
+
+type ocsfCloud struct {
+	Provider string       `json:"provider,omitempty"`
+	Account  *ocsfAccount `json:"account,omitempty"`
+}
+
+type ocsfAccount struct {
+	UID  string `json:"uid,omitempty"`
+	Name string `json:"name,omitempty"`
 }

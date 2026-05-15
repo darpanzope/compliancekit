@@ -211,6 +211,14 @@ func canonicalProduct(explicit string, p product) string {
 // existing resource is reused; otherwise a phantom is emitted for
 // the caller to add. Severity is taken from the mapping override or
 // the event's severity_id; status from status_id.
+//
+// Special case — compliancekit's own OCSF emit: when the producing
+// product is "compliancekit", the OCSF event carries the original
+// CheckID in compliance.control + finding_info.uid and the original
+// Source in unmapped.compliancekit_source. The adapter recovers the
+// original CheckID verbatim (no `ingest.` prefix) and the original
+// Source, so a round-trip emit→ingest is lossless for the fields
+// that matter to the diff engine and the evidence pack.
 func projectEvent(
 	ev event,
 	productID, toolVersion string,
@@ -225,17 +233,42 @@ func projectEvent(
 	status := resolveStatus(ev)
 
 	tags := []string{}
+	source := &core.Source{
+		Type:        "ingest",
+		Tool:        productID,
+		ToolVersion: toolVersion,
+		Format:      "ocsf",
+		File:        opts.Provenance.File,
+	}
+	checkID := composeCheckID(productID, ruleID)
+
+	// Lossless round-trip for compliancekit-emitted OCSF: recover the
+	// original CheckID and Source provenance.
+	if productID == "compliancekit" {
+		if ruleID != "" {
+			checkID = ruleID
+		}
+		if originalSource := extractCompliancekitSource(ev); originalSource != nil {
+			source = originalSource
+		}
+		if originalTags := extractCompliancekitTags(ev); len(originalTags) > 0 {
+			tags = append(tags, originalTags...)
+		}
+	}
+
 	if mapping != nil {
 		if m, ok := mapping.Lookup(ruleID); ok {
 			tags = append(tags, m.Tags...)
-		} else if ruleID != "" && !opts.FailOnUnmapped {
+		} else if ruleID != "" && !opts.FailOnUnmapped && productID != "compliancekit" {
+			// Don't warn on round-trip ingest: compliancekit's own
+			// OCSF emit carries native CheckIDs that don't need a
+			// mapping table.
 			warnings = append(warnings,
 				fmt.Sprintf("no mapping for %s rule %q (finding emitted without framework attribution)",
 					productID, ruleID))
 		}
 	}
 
-	checkID := composeCheckID(productID, ruleID)
 	finding := core.Finding{
 		CheckID:   checkID,
 		Status:    status,
@@ -244,22 +277,61 @@ func projectEvent(
 		Message:   composeMessage(ev),
 		Tags:      tags,
 		Timestamp: timestampFromEvent(ev, opts.Provenance.IngestedAt),
-		Source: &core.Source{
-			Type:        "ingest",
-			Tool:        productID,
-			ToolVersion: toolVersion,
-			Format:      "ocsf",
-			File:        opts.Provenance.File,
-		},
+		Source:    source,
 	}
 	return finding, phantom, warnings
+}
+
+// extractCompliancekitSource recovers the original Source struct from
+// an OCSF event's unmapped.compliancekit_source slot. Returns nil if
+// the slot is absent or its shape doesn't match — never errors,
+// since this is a best-effort enrichment.
+func extractCompliancekitSource(ev event) *core.Source {
+	raw, ok := ev.Unmapped["compliancekit_source"]
+	if !ok {
+		return nil
+	}
+	// json.Unmarshal of unknown {} → map[string]any. Marshal back
+	// and unmarshal into the typed Source is the cleanest way to
+	// preserve all fields without enumerating them here.
+	b, err := json.Marshal(raw)
+	if err != nil {
+		return nil
+	}
+	var s core.Source
+	if err := json.Unmarshal(b, &s); err != nil {
+		return nil
+	}
+	return &s
+}
+
+// extractCompliancekitTags recovers tags from unmapped.compliancekit_tags.
+// Returns nil for absent or malformed entries.
+func extractCompliancekitTags(ev event) []string {
+	raw, ok := ev.Unmapped["compliancekit_tags"]
+	if !ok {
+		return nil
+	}
+	arr, ok := raw.([]any)
+	if !ok {
+		return nil
+	}
+	out := make([]string, 0, len(arr))
+	for _, x := range arr {
+		if s, ok := x.(string); ok {
+			out = append(out, s)
+		}
+	}
+	return out
 }
 
 // ruleIDFor extracts the most-meaningful rule identifier from an event.
 // Order of preference: finding_info.types[0] (AWS Security Hub puts
 // "Software and Configuration Checks/Industry and Regulatory Standards/
 // .../S3.4" here), then finding_info.analytic.uid, then
-// finding_info.uid, then metadata.product.feature.uid.
+// finding_info.uid, then metadata.product.feature.uid, then
+// compliance.control (the round-trip path for compliancekit's own
+// OCSF emit, which writes the CheckID into compliance.control).
 func ruleIDFor(ev event) string {
 	if ev.Finding != nil {
 		if len(ev.Finding.Types) > 0 && ev.Finding.Types[0] != "" {
@@ -275,6 +347,9 @@ func ruleIDFor(ev event) string {
 	}
 	if ev.Metadata.Product.FeatureRef != nil && ev.Metadata.Product.FeatureRef.UID != "" {
 		return ev.Metadata.Product.FeatureRef.UID
+	}
+	if ev.Compliance != nil && ev.Compliance.Control != "" {
+		return ev.Compliance.Control
 	}
 	return ""
 }
