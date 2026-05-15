@@ -1,0 +1,84 @@
+# compliancekit.yaml — Tailoring quickstart.
+#
+# v0.12+. Use `tailoring:` to declare which (framework, control)
+# pairs are out of audit scope for your organization. Every entry
+# requires a written justification — the evidence pack carries the
+# justification alongside the finding so auditors see every
+# scope-out decision with its reason.
+#
+# When you run `compliancekit evidence --config compliancekit.yaml
+# --out pack/`, the pack additionally writes:
+#
+#   - tailoring.json: full machine-readable record at pack root
+#   - control-mapping.csv: new `tailored` + `tailoring_justification`
+#     columns
+#   - summary.html: header chip + dedicated tailoring card + per-row
+#     "tailored" pill with the justification inline
+
+project: acme-saas
+environment: prod
+
+providers:
+  digitalocean:
+    enabled: true
+    token_env: DO_API_TOKEN
+
+# All 7 v0.12 frameworks; trim this list to the ones you actually
+# care about for your audit.
+frameworks:
+  - soc2
+  - iso27001
+  - cis-v8
+  - nist-800-53-r5
+  - hipaa
+  - pci-dss-v4
+  - mitre-attack
+
+tailoring:
+  # PCI: payments tokenized → CDE controls out of scope.
+  - framework: pci-dss-v4
+    control: "10.6.1"
+    justification: |
+      Out of scope — we do not store, process, or transmit Primary
+      Account Numbers (PAN). All payments are tokenized via Stripe
+      Connect; no Cardholder Data Environment (CDE) exists.
+
+  - framework: pci-dss-v4
+    control: "3.2"
+    justification: |
+      Out of scope per PCI 3.2 — see PCI 10.6.1 justification.
+      Stripe Connect handles all PAN storage off our infrastructure.
+
+  # SOC 2 Privacy not in scope (audit covers Security + Availability
+  # + Confidentiality only).
+  - framework: soc2
+    control: P1.1
+    justification: |
+      Not committed in our SOC 2 report; pre-Privacy-Type audit
+      window. Revisit at next audit if Privacy is added to scope.
+
+  - framework: soc2
+    control: P2.1
+    justification: |
+      See P1.1 justification — Privacy category not committed in this
+      SOC 2 audit cycle.
+
+  # HIPAA: we are not a covered entity / business associate.
+  - framework: hipaa
+    control: "164.308(b)(1)"
+    justification: |
+      Not a HIPAA-covered entity. ePHI does not flow through our
+      systems. This framework is enabled for cross-mapping coverage
+      with related SOC 2 / NIST controls; HIPAA-specific implementation
+      specifications scope out by default.
+
+severity:
+  fail_on: high
+  min_report: low
+
+output:
+  format: [json, html, markdown]
+  out_dir: ./out
+  evidence: true                # write the evidence pack alongside
+                                # findings; v0.12 evidence-pack ships
+                                # the full tailoring trail.

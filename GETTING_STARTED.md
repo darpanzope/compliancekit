@@ -68,7 +68,7 @@ providers:
   digitalocean:
     enabled: true
     token_env: DO_API_TOKEN
-frameworks: [soc2, iso27001, cis-v8]
+frameworks: [soc2, iso27001, cis-v8, nist-800-53-r5, hipaa, pci-dss-v4, mitre-attack]
 severity: { fail_on: high, min_report: info }
 output: { format: [json, html, markdown], out_dir: ./out }
 ```
@@ -84,7 +84,7 @@ Expected:
 ```
 ✓ config: loaded from compliancekit.yaml
 ✓ severity: fail_on=high, min_report=info
-✓ frameworks: soc2, iso27001, cis-v8
+✓ frameworks: soc2, iso27001, cis-v8, nist-800-53-r5, hipaa, pci-dss-v4, mitre-attack
 ✓ output: format=json,html,markdown, evidence=false, out_dir=./out
 ✓ providers.digitalocean: DO_API_TOKEN resolved (token length: 71)
 ✓ providers.digitalocean: API reachable (631ms)
@@ -356,10 +356,45 @@ open evidence/2026-Q2/summary.html
 ```
 
 The pack contains:
-- Per-framework, per-control folders (`cis-v8/`, `iso27001/`, `soc2/`)
-- `control-mapping.csv` — importable into Drata / Vanta / AuditBoard
-- `summary.html` — single-file auditor index
-- `MANIFEST.sha256` — tamper-evidence (`sha256sum -c MANIFEST.sha256`)
+- Per-framework, per-control folders (one per shipping framework —
+  `soc2/`, `iso27001/`, `cis-v8/`, `nist-800-53-r5/`, `hipaa/`,
+  `pci-dss-v4/`, `mitre-attack/`).
+- `control-mapping.csv` — importable into Drata / Vanta / AuditBoard.
+  Carries `framework_name`, `control_family`, `control_tags`,
+  `tailored`, and `tailoring_justification` columns (v0.12+).
+- `summary.html` — single-file auditor index. Compliance frameworks
+  render as control checklists; MITRE ATT&CK renders as a separate
+  kill-chain "Techniques mapped" section.
+- `tailoring.json` (v0.12+) — operator-declared scope-outs with
+  justifications. Only written when `--config` points at a yaml
+  with a `tailoring:` block.
+- `MANIFEST.sha256` — tamper-evidence (`sha256sum -c MANIFEST.sha256`).
+
+**Tailoring (v0.12+):** declare which controls are out of scope for
+your audit with a required justification:
+
+```yaml
+# compliancekit.yaml
+tailoring:
+  - framework: pci-dss-v4
+    control: "10.6.1"
+    justification: |
+      Out of scope — no PAN data. Payments tokenized via Stripe.
+```
+
+Then pass the config to evidence generation:
+
+```sh
+compliancekit evidence \
+  --in out/findings.json \
+  --out evidence/2026-Q2/ \
+  --config compliancekit.yaml
+```
+
+The justification flows into `tailoring.json`, the
+`tailoring_justification` column of `control-mapping.csv`, and a
+dedicated card at the top of `summary.html` so the auditor sees
+every scope-out decision alongside the reason.
 
 Sensitive tokens (AWS keys, GitHub PATs, Slack tokens, bearer headers,
 email addresses) are **redacted by default** in finding messages. For
