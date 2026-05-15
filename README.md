@@ -225,15 +225,17 @@ Full per-check reference (auto-generated, IDs / severities / framework mappings 
 
 ### Frameworks
 
-Every check maps to all three frameworks shipping today:
+Every check maps across **seven shipping frameworks** (v0.12+) — 548 controls total. Operators can scope controls out of audit via `tailoring:` in `compliancekit.yaml`; the evidence pack carries every scope-out with its written justification.
 
-| Framework | Version | Coverage |
-|---|---|---|
-| SOC 2 Trust Services Criteria | 2017 (with 2022 PoF) | CC + A controls referenced by current checks |
-| ISO/IEC 27001 Annex A | 2022 | full A.8 Technological theme (34 controls) + A.5.9, A.5.15, A.5.30 |
-| CIS Controls v8 | v8 | subset referenced by current checks |
-
-NIST 800-53 r5, HIPAA, PCI-DSS v4, and MITRE ATT&CK land at **v0.12**.
+| Framework | Version | Coverage | Category |
+|---|---|---:|---|
+| SOC 2 Trust Services Criteria | 2017 (with 2022 PoF) | 60 (full CC1-CC9 + A + C + PI + P) | compliance |
+| ISO/IEC 27001 Annex A | 2022 | 93 (full Annex A: org, people, physical, technological) | compliance |
+| CIS Controls v8 | v8 | 153 safeguards × IG1/IG2/IG3 taxonomy | compliance |
+| NIST SP 800-53 | r5 | 131 (cloud + Linux subset across 14 families) | compliance |
+| HIPAA Security Rule | 45 CFR §§164.308/310/312 | 50 implementation specs × required/addressable | compliance |
+| PCI DSS | v4.0 | 61 sub-requirements × 12 themes | compliance |
+| MITRE ATT&CK Enterprise | v15 (2024) | 12 tactics + 50 techniques (cloud + Linux subset) | threat model |
 
 ### Output formats
 

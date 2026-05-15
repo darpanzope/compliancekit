@@ -56,7 +56,23 @@ providers:
 
 frameworks:
   - soc2
+  - iso27001
   - cis-v8
+  # v0.12+: uncomment to enable the additional shipping frameworks.
+  # - nist-800-53-r5
+  # - hipaa
+  # - pci-dss-v4
+  # - mitre-attack
+
+# v0.12+: tailoring lets you scope (framework, control) pairs out of
+# audit with a required justification. The evidence pack writes
+# tailoring.json + a tailoring column in control-mapping.csv + a
+# header chip in summary.html so the scope-out is auditable.
+# tailoring:
+#   - framework: pci-dss-v4
+#     control: "10.6.1"
+#     justification: |
+#       Out of scope — no PAN data. Payments tokenized via Stripe.
 
 severity:
   fail_on: high     # exit non-zero on any finding at this severity or above

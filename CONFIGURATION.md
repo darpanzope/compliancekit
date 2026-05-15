@@ -109,14 +109,31 @@ providers:                      # object, required. At least one provider must b
     token_env: HCLOUD_TOKEN
 
 frameworks:                     # array<string>, default ["soc2", "cis-v8"]
-  - soc2
-  - iso27001
-  - cis-v8
-  - nist-800-53                 # v0.12+
-  - hipaa                       # v0.12+
-  - pci-dss                     # v0.12+
-  - mitre-attack                # v0.12+
-  - fedramp                     # v0.12+ (subset; full OSCAL catalog ingest v1.8)
+  - soc2                        # SOC 2 TSC (2017 with 2022 PoF) — 60 controls
+  - iso27001                    # ISO/IEC 27001:2022 Annex A — 93 controls
+  - cis-v8                      # CIS Controls v8 — 153 safeguards (IG1/IG2/IG3)
+  - nist-800-53-r5              # v0.12+. NIST SP 800-53 r5 — 131 controls (cloud + Linux subset)
+  - hipaa                       # v0.12+. HIPAA Security Rule §§164.308/310/312 — 50 specs
+  - pci-dss-v4                  # v0.12+. PCI DSS v4.0 — 61 sub-requirements
+  - mitre-attack                # v0.12+. MITRE ATT&CK Enterprise — kill-chain threat model
+
+# v0.12+. Tailoring lets an operator scope individual (framework,
+# control) pairs out of audit, with a required written justification.
+# The justification flows into evidence/tailoring.json + a column in
+# evidence/control-mapping.csv + the summary.html header card so the
+# auditor sees every scope-out decision with its reason.
+tailoring:                      # v0.12+
+  - framework: pci-dss-v4
+    control: "10.6.1"
+    justification: |
+      Out of scope — we do not store, process, or transmit
+      Primary Account Numbers (PAN). All payments are tokenized
+      via Stripe Connect; CDE does not exist in our environment.
+  - framework: soc2
+    control: P1.1
+    justification: |
+      Privacy commitment not yet declared in our SOC 2 report.
+      Pre-audit; revisit at next audit window.
 
 profile: ci-fast                # v0.6+. names a key under `profiles:` below.
 
