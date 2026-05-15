@@ -19,15 +19,19 @@ import (
 
 // Config is the parsed compliancekit.yaml.
 type Config struct {
-	Project     string                   `mapstructure:"project"     yaml:"project,omitempty"`
-	Environment string                   `mapstructure:"environment" yaml:"environment,omitempty"`
-	Providers   Providers                `mapstructure:"providers"   yaml:"providers"`
-	Frameworks  []string                 `mapstructure:"frameworks"  yaml:"frameworks"`
-	Profile     string                   `mapstructure:"profile"     yaml:"profile,omitempty"`
-	Profiles    map[string]ProfileConfig `mapstructure:"profiles"    yaml:"profiles,omitempty"`
-	Severity    SeverityConfig           `mapstructure:"severity"    yaml:"severity"`
-	Output      OutputConfig             `mapstructure:"output"      yaml:"output"`
-	State       StateConfig              `mapstructure:"state"       yaml:"state"`
+	Project     string    `mapstructure:"project"     yaml:"project,omitempty"`
+	Environment string    `mapstructure:"environment" yaml:"environment,omitempty"`
+	Providers   Providers `mapstructure:"providers"   yaml:"providers"`
+	Frameworks  []string  `mapstructure:"frameworks"  yaml:"frameworks"`
+	// Tailoring is the operator-declared list of (framework, control)
+	// pairs scoped out of audit. Every entry requires a justification
+	// — see frameworks.TailoringRule and CONFIGURATION.md. v0.12+.
+	Tailoring []TailoringRule          `mapstructure:"tailoring"   yaml:"tailoring,omitempty"`
+	Profile   string                   `mapstructure:"profile"     yaml:"profile,omitempty"`
+	Profiles  map[string]ProfileConfig `mapstructure:"profiles"    yaml:"profiles,omitempty"`
+	Severity  SeverityConfig           `mapstructure:"severity"    yaml:"severity"`
+	Output    OutputConfig             `mapstructure:"output"      yaml:"output"`
+	State     StateConfig              `mapstructure:"state"       yaml:"state"`
 
 	// SourcePath is the resolved path of the YAML file Load read from, or ""
 	// if no file was found and defaults plus environment were used alone.
@@ -253,6 +257,16 @@ func (c Config) Validate() error {
 	}
 
 	return nil
+}
+
+// TailoringRule mirrors frameworks.TailoringRule one-for-one. The
+// duplicate-yet-thin type avoids a circular import between
+// internal/config and internal/frameworks; the loader at scan time
+// passes the slice through to frameworks.NewTailoring. v0.12+.
+type TailoringRule struct {
+	Framework     string `mapstructure:"framework"     yaml:"framework"`
+	Control       string `mapstructure:"control"       yaml:"control"`
+	Justification string `mapstructure:"justification" yaml:"justification"`
 }
 
 // ProfileConfig is one named subset of the check catalog declared
