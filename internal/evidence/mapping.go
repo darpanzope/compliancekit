@@ -47,6 +47,9 @@ var mappingColumns = []string{
 	"control_tags",            // CIS IG level / HIPAA required-or-addressable / ATT&CK tactic IDs (semicolon-separated)
 	"tailored",                // "true" if operator scoped this control out
 	"tailoring_justification", // operator's reason; empty when not tailored
+	// v0.13 additions:
+	"finding_source", // "native" | "ingest" — where the finding came from
+	"finding_tool",   // populated for ingest findings (e.g. "trivy", "aws-security-hub"); empty for native
 }
 
 // writeMappingCSV emits <out>/control-mapping.csv with one row per
@@ -96,6 +99,7 @@ func writeMappingCSV(outDir string, controls []ControlRef, tailoring *frameworks
 			if chk, ok := core.LookupCheck(fnd.CheckID); ok {
 				title = chk.Title
 			}
+			sourceType, sourceTool := sourceColumns(fnd)
 			row := []string{
 				c.FrameworkID,
 				c.ControlID,
@@ -115,6 +119,8 @@ func writeMappingCSV(outDir string, controls []ControlRef, tailoring *frameworks
 				tagsCSV,
 				tailored,
 				justification,
+				sourceType,
+				sourceTool,
 			}
 			if err := w.Write(row); err != nil {
 				return "", fmt.Errorf("write row: %w", err)
@@ -126,6 +132,17 @@ func writeMappingCSV(outDir string, controls []ControlRef, tailoring *frameworks
 		return "", fmt.Errorf("flush csv: %w", err)
 	}
 	return path, nil
+}
+
+// sourceColumns returns the (finding_source, finding_tool) values
+// for the control-mapping.csv row. A nil Source or Type=="native"
+// (or empty) maps to ("native", ""); ingest findings carry through
+// their Source.Type + Source.Tool. v0.13+.
+func sourceColumns(f core.Finding) (sourceType, sourceTool string) {
+	if f.Source == nil || f.Source.Type == "" || f.Source.Type == "native" {
+		return "native", ""
+	}
+	return f.Source.Type, f.Source.Tool
 }
 
 // resolveControlMeta looks up the framework and control to surface

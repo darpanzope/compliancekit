@@ -115,6 +115,10 @@ func runScan(ctx context.Context, w io.Writer, opts scanOptions, providerFilter 
 		return fmt.Errorf("scan: %w", err)
 	}
 
+	if err := mergeConfigIngest(ctx, w, &result, cfg.Ingest); err != nil {
+		return err
+	}
+
 	if err := os.MkdirAll(cfg.Output.OutDir, 0o750); err != nil {
 		return fmt.Errorf("create out_dir %s: %w", cfg.Output.OutDir, err)
 	}
