@@ -1,0 +1,459 @@
+# HIPAA Security Rule — 45 CFR Part 164, Subpart C
+#
+# Source: U.S. Department of Health and Human Services HIPAA
+# Security Rule (45 CFR §§164.302 - 164.318).
+#
+# v0.12 ships the technical-, administrative-, and physical-
+# safeguards-relevant implementation specifications. Each spec is
+# tagged "required" (must be implemented) or "addressable" (must
+# be implemented if reasonable and appropriate for the entity;
+# else document why and implement an equivalent alternative).
+
+id: hipaa
+name: HIPAA Security Rule
+version: "2003 (with 2013 Omnibus revisions)"
+category: compliance
+source: U.S. Department of Health and Human Services — HIPAA Security Rule (45 CFR §§164.302 - 164.318)
+url: https://www.hhs.gov/hipaa/for-professionals/security/index.html
+description: |
+  The HIPAA Security Rule establishes national standards for
+  protecting electronic protected health information (ePHI) that is
+  created, received, used, or maintained by a covered entity or
+  business associate. The Rule requires administrative, physical,
+  and technical safeguards to ensure the confidentiality, integrity,
+  and availability of ePHI. Each implementation specification is
+  labeled "Required" (R) or "Addressable" (A).
+
+controls:
+  # ---- §164.308 Administrative Safeguards ----
+
+  "164.308(a)(1)(i)":
+    name: Security Management Process
+    family: administrative-safeguards
+    description: |
+      Implement policies and procedures to prevent, detect,
+      contain, and correct security violations.
+
+  "164.308(a)(1)(ii)(A)":
+    name: Risk Analysis
+    family: administrative-safeguards
+    tags: [required]
+    description: |
+      Conduct an accurate and thorough assessment of the potential
+      risks and vulnerabilities to the confidentiality, integrity,
+      and availability of ePHI held by the covered entity or
+      business associate.
+
+  "164.308(a)(1)(ii)(B)":
+    name: Risk Management
+    family: administrative-safeguards
+    tags: [required]
+    description: |
+      Implement security measures sufficient to reduce risks and
+      vulnerabilities to a reasonable and appropriate level.
+
+  "164.308(a)(1)(ii)(C)":
+    name: Sanction Policy
+    family: administrative-safeguards
+    tags: [required]
+    description: |
+      Apply appropriate sanctions against workforce members who fail
+      to comply with the security policies and procedures of the
+      covered entity or business associate.
+
+  "164.308(a)(1)(ii)(D)":
+    name: Information System Activity Review
+    family: administrative-safeguards
+    tags: [required]
+    description: |
+      Implement procedures to regularly review records of
+      information system activity, such as audit logs, access
+      reports, and security incident tracking reports.
+
+  "164.308(a)(2)":
+    name: Assigned Security Responsibility
+    family: administrative-safeguards
+    tags: [required]
+    description: |
+      Identify the security official who is responsible for the
+      development and implementation of the policies and procedures
+      required by the Security Rule.
+
+  "164.308(a)(3)(ii)(A)":
+    name: Authorization and/or Supervision
+    family: administrative-safeguards
+    tags: [addressable]
+    description: |
+      Implement procedures for the authorization and/or supervision
+      of workforce members who work with ePHI or in locations where
+      it might be accessed.
+
+  "164.308(a)(3)(ii)(B)":
+    name: Workforce Clearance Procedure
+    family: administrative-safeguards
+    tags: [addressable]
+    description: |
+      Implement procedures to determine that the access of a
+      workforce member to ePHI is appropriate.
+
+  "164.308(a)(3)(ii)(C)":
+    name: Termination Procedures
+    family: administrative-safeguards
+    tags: [addressable]
+    description: |
+      Implement procedures for terminating access to ePHI when the
+      employment of a workforce member ends or as required by
+      paragraph (a)(3)(ii)(B).
+
+  "164.308(a)(4)(ii)(A)":
+    name: Isolating Health Care Clearinghouse Functions
+    family: administrative-safeguards
+    tags: [required]
+    description: |
+      If a health care clearinghouse is part of a larger
+      organization, implement policies and procedures that protect
+      ePHI of the clearinghouse from unauthorized access by the
+      larger organization.
+
+  "164.308(a)(4)(ii)(B)":
+    name: Access Authorization
+    family: administrative-safeguards
+    tags: [addressable]
+    description: |
+      Implement policies and procedures for granting access to ePHI,
+      for example, through access to a workstation, transaction,
+      program, process, or other mechanism.
+
+  "164.308(a)(4)(ii)(C)":
+    name: Access Establishment and Modification
+    family: administrative-safeguards
+    tags: [addressable]
+    description: |
+      Implement policies and procedures that, based upon the entity's
+      access authorization policies, establish, document, review, and
+      modify a user's right of access to a workstation, transaction,
+      program, or process.
+
+  "164.308(a)(5)(i)":
+    name: Security Awareness and Training
+    family: administrative-safeguards
+    description: |
+      Implement a security awareness and training program for all
+      members of its workforce (including management).
+
+  "164.308(a)(5)(ii)(A)":
+    name: Security Reminders
+    family: administrative-safeguards
+    tags: [addressable]
+    description: |
+      Periodic security updates.
+
+  "164.308(a)(5)(ii)(B)":
+    name: Protection from Malicious Software
+    family: administrative-safeguards
+    tags: [addressable]
+    description: |
+      Procedures for guarding against, detecting, and reporting
+      malicious software.
+
+  "164.308(a)(5)(ii)(C)":
+    name: Log-In Monitoring
+    family: administrative-safeguards
+    tags: [addressable]
+    description: |
+      Procedures for monitoring log-in attempts and reporting
+      discrepancies.
+
+  "164.308(a)(5)(ii)(D)":
+    name: Password Management
+    family: administrative-safeguards
+    tags: [addressable]
+    description: |
+      Procedures for creating, changing, and safeguarding passwords.
+
+  "164.308(a)(6)(i)":
+    name: Security Incident Procedures
+    family: administrative-safeguards
+    description: |
+      Implement policies and procedures to address security
+      incidents.
+
+  "164.308(a)(6)(ii)":
+    name: Response and Reporting
+    family: administrative-safeguards
+    tags: [required]
+    description: |
+      Identify and respond to suspected or known security incidents;
+      mitigate, to the extent practicable, harmful effects of
+      security incidents that are known to the covered entity or
+      business associate; and document security incidents and their
+      outcomes.
+
+  "164.308(a)(7)(ii)(A)":
+    name: Data Backup Plan
+    family: administrative-safeguards
+    tags: [required]
+    description: |
+      Establish and implement procedures to create and maintain
+      retrievable exact copies of ePHI.
+
+  "164.308(a)(7)(ii)(B)":
+    name: Disaster Recovery Plan
+    family: administrative-safeguards
+    tags: [required]
+    description: |
+      Establish (and implement as needed) procedures to restore any
+      loss of data.
+
+  "164.308(a)(7)(ii)(C)":
+    name: Emergency Mode Operation Plan
+    family: administrative-safeguards
+    tags: [required]
+    description: |
+      Establish (and implement as needed) procedures to enable
+      continuation of critical business processes for protection of
+      the security of ePHI while operating in emergency mode.
+
+  "164.308(a)(7)(ii)(D)":
+    name: Testing and Revision Procedures
+    family: administrative-safeguards
+    tags: [addressable]
+    description: |
+      Implement procedures for periodic testing and revision of
+      contingency plans.
+
+  "164.308(a)(7)(ii)(E)":
+    name: Applications and Data Criticality Analysis
+    family: administrative-safeguards
+    tags: [addressable]
+    description: |
+      Assess the relative criticality of specific applications and
+      data in support of other contingency plan components.
+
+  "164.308(a)(8)":
+    name: Evaluation
+    family: administrative-safeguards
+    tags: [required]
+    description: |
+      Perform a periodic technical and nontechnical evaluation, based
+      initially upon the standards implemented under this rule and,
+      subsequently, in response to environmental or operational
+      changes affecting the security of ePHI.
+
+  "164.308(b)(1)":
+    name: Business Associate Contracts and Other Arrangements
+    family: administrative-safeguards
+    description: |
+      A covered entity may permit a business associate to create,
+      receive, maintain, or transmit ePHI on the covered entity's
+      behalf only if the covered entity obtains satisfactory
+      assurances that the business associate will appropriately
+      safeguard the information.
+
+  # ---- §164.310 Physical Safeguards ----
+
+  "164.310(a)(1)":
+    name: Facility Access Controls
+    family: physical-safeguards
+    description: |
+      Implement policies and procedures to limit physical access to
+      its electronic information systems and the facility or
+      facilities in which they are housed, while ensuring that
+      properly authorized access is allowed.
+
+  "164.310(a)(2)(i)":
+    name: Contingency Operations
+    family: physical-safeguards
+    tags: [addressable]
+    description: |
+      Establish (and implement as needed) procedures that allow
+      facility access in support of restoration of lost data under
+      the disaster recovery plan and emergency mode operations plan
+      in the event of an emergency.
+
+  "164.310(a)(2)(ii)":
+    name: Facility Security Plan
+    family: physical-safeguards
+    tags: [addressable]
+    description: |
+      Implement policies and procedures to safeguard the facility
+      and the equipment therein from unauthorized physical access,
+      tampering, and theft.
+
+  "164.310(a)(2)(iii)":
+    name: Access Control and Validation Procedures
+    family: physical-safeguards
+    tags: [addressable]
+    description: |
+      Implement procedures to control and validate a person's access
+      to facilities based on their role or function, including
+      visitor control.
+
+  "164.310(a)(2)(iv)":
+    name: Maintenance Records
+    family: physical-safeguards
+    tags: [addressable]
+    description: |
+      Implement policies and procedures to document repairs and
+      modifications to the physical components of a facility which
+      are related to security.
+
+  "164.310(b)":
+    name: Workstation Use
+    family: physical-safeguards
+    tags: [required]
+    description: |
+      Implement policies and procedures that specify the proper
+      functions to be performed, the manner in which those functions
+      are to be performed, and the physical attributes of the
+      surroundings of a specific workstation or class of workstation
+      that can access ePHI.
+
+  "164.310(c)":
+    name: Workstation Security
+    family: physical-safeguards
+    tags: [required]
+    description: |
+      Implement physical safeguards for all workstations that access
+      ePHI to restrict access to authorized users.
+
+  "164.310(d)(1)":
+    name: Device and Media Controls
+    family: physical-safeguards
+    description: |
+      Implement policies and procedures that govern the receipt and
+      removal of hardware and electronic media that contain ePHI
+      into and out of a facility, and the movement of these items
+      within the facility.
+
+  "164.310(d)(2)(i)":
+    name: Disposal
+    family: physical-safeguards
+    tags: [required]
+    description: |
+      Implement policies and procedures to address the final
+      disposition of ePHI, and the hardware or electronic media on
+      which it is stored.
+
+  "164.310(d)(2)(ii)":
+    name: Media Re-Use
+    family: physical-safeguards
+    tags: [required]
+    description: |
+      Implement procedures for removal of ePHI from electronic media
+      before the media are made available for re-use.
+
+  "164.310(d)(2)(iii)":
+    name: Accountability
+    family: physical-safeguards
+    tags: [addressable]
+    description: |
+      Maintain a record of the movements of hardware and electronic
+      media and any person responsible therefore.
+
+  "164.310(d)(2)(iv)":
+    name: Data Backup and Storage
+    family: physical-safeguards
+    tags: [addressable]
+    description: |
+      Create a retrievable, exact copy of ePHI, when needed, before
+      movement of equipment.
+
+  # ---- §164.312 Technical Safeguards ----
+
+  "164.312(a)(1)":
+    name: Access Control
+    family: technical-safeguards
+    description: |
+      Implement technical policies and procedures for electronic
+      information systems that maintain ePHI to allow access only
+      to those persons or software programs that have been granted
+      access rights.
+
+  "164.312(a)(2)(i)":
+    name: Unique User Identification
+    family: technical-safeguards
+    tags: [required]
+    description: |
+      Assign a unique name and/or number for identifying and
+      tracking user identity.
+
+  "164.312(a)(2)(ii)":
+    name: Emergency Access Procedure
+    family: technical-safeguards
+    tags: [required]
+    description: |
+      Establish (and implement as needed) procedures for obtaining
+      necessary ePHI during an emergency.
+
+  "164.312(a)(2)(iii)":
+    name: Automatic Logoff
+    family: technical-safeguards
+    tags: [addressable]
+    description: |
+      Implement electronic procedures that terminate an electronic
+      session after a predetermined time of inactivity.
+
+  "164.312(a)(2)(iv)":
+    name: Encryption and Decryption
+    family: technical-safeguards
+    tags: [addressable]
+    description: |
+      Implement a mechanism to encrypt and decrypt ePHI.
+
+  "164.312(b)":
+    name: Audit Controls
+    family: technical-safeguards
+    tags: [required]
+    description: |
+      Implement hardware, software, and/or procedural mechanisms
+      that record and examine activity in information systems that
+      contain or use ePHI.
+
+  "164.312(c)(1)":
+    name: Integrity
+    family: technical-safeguards
+    description: |
+      Implement policies and procedures to protect ePHI from
+      improper alteration or destruction.
+
+  "164.312(c)(2)":
+    name: Mechanism to Authenticate ePHI
+    family: technical-safeguards
+    tags: [addressable]
+    description: |
+      Implement electronic mechanisms to corroborate that ePHI has
+      not been altered or destroyed in an unauthorized manner.
+
+  "164.312(d)":
+    name: Person or Entity Authentication
+    family: technical-safeguards
+    tags: [required]
+    description: |
+      Implement procedures to verify that a person or entity seeking
+      access to ePHI is the one claimed.
+
+  "164.312(e)(1)":
+    name: Transmission Security
+    family: technical-safeguards
+    description: |
+      Implement technical security measures to guard against
+      unauthorized access to ePHI that is being transmitted over an
+      electronic communications network.
+
+  "164.312(e)(2)(i)":
+    name: Integrity Controls
+    family: technical-safeguards
+    tags: [addressable]
+    description: |
+      Implement security measures to ensure that electronically
+      transmitted ePHI is not improperly modified without detection
+      until disposed of.
+
+  "164.312(e)(2)(ii)":
+    name: Encryption
+    family: technical-safeguards
+    tags: [addressable]
+    description: |
+      Implement a mechanism to encrypt ePHI whenever deemed
+      appropriate.
