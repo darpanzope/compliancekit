@@ -1,0 +1,53 @@
+# compliancekit.yaml — AWS Security Hub OCSF ingest quickstart.
+#
+# Goal: pull AWS Security Hub findings into compliancekit so the
+# FSBP-style "S3.5 / EC2.19 / RDS.2" rule IDs land in the same
+# evidence pack as your native AWS scan, mapped to SOC 2 / ISO /
+# NIST / PCI controls via the embedded mappings/aws-security-hub.yaml.
+#
+# Export Security Hub findings to OCSF first (one-time SIEM
+# integration setup, or via the export-findings-to-s3 console flow):
+#
+#   aws securityhub batch-get-finding-aggregator \
+#       --finding-aggregator-arn <arn> \
+#       --output json > security-hub-export.json
+#
+# Or use the official SIEM/S3 export pipeline that emits OCSF events
+# (JSONL one event per line). The adapter auto-detects single-object,
+# JSON-array, and JSONL shapes.
+#
+# Then:
+#
+#   compliancekit scan --config=compliancekit.yaml --evidence true
+
+project: acme-aws-prod
+environment: prod
+
+providers:
+  aws:
+    enabled: true
+    # Empty regions = "every region the credential can see"
+    regions: []
+
+frameworks:
+  - soc2
+  - iso27001
+  - nist-800-53-r5
+  - pci-dss-v4
+
+ingest:
+  - format: ocsf
+    file: ./security-hub-export.json
+    tool: aws-security-hub
+    tool_version: "2026-04"
+    # Optional: custom mapping override
+    # mapping: ./mappings/aws-security-hub-acme.yaml
+
+severity:
+  fail_on: high
+  min_report: low
+
+output:
+  format: [json, markdown, sarif, ocsf]
+  out_dir: ./out
+  evidence: true

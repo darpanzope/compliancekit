@@ -1,0 +1,56 @@
+# compliancekit.yaml — Trivy SARIF ingest quickstart.
+#
+# Goal: run Trivy in CI, hand the SARIF over to compliancekit, get a
+# framework-mapped findings.json and evidence pack alongside whatever
+# native cloud scan you already run.
+#
+# Run (CI shape):
+#
+#   trivy fs --format=sarif --output=trivy.sarif .
+#   compliancekit ingest --format=sarif --in=trivy.sarif \
+#       --tool=trivy --tool-version=v0.50.4 \
+#       --out=findings-trivy.json
+#
+# Or, merged into a native scan via this config:
+#
+#   compliancekit scan --config=compliancekit.yaml --evidence true
+#
+# Either way, every Trivy result becomes a compliancekit Finding
+# attributed to SOC 2 / ISO 27001 / NIST / PCI controls via the
+# embedded mappings/trivy.yaml table. Override with `mapping:` below
+# to substitute a custom one.
+
+project: acme-ci
+environment: prod
+
+# Native scan + Trivy ingest. Disable the providers block to do
+# Trivy-only via `compliancekit ingest` standalone.
+providers:
+  kubernetes:
+    enabled: true
+
+frameworks:
+  - soc2
+  - iso27001
+  - cis-v8
+  - nist-800-53-r5
+  - pci-dss-v4
+
+ingest:
+  - format: sarif
+    file: ./trivy.sarif
+    tool: trivy
+    tool_version: v0.50.4
+    # Uncomment to override the built-in mapping table:
+    # mapping: ./mappings/trivy-acme.yaml
+    # Uncomment to abort on the first unmapped rule:
+    # fail_on_unmapped: true
+
+severity:
+  fail_on: high
+  min_report: low
+
+output:
+  format: [json, markdown, sarif]
+  out_dir: ./out
+  evidence: true

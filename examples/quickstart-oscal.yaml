@@ -1,0 +1,53 @@
+# compliancekit.yaml — OSCAL Catalog ingest quickstart.
+#
+# Goal: drop in a customer-supplied OSCAL Catalog at scan time and
+# have its controls become scannable as a runtime-registered
+# framework — no recompile, no embedded YAML edit, no roundtrip
+# through Drata/Vanta export.
+#
+# Catalogs accepted:
+#   - JSON  (the OSCAL machine format; preferred)
+#   - YAML  (lossless serialization)
+#   - XML   (original OSCAL; lighter coverage)
+#
+# Example flow (FedRAMP-curious shop with a tailored NIST 800-53
+# OSCAL catalog):
+#
+#   compliancekit scan --config=compliancekit.yaml --evidence true
+#
+# The catalog gets registered as a runtime framework with ID
+# "oscal.<title-kebab-cased>". Findings attribute to its controls
+# only when (existing native check or an ingest mapping table) maps
+# them. The evidence pack writes assessment-results.oscal.json +
+# profile.oscal.json covering the registered framework alongside
+# the built-in ones.
+
+project: acme-fedramp-prep
+environment: prod
+
+providers:
+  aws:
+    enabled: true
+
+# Embedded frameworks the scan still attributes to. The OSCAL
+# ingest adds another one to this list at scan time — call it
+# explicitly here if you want to ALSO render against it.
+frameworks:
+  - soc2
+  - nist-800-53-r5
+  # The runtime-registered framework will be available as e.g.
+  # `oscal.acme-internal-baseline` after the ingest entry below
+  # runs; add it here to pin its rendering in the evidence pack.
+
+ingest:
+  - format: oscal-catalog
+    file: ./catalogs/acme-internal-baseline.oscal.json
+
+severity:
+  fail_on: high
+  min_report: low
+
+output:
+  format: [json, markdown, html]
+  out_dir: ./out
+  evidence: true
