@@ -1,0 +1,38 @@
+{
+  "check_type": "terraform",
+  "summary": { "passed": 12, "failed": 2, "skipped": 1, "resource_count": 18, "checkov_version": "3.2.71" },
+  "results": {
+    "failed_checks": [
+      {
+        "check_id": "CKV_AWS_24",
+        "bc_check_id": "BC_AWS_NETWORKING_22",
+        "check_name": "Ensure no security groups allow ingress from 0.0.0.0:0 to port 22",
+        "file_path": "/main.tf",
+        "file_line_range": [22, 35],
+        "resource": "aws_security_group.web",
+        "severity": "HIGH",
+        "guideline": "https://docs.bridgecrew.io/docs/networking_2",
+        "check_result": { "result": "FAILED" }
+      },
+      {
+        "check_id": "CKV_AWS_19",
+        "check_name": "Ensure all data stored in S3 bucket is securely encrypted at rest",
+        "file_path": "/main.tf",
+        "file_line_range": [41, 50],
+        "resource": "aws_s3_bucket.backup",
+        "severity": "MEDIUM",
+        "check_result": { "result": "FAILED" }
+      }
+    ],
+    "skipped_checks": [
+      {
+        "check_id": "CKV_AWS_21",
+        "check_name": "S3 bucket versioning enabled",
+        "file_path": "/main.tf",
+        "resource": "aws_s3_bucket.scratch",
+        "severity": "LOW",
+        "check_result": { "result": "SKIPPED" }
+      }
+    ]
+  }
+}

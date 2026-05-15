@@ -1,0 +1,25 @@
+[
+  {
+    "Description": "AWS Access Key ID",
+    "StartLine": 3,
+    "EndLine": 3,
+    "Match": "AKIAIOSFODNN7EXAMPLE",
+    "Secret": "AKIAIOSFODNN7EXAMPLE",
+    "File": ".env",
+    "Commit": "0123456789abcdef0123456789abcdef01234567",
+    "Author": "Alice",
+    "Email": "alice@example.com",
+    "Date": "2026-05-15T09:00:00Z",
+    "Message": "wip",
+    "Tags": ["key", "AWS"],
+    "RuleID": "aws-access-key-id"
+  },
+  {
+    "Description": "Generic API Key",
+    "StartLine": 12,
+    "Match": "api_key=abc123def456ghi789",
+    "Secret": "abc123def456ghi789",
+    "File": "src/config.py",
+    "RuleID": "generic-api-key"
+  }
+]
