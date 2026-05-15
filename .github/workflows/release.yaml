@@ -82,26 +82,19 @@ jobs:
           cache: true
           cache-dependency-path: go.sum
 
-      # Heartbeat probe. Emits a line every 30s so the runner
-      # agent's stdout pipe keeps draining even when `go build`
-      # itself is silent for minutes during link. v0.12.0's first
-      # attempts ate SIGTERM (exit 143) during silent compiles;
-      # this keeps the orchestrator confident the runner is alive.
-      - name: Start heartbeat
-        run: |
-          (
-            while true; do
-              echo "[heartbeat $(date -u +%Y-%m-%dT%H:%M:%SZ)] building ${{ matrix.target.goos }}/${{ matrix.target.goarch }}"
-              sleep 30
-            done
-          ) &
-          echo $! > /tmp/heartbeat.pid
-
       # Cross-compile. ldflags reproduce what the old goreleaser
       # config injected via {{ .Version }}, {{ .ShortCommit }},
       # {{ .Date }}. github.ref_name is the tag, including the
       # leading 'v'; strip it for main.version to keep parity with
       # how goreleaser stamps it.
+      #
+      # No heartbeat probe needed here: with one target per runner,
+      # a single Go link finishes in ~2 min on a warm module cache —
+      # well inside any plausible orchestrator watchdog window. The
+      # original heartbeat-probe pattern (backgrounded `while true;
+      # sleep 30; done &`) seemed to interfere with the runner agent
+      # cleanly reporting job completion in the first attempt at this
+      # workflow shape, leaving jobs stuck "in_progress" indefinitely.
       - name: Build binary
         env:
           GOOS: ${{ matrix.target.goos }}
@@ -121,13 +114,6 @@ jobs:
             ./cmd/compliancekit
           ls -la "${out_dir}/"
           file "${out_dir}/compliancekit"
-
-      - name: Stop heartbeat
-        if: always()
-        run: |
-          if [ -f /tmp/heartbeat.pid ]; then
-            kill "$(cat /tmp/heartbeat.pid)" 2>/dev/null || true
-          fi
 
       - name: Upload binary
         uses: actions/upload-artifact@v4
@@ -214,16 +200,6 @@ jobs:
           echo "bin/ sha256:"
           find bin -type f -exec sha256sum {} \;
 
-      - name: Start heartbeat
-        run: |
-          (
-            while true; do
-              echo "[heartbeat $(date -u +%Y-%m-%dT%H:%M:%SZ)] release pipeline running"
-              sleep 30
-            done
-          ) &
-          echo $! > /tmp/heartbeat.pid
-
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
         with:
@@ -234,10 +210,3 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
           COSIGN_EXPERIMENTAL: 'true'
-
-      - name: Stop heartbeat
-        if: always()
-        run: |
-          if [ -f /tmp/heartbeat.pid ]; then
-            kill "$(cat /tmp/heartbeat.pid)" 2>/dev/null || true
-          fi
