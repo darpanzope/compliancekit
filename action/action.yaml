@@ -19,8 +19,8 @@
 #     friction is real for an action whose primary input is files
 #     in the workspace.
 
-name: compliancekit
-description: Open-source compliance scanner for cloud and Linux infrastructure
+name: compliancekit-scan
+description: Compliance scanning in CI — DigitalOcean, AWS, GCP, Hetzner, Kubernetes, Linux. Maps every finding to SOC 2 / ISO 27001 / CIS / NIST / HIPAA / PCI / ATT&CK. Audit-ready evidence pack output.
 author: darpanzope
 branding:
   icon: shield
