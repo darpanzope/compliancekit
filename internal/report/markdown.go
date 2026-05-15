@@ -106,51 +106,62 @@ func renderFindingMarkdown(w io.Writer, f core.Finding) {
 		fmt.Fprintf(w, "  > %s\n", msg)
 	}
 
-	// v0.14+ Vulnerability block — surface CVE detail when present.
-	// One-line subbullets keep the PR-comment layout tight.
-	if v := f.Vulnerability; v != nil {
-		details := []string{}
-		if v.CVSSScore > 0 {
-			details = append(details, fmt.Sprintf("CVSS %.1f", v.CVSSScore))
-		}
-		if v.Package.Name != "" {
-			pkg := v.Package.Name
-			if v.Package.Version != "" {
-				pkg += "@" + v.Package.Version
-			}
-			details = append(details, "package="+pkg)
-		}
-		if v.FixedVersion != "" {
-			details = append(details, "fixed-in="+v.FixedVersion)
-		} else if v.Package.Name != "" {
-			details = append(details, "unpatched")
-		}
-		if v.Image != "" {
-			details = append(details, "image="+v.Image)
-		}
-		if len(details) > 0 {
-			fmt.Fprintf(w, "  > vulnerability: %s\n", strings.Join(details, " · "))
-		}
-		if v.PrimaryURL != "" {
-			fmt.Fprintf(w, "  > advisory: %s\n", v.PrimaryURL)
-		}
-	}
+	renderVulnSubbullet(w, f.Vulnerability)
+	renderSecretSubbullet(w, f.Secret)
+}
 
-	// v0.14+ Secret block — fingerprint is already redacted by the
-	// ingest adapter; we never see the raw value here.
-	if s := f.Secret; s != nil {
-		fmt.Fprintf(w, "  > secret: rule=%s · fingerprint=%s", s.RuleID, s.Fingerprint)
-		if s.File != "" {
-			fmt.Fprintf(w, " · file=%s", s.File)
-			if s.Line > 0 {
-				fmt.Fprintf(w, ":L%d", s.Line)
-			}
-		}
-		if s.Author != "" {
-			fmt.Fprintf(w, " · author=%s", s.Author)
-		}
-		fmt.Fprintf(w, "\n")
+// renderVulnSubbullet emits the v0.14 Vulnerability block as one or
+// two indented subbullets under the parent finding. No-op when v
+// is nil.
+func renderVulnSubbullet(w io.Writer, v *core.Vulnerability) {
+	if v == nil {
+		return
 	}
+	details := []string{}
+	if v.CVSSScore > 0 {
+		details = append(details, fmt.Sprintf("CVSS %.1f", v.CVSSScore))
+	}
+	if v.Package.Name != "" {
+		pkg := v.Package.Name
+		if v.Package.Version != "" {
+			pkg += "@" + v.Package.Version
+		}
+		details = append(details, "package="+pkg)
+	}
+	if v.FixedVersion != "" {
+		details = append(details, "fixed-in="+v.FixedVersion)
+	} else if v.Package.Name != "" {
+		details = append(details, "unpatched")
+	}
+	if v.Image != "" {
+		details = append(details, "image="+v.Image)
+	}
+	if len(details) > 0 {
+		fmt.Fprintf(w, "  > vulnerability: %s\n", strings.Join(details, " · "))
+	}
+	if v.PrimaryURL != "" {
+		fmt.Fprintf(w, "  > advisory: %s\n", v.PrimaryURL)
+	}
+}
+
+// renderSecretSubbullet emits the v0.14 Secret block. Fingerprint is
+// pre-redacted by the ingest adapter; the renderer must never enrich
+// or attempt to recover the raw value (ADR-010).
+func renderSecretSubbullet(w io.Writer, s *core.Secret) {
+	if s == nil {
+		return
+	}
+	fmt.Fprintf(w, "  > secret: rule=%s · fingerprint=%s", s.RuleID, s.Fingerprint)
+	if s.File != "" {
+		fmt.Fprintf(w, " · file=%s", s.File)
+		if s.Line > 0 {
+			fmt.Fprintf(w, ":L%d", s.Line)
+		}
+	}
+	if s.Author != "" {
+		fmt.Fprintf(w, " · author=%s", s.Author)
+	}
+	fmt.Fprintf(w, "\n")
 }
 
 // groupBySeverity buckets findings by severity. Findings whose severity

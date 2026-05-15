@@ -1,0 +1,61 @@
+# compliancekit.yaml — v0.14 vulnerability pipeline quickstart.
+#
+# Goal: run Trivy + Grype + gitleaks in CI, hand the JSON over to
+# compliancekit, get one evidence pack that:
+#   - lists every CVE in vulnerabilities.csv
+#   - cross-references each CVE to the running K8s Deployment that
+#     uses the affected image
+#   - emits a redacted-only Secret block for every leaked credential
+#   - produces an OSCAL Assessment Results document covering both
+#     the native scan AND the ingested CVE/secret findings
+#
+# CI flow:
+#
+#   trivy image    --format=json --output=trivy-image.json   ghcr.io/acme/api:v2.0
+#   grype          --output=json --file=grype-image.json     ghcr.io/acme/api:v2.0
+#   gitleaks detect --report-format=json --report-path=gitleaks.json
+#   compliancekit scan --config=compliancekit.yaml --evidence true
+#
+# Result: out/findings.json + out/evidence/<period>/ with the
+# cross-tool, cross-framework picture.
+
+project: acme-prod
+environment: prod
+
+providers:
+  kubernetes:
+    enabled: true
+
+frameworks:
+  - soc2
+  - iso27001
+  - cis-v8
+  - nist-800-53-r5
+  - pci-dss-v4
+
+ingest:
+  - format: trivy-json
+    file: ./trivy-image.json
+    tool: trivy
+    tool_version: v0.50.4
+
+  - format: grype-json
+    file: ./grype-image.json
+    tool: grype
+    tool_version: v0.74.0
+
+  # gitleaks: Secret findings always carry a redacted-only Fingerprint
+  # per ADR-010 — the raw credential value never enters compliancekit's
+  # data plane.
+  - format: gitleaks-json
+    file: ./gitleaks.json
+    tool: gitleaks
+
+severity:
+  fail_on: high
+  min_report: low
+
+output:
+  format: [json, markdown, sarif, ocsf, html]
+  out_dir: ./out
+  evidence: true

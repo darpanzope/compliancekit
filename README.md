@@ -255,6 +255,7 @@ Every check maps across **seven shipping frameworks** (v0.12+) — 548 controls 
 evidence/<period>/
 ├── MANIFEST.sha256                # sha256sum -c verifiable
 ├── control-mapping.csv            # Drata / Vanta / AuditBoard importable
+├── vulnerabilities.csv            # v0.14+: one row per (CVE × resource); Snyk/Tenable importable
 ├── summary.html                   # auditor index
 ├── tailoring.json                 # operator scope-outs + justifications
 ├── assessment-results.oscal.json  # OSCAL AR v1.1.2, FedRAMP-style
@@ -264,21 +265,31 @@ evidence/<period>/
 └── cis-v8/<control>/{findings.json, control.md}
 ```
 
-### Ingest formats (v0.13+)
+### Ingest formats (v0.13+, expanded at v0.14)
 
 External tool output merges into the same evidence pack:
 
-| Format          | Use case                                                                           |
-|-----------------|------------------------------------------------------------------------------------|
-| `sarif`         | Trivy, Checkov, KICS, Terrascan, GitHub CodeQL, Semgrep                            |
-| `ocsf`          | AWS Security Hub, GCP Security Command Center, Microsoft Defender for Cloud        |
-| `oscal-catalog` | Customer-supplied OSCAL Catalog → registers as a runtime scannable framework       |
+| Format            | Use case                                                                           |
+|-------------------|------------------------------------------------------------------------------------|
+| `sarif`           | Generic — Trivy, Checkov, KICS, Terrascan, GitHub CodeQL, Semgrep                  |
+| `ocsf`            | AWS Security Hub, GCP Security Command Center, Microsoft Defender for Cloud        |
+| `oscal-catalog`   | Customer-supplied OSCAL Catalog → registers as a runtime scannable framework       |
+| `trivy-json` *v0.14* | Trivy native JSON — per-package CVE / PURL / CVSS / image SHA detail            |
+| `grype-json` *v0.14* | Grype native JSON — alternate vuln scanner, same typed Vulnerability shape      |
+| `checkov-json` *v0.14* | Checkov native JSON — Terraform / K8s / Docker per-resource graph             |
+| `gitleaks-json` *v0.14* | gitleaks native JSON — secrets with auto-redacted fingerprints (ADR-010)     |
 
-Run standalone (`compliancekit ingest --format=sarif --in=trivy.sarif`),
+Run standalone (`compliancekit ingest --format=trivy-json --in=trivy.json`),
 or declare an `ingest:` block in `compliancekit.yaml` and the
-`scan` command merges everything before writing the pack. Per-tool
-mapping tables ship embedded; `compliancekit mapping list / show /
-validate / diff` manages overrides.
+`scan` command merges everything before writing the pack. v0.14+
+adds an image-SHA correlation pass: when a Trivy / Grype image scan
+reports a CVE on `container-image://<sha>` and the live graph has
+K8s / DO / AWS resources referencing that SHA, the CVE finding is
+cloned onto each running instance with a `running-on:<type>/<name>`
+tag — so an auditor pivoting through "what's wrong with this
+Deployment" sees the upstream image's CVEs too. Per-tool mapping
+tables ship embedded; `compliancekit mapping list / show / validate
+/ diff` manages overrides.
 
 ## Use it in CI
 

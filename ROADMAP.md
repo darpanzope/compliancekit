@@ -178,7 +178,7 @@ to the v0.1-v0.5 audience that put compliancekit on the map.
 | **v0.11** ✅ | **Kubernetes + EKS / GKE / DOKS-deep** | 139 checks across pods, controllers, RBAC, network, storage, namespaces/admission, nodes + EKS/GKE/DOKS enrichment — production-grade K8s posture across the four clouds we ship |
 | **v0.12** ✅ | **Framework expansion (NIST 800-53 r5, HIPAA, PCI-DSS v4, MITRE ATT&CK) + tailoring + evidence-pack depth** | 7 frameworks × 548 controls; existing 3 expanded to full catalogs; ATT&CK as the first kill-chain threat-model lens; tailoring lets operators scope controls out with justifications |
 | **v0.13** ✅ | IaC / OCSF / OSCAL ingest + emit + OSCAL AR/Profile emit + mapping CLI | 3 ingest formats (SARIF / OCSF / OSCAL Catalog) covering 7 tools; 2 OSCAL emits (Assessment Results + Profile); 106 starter rule mappings; lossless OCSF round-trip; runtime framework registration |
-| **v0.14** | Vuln / secret / SCA ingest (Trivy, Grype, Checkov, gitleaks) | Every CVE tied to a real instance |
+| **v0.14** ✅ | Vuln / secret / SCA ingest (Trivy, Grype, Checkov, gitleaks) + image-SHA graph join + vulnerabilities.csv + ADR-010 secret-redaction | 4 native-JSON adapters, every CVE tied to its running cloud resource, fingerprint-only secret handling |
 | **v0.15** | Remediation generators (Bash / Terraform / Ansible / aws / gcloud / doctl) | Copy-paste this Terraform to fix |
 | **v0.16** | Rego policy DSL (via OPA) | Write a check in 10 lines of Rego |
 | **v0.17** | Notifications (Slack / Discord / Teams / email / webhook / PR / Jira) | Slack alert on every new high finding |
@@ -750,48 +750,77 @@ attribution.
 
 ---
 
-### v0.14 — Vuln / secret / SCA ingest
+### v0.14 ✅ — Vuln / secret / SCA ingest (shipped 2026-05-15)
 
-**Goal:** every CVE tied to a real resource in the graph. By v0.14
-the operator can answer "which of my droplets has CVE-2026-XXXXX
-right now?" without running a separate vuln-DB tool.
+**Goal:** every CVE tied to a real resource in the graph. v0.14 layers
+on top of v0.13's generic SARIF/OCSF ingest paths with four
+purpose-built native-JSON adapters, typed Vulnerability + Secret
+metadata blocks on core.Finding, and an image-SHA correlation pass
+that maps a CVE-on-an-image onto every running K8s Deployment / DO
+App Platform service / ECS task that references the same SHA.
 
-**Deliverables**
+**Shipped (11 phases):**
 
-- **Trivy ingest**: read a `trivy fs --format=json` output, project
-  vulnerabilities onto the resources they were found in (a Docker
-  image referenced by a DO App Platform deploy gets the
-  vulnerability list attached to that DO resource).
-- **Grype ingest**: same shape.
-- **Checkov ingest**: IaC vulns merge into the graph as resources
-  proxying for the cloud resources they describe.
-- **gitleaks ingest**: secret findings, with the rule of "we treat
-  a leaked secret as a finding against the repository resource,
-  not the file."
-- **Compose, don't reimplement**: no native CVE database, no
-  native dependency resolver. compliancekit's job is the graph and
-  the evidence pack; the scanners are best left to specialists.
+| Phase | Theme | Output |
+|---|---|---|
+| 0 | Schema scaffolding | `core.Finding.Vulnerability` + `Secret` typed blocks; default CVE/GHSA → vuln-mgmt framework mapping (SOC 2 CC7.1 / NIST SI-2 / ISO A.8.8 / PCI 6.3 / CIS 7.1) retroactively lights up the v0.13 SARIF path for advisory-shaped rules |
+| 1 | Trivy native JSON | `--format=trivy-json` — per-package CVE / PURL / fixed-version / CVSS vector / image SHA. NVD-preferred CVSS scoring; auto-redacted secret detector output |
+| 2 | Grype ingest | `--format=grype-json` — sibling tool, distinct schema, same Vulnerability shape |
+| 3 | Checkov native JSON | `--format=checkov-json` — richer than SARIF (per-resource graph projection, file_line_range, guideline URL) |
+| 4 | gitleaks ingest | `--format=gitleaks-json` — Secret block with auto-redacted Fingerprint, commit+author metadata for revocation routing |
+| 5 | Image-SHA graph join | `internal/ingest/correlate.go` — when a Trivy image scan reports CVE on `container-image://<sha>` and a K8s/DO/ECS resource in the live graph references that SHA, clone the finding onto the running instance with a "running-on" tag. Bidirectional. |
+| 6 | `vulnerabilities.csv` | New evidence-pack artifact — one row per (CVE, resource, framework) with cve_id / cvss / package_purl / fixed_version / source_tool columns. Directly importable into vuln-mgmt tools |
+| 7 | Reporter updates | Markdown emits per-finding CVE subbullets + Secret lines; SARIF result.properties gains cve_id + GitHub-recognized security-severity; OCSF emit routes Vulnerability + Secret through `unmapped.compliancekit_{vulnerability,secret}` |
+| 8 | ADR-010 secret-redaction | `ingest.RedactSecret` is the single canonical helper; per-adapter copies aliased to it. ADR-010 codifies the "raw secret value never enters the data plane" policy with the algorithm + threshold rationale + rejected alternatives |
+| 9 | Integration tests | End-to-end pipeline test — Trivy fixture + K8s deployment in graph → correlated finding lands on the deployment with all metadata preserved + Trivy+Grype dual-source additivity test |
+| 10 | Wrap (this section) | ROADMAP / README / examples / memory sweep |
 
-**Plumbing**
+**Aggregate:** 4 new ingest formats (`trivy-json`, `grype-json`,
+`checkov-json`, `gitleaks-json`), 2 typed metadata blocks on
+`core.Finding`, 1 new evidence-pack artifact, 1 new graph-correlation
+pass, 1 new ADR (ADR-010 secret redaction). Zero new external
+dependencies — every parser hand-rolled against `encoding/json`.
 
-- Extends `internal/ingest/` from v0.13 with per-tool adapters:
-  `trivy.go`, `grype.go`, `checkov.go`, `gitleaks.go`.
-- `core.Finding` gains optional `Vulnerability` + `Secret` typed
-  metadata blocks so reporters can render CVE IDs + secret
-  fingerprints natively.
-- Cross-reference rules: a Trivy finding against an image SHA gets
-  joined to every DO/AWS/GCP/K8s resource referencing that SHA.
-  Joins happen at scan time using the existing resource graph.
-- Evidence pack gains a `vulnerabilities.csv` index alongside
-  `control-mapping.csv`.
+**Composition recipe:**
 
-**Definition of done**
+```yaml
+# compliancekit.yaml
+providers:
+  kubernetes: { enabled: true }
 
-- One ingest fixture per tool (Trivy / Grype / Checkov / gitleaks).
-- A CVE found by Trivy on a container image used by an App Platform
-  app appears in `findings.json` linked to the App resource.
-- Memory ceiling: 10k vuln findings on a 500-resource graph stays
-  under 500MB RSS.
+ingest:
+  - format: trivy-json
+    file: ./out/trivy-image.json
+    tool: trivy
+  - format: grype-json
+    file: ./out/grype-image.json
+    tool: grype
+  - format: gitleaks-json
+    file: ./out/gitleaks.json
+    tool: gitleaks
+```
+
+`compliancekit scan --config=... --evidence true` runs the native
+K8s scan, ingests Trivy + Grype + gitleaks output, runs the image-
+SHA join (Trivy's CVE on image X cross-references every Pod /
+Deployment in the K8s graph referencing X), and writes an evidence
+pack containing `vulnerabilities.csv` plus the existing
+`control-mapping.csv` + per-control folders mixing native + ingested
+findings.
+
+**Definition of done — met:**
+
+- ✅ One ingest fixture per tool (Trivy / Grype / Checkov / gitleaks).
+- ✅ A CVE found by Trivy on a container image used by a K8s
+  Deployment appears in `findings.json` linked to both the image
+  AND the Deployment (tested in `internal/cli/vuln_pipeline_test.go`).
+- ✅ Vulnerability blocks expose CVE-ID + CVSS + PURL + fixed-version
+  + image identifier in every reporter format.
+- ✅ Secret blocks carry redacted-only fingerprints (ADR-010); test
+  fixtures verify "AKIAIOSFODNN7EXAMPLE" never substring-matches output.
+- ✅ Evidence pack ships `vulnerabilities.csv` whenever CVE findings
+  exist (skip when zero).
+- ✅ ADR-010 codifies the redaction policy with algorithm rationale.
 
 ---
 
