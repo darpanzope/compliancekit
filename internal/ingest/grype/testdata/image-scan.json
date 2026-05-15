@@ -1,0 +1,44 @@
+{
+  "matches": [
+    {
+      "vulnerability": {
+        "id": "CVE-2024-12345",
+        "dataSource": "https://nvd.nist.gov/vuln/detail/CVE-2024-12345",
+        "severity": "High",
+        "description": "openssl: heap-buffer-overflow in X.509 verification",
+        "urls": ["https://avd.aquasec.com/nvd/cve-2024-12345"],
+        "cvss": [
+          {
+            "source": "nvd",
+            "version": "3.1",
+            "vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:H/A:H",
+            "metrics": { "baseScore": 8.1 }
+          },
+          {
+            "source": "redhat",
+            "version": "3.1",
+            "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+            "metrics": { "baseScore": 7.5 }
+          }
+        ],
+        "fix": { "versions": ["3.0.8"], "state": "fixed" }
+      },
+      "artifact": {
+        "name": "openssl",
+        "version": "3.0.7",
+        "type": "apk",
+        "purl": "pkg:apk/alpine/openssl@3.0.7?distro=3.18.0"
+      }
+    }
+  ],
+  "source": {
+    "type": "image",
+    "target": {
+      "userInput": "alpine:3.18.0",
+      "imageID": "sha256:c5b1261d6d3e43071626931fc004f70149baeba2c8ec672bd4f27761f8e1ad6b",
+      "manifestDigest": "sha256:82d1e9d7ed48a7523bdebc18cf6290bdb97b82302a8a9c27d4fe885949ea94d1"
+    }
+  },
+  "distro": { "name": "alpine", "version": "3.18.0" },
+  "descriptor": { "name": "grype", "version": "0.74.0" }
+}

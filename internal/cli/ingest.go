@@ -19,6 +19,7 @@ import (
 	// Side-effect imports register each format adapter with
 	// ingest.Default. Adding a new format here is all it takes to
 	// make --format=<name> light up across the CLI.
+	_ "github.com/darpanzope/compliancekit/internal/ingest/grype"
 	_ "github.com/darpanzope/compliancekit/internal/ingest/ocsf"
 	_ "github.com/darpanzope/compliancekit/internal/ingest/oscal"
 	_ "github.com/darpanzope/compliancekit/internal/ingest/sarif"
