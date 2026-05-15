@@ -347,6 +347,52 @@ Every adapter package (`internal/ingest/{trivy,gitleaks,...}/redact.go`) defines
 
 ---
 
+## ADR-011 — Remediation strategies are per-format Go, hand-written, generate-only
+**Date:** 2026-05-15 (v0.15 kickoff)
+**Status:** Accepted
+
+### Question
+v0.15 turns every finding into a copy-pasteable fix in the operator's tool of choice (Terraform, kubectl, aws/gcloud/az/doctl/hcloud CLI, Helm overlay, Ansible, bash). Three architectural shapes are plausible:
+
+1. **Templates.** Strategies are go:embed text templates, one per (CheckID, Format). Easiest to author; weakest at expressing branching logic ("if KMS not present, also generate a Key resource").
+2. **One method on each check.** `core.Check` gains `Remediate(Finding) -> Snippet`. Locality is great; every check carries its remediation. But the method has to know every output format, which forces format-specific logic into the check files.
+3. **Per-format Go strategy packages.** `internal/remediate/<format>/` each registers Strategy implementations against the CheckIDs it can fix. Verbose but every output format owns its own correctness boundary and tests.
+
+We also need to decide whether remediation can ever auto-apply (and if so, when), how risky changes are signaled, and what happens to findings without a strategy.
+
+### Decision
+**Per-format Go strategy packages, hand-written, generate-only.** Concretely:
+
+- `internal/remediate/` ships a `Strategy` interface, a `Registry`, and the `Format` / `RiskClass` / `Snippet` value types.
+- Each output format gets a subpackage (`internal/remediate/{terraform,kubectl,helm,ansible,bash,awscli,gcloud,azcli,doctl,hcloud}`) that registers strategies in `init()` against the CheckIDs it can fix.
+- A Strategy declares `RiskClass` (safe / review / manual). `safe` snippets are idempotent and have no behavior change; `review` snippets change visible behavior; `manual` snippets cannot be rendered and route the finding to the OSCAL POA&M emitter for out-of-band remediation tracking.
+- Strategies emit Snippets with `Content` + optional `VerifyCmd` + optional `RollbackCmd` + `Notes`. The runbook surfaces all four. Operators get the fix, plus a way to confirm it landed, plus a way to undo it.
+- Remediation is GENERATION only. ADR-006 already established that `--apply-fix` is the v2.x trust gate; ADR-011 codifies the internal invariant: the binary writes files and exits, it never calls any cloud API or `kubectl apply`.
+- Findings whose CheckID has no registered strategy fall through to POA&M as manual-action items. We never silently drop a finding from the remediation flow.
+
+### Reasoning
+- **Hand-written Go beats templates** for the bigger strategies (Terraform fixes that depend on the existing resource graph, kubectl patches that vary by Pod spec shape). The 5% of simple strategies that would be cleaner as templates aren't enough volume to justify a second authoring path.
+- **Per-format subpackages over per-check methods** because the Strategy interface lets one strategy declare multiple CheckIDs and multiple Formats — a single `aws-s3-public-access` strategy can emit both Terraform and aws-cli for every flavor of S3-public finding. Putting that strategy on the check struct forces it into the wrong file and prevents reuse across check IDs.
+- **`RiskClass` gates auto-apply forever.** Even when v2.x lands `--apply-fix`, the only safe class to default-apply is `safe`. `review` will require explicit per-resource allowlists. `manual` is never apply-able. Encoding the risk on the strategy (not on the runtime flag) means a contributor can't accidentally promote a manual fix to auto-apply by passing the wrong flag.
+- **`VerifyCmd` separately from `Content`.** An operator who applies a remediation needs to confirm the fix landed without re-reading the original finding. The verify command is the cheapest possible audit trail entry: "I ran the fix, then ran the verify, both succeeded, here are the timestamps."
+- **No silent drops.** If a finding has no strategy, the POA&M emitter surfaces it. Auditors want a paper trail showing "here are the findings we can't auto-fix and the human action assigned to each." Dropping unmatched findings would be operator-friendly but auditor-hostile.
+
+### Rejected alternatives
+- **Generic template engine (gotemplate / yaml.v3 marshaling).** Rejected. Operators paste these into production; subtle whitespace or quoting errors in templates land as broken Terraform or kubectl. Hand-written Go with the shared `internal/remediate/render` helpers gives us a static type system over the generated code.
+- **Single `Remediate` method on each check.** Rejected. Forces every check author to learn 10 output formats. Strategies can be added incrementally without touching check files; the unit of contribution is "I know AWS CLI for IAM and added strategies for the 12 IAM CheckIDs."
+- **Auto-apply at v0.15 behind `--apply-fix`.** Rejected. ADR-006 explicitly defers this to v2.x, and the v0.15 strategy-level `RiskClass` is the necessary prerequisite — we won't ship apply before we ship a way to tag fixes as auto-safe.
+- **CheckID wildcards as the primary lookup mechanism.** Rejected. Wildcards exist (`CheckIDs() == ["*"]`) but only as a last-resort fallback for the "manual review" generic strategy. The primary path is exact CheckID match because the per-finding rendering needs the specific check semantics, not a generic "go fix this" template.
+
+### Consequences
+- `internal/remediate/remediate.go` defines `Strategy`, `Snippet`, `Format`, `RiskClass`, errors. `internal/remediate/registry.go` provides `Default` + `Register`.
+- Each format subpackage's `init()` registers its strategies. The CLI in `internal/cli/remediate.go` side-effect-imports each subpackage so `compliancekit remediate` resolves every format with zero configuration.
+- `internal/remediate/poam/` consumes `unmatched` findings from `Registry.RenderAll` and emits OSCAL POA&M JSON into the evidence pack.
+- `internal/remediate/tickets/` (Jira + Linear) reads the same unmatched + RiskClass=manual snippets and files tickets when the operator opts in via config.
+- The contribution bar: a new CheckID should land with at least one Strategy alongside the check; CI gates this for v0.15-shipped checks (per issue #14 DoD).
+- The evidence pack at v0.15 gains: `remediation/<format>/<resource-id>.<ext>`, `remediation.md` runbook, `remediate.sh` bulk-apply script, `poam.oscal.json` OSCAL POA&M file.
+
+---
+
 ## Open questions (not yet decided)
 
 - **Plugin host model:** subprocess gRPC (Terraform-provider pattern), WASM via wazero, or both? Decision at v2.0.
