@@ -8,7 +8,7 @@ floating v1 tag is moved to point at it. Edit here, ship there.
 -->
 
 [![release](https://img.shields.io/github/v/release/darpanzope/compliancekit?label=compliancekit&logo=github)](https://github.com/darpanzope/compliancekit/releases)
-[![marketplace](https://img.shields.io/badge/marketplace-compliancekit-blue?logo=github)](https://github.com/marketplace/actions/compliancekit)
+[![marketplace](https://img.shields.io/badge/marketplace-compliancekit--scan-blue?logo=github)](https://github.com/marketplace/actions/compliancekit-scan)
 [![license](https://img.shields.io/github/license/darpanzope/compliancekit)](https://github.com/darpanzope/compliancekit/blob/main/LICENSE)
 [![sigstore cosign](https://img.shields.io/badge/sigstore-cosign-3b8eed?logo=sigstore)](https://docs.sigstore.dev/)
 
