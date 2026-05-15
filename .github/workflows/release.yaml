@@ -72,21 +72,19 @@ jobs:
           cache: true
           cache-dependency-path: go.sum
 
-      # Belt-and-suspenders cache for Go's build cache directory.
-      # setup-go covers $GOPATH/pkg/mod (downloaded modules) AND
-      # $GOCACHE (compiled package cache); we add an extra layer
-      # of caching here keyed against the goreleaser config so that
-      # changes to ldflags or build tags also force a rebuild.
-      - name: Cache goreleaser build artifacts
+      # Cache goreleaser's dist/ output keyed against the goreleaser
+      # config + go.sum. setup-go@v5 with cache:true already owns
+      # ~/.cache/go-build + ~/go/pkg/mod; overlapping those paths in
+      # a second actions/cache@v4 step causes tar restore conflicts
+      # ("Cannot open: File exists") and silently disables the cache.
+      # v0.12 learned this the hard way — see CI run 25901629789.
+      - name: Cache goreleaser dist/
         uses: actions/cache@v4
         with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-            ./dist
-          key: goreleaser-${{ runner.os }}-${{ hashFiles('go.sum', '.goreleaser.yaml') }}
+          path: ./dist
+          key: goreleaser-dist-${{ runner.os }}-${{ hashFiles('go.sum', '.goreleaser.yaml') }}
           restore-keys: |
-            goreleaser-${{ runner.os }}-
+            goreleaser-dist-${{ runner.os }}-
 
       # Expose ACTIONS_RUNTIME_TOKEN + ACTIONS_CACHE_URL to subprocesses
       # so buildx can read/write the GitHub Actions cache backend the

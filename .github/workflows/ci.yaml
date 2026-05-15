@@ -34,20 +34,19 @@ jobs:
           cache: true
           cache-dependency-path: go.sum
 
-      # Belt-and-suspenders cache for Go's build cache + golangci-lint
-      # cache directory. setup-go covers GOPATH/pkg/mod + GOCACHE; this
-      # adds the lint cache so subsequent CI runs skip re-analyzing
-      # unchanged packages.
-      - name: Cache CI build artifacts
+      # Cache the golangci-lint analysis cache only. setup-go@v5 with
+      # cache:true already owns ~/.cache/go-build + ~/go/pkg/mod;
+      # overlapping those paths in a second actions/cache@v4 step
+      # causes tar restore conflicts ("Cannot open: File exists") and
+      # silently disables the cache. v0.12's original belt-and-
+      # suspenders cache learned this the hard way.
+      - name: Cache golangci-lint analysis
         uses: actions/cache@v4
         with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-            ~/.cache/golangci-lint
-          key: ci-${{ runner.os }}-go${{ env.GO_VERSION }}-${{ hashFiles('go.sum') }}
+          path: ~/.cache/golangci-lint
+          key: golangci-${{ runner.os }}-go${{ env.GO_VERSION }}-${{ hashFiles('go.sum', '.golangci.yaml') }}
           restore-keys: |
-            ci-${{ runner.os }}-go${{ env.GO_VERSION }}-
+            golangci-${{ runner.os }}-go${{ env.GO_VERSION }}-
 
       # Build golangci-lint from source against the runner's Go (1.26+)
       # instead of using the action's prebuilt v1.64.x binary, which is
