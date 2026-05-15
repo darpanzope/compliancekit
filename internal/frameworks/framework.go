@@ -177,22 +177,53 @@ var (
 	loadOnce  sync.Once
 	loadCache map[string]*Framework
 	loadErr   error
+
+	runtimeMu sync.RWMutex
+	runtime   = map[string]*Framework{}
 )
 
 // All returns the loaded framework set, parsing the embedded YAML on
-// first call and caching for subsequent calls. The map keys are
-// framework IDs ("soc2", "cis-v8"); values are owned by the cache and
-// must not be mutated by callers.
+// first call and caching for subsequent calls, then merging any
+// runtime-registered frameworks (see Register). Runtime entries take
+// precedence over embedded entries with the same ID so operators
+// can override a built-in catalog by providing their own via
+// OSCAL-Catalog ingest at scan time. The map keys are framework IDs
+// ("soc2", "cis-v8", "custom-internal"); values are owned by the
+// cache and must not be mutated by callers.
 func All() (map[string]*Framework, error) {
 	loadOnce.Do(func() {
 		loadCache, loadErr = LoadAll()
 	})
-	return loadCache, loadErr
+	if loadErr != nil {
+		return nil, loadErr
+	}
+
+	runtimeMu.RLock()
+	defer runtimeMu.RUnlock()
+
+	// Build a fresh merged map per call so callers can't accidentally
+	// mutate the cache by writing to the returned map.
+	merged := make(map[string]*Framework, len(loadCache)+len(runtime))
+	for k, v := range loadCache {
+		merged[k] = v
+	}
+	for k, v := range runtime {
+		merged[k] = v
+	}
+	return merged, nil
 }
 
 // Get returns one framework by ID, or (nil, false) if the ID is
-// unknown or framework loading failed.
+// unknown or framework loading failed. Runtime registrations
+// (frameworks.Register) take precedence over embedded entries.
 func Get(id string) (*Framework, bool) {
+	runtimeMu.RLock()
+	if fw, ok := runtime[id]; ok {
+		runtimeMu.RUnlock()
+		return fw, true
+	}
+	runtimeMu.RUnlock()
+
 	all, err := All()
 	if err != nil {
 		return nil, false
@@ -200,6 +231,68 @@ func Get(id string) (*Framework, bool) {
 	fw, ok := all[id]
 	return fw, ok
 }
+
+// Register installs a framework into the runtime registry. v0.13+
+// uses this to bind frameworks loaded from external OSCAL Catalogs
+// at scan time, so a customer's bespoke FedRAMP-style framework
+// becomes scannable without writing a new embedded YAML.
+//
+// Registering a framework whose ID matches an embedded one is
+// allowed and intentional: the operator's runtime version takes
+// precedence, which is how OSCAL Catalog ingest can shadow the
+// bundled NIST 800-53 catalog with a customer-tailored variant.
+//
+// Returns ErrFrameworkInvalid if fw is nil or has empty ID; in
+// that case the registry is unchanged.
+func Register(fw *Framework) error {
+	if fw == nil {
+		return ErrFrameworkInvalid
+	}
+	if fw.ID == "" {
+		return ErrFrameworkInvalid
+	}
+	runtimeMu.Lock()
+	defer runtimeMu.Unlock()
+	runtime[fw.ID] = fw
+	return nil
+}
+
+// Unregister removes a runtime-registered framework. Returns true if
+// the entry existed. Embedded frameworks cannot be removed via this
+// path — only runtime entries; the embedded set is always available
+// to Get/All as the fallback layer.
+func Unregister(id string) bool {
+	runtimeMu.Lock()
+	defer runtimeMu.Unlock()
+	if _, ok := runtime[id]; !ok {
+		return false
+	}
+	delete(runtime, id)
+	return true
+}
+
+// RegisteredRuntime returns the IDs of frameworks added via Register.
+// Sorted. Useful for the doctor command and for tests that need to
+// isolate registry state. Excludes embedded frameworks.
+func RegisteredRuntime() []string {
+	runtimeMu.RLock()
+	defer runtimeMu.RUnlock()
+	out := make([]string, 0, len(runtime))
+	for id := range runtime {
+		out = append(out, id)
+	}
+	// Sort for deterministic output.
+	for i := 1; i < len(out); i++ {
+		for j := i; j > 0 && out[j-1] > out[j]; j-- {
+			out[j-1], out[j] = out[j], out[j-1]
+		}
+	}
+	return out
+}
+
+// ErrFrameworkInvalid is returned by Register when its argument is
+// nil or has empty ID. Treat as a programmer error.
+var ErrFrameworkInvalid = fmt.Errorf("framework is nil or has empty ID")
 
 // ResolvedControl pairs a Control with the Framework it belongs to,
 // useful when iterating across the controls a single Check references.

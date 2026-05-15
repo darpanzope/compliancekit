@@ -1,0 +1,61 @@
+{
+  "catalog": {
+    "uuid": "01234567-89ab-cdef-0123-456789abcdef",
+    "metadata": {
+      "title": "Acme Internal Security Baseline",
+      "version": "2026.1",
+      "last-modified": "2026-05-01T00:00:00Z",
+      "oscal-version": "1.1.2"
+    },
+    "groups": [
+      {
+        "id": "ac",
+        "class": "AC",
+        "title": "Access Control",
+        "controls": [
+          {
+            "id": "ac-1",
+            "title": "Access Control Policy and Procedures",
+            "parts": [
+              {
+                "name": "statement",
+                "prose": "Develop, document, and disseminate to the organization an access control policy that addresses purpose, scope, roles, and responsibilities."
+              }
+            ],
+            "props": [
+              { "name": "label", "value": "low-impact" },
+              { "name": "reference", "value": "NIST 800-53 AC-1" }
+            ]
+          },
+          {
+            "id": "ac-2",
+            "title": "Account Management",
+            "parts": [
+              {
+                "name": "statement",
+                "prose": "Identify and select the types of information system accounts to support organizational missions."
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "au",
+        "class": "AU",
+        "title": "Audit and Accountability",
+        "controls": [
+          {
+            "id": "au-2",
+            "title": "Event Logging",
+            "parts": [
+              {
+                "name": "statement",
+                "prose": "Identify the types of events that the system is capable of logging in support of the audit function."
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

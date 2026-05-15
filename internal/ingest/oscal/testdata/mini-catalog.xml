@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<catalog uuid="ffffffff-0000-1111-2222-333333333333">
+  <metadata>
+    <title>Acme XML Catalog</title>
+    <version>2026.3</version>
+    <oscal-version>1.1.2</oscal-version>
+  </metadata>
+  <group id="ia" class="IA">
+    <title>Identification and Authentication</title>
+    <control id="ia-2" class="IA">
+      <title>Identification and Authentication (Organizational Users)</title>
+      <part name="statement">
+        <prose>Uniquely identify and authenticate organizational users.</prose>
+      </part>
+    </control>
+    <control id="ia-5" class="IA">
+      <title>Authenticator Management</title>
+      <part name="statement">
+        <prose>Manage system authenticators by verifying identity at issuance.</prose>
+      </part>
+    </control>
+  </group>
+</catalog>

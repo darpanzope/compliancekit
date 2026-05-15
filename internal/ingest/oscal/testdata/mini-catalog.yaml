@@ -1,0 +1,21 @@
+catalog:
+  uuid: aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee
+  metadata:
+    title: Acme YAML Catalog
+    version: "2026.2"
+    oscal-version: "1.1.2"
+  groups:
+    - id: sc
+      class: SC
+      title: System and Communications Protection
+      controls:
+        - id: sc-7
+          title: Boundary Protection
+          parts:
+            - name: statement
+              prose: Monitor and control communications at the external boundary of the system and at key internal boundaries.
+        - id: sc-28
+          title: Protection of Information at Rest
+          parts:
+            - name: statement
+              prose: Protect the confidentiality and integrity of information at rest.
