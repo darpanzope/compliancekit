@@ -77,18 +77,19 @@ type Options struct {
 // Result summarizes what Generate wrote so the CLI can render a
 // human-readable footer without re-walking the pack.
 type Result struct {
-	OutDir           string                  // absolute path to the pack root
-	FilesWritten     int                     // total files written, including MANIFEST
-	FrameworkResults []FrameworkResult       // one per framework with at least one mapped finding
-	ManifestPath     string                  // <OutDir>/MANIFEST.sha256
-	MappingCSVPath   string                  // <OutDir>/control-mapping.csv
-	SummaryHTMLPath  string                  // <OutDir>/summary.html (empty until phase 4 lands)
-	TailoringPath    string                  // <OutDir>/tailoring.json (v0.12+); empty when no rules
-	TailoringCount   int                     // number of tailoring rules recorded
-	OSCALARPath      string                  // <OutDir>/assessment-results.oscal.json (v0.13+)
-	OSCALProfilePath string                  // <OutDir>/profile.oscal.json (v0.13+)
-	Generated        time.Time               // header timestamp actually used
-	ControlIndex     map[string][]ControlRef // framework -> controls covered (display order)
+	OutDir              string                  // absolute path to the pack root
+	FilesWritten        int                     // total files written, including MANIFEST
+	FrameworkResults    []FrameworkResult       // one per framework with at least one mapped finding
+	ManifestPath        string                  // <OutDir>/MANIFEST.sha256
+	MappingCSVPath      string                  // <OutDir>/control-mapping.csv
+	SummaryHTMLPath     string                  // <OutDir>/summary.html (empty until phase 4 lands)
+	TailoringPath       string                  // <OutDir>/tailoring.json (v0.12+); empty when no rules
+	TailoringCount      int                     // number of tailoring rules recorded
+	OSCALARPath         string                  // <OutDir>/assessment-results.oscal.json (v0.13+)
+	OSCALProfilePath    string                  // <OutDir>/profile.oscal.json (v0.13+)
+	VulnerabilitiesPath string                  // <OutDir>/vulnerabilities.csv (v0.14+); empty when no CVE findings
+	Generated           time.Time               // header timestamp actually used
+	ControlIndex        map[string][]ControlRef // framework -> controls covered (display order)
 }
 
 // FrameworkResult is the per-framework rollup shown in the CLI footer.
@@ -182,19 +183,9 @@ func Generate(_ context.Context, findings []core.Finding, opts Options) (Result,
 	result.SummaryHTMLPath = summaryPath
 	result.FilesWritten++
 
-	oscalARPath, err := writeAssessmentResultsOSCAL(abs, findings, opts)
-	if err != nil {
+	if err := writeOSCALAndVulnArtifacts(abs, findings, &result, opts); err != nil {
 		return Result{}, err
 	}
-	result.OSCALARPath = oscalARPath
-	result.FilesWritten++
-
-	oscalProfilePath, err := writeProfileOSCAL(abs, &result, opts)
-	if err != nil {
-		return Result{}, err
-	}
-	result.OSCALProfilePath = oscalProfilePath
-	result.FilesWritten++
 
 	manifestPath, err := WriteManifest(abs)
 	if err != nil {
