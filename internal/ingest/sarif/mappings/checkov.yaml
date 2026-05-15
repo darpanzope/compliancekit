@@ -1,0 +1,217 @@
+# Checkov → compliancekit framework mapping table.
+#
+# Covers the most-flagged Checkov rules across CKV_AWS_*, CKV_GCP_*,
+# CKV_AZURE_*, CKV_K8S_*, and CKV_DOCKER_* prefixes. Bridgecrew publishes
+# their own framework-mapping JSON; this table is hand-curated against
+# compliancekit's framework catalog so the resulting evidence pack uses
+# the exact control IDs the rest of the scanner emits.
+#
+# Operators with a custom Bridgecrew/Checkov rule set should ship their
+# own override via `compliancekit ingest --mapping=...` or the ingest:
+# block in compliancekit.yaml.
+
+tool: checkov
+version: ">=3.0"
+description: |
+  Checkov IaC misconfiguration rules across AWS, Azure, GCP, Kubernetes,
+  and Docker. ~25 starter rules covering the highest-traffic checks; the
+  long tail can be added incrementally without code changes.
+
+rules:
+  # ------------------------------------------------------------------
+  # AWS S3
+  # ------------------------------------------------------------------
+  CKV_AWS_18:
+    controls:
+      - { framework: soc2,           control: CC7.2 }
+      - { framework: iso27001,       control: A.8.16 }
+      - { framework: nist-800-53-r5, control: AU-2 }
+    severity: medium
+    tags: [s3, logging]
+  CKV_AWS_19:
+    controls:
+      - { framework: soc2,           control: CC6.7 }
+      - { framework: pci-dss-v4,     control: "3.5" }
+      - { framework: nist-800-53-r5, control: SC-28 }
+    severity: high
+    tags: [s3, encryption-at-rest]
+  CKV_AWS_20:
+    controls:
+      - { framework: soc2,           control: CC6.1 }
+      - { framework: iso27001,       control: A.5.10 }
+      - { framework: pci-dss-v4,     control: "1.3" }
+    severity: high
+    tags: [s3, public-acl]
+  CKV_AWS_21:
+    controls:
+      - { framework: soc2,           control: CC7.2 }
+      - { framework: nist-800-53-r5, control: AU-2 }
+    severity: medium
+    tags: [s3, versioning]
+  CKV_AWS_53:
+    controls:
+      - { framework: soc2,           control: CC6.1 }
+      - { framework: pci-dss-v4,     control: "1.3" }
+    severity: high
+    tags: [s3, public-access-block]
+
+  # ------------------------------------------------------------------
+  # AWS IAM
+  # ------------------------------------------------------------------
+  CKV_AWS_1:
+    controls:
+      - { framework: soc2,           control: CC6.3 }
+      - { framework: iso27001,       control: A.5.18 }
+      - { framework: nist-800-53-r5, control: AC-6 }
+      - { framework: pci-dss-v4,     control: "7.2" }
+    severity: high
+    tags: [iam, admin-policy]
+  CKV_AWS_40:
+    controls:
+      - { framework: soc2,           control: CC6.3 }
+      - { framework: nist-800-53-r5, control: AC-6 }
+    severity: high
+    tags: [iam, inline-policy]
+  CKV_AWS_111:
+    controls:
+      - { framework: soc2,           control: CC6.3 }
+      - { framework: nist-800-53-r5, control: AC-6 }
+    severity: high
+    tags: [iam, write-access-no-mfa]
+
+  # ------------------------------------------------------------------
+  # AWS network / VPC
+  # ------------------------------------------------------------------
+  CKV_AWS_24:
+    controls:
+      - { framework: soc2,           control: CC6.6 }
+      - { framework: iso27001,       control: A.8.20 }
+      - { framework: nist-800-53-r5, control: SC-7 }
+      - { framework: pci-dss-v4,     control: "1.4" }
+    severity: critical
+    tags: [security-group, ssh-world-open]
+  CKV_AWS_25:
+    controls:
+      - { framework: soc2,           control: CC6.6 }
+      - { framework: nist-800-53-r5, control: SC-7 }
+      - { framework: pci-dss-v4,     control: "1.4" }
+    severity: critical
+    tags: [security-group, rdp-world-open]
+  CKV_AWS_260:
+    controls:
+      - { framework: soc2,           control: CC6.6 }
+      - { framework: nist-800-53-r5, control: SC-7 }
+    severity: high
+    tags: [vpc, ingress-world-open]
+
+  # ------------------------------------------------------------------
+  # AWS RDS
+  # ------------------------------------------------------------------
+  CKV_AWS_16:
+    controls:
+      - { framework: soc2,           control: CC6.7 }
+      - { framework: pci-dss-v4,     control: "3.5" }
+    severity: high
+    tags: [rds, encryption-at-rest]
+  CKV_AWS_17:
+    controls:
+      - { framework: soc2,           control: CC6.1 }
+      - { framework: pci-dss-v4,     control: "1.3" }
+    severity: critical
+    tags: [rds, public-access]
+  CKV_AWS_133:
+    controls:
+      - { framework: soc2,           control: A1.2 }
+      - { framework: iso27001,       control: A.8.13 }
+    severity: medium
+    tags: [rds, backup-retention]
+
+  # ------------------------------------------------------------------
+  # AWS KMS / encryption
+  # ------------------------------------------------------------------
+  CKV_AWS_7:
+    controls:
+      - { framework: soc2,           control: CC6.7 }
+      - { framework: iso27001,       control: A.8.24 }
+      - { framework: nist-800-53-r5, control: SC-12 }
+    severity: high
+    tags: [kms, rotation]
+
+  # ------------------------------------------------------------------
+  # AWS CloudTrail / logging
+  # ------------------------------------------------------------------
+  CKV_AWS_67:
+    controls:
+      - { framework: soc2,           control: CC7.2 }
+      - { framework: iso27001,       control: A.8.15 }
+      - { framework: nist-800-53-r5, control: AU-2 }
+      - { framework: pci-dss-v4,     control: "10.2" }
+    severity: high
+    tags: [cloudtrail, multi-region]
+  CKV_AWS_36:
+    controls:
+      - { framework: soc2,           control: CC7.2 }
+      - { framework: nist-800-53-r5, control: AU-9 }
+    severity: high
+    tags: [cloudtrail, log-validation]
+
+  # ------------------------------------------------------------------
+  # Kubernetes
+  # ------------------------------------------------------------------
+  CKV_K8S_8:
+    controls:
+      - { framework: soc2,           control: A1.1 }
+      - { framework: nist-800-53-r5, control: CP-10 }
+    severity: low
+    tags: [k8s, liveness-probe]
+  CKV_K8S_20:
+    controls:
+      - { framework: soc2,           control: CC6.1 }
+      - { framework: nist-800-53-r5, control: AC-6 }
+      - { framework: cis-v8,         control: "4.1" }
+    severity: medium
+    tags: [k8s, allow-privilege-escalation]
+  CKV_K8S_22:
+    controls:
+      - { framework: soc2,           control: CC6.1 }
+      - { framework: nist-800-53-r5, control: AC-3 }
+    severity: medium
+    tags: [k8s, read-only-rootfs]
+  CKV_K8S_23:
+    controls:
+      - { framework: soc2,           control: CC6.1 }
+      - { framework: cis-v8,         control: "4.6" }
+    severity: medium
+    tags: [k8s, runs-as-non-root]
+
+  # ------------------------------------------------------------------
+  # Docker
+  # ------------------------------------------------------------------
+  CKV_DOCKER_2:
+    controls:
+      - { framework: soc2,           control: A1.1 }
+      - { framework: cis-v8,         control: "4.6" }
+    severity: low
+    tags: [docker, healthcheck]
+  CKV_DOCKER_3:
+    controls:
+      - { framework: soc2,           control: CC6.1 }
+      - { framework: cis-v8,         control: "4.6" }
+    severity: medium
+    tags: [docker, user-non-root]
+
+  # ------------------------------------------------------------------
+  # GCP / Azure highlights
+  # ------------------------------------------------------------------
+  CKV_GCP_29:
+    controls:
+      - { framework: soc2,           control: CC6.7 }
+      - { framework: nist-800-53-r5, control: SC-28 }
+    severity: high
+    tags: [gcs, uniform-access]
+  CKV_AZURE_2:
+    controls:
+      - { framework: soc2,           control: CC6.7 }
+      - { framework: nist-800-53-r5, control: SC-28 }
+    severity: high
+    tags: [azure-storage, encryption-at-rest]

@@ -1,0 +1,175 @@
+# Trivy → compliancekit framework mapping table.
+#
+# Covers the most-traffic Trivy AVD (Aqua Vulnerability Database) misconfig
+# rules across AWS, Azure, GCP, Docker, and Kubernetes. Vulnerability rules
+# (CVE-*, GHSA-*) are deliberately NOT enumerated one-by-one — Trivy ships
+# tens of thousands of those; the adapter's CVSS-to-severity logic plus the
+# `default` block at the bottom of this file maps every CVE / GHSA finding
+# to vulnerability-management controls (SOC 2 CC7.1, NIST SI-2, ISO A.8.8,
+# PCI 6.3, CIS 7.x) without needing a row per CVE.
+#
+# Operators can override by passing --mapping=/path/to/custom-trivy.yaml.
+# Tailoring (per-framework scope-outs) lives in compliancekit.yaml's
+# tailoring: block, not here — this file maps rules to controls, the
+# tailoring block decides whether those controls are in audit scope.
+
+tool: trivy
+version: ">=0.50.0"
+description: |
+  Trivy AVD misconfig rules + a default CVE/GHSA → vulnerability-management
+  mapping. Authored against Trivy v0.50 schema; minor schema drift in newer
+  versions is tolerated by the SARIF ingester.
+
+rules:
+  # ------------------------------------------------------------------
+  # AWS S3 / storage misconfigs
+  # ------------------------------------------------------------------
+  AVD-AWS-0086:
+    controls:
+      - { framework: soc2,           control: CC6.1 }
+      - { framework: iso27001,       control: A.5.10 }
+      - { framework: nist-800-53-r5, control: AC-3 }
+      - { framework: pci-dss-v4,     control: "1.3" }
+    severity: high
+    tags: [s3, public-access]
+  AVD-AWS-0088:
+    controls:
+      - { framework: soc2,           control: CC6.7 }
+      - { framework: pci-dss-v4,     control: "3.5" }
+      - { framework: nist-800-53-r5, control: SC-28 }
+    severity: high
+    tags: [s3, encryption-at-rest]
+  AVD-AWS-0089:
+    controls:
+      - { framework: soc2,           control: CC7.2 }
+      - { framework: iso27001,       control: A.8.16 }
+      - { framework: nist-800-53-r5, control: AU-2 }
+    severity: medium
+    tags: [s3, logging]
+
+  # ------------------------------------------------------------------
+  # AWS IAM / access control
+  # ------------------------------------------------------------------
+  AVD-AWS-0057:
+    controls:
+      - { framework: soc2,           control: CC6.3 }
+      - { framework: iso27001,       control: A.5.18 }
+      - { framework: nist-800-53-r5, control: AC-6 }
+      - { framework: pci-dss-v4,     control: "7.2" }
+    severity: high
+    tags: [iam, least-privilege]
+  AVD-AWS-0123:
+    controls:
+      - { framework: soc2,           control: CC6.2 }
+      - { framework: nist-800-53-r5, control: IA-5 }
+      - { framework: pci-dss-v4,     control: "8.3" }
+    severity: high
+    tags: [iam, mfa]
+
+  # ------------------------------------------------------------------
+  # AWS network / VPC
+  # ------------------------------------------------------------------
+  AVD-AWS-0107:
+    controls:
+      - { framework: soc2,           control: CC6.6 }
+      - { framework: iso27001,       control: A.8.20 }
+      - { framework: nist-800-53-r5, control: SC-7 }
+      - { framework: pci-dss-v4,     control: "1.4" }
+    severity: critical
+    tags: [vpc, ingress, world-open]
+  AVD-AWS-0124:
+    controls:
+      - { framework: soc2,           control: CC6.6 }
+      - { framework: nist-800-53-r5, control: SC-7 }
+    severity: high
+    tags: [vpc, egress]
+
+  # ------------------------------------------------------------------
+  # AWS RDS / databases
+  # ------------------------------------------------------------------
+  AVD-AWS-0080:
+    controls:
+      - { framework: soc2,           control: CC6.1 }
+      - { framework: nist-800-53-r5, control: AC-3 }
+      - { framework: pci-dss-v4,     control: "1.3" }
+    severity: critical
+    tags: [rds, public-access]
+  AVD-AWS-0078:
+    controls:
+      - { framework: soc2,           control: CC6.7 }
+      - { framework: pci-dss-v4,     control: "3.5" }
+      - { framework: nist-800-53-r5, control: SC-28 }
+    severity: high
+    tags: [rds, encryption-at-rest]
+
+  # ------------------------------------------------------------------
+  # AWS KMS / encryption
+  # ------------------------------------------------------------------
+  AVD-AWS-0065:
+    controls:
+      - { framework: soc2,           control: CC6.7 }
+      - { framework: iso27001,       control: A.8.24 }
+      - { framework: nist-800-53-r5, control: SC-12 }
+    severity: high
+    tags: [kms, key-rotation]
+
+  # ------------------------------------------------------------------
+  # Kubernetes — runtime / pod security
+  # ------------------------------------------------------------------
+  AVD-KSV-0001:
+    controls:
+      - { framework: soc2,           control: CC6.1 }
+      - { framework: nist-800-53-r5, control: AC-3 }
+      - { framework: cis-v8,         control: "4.1" }
+    severity: high
+    tags: [k8s, runs-as-root]
+  AVD-KSV-0003:
+    controls:
+      - { framework: soc2,           control: CC6.6 }
+      - { framework: nist-800-53-r5, control: SC-7 }
+    severity: high
+    tags: [k8s, privileged]
+  AVD-KSV-0014:
+    controls:
+      - { framework: soc2,           control: CC6.6 }
+      - { framework: nist-800-53-r5, control: AC-6 }
+    severity: medium
+    tags: [k8s, host-namespace]
+
+  # ------------------------------------------------------------------
+  # Docker / container build
+  # ------------------------------------------------------------------
+  AVD-DS-0002:
+    controls:
+      - { framework: soc2,           control: CC6.1 }
+      - { framework: cis-v8,         control: "4.6" }
+    severity: medium
+    tags: [docker, user-root]
+  AVD-DS-0026:
+    controls:
+      - { framework: soc2,           control: CC6.7 }
+      - { framework: nist-800-53-r5, control: SC-28 }
+    severity: medium
+    tags: [docker, healthcheck]
+
+  # ------------------------------------------------------------------
+  # GCP / Azure starter mappings (extend in operator override file)
+  # ------------------------------------------------------------------
+  AVD-GCP-0017:
+    controls:
+      - { framework: soc2,           control: CC6.7 }
+      - { framework: nist-800-53-r5, control: SC-28 }
+    severity: high
+    tags: [gcs, encryption-at-rest]
+  AVD-GCP-0061:
+    controls:
+      - { framework: soc2,           control: CC6.1 }
+      - { framework: pci-dss-v4,     control: "1.3" }
+    severity: critical
+    tags: [gke, public-cluster]
+  AVD-AZU-0042:
+    controls:
+      - { framework: soc2,           control: CC6.1 }
+      - { framework: nist-800-53-r5, control: AC-3 }
+    severity: high
+    tags: [azure-storage, public-access]

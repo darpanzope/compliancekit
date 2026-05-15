@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json.schemastore.org/sarif-2.1.0-rtm.5.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "Checkov",
+          "version": "3.2.71",
+          "informationUri": "https://checkov.io"
+        }
+      },
+      "results": [
+        {
+          "ruleId": "CKV_AWS_24",
+          "level": "error",
+          "message": { "text": "Ensure no security groups allow ingress from 0.0.0.0:0 to port 22" },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "main.tf" },
+                "region": { "startLine": 22, "endLine": 35 }
+              },
+              "logicalLocations": [
+                { "fullyQualifiedName": "aws_security_group.web", "kind": "terraform.resource" }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CKV_AWS_19",
+          "level": "warning",
+          "message": { "text": "Ensure all data stored in S3 buckets is securely encrypted at rest" },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "main.tf" },
+                "region": { "startLine": 41, "endLine": 50 }
+              },
+              "logicalLocations": [
+                { "fullyQualifiedName": "aws_s3_bucket.backup", "kind": "terraform.resource" }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "CKV_K8S_20",
+          "level": "warning",
+          "message": { "text": "Containers should not run with allowPrivilegeEscalation" },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "k8s/deployment.yaml" },
+                "region": { "startLine": 15 }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,98 @@
+# Terrascan → compliancekit framework mapping table.
+#
+# Terrascan policies are identified as AC_<provider>_<NNNN>. ~12 starter
+# policies covering the highest-flagged AWS and Kubernetes rules.
+
+tool: terrascan
+version: ">=1.18"
+description: |
+  Terrascan IaC policies. Starter coverage; operators with a Tenable-licensed
+  expanded policy set should ship their own override.
+
+rules:
+  # AWS S3
+  AC_AWS_0001:
+    controls:
+      - { framework: soc2,           control: CC6.1 }
+      - { framework: iso27001,       control: A.5.10 }
+      - { framework: pci-dss-v4,     control: "1.3" }
+    severity: high
+    tags: [s3, public-acl]
+  AC_AWS_0207:
+    controls:
+      - { framework: soc2,           control: CC6.7 }
+      - { framework: pci-dss-v4,     control: "3.5" }
+    severity: high
+    tags: [s3, encryption-at-rest]
+  AC_AWS_0212:
+    controls:
+      - { framework: soc2,           control: CC7.2 }
+      - { framework: nist-800-53-r5, control: AU-2 }
+    severity: medium
+    tags: [s3, logging]
+
+  # AWS IAM
+  AC_AWS_0027:
+    controls:
+      - { framework: soc2,           control: CC6.3 }
+      - { framework: nist-800-53-r5, control: AC-6 }
+    severity: high
+    tags: [iam, admin-policy]
+  AC_AWS_0148:
+    controls:
+      - { framework: soc2,           control: CC6.2 }
+      - { framework: pci-dss-v4,     control: "8.3" }
+    severity: high
+    tags: [iam, mfa]
+
+  # AWS network
+  AC_AWS_0019:
+    controls:
+      - { framework: soc2,           control: CC6.6 }
+      - { framework: nist-800-53-r5, control: SC-7 }
+      - { framework: pci-dss-v4,     control: "1.4" }
+    severity: critical
+    tags: [security-group, ssh-world-open]
+  AC_AWS_0231:
+    controls:
+      - { framework: soc2,           control: CC6.6 }
+      - { framework: nist-800-53-r5, control: SC-7 }
+    severity: high
+    tags: [vpc, ingress-world-open]
+
+  # AWS RDS
+  AC_AWS_0058:
+    controls:
+      - { framework: soc2,           control: CC6.1 }
+      - { framework: pci-dss-v4,     control: "1.3" }
+    severity: critical
+    tags: [rds, public-access]
+  AC_AWS_0053:
+    controls:
+      - { framework: soc2,           control: CC6.7 }
+      - { framework: pci-dss-v4,     control: "3.5" }
+    severity: high
+    tags: [rds, encryption-at-rest]
+
+  # AWS CloudTrail
+  AC_AWS_0167:
+    controls:
+      - { framework: soc2,           control: CC7.2 }
+      - { framework: nist-800-53-r5, control: AU-2 }
+      - { framework: pci-dss-v4,     control: "10.2" }
+    severity: high
+    tags: [cloudtrail, logging-disabled]
+
+  # Kubernetes
+  AC_K8S_0001:
+    controls:
+      - { framework: soc2,           control: CC6.1 }
+      - { framework: cis-v8,         control: "4.6" }
+    severity: medium
+    tags: [k8s, runs-as-root]
+  AC_K8S_0072:
+    controls:
+      - { framework: soc2,           control: CC6.1 }
+      - { framework: cis-v8,         control: "4.1" }
+    severity: high
+    tags: [k8s, privilege-escalation]

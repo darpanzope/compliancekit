@@ -1,0 +1,115 @@
+# KICS (Keeping Infrastructure as Code Secure) → compliancekit framework
+# mapping table.
+#
+# KICS queries are identified by UUID rather than human-readable IDs, so
+# this table is by design a starter: ~12 widely-cited high-impact queries
+# across AWS, Azure, GCP, and Kubernetes. Operators with a Checkmarx-licensed
+# expanded query set should ship their own override.
+
+tool: kics
+version: ">=1.7"
+description: |
+  KICS top high-impact IaC misconfiguration queries. The mapping uses
+  query UUIDs because KICS does not assign stable short IDs.
+
+rules:
+  # ad307ed4-f4cb-46f5-9f38-2c6a87f886cd — S3 Bucket Allows Public Read
+  ad307ed4-f4cb-46f5-9f38-2c6a87f886cd:
+    controls:
+      - { framework: soc2,           control: CC6.1 }
+      - { framework: iso27001,       control: A.5.10 }
+      - { framework: pci-dss-v4,     control: "1.3" }
+    severity: high
+    tags: [s3, public-acl]
+
+  # 38c5ee0d-7f22-4260-ab72-5073048df100 — S3 Bucket Without Versioning
+  38c5ee0d-7f22-4260-ab72-5073048df100:
+    controls:
+      - { framework: soc2,           control: A1.2 }
+      - { framework: nist-800-53-r5, control: CP-9 }
+    severity: medium
+    tags: [s3, versioning]
+
+  # b9c83569-459b-4110-8f79-6305aa33cb37 — S3 Bucket Without Server-Side Encryption
+  b9c83569-459b-4110-8f79-6305aa33cb37:
+    controls:
+      - { framework: soc2,           control: CC6.7 }
+      - { framework: pci-dss-v4,     control: "3.5" }
+      - { framework: nist-800-53-r5, control: SC-28 }
+    severity: high
+    tags: [s3, encryption-at-rest]
+
+  # 4728d99c-fdf2-4cbf-bd87-a4715a7c2bf8 — Security Group With Unrestricted Access To SSH
+  4728d99c-fdf2-4cbf-bd87-a4715a7c2bf8:
+    controls:
+      - { framework: soc2,           control: CC6.6 }
+      - { framework: iso27001,       control: A.8.20 }
+      - { framework: nist-800-53-r5, control: SC-7 }
+      - { framework: pci-dss-v4,     control: "1.4" }
+    severity: critical
+    tags: [security-group, ssh-world-open]
+
+  # 5ae0e1a1-8b13-455e-bdb1-1c54e23c5d62 — RDS DB Instance Publicly Accessible
+  5ae0e1a1-8b13-455e-bdb1-1c54e23c5d62:
+    controls:
+      - { framework: soc2,           control: CC6.1 }
+      - { framework: pci-dss-v4,     control: "1.3" }
+    severity: critical
+    tags: [rds, public-access]
+
+  # 28545147-2fc6-42d5-a1f9-cf226658e591 — IAM Policy Grants AssumeRole To Wildcard Principal
+  28545147-2fc6-42d5-a1f9-cf226658e591:
+    controls:
+      - { framework: soc2,           control: CC6.3 }
+      - { framework: nist-800-53-r5, control: AC-6 }
+    severity: high
+    tags: [iam, wildcard-principal]
+
+  # 70bb45c5-9bf8-4f23-9c14-29d80f3a8c1f — CloudTrail Logging Disabled
+  70bb45c5-9bf8-4f23-9c14-29d80f3a8c1f:
+    controls:
+      - { framework: soc2,           control: CC7.2 }
+      - { framework: iso27001,       control: A.8.15 }
+      - { framework: nist-800-53-r5, control: AU-2 }
+    severity: high
+    tags: [cloudtrail, logging-disabled]
+
+  # 17bf83b5-d83e-431c-a0c8-7a5b15c4f7ab — Kubernetes Pod Allows Privilege Escalation
+  17bf83b5-d83e-431c-a0c8-7a5b15c4f7ab:
+    controls:
+      - { framework: soc2,           control: CC6.1 }
+      - { framework: cis-v8,         control: "4.1" }
+    severity: high
+    tags: [k8s, privilege-escalation]
+
+  # bb241e61-77c3-4b97-9575-c0f8a1e008d0 — Kubernetes Container Running As Root
+  bb241e61-77c3-4b97-9575-c0f8a1e008d0:
+    controls:
+      - { framework: soc2,           control: CC6.1 }
+      - { framework: cis-v8,         control: "4.6" }
+    severity: medium
+    tags: [k8s, runs-as-root]
+
+  # 76d2ed4a-7e16-4d2d-9a4c-7d2b18ccf6c7 — Azure Storage Account Allows Public Access
+  76d2ed4a-7e16-4d2d-9a4c-7d2b18ccf6c7:
+    controls:
+      - { framework: soc2,           control: CC6.1 }
+      - { framework: pci-dss-v4,     control: "1.3" }
+    severity: high
+    tags: [azure-storage, public-access]
+
+  # 0a7c2c1a-0b1c-4c1f-9a4d-6c91a9e4d6f2 — GCS Bucket Public Access
+  0a7c2c1a-0b1c-4c1f-9a4d-6c91a9e4d6f2:
+    controls:
+      - { framework: soc2,           control: CC6.1 }
+      - { framework: pci-dss-v4,     control: "1.3" }
+    severity: high
+    tags: [gcs, public-access]
+
+  # c9d2c195-3a7d-4f2d-bea6-d3a05fa3a39e — Dockerfile RUN Using `sudo`
+  c9d2c195-3a7d-4f2d-bea6-d3a05fa3a39e:
+    controls:
+      - { framework: soc2,           control: CC6.1 }
+      - { framework: cis-v8,         control: "4.6" }
+    severity: low
+    tags: [docker, sudo]
