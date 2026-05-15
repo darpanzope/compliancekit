@@ -17,9 +17,11 @@ import (
 
 // mergeConfigIngest is the runScan-side wrapper around
 // runIngestSources. It appends ingested findings to result.Findings,
-// surfaces ingest warnings on stderr-ish (w), and reports a summary
-// line. Extracted from runScan so the host function stays under
-// gocyclo's 15-edge ceiling.
+// surfaces ingest warnings on stderr-ish (w), runs the v0.14
+// image-SHA correlation pass to cross-reference ingested CVEs with
+// running cloud resources, and reports a summary line. Extracted
+// from runScan so the host function stays under gocyclo's 15-edge
+// ceiling.
 func mergeConfigIngest(ctx context.Context, w io.Writer, result *engine.Result, sources []config.IngestSource) error {
 	if len(sources) == 0 {
 		return nil
@@ -33,6 +35,17 @@ func mergeConfigIngest(ctx context.Context, w io.Writer, result *engine.Result, 
 		fmt.Fprintf(w, "ingest warning: %s\n", ww)
 	}
 	fmt.Fprintf(w, "merged %d ingested finding(s) from %d source(s)\n", len(findings), len(sources))
+
+	// v0.14 Phase 5: image-SHA correlation. Ingested CVE findings
+	// pinned to a container image get cloned onto every cloud
+	// resource in the live graph referencing the same SHA, so an
+	// auditor pivoting through "what's wrong with this Deployment"
+	// sees the upstream image's CVEs too.
+	expanded, added := ingest.CorrelateImageSHA(result.Findings, result.Graph)
+	result.Findings = expanded
+	if added > 0 {
+		fmt.Fprintf(w, "correlated %d additional finding(s) via image-SHA join\n", added)
+	}
 	return nil
 }
 
