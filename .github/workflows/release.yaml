@@ -1,32 +1,16 @@
 name: release
 
-# Triggered when a v*.*.* tag is pushed. The pipeline has two stages:
+# Triggered when a v*.*.* tag is pushed. The workflow:
 #
-#   1. build (matrix): cross-compiles ONE GOOS/GOARCH target per
-#      runner. Four runners run in parallel; each only does the work
-#      for its single target. Each runner uploads its binary as a
-#      job artifact under bin/<goos>_<goarch>/.
-#
-#   2. release: needs all four build cells. Downloads the four
-#      binary artifacts into bin/, then runs `goreleaser release
-#      --clean`. Goreleaser is configured with `builder: prebuilt`
-#      so it consumes the prebuilt binaries instead of cross-compiling
-#      a second time. It still assembles tar.gz archives, computes
-#      checksums, generates SBOMs, builds + signs the multi-arch
-#      Docker image, signs the checksums file via cosign keyless,
-#      pushes the Homebrew formula, and creates the GitHub Release.
-#
-# Why the split? The original pipeline ran goreleaser on a single
-# runner with the default builder, fanning all four cross-compile
-# targets in parallel on one host. v0.11 succeeded but went silent
-# for 11m20s during the link phase. v0.12.0 reproducibly died at
-# ~8m of silence with exit code 143 (SIGTERM from the orchestrator)
-# three attempts in a row — consistent with the runner agent
-# missing heartbeats because the host was saturated. Splitting
-# the build per-target eliminates the saturation cliff: each runner
-# has at most one Go link in flight at once, and the release-stage
-# work (archive, SBOM, sign, Docker) is much lighter than four
-# parallel link phases.
+#   1. Restores the full git history (goreleaser computes changelog
+#      from the range between the previous tag and HEAD).
+#   2. Sets up Go, Docker buildx, syft (SBOM), cosign (signing).
+#   3. Logs into GHCR using the workflow's ambient GITHUB_TOKEN so
+#      Docker manifests can be pushed to ghcr.io/darpanzope/*.
+#   4. Runs `goreleaser release` which assembles binaries, archives,
+#      checksums, SBOMs, Docker images, cosign signatures, the
+#      GitHub Release, and the Homebrew formula push -- per the
+#      .goreleaser.yaml in the repo root.
 #
 # Required secrets (configured at repo or org level):
 #
@@ -53,83 +37,16 @@ env:
   GO_VERSION: '1.26'
 
 jobs:
-  # Cross-compile one (GOOS, GOARCH) target per runner. Fan-out
-  # is across 4 separate hosted runners rather than 4 parallel
-  # processes on one runner, so per-host load stays low.
-  build:
-    name: build (${{ matrix.target.goos }}/${{ matrix.target.goarch }})
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    strategy:
-      fail-fast: false
-      matrix:
-        target:
-          - { goos: linux,  goarch: amd64 }
-          - { goos: linux,  goarch: arm64 }
-          - { goos: darwin, goarch: amd64 }
-          - { goos: darwin, goarch: arm64 }
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # full history; lets us derive commit + date stamps
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: ${{ env.GO_VERSION }}
-          check-latest: true
-          cache: true
-          cache-dependency-path: go.sum
-
-      # Cross-compile. ldflags reproduce what the old goreleaser
-      # config injected via {{ .Version }}, {{ .ShortCommit }},
-      # {{ .Date }}. github.ref_name is the tag, including the
-      # leading 'v'; strip it for main.version to keep parity with
-      # how goreleaser stamps it.
-      #
-      # No heartbeat probe needed here: with one target per runner,
-      # a single Go link finishes in ~2 min on a warm module cache —
-      # well inside any plausible orchestrator watchdog window. The
-      # original heartbeat-probe pattern (backgrounded `while true;
-      # sleep 30; done &`) seemed to interfere with the runner agent
-      # cleanly reporting job completion in the first attempt at this
-      # workflow shape, leaving jobs stuck "in_progress" indefinitely.
-      - name: Build binary
-        env:
-          GOOS: ${{ matrix.target.goos }}
-          GOARCH: ${{ matrix.target.goarch }}
-          CGO_ENABLED: '0'
-        run: |
-          set -eu
-          version="${GITHUB_REF_NAME#v}"
-          commit="${GITHUB_SHA:0:7}"
-          date="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-          out_dir="bin/${GOOS}_${GOARCH}"
-          mkdir -p "${out_dir}"
-          go build \
-            -trimpath \
-            -ldflags="-s -w -X main.version=${version} -X main.commit=${commit} -X main.date=${date}" \
-            -o "${out_dir}/compliancekit" \
-            ./cmd/compliancekit
-          ls -la "${out_dir}/"
-          file "${out_dir}/compliancekit"
-
-      - name: Upload binary
-        uses: actions/upload-artifact@v4
-        with:
-          name: bin-${{ matrix.target.goos }}-${{ matrix.target.goarch }}
-          path: bin/${{ matrix.target.goos }}_${{ matrix.target.goarch }}/compliancekit
-          retention-days: 1
-          if-no-files-found: error
-
-  # Assemble archives, checksums, SBOMs, Docker images, signatures,
-  # the GitHub Release, and the Homebrew formula. The goreleaser
-  # config uses builder: prebuilt so this job does NOT recompile.
   release:
-    needs: build
+    # v0.11 (Kubernetes) added k8s.io/client-go and tripled the binary
+    # size ~50MB -> ~154MB. v0.12.0's first three release attempts
+    # OOM-pattern-killed the runner during four parallel goreleaser
+    # cross-compiles on this same host. Fix lives in .goreleaser.yaml
+    # (`builds[].parallelism: 2`), not here: capping concurrent links
+    # keeps the host comfortably under the 16GB RAM ceiling while
+    # holding wall time at ~17 min, same as v0.11.
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 90
     permissions:
       contents: write
       packages: write
@@ -138,8 +55,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 0  # full history for goreleaser's changelog
 
+      # actions/setup-go@v5 enables module + build cache by default
+      # (keyed on go.sum), but pinning the cache-dependency-path
+      # is explicit-is-better-than-implicit and lets us reason about
+      # cache misses if any.
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
@@ -148,6 +69,24 @@ jobs:
           cache: true
           cache-dependency-path: go.sum
 
+      # Cache goreleaser's dist/ output keyed against the goreleaser
+      # config + go.sum. setup-go@v5 with cache:true already owns
+      # ~/.cache/go-build + ~/go/pkg/mod; overlapping those paths in
+      # a second actions/cache@v4 step causes tar restore conflicts
+      # ("Cannot open: File exists") and silently disables the cache.
+      - name: Cache goreleaser dist/
+        uses: actions/cache@v4
+        with:
+          path: ./dist
+          key: goreleaser-dist-${{ runner.os }}-${{ hashFiles('go.sum', '.goreleaser.yaml') }}
+          restore-keys: |
+            goreleaser-dist-${{ runner.os }}-
+
+      # Expose ACTIONS_RUNTIME_TOKEN + ACTIONS_CACHE_URL to subprocesses
+      # so buildx can read/write the GitHub Actions cache backend the
+      # docker `--cache-from/to=type=gha` flags in .goreleaser.yaml
+      # rely on. Without this step the cache silently misses (no error,
+      # just no speedup).
       - name: Expose GitHub Actions runtime to buildx
         uses: crazy-max/ghaction-github-runtime@v3
 
@@ -172,34 +111,6 @@ jobs:
         with:
           cosign-release: 'v2.4.1'
 
-      # Download each matrix cell's binary back into bin/. The
-      # upload step stored them at bin/<goos>_<goarch>/compliancekit;
-      # download-artifact with pattern bin-* recreates that layout
-      # under bin-downloads/. We then flatten into bin/ so the path
-      # matches what .goreleaser.yaml's prebuilt.path template
-      # expects.
-      - name: Download all binaries
-        uses: actions/download-artifact@v4
-        with:
-          pattern: bin-*
-          path: bin-downloads/
-
-      - name: Assemble bin/ tree
-        run: |
-          set -eu
-          mkdir -p bin/
-          for src in bin-downloads/bin-*/compliancekit; do
-            dir=$(basename "$(dirname "${src}")")          # bin-linux-amd64
-            target=${dir#bin-}                              # linux-amd64
-            goos=${target%-*}                               # linux
-            goarch=${target##*-}                            # amd64
-            install -D -m 0755 "${src}" "bin/${goos}_${goarch}/compliancekit"
-          done
-          echo "bin/ layout:"
-          find bin -type f -exec ls -la {} \;
-          echo "bin/ sha256:"
-          find bin -type f -exec sha256sum {} \;
-
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
         with:
@@ -207,6 +118,12 @@ jobs:
           version: '~> v2'
           args: release --clean
         env:
+          # Ambient token for the GitHub Release + GHCR push.
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Fine-grained PAT for pushing the Homebrew formula to
+          # darpanzope/homebrew-tap. Create this with
+          # contents: write on the tap repo only.
           HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
+          # Tells cosign to use the ambient OIDC token rather than
+          # prompting for a browser-based one.
           COSIGN_EXPERIMENTAL: 'true'

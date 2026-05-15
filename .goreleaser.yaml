@@ -30,28 +30,27 @@ before:
     - go run ./cmd/gencheckdocs -check
 
 builds:
-  # Prebuilt builder. Binaries are cross-compiled by the matrix
-  # `build` job in .github/workflows/release.yaml (one runner per
-  # GOOS/GOARCH target) and uploaded as artifacts. The release job
-  # downloads them into bin/ and goreleaser assembles archives,
-  # SBOMs, Docker images, signatures, and the GitHub Release.
-  #
-  # Why prebuilt: v0.12.0's first release attempts ran goreleaser
-  # build with the default builder, fanning all 4 cross-compile
-  # targets onto a single ubuntu-latest runner. The host saturated
-  # mid-link and the orchestrator killed the runner with SIGTERM
-  # (exit 143) three times in a row. Splitting one target per
-  # runner removes the saturation cliff entirely.
-  #
-  # Local-dev path: to test the full pipeline locally, build
-  # binaries into bin/ first (a one-line `make bin/all` produces
-  # the expected layout), then run
-  # `goreleaser release --snapshot --clean --skip=publish`.
   - id: compliancekit
-    builder: prebuilt
+    main: ./cmd/compliancekit
     binary: compliancekit
-    prebuilt:
-      path: bin/{{ .Os }}_{{ .Arch }}/compliancekit
+    # Cap concurrent cross-compiles at 2 (default is runtime.NumCPU
+    # = 4 on ubuntu-latest). v0.12.0's first three release attempts
+    # OOM-pattern-killed the runner with SIGTERM ~8 min into the
+    # silent link phase, all four targets fighting for the same
+    # host. Halving parallelism keeps peak link memory well under
+    # the runner's 16GB ceiling. Wall time goes from ~11m (when 4
+    # parallel succeeded, e.g. v0.11) to ~14-17m — same range as
+    # the last green release, no longer racing the cliff.
+    parallelism: 2
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w
+      - -X main.version={{ .Version }}
+      - -X main.commit={{ .ShortCommit }}
+      - -X main.date={{ .Date }}
     goos:
       - linux
       - darwin
