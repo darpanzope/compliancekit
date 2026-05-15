@@ -1,0 +1,157 @@
+# AWS Security Hub → compliancekit framework mapping table.
+#
+# Security Hub findings are aggregated from multiple AWS-native services
+# (Config, GuardDuty, Inspector, Macie, Firewall Manager) and exported
+# as OCSF v1.1+ events. The "rule id" we key on is the AWS Foundational
+# Security Best Practices (FSBP) standard's short ID, derived from
+# finding_info.types[] (e.g. "S3.4" from
+# "Software and Configuration Checks/Industry and Regulatory Standards/
+# AWS Foundational Security Best Practices/S3.4").
+#
+# ~20 starter rules covering the most-flagged FSBP checks; operators
+# with custom Security Hub insight subscriptions should ship an
+# override.
+
+tool: aws-security-hub
+version: "FSBP-1.0"
+description: |
+  AWS Foundational Security Best Practices (FSBP) → compliancekit
+  framework controls. Hand-curated starter; expand via operator override.
+
+rules:
+  # ------------------------- S3 -------------------------
+  S3.1:
+    controls:
+      - { framework: soc2,           control: CC6.1 }
+      - { framework: iso27001,       control: A.5.10 }
+      - { framework: nist-800-53-r5, control: AC-3 }
+      - { framework: pci-dss-v4,     control: "1.3" }
+    severity: high
+    tags: [s3, public-access-block]
+  S3.4:
+    controls:
+      - { framework: soc2,           control: CC6.7 }
+      - { framework: pci-dss-v4,     control: "3.5" }
+      - { framework: nist-800-53-r5, control: SC-28 }
+    severity: high
+    tags: [s3, encryption-at-rest]
+  S3.5:
+    controls:
+      - { framework: soc2,           control: CC6.6 }
+      - { framework: pci-dss-v4,     control: "4.2" }
+      - { framework: nist-800-53-r5, control: SC-8 }
+    severity: high
+    tags: [s3, ssl-only]
+  S3.8:
+    controls:
+      - { framework: soc2,           control: CC6.1 }
+      - { framework: pci-dss-v4,     control: "1.3" }
+    severity: high
+    tags: [s3, bucket-level-public-access-block]
+
+  # ------------------------- EC2 -------------------------
+  EC2.2:
+    controls:
+      - { framework: soc2,           control: CC6.6 }
+      - { framework: nist-800-53-r5, control: SC-7 }
+    severity: critical
+    tags: [security-group, default-sg-allow]
+  EC2.18:
+    controls:
+      - { framework: soc2,           control: CC6.6 }
+      - { framework: nist-800-53-r5, control: SC-7 }
+      - { framework: pci-dss-v4,     control: "1.4" }
+    severity: critical
+    tags: [security-group, sg-ingress-allowed]
+  EC2.19:
+    controls:
+      - { framework: soc2,           control: CC6.6 }
+      - { framework: pci-dss-v4,     control: "1.4" }
+    severity: critical
+    tags: [security-group, ssh-world-open]
+
+  # ------------------------- IAM -------------------------
+  IAM.1:
+    controls:
+      - { framework: soc2,           control: CC6.3 }
+      - { framework: nist-800-53-r5, control: AC-6 }
+      - { framework: pci-dss-v4,     control: "7.2" }
+    severity: high
+    tags: [iam, full-admin-policy]
+  IAM.2:
+    controls:
+      - { framework: soc2,           control: CC6.3 }
+      - { framework: nist-800-53-r5, control: AC-6 }
+    severity: high
+    tags: [iam, user-policy-attached]
+  IAM.5:
+    controls:
+      - { framework: soc2,           control: CC6.2 }
+      - { framework: pci-dss-v4,     control: "8.3" }
+      - { framework: nist-800-53-r5, control: IA-5 }
+    severity: high
+    tags: [iam, mfa-console]
+
+  # ------------------------- RDS -------------------------
+  RDS.1:
+    controls:
+      - { framework: soc2,           control: CC6.1 }
+      - { framework: pci-dss-v4,     control: "1.3" }
+    severity: critical
+    tags: [rds, public-snapshot]
+  RDS.2:
+    controls:
+      - { framework: soc2,           control: CC6.1 }
+      - { framework: pci-dss-v4,     control: "1.3" }
+    severity: critical
+    tags: [rds, public-access]
+  RDS.3:
+    controls:
+      - { framework: soc2,           control: CC6.7 }
+      - { framework: pci-dss-v4,     control: "3.5" }
+    severity: high
+    tags: [rds, encryption-at-rest]
+
+  # ----------------------- CloudTrail -----------------------
+  CloudTrail.1:
+    controls:
+      - { framework: soc2,           control: CC7.2 }
+      - { framework: iso27001,       control: A.8.15 }
+      - { framework: nist-800-53-r5, control: AU-2 }
+      - { framework: pci-dss-v4,     control: "10.2" }
+    severity: high
+    tags: [cloudtrail, multi-region]
+  CloudTrail.2:
+    controls:
+      - { framework: soc2,           control: CC7.2 }
+      - { framework: nist-800-53-r5, control: AU-9 }
+    severity: high
+    tags: [cloudtrail, log-encryption]
+  CloudTrail.4:
+    controls:
+      - { framework: soc2,           control: CC7.2 }
+      - { framework: nist-800-53-r5, control: AU-9 }
+    severity: high
+    tags: [cloudtrail, log-validation]
+
+  # ----------------------- KMS / encryption -----------------------
+  KMS.1:
+    controls:
+      - { framework: soc2,           control: CC6.7 }
+      - { framework: nist-800-53-r5, control: SC-12 }
+    severity: medium
+    tags: [kms, rotation]
+  KMS.4:
+    controls:
+      - { framework: soc2,           control: CC6.7 }
+      - { framework: nist-800-53-r5, control: SC-12 }
+    severity: high
+    tags: [kms, customer-managed]
+
+  # ----------------------- VPC / network -----------------------
+  VPC.2:
+    controls:
+      - { framework: soc2,           control: CC6.6 }
+      - { framework: nist-800-53-r5, control: SC-7 }
+    severity: medium
+    tags: [vpc, default-vpc-cleanup]

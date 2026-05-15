@@ -1,0 +1,97 @@
+[
+  {
+    "class_uid": 2003,
+    "class_name": "Compliance Finding",
+    "category_uid": 2,
+    "category_name": "Findings",
+    "activity_id": 1,
+    "activity_name": "Create",
+    "time": 1747300800000,
+    "severity_id": 4,
+    "severity": "High",
+    "status_id": 1,
+    "status": "New",
+    "metadata": {
+      "version": "1.1.0",
+      "product": {
+        "name": "Security Hub",
+        "vendor_name": "Amazon Web Services",
+        "version": "2"
+      }
+    },
+    "resources": [
+      {
+        "uid": "arn:aws:s3:::acme-customer-backups",
+        "type": "AwsS3Bucket",
+        "name": "acme-customer-backups",
+        "region": "us-east-1",
+        "cloud": {
+          "provider": "AWS",
+          "account": {
+            "uid": "123456789012",
+            "name": "prod-account",
+            "type": "AWS Account"
+          }
+        }
+      }
+    ],
+    "finding_info": {
+      "uid": "arn:aws:securityhub:us-east-1:123456789012:finding/8f12...",
+      "title": "S3 buckets should require requests to use SSL",
+      "desc": "Bucket acme-customer-backups does not have a bucket policy that denies unencrypted HTTP requests.",
+      "types": [
+        "Software and Configuration Checks/Industry and Regulatory Standards/AWS Foundational Security Best Practices/S3.5"
+      ],
+      "src_url": "https://docs.aws.amazon.com/securityhub/latest/userguide/s3-controls.html#s3-5"
+    },
+    "compliance": {
+      "standards": ["AWS Foundational Security Best Practices"],
+      "requirements": ["S3.5"],
+      "control": "S3.5",
+      "status": "Failed",
+      "status_id": 2
+    },
+    "cloud": {
+      "provider": "AWS",
+      "region": "us-east-1"
+    }
+  },
+  {
+    "class_uid": 2003,
+    "class_name": "Compliance Finding",
+    "category_uid": 2,
+    "category_name": "Findings",
+    "activity_id": 1,
+    "time": 1747300810000,
+    "severity_id": 5,
+    "severity": "Critical",
+    "status_id": 1,
+    "metadata": {
+      "version": "1.1.0",
+      "product": {
+        "name": "Security Hub",
+        "vendor_name": "Amazon Web Services"
+      }
+    },
+    "resources": [
+      {
+        "uid": "arn:aws:ec2:us-east-1:123456789012:security-group/sg-0abc123",
+        "type": "AwsEc2SecurityGroup",
+        "name": "web-server-sg",
+        "region": "us-east-1"
+      }
+    ],
+    "finding_info": {
+      "title": "Security groups should not allow unrestricted access to ports with high risk",
+      "desc": "Security group sg-0abc123 allows ingress from 0.0.0.0/0 to port 22.",
+      "types": [
+        "Software and Configuration Checks/Industry and Regulatory Standards/AWS Foundational Security Best Practices/EC2.19"
+      ]
+    },
+    "compliance": {
+      "requirements": ["EC2.19"],
+      "control": "EC2.19",
+      "status_id": 2
+    }
+  }
+]

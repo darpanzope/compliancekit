@@ -1,0 +1,82 @@
+# Microsoft Defender for Cloud → compliancekit framework mapping table.
+#
+# Defender for Cloud emits OCSF events with assessmentId / displayName
+# identifying which Azure Security Benchmark control fired.
+
+tool: defender-for-cloud
+version: "ASB-v3"
+description: |
+  Microsoft Defender for Cloud assessment IDs → compliancekit framework
+  controls. Starter coverage of Azure Security Benchmark v3 top categories.
+
+rules:
+  # Storage
+  STORAGE_ACCOUNT_PUBLIC_ACCESS:
+    controls:
+      - { framework: soc2,           control: CC6.1 }
+      - { framework: pci-dss-v4,     control: "1.3" }
+    severity: high
+    tags: [storage, public-access]
+  STORAGE_ENCRYPTION_AT_REST:
+    controls:
+      - { framework: soc2,           control: CC6.7 }
+      - { framework: pci-dss-v4,     control: "3.5" }
+    severity: high
+    tags: [storage, encryption-at-rest]
+
+  # SQL / databases
+  SQL_TDE_ENABLED:
+    controls:
+      - { framework: soc2,           control: CC6.7 }
+      - { framework: pci-dss-v4,     control: "3.5" }
+    severity: high
+    tags: [sql, tde]
+  SQL_AUDITING_ENABLED:
+    controls:
+      - { framework: soc2,           control: CC7.2 }
+      - { framework: nist-800-53-r5, control: AU-2 }
+    severity: medium
+    tags: [sql, auditing]
+  SQL_FIREWALL_ALLOW_ALL:
+    controls:
+      - { framework: soc2,           control: CC6.6 }
+      - { framework: pci-dss-v4,     control: "1.4" }
+    severity: critical
+    tags: [sql, firewall-allow-all]
+
+  # IAM
+  RBAC_BUILT_IN_OWNER:
+    controls:
+      - { framework: soc2,           control: CC6.3 }
+      - { framework: nist-800-53-r5, control: AC-6 }
+    severity: high
+    tags: [rbac, built-in-owner]
+  PIM_MFA_FOR_OWNERS:
+    controls:
+      - { framework: soc2,           control: CC6.2 }
+      - { framework: pci-dss-v4,     control: "8.3" }
+    severity: high
+    tags: [iam, mfa-owners]
+
+  # Network
+  NSG_RULE_ALLOW_ALL_INBOUND:
+    controls:
+      - { framework: soc2,           control: CC6.6 }
+      - { framework: nist-800-53-r5, control: SC-7 }
+      - { framework: pci-dss-v4,     control: "1.4" }
+    severity: critical
+    tags: [nsg, allow-all-inbound]
+
+  # Keys
+  KEY_VAULT_RBAC_AUTHORIZATION:
+    controls:
+      - { framework: soc2,           control: CC6.3 }
+      - { framework: nist-800-53-r5, control: AC-3 }
+    severity: medium
+    tags: [key-vault, rbac]
+  KEY_ROTATION_ENABLED:
+    controls:
+      - { framework: soc2,           control: CC6.7 }
+      - { framework: nist-800-53-r5, control: SC-12 }
+    severity: medium
+    tags: [key-vault, rotation]

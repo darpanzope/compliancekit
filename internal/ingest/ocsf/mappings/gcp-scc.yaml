@@ -1,0 +1,82 @@
+# GCP Security Command Center → compliancekit framework mapping table.
+#
+# SCC emits findings with category and source_properties; we key on
+# finding_info.types[0] which carries the SCC source ruleset short ID
+# (e.g. "SHA.PUBLIC_BUCKET_ACL").
+
+tool: gcp-scc
+version: "1.0"
+description: |
+  Google Cloud Security Command Center finding categories → compliancekit
+  framework controls. Starter coverage of Security Health Analytics top
+  categories.
+
+rules:
+  # Cloud Storage
+  PUBLIC_BUCKET_ACL:
+    controls:
+      - { framework: soc2,           control: CC6.1 }
+      - { framework: pci-dss-v4,     control: "1.3" }
+      - { framework: nist-800-53-r5, control: AC-3 }
+    severity: critical
+    tags: [gcs, public-access]
+  BUCKET_LOGGING_DISABLED:
+    controls:
+      - { framework: soc2,           control: CC7.2 }
+      - { framework: nist-800-53-r5, control: AU-2 }
+    severity: medium
+    tags: [gcs, logging]
+  BUCKET_CMEK_DISABLED:
+    controls:
+      - { framework: soc2,           control: CC6.7 }
+      - { framework: nist-800-53-r5, control: SC-12 }
+    severity: medium
+    tags: [gcs, cmek]
+
+  # IAM
+  OVER_PRIVILEGED_ACCOUNT:
+    controls:
+      - { framework: soc2,           control: CC6.3 }
+      - { framework: nist-800-53-r5, control: AC-6 }
+    severity: high
+    tags: [iam, least-privilege]
+  PRIMITIVE_ROLES_USED:
+    controls:
+      - { framework: soc2,           control: CC6.3 }
+      - { framework: nist-800-53-r5, control: AC-6 }
+    severity: high
+    tags: [iam, primitive-roles]
+
+  # Compute Engine
+  PUBLIC_IP_ADDRESS:
+    controls:
+      - { framework: soc2,           control: CC6.6 }
+      - { framework: nist-800-53-r5, control: SC-7 }
+    severity: medium
+    tags: [compute, public-ip]
+  OPEN_SSH_PORT:
+    controls:
+      - { framework: soc2,           control: CC6.6 }
+      - { framework: pci-dss-v4,     control: "1.4" }
+    severity: critical
+    tags: [firewall, ssh-world-open]
+  OPEN_RDP_PORT:
+    controls:
+      - { framework: soc2,           control: CC6.6 }
+      - { framework: pci-dss-v4,     control: "1.4" }
+    severity: critical
+    tags: [firewall, rdp-world-open]
+
+  # GKE
+  CLUSTER_PRIVATE_GOOGLE_ACCESS_DISABLED:
+    controls:
+      - { framework: soc2,           control: CC6.6 }
+      - { framework: nist-800-53-r5, control: SC-7 }
+    severity: medium
+    tags: [gke, private-google-access]
+  GKE_DEFAULT_SERVICE_ACCOUNT:
+    controls:
+      - { framework: soc2,           control: CC6.3 }
+      - { framework: nist-800-53-r5, control: AC-6 }
+    severity: high
+    tags: [gke, default-sa]

@@ -1,0 +1,40 @@
+{
+  "class_uid": 2003,
+  "class_name": "Compliance Finding",
+  "time": 1747300830000,
+  "severity_id": 5,
+  "severity": "Critical",
+  "status_id": 1,
+  "metadata": {
+    "version": "1.1.0",
+    "product": {
+      "name": "Microsoft Defender for Cloud",
+      "vendor_name": "Microsoft"
+    }
+  },
+  "resources": [
+    {
+      "uid": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/acme-rg/providers/Microsoft.Network/networkSecurityGroups/web-nsg",
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "name": "web-nsg",
+      "region": "eastus",
+      "cloud": {
+        "provider": "Azure",
+        "account": {
+          "uid": "00000000-0000-0000-0000-000000000000",
+          "name": "acme-subscription",
+          "type": "Azure Subscription"
+        }
+      }
+    }
+  ],
+  "finding_info": {
+    "title": "NSG rule allows all inbound traffic",
+    "desc": "Network security group web-nsg has an inbound rule with source 0.0.0.0/0 on any port.",
+    "types": ["NSG_RULE_ALLOW_ALL_INBOUND"]
+  },
+  "compliance": {
+    "requirements": ["NSG_RULE_ALLOW_ALL_INBOUND"],
+    "status_id": 2
+  }
+}
