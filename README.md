@@ -265,6 +265,44 @@ evidence/<period>/
 └── cis-v8/<control>/{findings.json, control.md}
 ```
 
+### Remediation generators (v0.15+)
+
+`compliancekit remediate --in=findings.json --out=./remediation/`
+emits copy-pasteable fix-it artifacts in the operator's tool of
+choice:
+
+| Format       | Surface                                                          |
+|--------------|------------------------------------------------------------------|
+| `terraform`  | HCL fragments for AWS, GCP, DigitalOcean, Hetzner                |
+| `kubectl`    | strategic-merge patch + GitOps manifest for K8s findings         |
+| `helm`       | values.yaml overlays for Helm-chart-deployed workloads           |
+| `ansible`    | playbook task fragments for Linux / CIS host hardening           |
+| `aws-cli`    | `aws <service>` one-liners                                       |
+| `gcloud`     | `gcloud <service>` one-liners                                    |
+| `az-cli`     | `az <service>` one-liners (Defender for Cloud ingest findings)   |
+| `doctl`      | `doctl <service>` one-liners for DigitalOcean                    |
+| `hcloud`     | `hcloud <service>` one-liners for Hetzner                        |
+| `bash`       | POSIX-sh fallbacks for Linux + wildcard manual-review snippets    |
+
+Each snippet declares a RiskClass (`safe`, `review`, `manual`),
+optional `Verify` command, optional `Rollback` command, and prose
+caveats. The output directory contains:
+
+```
+remediation/
+├── remediation.md          # runbook grouped by risk class, with TOC + verify shortcuts
+├── remediate.sh            # bash script bundling RiskSafe snippets (set -euo pipefail)
+├── poam.oscal.json         # OSCAL v1.1.2 POA&M for manual / unmatched findings
+├── remediate-terraform/    # per-resource .tf snippets
+├── remediate-kubectl/      # per-resource patch + manifest YAML
+└── remediate-<format>/     # one directory per Format
+```
+
+Per ADR-006 + ADR-011 the command is **generation only**; `--apply-fix`
+is a v2.x trust gate intentionally deferred. Optional ticket
+integration (`--tickets`) files Jira / Linear issues for manual
+findings when credentials are provided via env vars.
+
 ### Ingest formats (v0.13+, expanded at v0.14)
 
 External tool output merges into the same evidence pack:
@@ -324,8 +362,10 @@ parsed locally. No daemons, no auto-update, no callbacks.
 
 **Will it touch my infrastructure?**
 No. `compliancekit` is read-only by design (ADR-005 in
-[DECISIONS.md](DECISIONS.md)). Remediation generators land at v0.15 and even
-then they emit commands for you to run — they do not execute anything.
+[DECISIONS.md](DECISIONS.md)). v0.15 ships remediation generators
+(`compliancekit remediate`) — they emit Terraform / kubectl / cloud-CLI
+artifacts the operator copy-pastes, never executed by the binary.
+Auto-apply is permanently gated to v2.x per ADR-006 / ADR-011.
 
 **My auditor wants Drata / Vanta / AuditBoard. Does this play nicely?**
 Yes. `evidence` emits `control-mapping.csv` in a one-row-per-(control,

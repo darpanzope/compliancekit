@@ -1,0 +1,76 @@
+# compliancekit.yaml — v0.15 remediation generators quickstart.
+#
+# The "OK how do I fix it" pipeline:
+#
+#   1. compliancekit scan --config=compliancekit.yaml --out=findings.json
+#   2. compliancekit remediate --in=findings.json --out=./remediation
+#
+# Output:
+#
+#   remediation/
+#   ├── remediation.md         # operator runbook (grouped by risk)
+#   ├── remediate.sh           # bash script bundling RiskSafe fixes
+#   ├── poam.oscal.json        # OSCAL POA&M for manual items
+#   ├── remediate-terraform/   # .tf snippets per resource
+#   ├── remediate-kubectl/     # patch + manifest YAML per workload
+#   ├── remediate-aws-cli/     # aws-cli one-liners per resource
+#   └── remediate-<format>/    # one directory per Format
+#
+# Per ADR-006 + ADR-011 the command never calls cloud APIs or
+# `kubectl apply` — it only generates artifacts you copy-paste.
+
+project: acme-prod
+environment: prod
+
+# Standard scan config — providers, frameworks, output formats.
+providers:
+  aws:
+    enabled: true
+  kubernetes:
+    enabled: true
+    contexts: [prod]
+
+# Optional: import external tool output (Trivy, gitleaks, …) so the
+# remediation pipeline sees those findings too.
+ingest:
+  - format: gitleaks-json
+    file: ./gitleaks.json
+    tool: gitleaks
+  - format: trivy-json
+    file: ./trivy-fs.json
+    tool: trivy
+
+severity:
+  fail_on: critical
+  min_report: medium
+
+output:
+  format: [json, markdown, sarif]
+  out_dir: ./out
+  evidence: true
+
+# After running `compliancekit scan`, run remediate:
+#
+#   compliancekit remediate --in=./out/findings.json --out=./remediation
+#
+# Restrict to a single output format:
+#
+#   compliancekit remediate --in=findings.json --out=./rem --format=terraform
+#
+# File Jira tickets for manual items (credentials via env vars):
+#
+#   export JIRA_HOST=acme.atlassian.net
+#   export JIRA_EMAIL=bot@acme.com
+#   export JIRA_TOKEN=$(pass jira/api-token)
+#   export JIRA_PROJECT=SEC
+#   compliancekit remediate --in=findings.json --out=./remediation --tickets
+#
+# Or Linear:
+#
+#   export LINEAR_API_KEY=$(pass linear/api-key)
+#   export LINEAR_TEAM_ID=team-uuid
+#   compliancekit remediate --in=findings.json --out=./remediation --tickets
+#
+# Missing credentials = that provider is skipped silently. Both
+# providers can be configured at once; tickets are filed in every
+# Configured provider per manual finding.

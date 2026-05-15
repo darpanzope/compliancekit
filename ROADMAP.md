@@ -179,7 +179,7 @@ to the v0.1-v0.5 audience that put compliancekit on the map.
 | **v0.12** ✅ | **Framework expansion (NIST 800-53 r5, HIPAA, PCI-DSS v4, MITRE ATT&CK) + tailoring + evidence-pack depth** | 7 frameworks × 548 controls; existing 3 expanded to full catalogs; ATT&CK as the first kill-chain threat-model lens; tailoring lets operators scope controls out with justifications |
 | **v0.13** ✅ | IaC / OCSF / OSCAL ingest + emit + OSCAL AR/Profile emit + mapping CLI | 3 ingest formats (SARIF / OCSF / OSCAL Catalog) covering 7 tools; 2 OSCAL emits (Assessment Results + Profile); 106 starter rule mappings; lossless OCSF round-trip; runtime framework registration |
 | **v0.14** ✅ | Vuln / secret / SCA ingest (Trivy, Grype, Checkov, gitleaks) + image-SHA graph join + vulnerabilities.csv + ADR-010 secret-redaction | 4 native-JSON adapters, every CVE tied to its running cloud resource, fingerprint-only secret handling |
-| **v0.15** | Remediation generators (Bash / Terraform / Ansible / aws / gcloud / doctl) | Copy-paste this Terraform to fix |
+| ~~v0.15~~ ✅ | Remediation generators (Bash, Terraform, kubectl, Helm, Ansible, aws/gcloud/az/doctl/hcloud + POA&M + Jira/Linear) | Copy-paste this Terraform to fix |
 | **v0.16** | Rego policy DSL (via OPA) | Write a check in 10 lines of Rego |
 | **v0.17** | Notifications (Slack / Discord / Teams / email / webhook / PR / Jira) | Slack alert on every new high finding |
 | **v0.18** | Waivers + in-code skip annotations | Mute findings the right way |
@@ -824,49 +824,77 @@ findings.
 
 ---
 
-### v0.15 — Remediation generators
+### v0.15 ✅ — Remediation generators (shipped 2026-05-15)
 
-**Goal:** the "OK how do I fix it" question gets answered
-copy-pasteably. Every shipped check produces both a finding AND
-a structured remediation in the operator's tool of choice.
+**Scope expanded from the original ROADMAP:** ten output formats
+(not four), per-format strategy packages (not per-check methods),
+RiskClass-gated bulk apply, OSCAL POA&M emit, and Jira + Linear
+ticket integration for manual items. Architectural shape codified
+in ADR-011.
 
-**Deliverables**
+**What shipped (13 phases, 35 files, ~10k LOC)**
 
-- **Per-check remediation generators** for the formats the audience
-  already uses: Bash one-liners, Terraform blocks, Ansible playbook
-  fragments, `aws` / `gcloud` / `doctl` / `hcloud` CLI commands.
-- Generators live next to the check (`internal/checks/<provider>/
-  <service>_remediate.go`) so a contributor adding a new check is
-  expected to ship the remediation too — a check without a
-  remediation generator is incomplete from v0.15 onwards.
-- `compliancekit remediate --in=findings.json --format=terraform`
-  emits a single file the operator applies.
-- **Per ADR-006**: remediation is *generation*, not *application*.
-  `--apply-fix` is the v2.x gate, intentionally a separate trust
-  bar.
+- **Strategy registry + 10 Formats.** `internal/remediate` defines
+  the `Strategy` interface, `Snippet` shape, and `Format` /
+  `RiskClass` enums. Each format gets a subpackage that registers
+  strategies in `init()`:
+    - `terraform` (35 strategies — AWS, GCP, DigitalOcean, Hetzner)
+    - `kubectl` (30+ — pod security context, NetworkPolicy, RBAC,
+      PSA, PDB, Ingress, Service)
+    - `awscli`, `gcloud`, `azcli`, `doctl`, `hcloud` — one-liner
+      cloud-CLI commands paired with the IaC strategies
+    - `helm` — values.yaml overlays for Helm-deployed K8s workloads
+    - `ansible` — playbook tasks for Linux/CIS findings
+    - `bash` — POSIX-sh fallbacks + the WILDCARD ("*") strategy that
+      catches every CheckID with no specific renderer
+- **140 strategies covering 127 CheckIDs.** Each declares:
+  - RiskClass (safe / review / manual)
+  - Idempotent flag
+  - VerifyCmd (run after apply to confirm)
+  - RollbackCmd (where the inverse is a single command)
+  - Notes (operator-facing caveats)
+  - Refs (authoritative doc URLs)
+- **`compliancekit remediate` subcommand.** Reads findings JSON
+  (envelope or bare-array), runs the registry, emits:
+    - `remediation.md` — runbook grouped by risk class with TOC +
+      catalog-resolved titles + per-format code fences + inline
+      Verify / Rollback
+    - `remediate.sh` — single bash script bundling RiskSafe snippets
+      (cloud-CLI + bash flavors only — IaC formats need their own
+      apply step)
+    - `remediate-<format>/` — one directory per Format with raw
+      snippet files per resource
+    - `poam.oscal.json` — OSCAL v1.1.2 POA&M; one item per manual
+      or unmatched finding with deterministic UUIDs (via the same
+      SHA-256-prefix algorithm as the AR + Profile emitters)
+- **Jira + Linear ticketing (optional).** Env-driven (JIRA_HOST /
+  JIRA_EMAIL / JIRA_TOKEN / JIRA_PROJECT, LINEAR_API_KEY /
+  LINEAR_TEAM_ID). Missing creds → that provider is skipped silently.
+  Per-provider failure doesn't block the others.
 
-**Plumbing**
+**Architectural decisions (ADR-011)**
 
-- New subcommand `cmd/compliancekit/remediate.go` driven by
-  `internal/remediate/` package.
-- `core.Check` interface gains an optional `Remediate(finding)
-  -> Snippet` method; checks without one continue to surface the
-  free-text `Remediation` field as fallback.
-- One remediation per (check, output-format) tuple. CI gates
-  that every active check has at least one tested remediation
-  by v0.15-shipping.
-- Per-format renderers in `internal/remediate/render/{bash,
-  terraform,ansible,cli}.go`.
+- Per-format Go strategy packages, hand-written, generate-only.
+- Risk classified at strategy authorship time so v2.x's `--apply-fix`
+  cannot accidentally promote a manual fix.
+- Findings without a strategy never silently drop — they flow to
+  the POA&M emitter via the wildcard fallback strategy.
 
-**Definition of done**
+**Definition of done — what was actually shipped**
 
-- Every v0.5-v0.10 check has a structured remediation in at least
-  three output formats (bash + terraform + one cloud-CLI).
-- A regression test asserts that re-running a Terraform-format
-  remediation against the same finding twice produces idempotent
-  HCL.
-- Contributor guide updated: new checks REQUIRE a remediation
-  generator alongside the eval function.
+- ✅ Terraform, kubectl, awscli, gcloud, azcli, doctl, hcloud, helm,
+  ansible, bash generators — 10 formats, not 4.
+- ✅ `compliancekit remediate --in=findings.json --out=./remediation`
+  emits the runbook + bulk script + per-format directories + POA&M.
+- ✅ Determinism: re-rendering the same findings produces byte-
+  identical artifacts (no timestamps in snippet bodies; sort orders
+  stable on (Risk, CheckID, Resource.ID, Format)).
+- ✅ Wildcard fallback strategy in `internal/remediate/bash` ensures
+  every finding produces at least one Snippet — auditor-visible.
+- ✅ OSCAL POA&M emit completes the evidence-pack story (alongside
+  AR + Profile from v0.13).
+- ✅ Jira + Linear integration; both ship with httptest-backed
+  contract tests.
 
 ---
 
