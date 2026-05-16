@@ -45,6 +45,23 @@ func (r *Registry) Register(check Check, fn CheckFunc) {
 	r.checks[check.ID] = check
 }
 
+// Unregister removes a check from the registry. Returns true if a
+// check was actually removed, false if id was unknown. Primarily
+// useful in tests where a per-test Register call needs a paired
+// cleanup so suite ordering doesn't leak state across tests.
+// Production code should never need this — registrations happen
+// once at init time and stay for the process lifetime.
+func (r *Registry) Unregister(id string) bool {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if _, ok := r.funcs[id]; !ok {
+		return false
+	}
+	delete(r.funcs, id)
+	delete(r.checks, id)
+	return true
+}
+
 // Get returns the CheckFunc for id and whether it is registered.
 func (r *Registry) Get(id string) (CheckFunc, bool) {
 	r.mu.RLock()
@@ -110,6 +127,11 @@ func DefaultRegistry() *Registry { return defaultRegistry }
 
 // Register registers a check in the default registry.
 func Register(check Check, fn CheckFunc) { defaultRegistry.Register(check, fn) }
+
+// Unregister removes id from the default registry. Returns true if
+// something was actually removed. See Registry.Unregister for the
+// "tests only" caveat.
+func Unregister(id string) bool { return defaultRegistry.Unregister(id) }
 
 // Lookup returns the CheckFunc for a check ID from the default registry.
 func Lookup(id string) (CheckFunc, bool) { return defaultRegistry.Get(id) }

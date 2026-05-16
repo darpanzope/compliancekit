@@ -12,6 +12,7 @@ import (
 
 	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/frameworks"
+	"github.com/darpanzope/compliancekit/internal/policy"
 )
 
 // newChecksCmd builds the `compliancekit checks` parent command.
@@ -135,14 +136,24 @@ func filterChecksBySeverity(checks []core.Check, threshold core.Severity) []core
 
 func renderChecksTable(w io.Writer, checks []core.Check) error {
 	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(tw, "ID\tSEVERITY\tPROVIDER\tTITLE")
+	fmt.Fprintln(tw, "ID\tSEVERITY\tPROVIDER\tSOURCE\tTITLE")
+	regoCount := 0
 	for _, c := range checks {
-		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\n", c.ID, c.Severity, c.Provider, c.Title)
+		src := "go"
+		if c.Policy != "" {
+			src = "rego"
+			regoCount++
+		}
+		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\n", c.ID, c.Severity, c.Provider, src, c.Title)
 	}
 	if err := tw.Flush(); err != nil {
 		return err
 	}
-	fmt.Fprintf(w, "\n%d check(s)\n", len(checks))
+	if regoCount > 0 {
+		fmt.Fprintf(w, "\n%d check(s) — %d Go, %d Rego\n", len(checks), len(checks)-regoCount, regoCount)
+	} else {
+		fmt.Fprintf(w, "\n%d check(s)\n", len(checks))
+	}
 	return nil
 }
 
@@ -238,6 +249,21 @@ func runChecksShow(w io.Writer, id string) error {
 		for _, r := range check.References {
 			fmt.Fprintf(w, "  %s\n", r)
 		}
+	}
+
+	// Rego-backed checks: surface the source file path and body so
+	// operators can audit what's actually running without digging
+	// through the repo. Go-backed checks have no equivalent surface
+	// — their CheckFunc lives in compiled binary — so the section
+	// is conditional on Check.Policy being set.
+	if check.Policy != "" {
+		fmt.Fprintf(w, "\nSource: Rego (%s)\n", check.Policy)
+		if m := policy.Lookup(check.ID); m != nil && m.Body != "" {
+			fmt.Fprintln(w, "\nPolicy body:")
+			fmt.Fprintln(w, indentBlock(m.Body))
+		}
+	} else {
+		fmt.Fprintln(w, "\nSource: Go (internal/checks/...)")
 	}
 
 	return nil
