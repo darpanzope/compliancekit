@@ -107,8 +107,15 @@ func Compile(ctx context.Context, path, body string) (*Module, error) {
 	}
 
 	// Validate via OPA's parser. We compile to surface syntax errors
-	// at load time, not at first Evaluate.
-	if _, err := rego.New(rego.Module(path, body), rego.Query(fmt.Sprintf("data.%s", pkg))).PrepareForEval(ctx); err != nil {
+	// at load time, not at first Evaluate. Built-ins must be present
+	// here too so a policy referencing `compliancekit.has_tag` compiles
+	// rather than dying with "unknown function".
+	compileOpts := []func(*rego.Rego){
+		rego.Module(path, body),
+		rego.Query(fmt.Sprintf("data.%s", pkg)),
+	}
+	compileOpts = append(compileOpts, builtinOptions()...)
+	if _, err := rego.New(compileOpts...).PrepareForEval(ctx); err != nil {
 		return nil, fmt.Errorf("policy %s: compile: %w", path, err)
 	}
 
@@ -152,7 +159,12 @@ func extractPackage(body string) (string, error) {
 //	references[], frameworks{<framework_id>: [...controls]}.
 func extractMetadata(ctx context.Context, path, body, pkg string) (core.Check, error) {
 	query := fmt.Sprintf("data.%s.metadata", pkg)
-	r := rego.New(rego.Query(query), rego.Module(path, body))
+	metaOpts := []func(*rego.Rego){
+		rego.Query(query),
+		rego.Module(path, body),
+	}
+	metaOpts = append(metaOpts, builtinOptions()...)
+	r := rego.New(metaOpts...)
 	rs, err := r.Eval(ctx)
 	if err != nil {
 		return core.Check{}, fmt.Errorf("evaluate metadata rule: %w", err)

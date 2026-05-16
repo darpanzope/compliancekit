@@ -98,11 +98,13 @@ func (m *Module) Evaluate(ctx context.Context, graph *core.ResourceGraph) ([]cor
 	}
 
 	query := fmt.Sprintf("data.%s.findings", m.PackageName)
-	r := rego.New(
+	opts := []func(*rego.Rego){
 		rego.Query(query),
 		rego.Module(m.SourcePath, m.Body),
 		rego.Input(input),
-	)
+	}
+	opts = append(opts, builtinOptions()...)
+	r := rego.New(opts...)
 	rs, err := r.Eval(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("policy %s: eval: %w", m.SourcePath, err)

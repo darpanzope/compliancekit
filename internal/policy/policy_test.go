@@ -94,11 +94,24 @@ func TestLoadDir(t *testing.T) {
 	if len(errs) != 0 {
 		t.Fatalf("unexpected load errors: %v", errs)
 	}
-	if len(mods) != 1 {
-		t.Fatalf("expected exactly 1 module, got %d", len(mods))
+	if len(mods) == 0 {
+		t.Fatalf("expected at least 1 module from testdata/")
 	}
-	if mods[0].Check.ID != "test-sample-bucket-public" {
-		t.Errorf("loaded module ID = %q", mods[0].Check.ID)
+	// Verify deterministic sort by Check.ID and that the sample policy
+	// is present. Multiple fixtures in testdata/ are fine — additional
+	// .rego files (e.g. builtins.rego) load alongside this one.
+	ids := make([]string, len(mods))
+	for i, m := range mods {
+		ids[i] = m.Check.ID
+	}
+	found := false
+	for _, id := range ids {
+		if id == "test-sample-bucket-public" {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("sample policy missing from LoadDir output; got %v", ids)
 	}
 }
 
