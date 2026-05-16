@@ -34,7 +34,7 @@ Split at v0.1. A typed `Resource` graph sits between `Collector` and `Evaluator`
 
 ## ADR-002 — Policy DSL is Rego, landing at v0.16
 **Date:** 2026-05-13
-**Status:** Accepted
+**Status:** Resolved — implemented at v0.16 (2026-05-15). See [ADR-012](#adr-012--rego-is-embedded-via-opas-go-library-not-shelled-out) for the embedded-OPA implementation choice.
 
 ### Question
 Stay Go-only forever, or add a policy DSL? If a DSL, which — Rego (OPA), CEL, Cloud Custodian's YAML, or our own?
@@ -390,6 +390,47 @@ We also need to decide whether remediation can ever auto-apply (and if so, when)
 - `internal/remediate/tickets/` (Jira + Linear) reads the same unmatched + RiskClass=manual snippets and files tickets when the operator opts in via config.
 - The contribution bar: a new CheckID should land with at least one Strategy alongside the check; CI gates this for v0.15-shipped checks (per issue #14 DoD).
 - The evidence pack at v0.15 gains: `remediation/<format>/<resource-id>.<ext>`, `remediation.md` runbook, `remediate.sh` bulk-apply script, `poam.oscal.json` OSCAL POA&M file.
+
+---
+
+## ADR-012 — Rego is embedded via OPA's Go library, not shelled out
+**Date:** 2026-05-15 (v0.16 kickoff)
+**Status:** Accepted
+
+### Question
+v0.16 ships the Rego policy DSL promised since v0.1 ([ADR-002](#adr-002--policy-dsl-is-rego-landing-at-v016)). Three implementation shapes are plausible:
+
+1. **Embed OPA as a Go library** (`github.com/open-policy-agent/opa/rego`). Policies compile + evaluate in-process; one binary.
+2. **Shell out to `opa eval`.** Operator installs OPA separately; compliancekit invokes the CLI for every check.
+3. **Compile policies to WASM at build time.** Policies ship as bytecode; runtime is a wazero interpreter, no Rego compiler at runtime.
+
+Each has different trade-offs around binary size, performance, sandboxing, and the operator's onboarding story.
+
+### Decision
+**Embed OPA as a Go library** at v0.16. The Rego compiler + interpreter live inside the compliancekit binary; policies evaluate against an in-memory snapshot of the ResourceGraph; no separate OPA installation required.
+
+Concrete shape:
+- `internal/policy/policy.go` wraps `rego.New(...).Eval(ctx)` into the existing `core.CheckFunc` signature.
+- `internal/policy/loader.go` walks `*.rego` files, extracts `metadata := {...}` constants into `core.Check` records, and registers each as a CheckFunc alongside the Go-evaluator checks.
+- Custom built-ins (`compliancekit.has_tag`, `compliancekit.attr_str`, `compliancekit.attr_bool`, `compliancekit.cvss_band`) are registered on the `rego.New` builder so policy authors aren't forced to re-derive common idioms.
+
+### Reasoning
+- **Binary-size cost is acceptable.** OPA's Go dependency adds ~15 MB to the compliancekit binary (8 MB → 23 MB). That's the upper bound of what we're willing to spend for the contribution-bar reduction Rego unlocks. The v2.0 plugin marketplace can revisit if the size becomes painful.
+- **Sandboxing is free with embed-as-library.** Rego is pure-functional with no I/O primitives; we don't need a separate sandbox. The data plane is the `ResourceGraph` snapshot we pass into `rego.Input(...)` — the policy cannot reach back into the live graph or make HTTP calls.
+- **Byte-identical Findings without serialization round-trips.** A Rego policy that emits `{"resource_id": "x", "status": "fail"}` produces a `core.Finding` in the same process where Go-evaluator checks produce theirs. Parity testing (Phase 6) asserts byte-equality; shell-out would require JSON marshaling at every boundary and introduce subtle drift.
+- **One distribution story.** "Install compliancekit; write Rego if you want." Shell-out would mean "install compliancekit; also install OPA; configure the path; debug version mismatches." Loses the appeal that lets the audience adopt the binary in the first place.
+
+### Rejected alternatives
+- **Shell out to `opa eval`.** Rejected. Adds a runtime dependency every operator has to discover and pin. Worse: every check execution pays a process-fork cost; a 300-check scan with 50 Rego checks would fork 50 times. Embedded eval is a function call.
+- **WASM via wazero.** Rejected for v0.16. Compelling for v2.0 (plugin marketplace) because WASM gives us real sandboxing for untrusted third-party plugins. But Rego policies authored in this repo are not untrusted — they live in the same git tree as the Go code, get the same review. WASM's complexity (build-time compilation step, separate test harness) buys nothing at v0.16.
+- **Defer custom built-ins to v0.17.** Considered but rejected. The ROADMAP note said "wait for community demand," but the four built-ins shipped (`has_tag`, `attr_str`, `attr_bool`, `cvss_band`) are unblockers — without them, every Rego policy reimplements the same `[t | t := input.resources[_].tags[_]; t == "x"]` boilerplate. Ship them as part of the v0.16 foundation; revisit additions case-by-case.
+
+### Consequences
+- `internal/policy/policy.go` + `internal/policy/loader.go` are the canonical entry points. Policies live in `internal/policies/<provider>/<id>.rego`; the same convention as the Go checks (`internal/checks/<provider>/...`).
+- Every policy MUST declare `package compliancekit.<provider>.<service>` and expose `metadata := {...}` + `findings := [...]` rules. The loader rejects policies missing either.
+- Custom built-ins are stable: removing or changing one is a breaking change for community-authored policies, governed by SemVer 2.0 once v1.0 freezes the API.
+- The `compliancekit policy test / validate / fmt` subcommands give policy authors a local development workflow without round-tripping through `compliancekit scan`.
+- Side-by-side parity: 15 existing Go checks ship as Rego twins at v0.16 (AWS / GCP / DigitalOcean / Kubernetes / Linux — 3 each). The Phase 6 parity test asserts both implementations produce byte-identical Finding slices against the same fixture graph; CI gates accidental drift.
 
 ---
 

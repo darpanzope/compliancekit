@@ -33,3 +33,30 @@ const (
 func (s Status) IsActionable() bool {
 	return s == StatusFail || s == StatusError
 }
+
+// ParseStatus parses the textual status name (case-insensitive)
+// produced by external callers — Rego policies, ingest adapters,
+// the CLI's --status flag. Returns the typed Status or an error
+// listing the four valid values.
+//
+// Unlike Severity which uses an int enum, Status is already a typed
+// string so this helper is mostly an "unknown value" guard.
+func ParseStatus(s string) (Status, error) {
+	switch s {
+	case "pass", "PASS", "Pass":
+		return StatusPass, nil
+	case "fail", "FAIL", "Fail":
+		return StatusFail, nil
+	case "skip", "SKIP", "Skip":
+		return StatusSkip, nil
+	case "error", "ERROR", "Error":
+		return StatusError, nil
+	}
+	return "", &unknownStatusError{got: s}
+}
+
+type unknownStatusError struct{ got string }
+
+func (e *unknownStatusError) Error() string {
+	return "unknown status " + e.got + " (want pass | fail | skip | error)"
+}
