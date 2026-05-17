@@ -1,0 +1,87 @@
+# compliancekit.yaml — v0.18 waivers quickstart.
+#
+# Two declaration paths shipped at v0.18:
+#
+#   1. Central waivers.yaml file (this scan config points at it
+#      via the `waivers.file:` key below).
+#
+#   2. In-code annotation comments in 6 file types
+#      (Terraform, YAML, Bash, Python, Dockerfile, Go):
+#
+#        # compliancekit:waive <check-id> <resource-id> \
+#        #   reason="..." approver=... expires=YYYY-MM-DD
+#
+#      Defaults when keyword args are omitted: 90-day expiry,
+#      approver "@annotation", reason references the file:line.
+#
+# Per ADR-013 (DECISIONS.md) every waiver REQUIRES expiry — no
+# permanent waivers because they degrade into hidden ignore-lists.
+# Reason floor is 16 non-whitespace chars (catches "OK"/"see ticket"
+# without rejecting real prose). Expired waivers stop muting AND
+# emit info-level `compliancekit-waiver-expired` findings so
+# auditors see the lapse.
+
+project: acme-prod
+environment: prod
+
+providers:
+  digitalocean:
+    enabled: true
+
+severity:
+  fail_on: critical
+  min_report: medium
+
+output:
+  format: [json, markdown, sarif]
+  out_dir: ./out
+  evidence: true
+
+# Tell scan where to load waivers from. Missing file = feature off
+# (not an error); bad file = scan fails loudly because an
+# unparseable waiver means an expected mute won't take effect.
+waivers:
+  file: ./waivers.yaml
+
+# ----------------------------------------------------------------------
+# Example waivers.yaml — drop alongside compliancekit.yaml:
+#
+#   waivers:
+#     - check_id:    aws-s3-no-public-acls
+#       resource_id: aws.s3.bucket.public-cdn
+#       reason:      "public CDN bucket; CloudFront enforces signed URLs at the edge"
+#       approver:    security@acme.com
+#       expires:     2099-12-31
+#
+#     - check_id:    k8s-pod-privileged
+#       resource_id: k8s.pod.kube-system.calico-node
+#       reason:      "Calico CNI requires CAP_NET_ADMIN on the host network namespace"
+#       approver:    platform@acme.com
+#       expires:     2099-12-31
+#
+#     # Glob waivers — `aws-s3-*` matches any S3 check on this bucket.
+#     - check_id:    "aws-s3-*"
+#       resource_id: aws.s3.bucket.legacy-archive
+#       reason:      "legacy archive bucket scheduled for migration in Q3 2026"
+#       approver:    storage-lead@acme.com
+#       expires:     2026-09-30
+# ----------------------------------------------------------------------
+
+# Inspect + verify:
+#
+#   compliancekit waivers list                    # table of active + expired
+#   compliancekit waivers show <check> <resource> # full detail incl reason
+#   compliancekit waivers validate                # schema + duplicate gate
+#
+# CI gate: every actionable finding must have a matching waiver.
+#
+#   compliancekit scan --config=compliancekit.yaml --out=out/findings.json
+#   compliancekit waivers check --in=out/findings.json
+#   # non-zero exit if any actionable finding lacks an active waiver.
+#
+# Evidence pack output (under ./out/<period>/):
+#
+#   control-mapping.csv     gains waiver_active / waiver_reason /
+#                           waiver_approver / waiver_expires columns
+#   waivers.json            new artifact with one entry per muted
+#                           finding (full Finding cross-reference)
