@@ -1,0 +1,68 @@
+# compliancekit.yaml — v0.16 Rego policy DSL quickstart.
+#
+# Two workflows demonstrated:
+#
+#   1. Authoring + local testing:
+#
+#        compliancekit policy test FIXTURE.json POLICY.rego
+#        compliancekit policy validate DIR/
+#        compliancekit policy fmt POLICY.rego
+#
+#   2. CI gate:
+#
+#        compliancekit policy validate ./policies/
+#        # exits non-zero on any compile, metadata, or duplicate-ID error.
+#
+# Policies live as .rego files under examples/policies/<provider>/
+# (see the shipped 15 reimplementations) or wherever you author them.
+# Per ADR-012 the OPA interpreter is embedded — no separate `opa`
+# binary required.
+
+project: acme-prod
+environment: prod
+
+providers:
+  aws:
+    enabled: true
+  kubernetes:
+    enabled: true
+    contexts: [prod]
+
+# Ingest still composes alongside Rego policies; both flow into the
+# same Findings slice.
+ingest:
+  - format: trivy-json
+    file: ./trivy.json
+    tool: trivy
+
+severity:
+  fail_on: high
+  min_report: medium
+
+output:
+  format: [json, markdown, sarif]
+  out_dir: ./out
+  evidence: true
+
+# ----------------------------------------------------------------------
+# Try the shipped Rego reimplementations against a synthetic fixture
+# without configuring any cloud credentials:
+#
+#   cat > /tmp/bucket-fixture.json <<'EOF'
+#   [
+#     {"id":"do.spaces.public-cdn",
+#      "type":"digitalocean.spaces_bucket",
+#      "name":"public-cdn",
+#      "provider":"digitalocean",
+#      "attributes":{"acl":"public-read"}}
+#   ]
+#   EOF
+#
+#   compliancekit policy test /tmp/bucket-fixture.json \
+#     examples/policies/digitalocean/spaces_public_acl.rego \
+#     --format=table
+#
+# Expected:
+#   1 finding(s)
+#     [high] fail on do.spaces.public-cdn — bucket "public-cdn": ACL is public-read
+# ----------------------------------------------------------------------

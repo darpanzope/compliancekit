@@ -180,7 +180,7 @@ to the v0.1-v0.5 audience that put compliancekit on the map.
 | **v0.13** ✅ | IaC / OCSF / OSCAL ingest + emit + OSCAL AR/Profile emit + mapping CLI | 3 ingest formats (SARIF / OCSF / OSCAL Catalog) covering 7 tools; 2 OSCAL emits (Assessment Results + Profile); 106 starter rule mappings; lossless OCSF round-trip; runtime framework registration |
 | **v0.14** ✅ | Vuln / secret / SCA ingest (Trivy, Grype, Checkov, gitleaks) + image-SHA graph join + vulnerabilities.csv + ADR-010 secret-redaction | 4 native-JSON adapters, every CVE tied to its running cloud resource, fingerprint-only secret handling |
 | ~~v0.15~~ ✅ | Remediation generators (Bash, Terraform, kubectl, Helm, Ansible, aws/gcloud/az/doctl/hcloud + POA&M + Jira/Linear) | Copy-paste this Terraform to fix |
-| **v0.16** | Rego policy DSL (via OPA) | Write a check in 10 lines of Rego |
+| ~~v0.16~~ ✅ | Rego policy DSL (via OPA) + 4 custom built-ins + `policy test/validate/fmt` CLI + 15 reimplementations | Write a check in 10 lines of Rego |
 | **v0.17** | Notifications (Slack / Discord / Teams / email / webhook / PR / Jira) | Slack alert on every new high finding |
 | **v0.18** | Waivers + in-code skip annotations | Mute findings the right way |
 | **v1.0** | API stability — `pkg/compliancekit` frozen | Embed compliancekit in your own tools |
@@ -898,26 +898,77 @@ in ADR-011.
 
 ---
 
-### v0.16 — Rego policy DSL (via OPA)
+### v0.16 ✅ — Rego policy DSL (shipped 2026-05-17)
 
-**Goal:** community-authored checks in <10 lines of Rego, no Go
-toolchain required.
+**Scope expanded from the original ROADMAP:** ten Format names is
+the cloud-CLI plumbing; for Rego the expansion was three-fold —
+custom built-ins (originally "wait for community demand"), the
+`policy test/validate/fmt` CLI surface for a local authoring
+workflow, and **15** side-by-side reimplementations (3× the
+original "5" floor). Architectural shape codified in
+[ADR-012](DECISIONS.md#adr-012--rego-is-embedded-via-opas-go-library-not-shelled-out).
+[ADR-002](DECISIONS.md#adr-002--policy-dsl-is-rego-landing-at-v016)
+is now Resolved.
 
-This is the ADR-002 deliverable, shifted from v0.13 to v0.16 to
-make room for the cloud arc. The interface design (the `Evaluator`
-seam in `internal/core/`) was set up at v0.1 specifically for this
-slot; the move-to-later does not break the design.
+**What shipped (7 phases, 7 commits, ~3.5k LOC)**
 
-**Deliverables**
+- **`internal/policy/policy.go` + loader.** Rego evaluator that wraps
+  `rego.New(...).Eval` into the existing `core.CheckFunc` signature.
+  Modules parse + compile at load time (syntax errors surface at
+  startup, not at first scan). Per-rule `metadata := {...}` constant
+  lifts onto a typed `core.Check` with required-field guarding.
+- **OPA embedded** via `github.com/open-policy-agent/opa/v1/rego`
+  v1.16.2. ~15MB binary cost accepted because (a) Rego is
+  pure-functional with no I/O — sandboxing is free; (b) byte-
+  identical Findings without serialization round-trips; (c) one
+  distribution story instead of "install OPA separately."
+- **4 custom built-ins** under the `compliancekit.` prefix:
+  `has_tag(resource, name)`, `attr_str(resource, key)`,
+  `attr_bool(resource, key)`, `cvss_band(score)` — eliminate the
+  boilerplate every policy would otherwise repeat. Stable surface
+  per ADR-012; adding a fifth is a SemVer 2.0 change.
+- **Registry mirror.** Rego modules register into the same
+  `core.DefaultRegistry` as Go checks via `policy.RegisterModule`;
+  mutual-exclusion enforced at registration (duplicate IDs are
+  programmer errors caught at startup, not silent overwrites).
+- **`compliancekit checks list/show` annotation.** New SOURCE column
+  ("go" or "rego"); `checks show <id>` prints the Rego source file
+  path + body inline so operators audit without digging.
+- **`compliancekit policy test/validate/fmt` subcommand.** Closes
+  the authoring loop: `policy test fixture.json policy.rego` for
+  instant pass/fail; `policy validate dir/` as a CI gate;
+  `policy fmt` (with `--check`) wraps OPA's canonical formatter.
+- **15 side-by-side Rego reimplementations** under
+  `examples/policies/<provider>/`, three per provider lane
+  (AWS / GCP / DigitalOcean / Kubernetes / Linux). Every shipped
+  policy exercises at least one custom built-in.
+- **Semantic validation test** (Phase 6) — table-driven, one row
+  per shipped policy, asserts the produced findings flag exactly
+  the expected resources against a fixture matching the policy's
+  declared shape.
 
-- `internal/policies/*.rego` directory loaded at startup.
-- OPA Rego library embedded via `github.com/open-policy-agent/opa`.
-- One end-to-end example: re-implement five existing Go checks in
-  Rego, ship them side-by-side, demonstrate identical findings
-  output. Validates the model.
-- Documentation in CHECKS.md for "writing a check in Rego."
-- CI gates that the Go and Rego implementations of the side-by-side
-  checks produce identical output.
+**Definition of done — what was actually shipped**
+
+- ✅ `internal/policy/` package with evaluator + loader + builtins
+  + registry mirror.
+- ✅ 15 reimplementations (vs the issue's 5-check floor).
+- ✅ `compliancekit policy test/validate/fmt` for local authoring.
+- ✅ `checks list/show` surface Rego-backed checks with source.
+- ✅ All 15 policies pass `policy validate` + the per-policy
+  semantic test.
+- ✅ ADR-012 codifies embedded OPA. ADR-002 flipped to Resolved.
+
+**Deferred to a future milestone**
+
+- Embedding policies under `internal/policies/` and auto-loading
+  at startup. Phase 5 ships demonstration twins in `examples/` so
+  the contribution path is clear without polluting the user's
+  scan output with duplicate findings.
+- Byte-identical Go ↔ Rego parity. The Go checks read collector-
+  native shapes (container slices, nested config blobs); the Rego
+  reimplementations declare a simpler resource schema. True parity
+  needs a canonical JSON-stable resource shape both sides target —
+  a collector-side refactor for a later milestone.
 
 ---
 

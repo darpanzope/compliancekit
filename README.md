@@ -329,6 +329,65 @@ Deployment" sees the upstream image's CVEs too. Per-tool mapping
 tables ship embedded; `compliancekit mapping list / show / validate
 / diff` manages overrides.
 
+### Rego policies (v0.16+)
+
+Community-authored checks in <10 lines of Rego — no Go toolchain
+required. compliancekit embeds OPA's interpreter (per
+[ADR-012](DECISIONS.md#adr-012--rego-is-embedded-via-opas-go-library-not-shelled-out));
+policies live as `*.rego` files, register alongside Go checks in
+the same registry, and produce findings indistinguishable from
+the Go-backed ones.
+
+A minimal policy:
+
+```rego
+package compliancekit.example.bucket_public
+
+metadata := {
+  "id":          "example-bucket-public",
+  "title":       "Buckets should not be public",
+  "description": "Flags any bucket whose attributes.public=true.",
+  "severity":    "high",
+  "provider":    "example",
+}
+
+findings := [f |
+  r := input.resources[_]
+  r.type == "example.bucket"
+  compliancekit.attr_bool(r, "public") == true
+  f := {
+    "resource_id": r.id,
+    "status":      "fail",
+    "message":     sprintf("bucket %q is public", [r.name]),
+  }
+]
+```
+
+Four custom built-ins available out of the box:
+
+- `compliancekit.has_tag(resource, name)` — tag-membership test
+- `compliancekit.attr_str(resource, key)` — string attribute, `""` on miss
+- `compliancekit.attr_bool(resource, key)` — bool attribute, `false` on miss
+- `compliancekit.cvss_band(score)` — `"critical"|"high"|"medium"|"low"|"info"`
+
+The `policy` subcommand carries the authoring loop:
+
+```bash
+# Evaluate a policy against a synthetic resource graph
+compliancekit policy test fixture.json examples/policies/aws/s3_public_access_block.rego
+
+# CI gate: compile every .rego under a directory + check metadata
+compliancekit policy validate examples/policies/aws
+
+# Reformat in place (or --check for a CI lint gate)
+compliancekit policy fmt examples/policies/aws/*.rego
+```
+
+15 side-by-side reimplementations of shipped Go checks live under
+[examples/policies/](examples/policies/) (AWS, GCP, DigitalOcean,
+Kubernetes, Linux — three per lane). Use them as templates for your
+own policies.
+
 ## Use it in CI
 
 ```yaml

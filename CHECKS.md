@@ -367,3 +367,107 @@ A parse error is the loud signal — the check author has a typo. The function r
 - Hot path: avoid map allocations inside the resource loop; pre-allocate the findings slice if the count is bounded.
 - The engine fans out scanners across goroutines automatically — your code doesn't need to. Don't spawn your own.
 - If a check needs *new* data that isn't in the graph, extend the collector. Don't make the scanner do I/O.
+
+## Writing a check in Rego (v0.16+)
+
+From v0.16, the Go scanner is one of two implementation paths. The other is a Rego policy that ships as a `.rego` file and registers into the same Check registry. Pick Rego when:
+
+- The check is a straightforward attribute test ("flag every resource where `attributes.X` is missing or wrong"). Most posture checks fit this pattern.
+- You want to ship a check without compiling Go or invoking the full contributor flow (clone the repo, install golangci-lint, etc.).
+- You're a security engineer who already writes Rego for Gatekeeper / Conftest / Trivy and want to reuse the muscle memory.
+
+Pick Go when:
+
+- The check needs cross-resource traversal (graph queries spanning multiple resource types).
+- The check needs computed values that Rego built-ins can't express (regex over strings is fine; non-trivial parsing of nested formats is not).
+- The check's metadata is computed at runtime from external sources.
+
+### Policy shape
+
+Every shipped Rego policy follows this structure:
+
+```rego
+package compliancekit.<provider>.<service>.<short_name>
+
+# One-line summary of what this policy flags.
+
+metadata := {
+  "id":            "<provider>-<service>-<rule>",      # required, kebab-case, forever-stable
+  "title":         "Short human-readable title",       # required
+  "description":   "Prose explaining what + why.",     # required
+  "severity":      "critical" | "high" | "medium" | "low" | "info",  # required
+  "provider":      "<provider>",                       # required (aws, gcp, …)
+  "service":       "<service>",                        # optional
+  "resource_type": "<provider>.<type>",                # optional
+  "rationale":     "Why this fires; cite incidents.",  # optional
+  "remediation":   "How to fix; copy-paste command.",  # optional
+  "frameworks": {
+    "soc2":     ["CC6.1"],
+    "iso27001": ["A.8.3"],
+    "cis-v8":   ["3.3"],
+  },                                                   # optional but expected for shipped policies
+  "tags":        ["data-exposure", "public-access"],  # optional
+  "references":  ["https://docs.aws.amazon.com/..."], # optional
+}
+
+findings := [f |
+  r := input.resources[_]
+  r.type == "<provider>.<type>"
+  # ...filtering conditions...
+  f := {
+    "resource_id": r.id,
+    "status":      "fail" | "pass" | "skip" | "error",
+    "message":     "human-readable detail",   # optional
+    "severity":    "high",                    # optional override of metadata.severity
+    "tags":        ["extra-tag"],             # optional addition to metadata.tags
+  }
+]
+```
+
+### Built-ins
+
+Four `compliancekit.` built-ins eliminate the most common boilerplate:
+
+| Built-in | Returns | Behavior |
+|---|---|---|
+| `compliancekit.has_tag(resource, name)` | bool | True iff resource.tags[] contains name. False (not error) if tags is missing. |
+| `compliancekit.attr_str(resource, key)` | string | resource.attributes[key] as string; `""` on miss or wrong type. |
+| `compliancekit.attr_bool(resource, key)` | bool | resource.attributes[key] as bool; `false` on miss or wrong type. |
+| `compliancekit.cvss_band(score)` | string | CVSS v3 score → `"critical"` (9+), `"high"` (7+), `"medium"` (4+), `"low"` (0.1+), `"info"`. |
+
+These match the semantics of `core.Resource.Attr` / `AttrBool` / `HasTag` in Go and the `cvssToSeverity` helper in the ingest packages, so a check author moving between Go and Rego doesn't have to learn two sets of rules.
+
+### Local authoring loop
+
+```bash
+# 1. Author the policy
+$EDITOR mypolicy.rego
+
+# 2. Build a fixture matching the resource shape the policy reads
+cat > fixture.json <<'JSON'
+[
+  {"id": "demo.bucket.x", "type": "demo.bucket", "name": "x",
+   "provider": "demo", "attributes": {"public": true}}
+]
+JSON
+
+# 3. Evaluate against the fixture
+compliancekit policy test fixture.json mypolicy.rego
+# {"check_id":"...", "status":"fail", ...}
+
+# 4. Compile-check + metadata-validate before shipping
+compliancekit policy validate ./policies/
+
+# 5. Reformat to canonical
+compliancekit policy fmt mypolicy.rego
+```
+
+### Worked examples
+
+15 representative policies live under [examples/policies/](examples/policies/) — three per provider lane (AWS, GCP, DigitalOcean, Kubernetes, Linux). Start by reading the one closest to what you're flagging; copy + adapt.
+
+### What policies cannot do
+
+- **No I/O.** Rego is pure-functional. The data plane is the in-memory `ResourceGraph` snapshot passed in as `input.resources[]`. A policy cannot reach the cloud APIs, the filesystem, or the network. Collectors do all data fetching.
+- **No cross-policy state.** Each policy is evaluated independently; there is no shared `data` between policies in compliancekit's invocation.
+- **No mutation of findings.** A policy returns findings; the engine consumes them. Per ADR-006 the binary is read-only end-to-end.
