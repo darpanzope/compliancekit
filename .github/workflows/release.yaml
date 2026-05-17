@@ -45,7 +45,7 @@ jobs:
     # CLI flag on the goreleaser step below: capping concurrent links
     # keeps the host comfortably under the 16GB RAM ceiling while
     # holding wall time at ~17 min, same as v0.11.
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 90
     permissions:
       contents: write
