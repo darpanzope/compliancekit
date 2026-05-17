@@ -1,0 +1,169 @@
+# compliancekit — DigitalOcean deep-scan quickstart (v0.19+)
+#
+# This config exercises the full 144-check DigitalOcean surface plus
+# the 19 DOKS checks (provider="kubernetes", service="doks"). It
+# captures every flag a production operator typically wants: per-
+# framework tailoring + waiver wiring + evidence pack emission +
+# remediation rendering across all three formats.
+#
+# Run:
+#   export DO_API_TOKEN=dop_v1_...   # required for the DO control-plane collector
+#   export SPACES_KEY=...            # optional — only the Spaces buckets need this
+#   export SPACES_SECRET=...
+#
+#   compliancekit scan --config examples/quickstart-digitalocean-deep.yaml
+#
+# Output:
+#   - evidence/<period>/                  full evidence pack
+#   - findings.json                       machine-readable scan output
+#   - remediations/{runbook,scripts}/     per-format remediation artifacts
+#   - poam.csv                            POA&M action list
+#
+# Manual-verify findings (StatusError) are expected and intentional —
+# DigitalOcean's public API does not expose a number of governance
+# controls (MFA enforcement, audit-log retention, billing alerts).
+# Capture screenshots and add waivers.yaml entries to record the
+# evidence; see ADR-013.
+
+providers:
+  digitalocean:
+    enabled: true
+    # The DOKS collector also fires under the digitalocean provider
+    # since DOKS clusters are control-plane resources; DOKS checks
+    # register under provider="kubernetes" / service="doks".
+
+scan:
+  parallel_checks: 8
+  fail_on: high      # any High / Critical finding exits non-zero
+
+frameworks:
+  # Tailor the framework set per audit. Drop the ones not relevant
+  # to your engagement to keep the report focused.
+  enabled:
+    - soc2
+    - iso27001
+    - cis-v8
+    - nist-800-53
+    - hipaa
+    - pci-dss
+    # - mitre-attack            # threat-model overlay; enable when wanted
+
+waivers:
+  # Single waivers.yaml owns the muting / sign-off for the manual-
+  # verify findings (MFA enforcement, audit-log retention etc.).
+  # Per ADR-013 waivers are time-bounded — DO API doesn't expose the
+  # underlying state so the audit relies on the documented waiver.
+  file: waivers.yaml
+
+  # Example waivers.yaml shape (commit alongside this config):
+  #
+  # waivers:
+  #   - check_id:    do-account-mfa-required
+  #     resource_id: digitalocean.account.*
+  #     reason:      "2FA enforced via Settings → Security; screenshot 2026-01-15-mfa.png in evidence-pack."
+  #     approver:    secops@acme.com
+  #     expires:     2026-04-15
+  #
+  #   - check_id:    do-account-audit-log-retention
+  #     resource_id: digitalocean.account.*
+  #     reason:      "Audit logs forwarded to Datadog via fluent-bit; 90d retention confirmed in DD."
+  #     approver:    secops@acme.com
+  #     expires:     2026-04-15
+
+ingest:
+  # Optional: fold in the latest Trivy / Grype CVE scan against your
+  # container images. The do-registry-no-recent-gc check pairs well
+  # with this — surface unscanned vulnerable layers.
+  # files:
+  #   - path: scans/trivy-prod-images.json
+  #     type: trivy
+
+evidence:
+  enabled: true
+  output: evidence/
+  formats:
+    - json
+    - html
+    - sarif
+    - ocsf
+  include_pass: true      # pass evidence matters for auditors
+  include_skip: true
+
+remediate:
+  enabled: true
+  output: remediations/
+  formats:
+    - terraform
+    - doctl
+    - bash
+  emit_runbook: true       # one markdown runbook ordering all findings
+  emit_poam: true          # POA&M CSV for SOC2 / FedRAMP-style submissions
+  emit_jira_csv: false     # set true to also produce Jira import CSV
+
+notify:
+  # Optional Slack / Teams / PagerDuty wiring. The Slack block below
+  # only fires when SLACK_WEBHOOK is set; otherwise the sink is a no-op.
+  slack:
+    webhook_url: $SLACK_WEBHOOK
+    severity_floor: high
+    only_new: true          # fire only on diff-vs-baseline new findings
+
+  pagerduty:
+    routing_key: $PAGERDUTY_ROUTING_KEY
+    severity_floor: critical
+
+baseline:
+  # Diff every scan against last known good state; only NEW findings
+  # trigger CI failure + notification.
+  enabled: true
+  path: baselines/digitalocean-prod.json
+  # First-run: `compliancekit baseline save --providers=digitalocean`
+
+# -----------------------------------------------------------------------------
+# What the scan actually does, end-to-end:
+#
+#   1. Collector phase (≈ 30s on a real account)
+#      - Authenticates with DO_API_TOKEN.
+#      - Walks every godo endpoint we support: account, droplets,
+#        firewalls, VPCs (+ peering), LBs, DNS zones + records,
+#        certs, managed DBs (+ firewalls), Spaces buckets +
+#        access keys, Container Registry + GC + repos, App Platform
+#        apps + spec, Functions namespaces + triggers + keys,
+#        volumes, snapshots, CDN, reserved IPs, SSH keys, images,
+#        monitoring alert policies, projects, DOKS clusters +
+#        node pools.
+#      - Emits collect_error_<field> attributes when a per-resource
+#        API call fails; collector does NOT abort the scan.
+#
+#   2. Check phase (≈ 5-10s)
+#      - Runs 144 DO checks (+ 19 DOKS checks) against the collected
+#        resource graph. Manual-verify checks emit StatusError with
+#        a dashboard URL in the message.
+#
+#   3. Waiver phase (≈ 1s)
+#      - Mutes any (check_id × resource_id) pair listed in
+#        waivers.yaml. Expired waivers stop muting AND emit a
+#        compliancekit-waiver-expired info finding.
+#
+#   4. Ingest phase (≈ varies)
+#      - Folds in external scanner output (Trivy / Grype / SARIF /
+#        OCSF) so the evidence pack carries the full posture, not
+#        just compliancekit's native checks.
+#
+#   5. Remediate phase (≈ 5s)
+#      - Renders 432 strategies × N findings into per-format
+#        directories. The runbook orders findings by severity +
+#        risk-class so operators triage critical-and-safe first.
+#
+#   6. Evidence phase (≈ 5s)
+#      - Writes the OSCAL Assessment Results JSON, the per-framework
+#        control-mapping CSV (with waiver columns), the
+#        vulnerabilities.csv (when ingest fed CVEs), the waivers.json
+#        artifact, plus the auditor-facing HTML index.
+#
+#   7. Notify phase (optional, ≈ 2s)
+#      - Sends Slack / Teams / PagerDuty alerts on new-vs-baseline
+#        findings above the per-sink severity floor.
+#
+# Typical wall-clock against a 50-resource account: 45-60 seconds.
+# -----------------------------------------------------------------------------

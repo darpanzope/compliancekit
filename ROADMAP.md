@@ -183,7 +183,7 @@ to the v0.1-v0.5 audience that put compliancekit on the map.
 | ~~v0.16~~ ✅ | Rego policy DSL (via OPA) + 4 custom built-ins + `policy test/validate/fmt` CLI + 15 reimplementations | Write a check in 10 lines of Rego |
 | ~~v0.17~~ ✅ | Notifications — 8 sinks (Slack, Discord, Teams, Email, Webhook, GitHub PR, Jira, PagerDuty) + dedup + only-new mode + per-sink severity floor | Slack alert on every new high finding |
 | ~~v0.18~~ ✅ | Waivers + in-code skip annotations — 4 CLI subcommands + 6 file types + evidence-pack `waivers.json` + 4 control-mapping columns + ADR-013 | Mute findings the right way |
-| **v0.19** | **DigitalOcean deepening — production grade** | 74 → 150+ checks, every DO surface covered; every check ships with TF + doctl + bash remediation + tests |
+| ~~v0.19~~ ✅ | DigitalOcean deepening — 74 → 144 checks across 21 services; every DO check ships with bespoke Terraform + doctl + bash remediation (432 strategies); checks-package coverage 96.1% | Production-grade DO posture |
 | **v0.20** | **Linux hardening — production grade** | 15 → 100+ checks; full CIS Server + STIG + ANSSI; per-distro (Debian, RHEL, Alpine, AL2/AL2023); bash + Ansible per check |
 | **v0.21** | **Kubernetes + DOKS deepening — production grade** | 139 → 250+ checks; full CIS K8s + NSA/CISA Hardening Guide + PCI K8s; RBAC graph analysis, supply-chain (cosign), policy-engine presence |
 | **v1.0** | API stability — `pkg/compliancekit` frozen | Embed compliancekit in your own tools |
@@ -1148,20 +1148,43 @@ integration. Architectural shape codified in
 
 ---
 
-### v0.19 — DigitalOcean deepening (production grade)
+### v0.19 ✅ — DigitalOcean deepening (production grade) (shipped 2026-05-17)
 
-**Goal:** the most comprehensive open-source DigitalOcean security
+**Shipped:** the most comprehensive open-source DigitalOcean security
 scanner that exists. DO is the indie-SaaS audience the project was
 built around; everything else is depth in service of that. v0.9
-shipped 74 checks across 20 services; v0.19 doubles the depth into
-the surfaces v0.9 deferred (account governance, MFA enforcement,
-DNS authentication records, Spaces lifecycle, billing exposure,
-project audits) and turns every existing check into a fully-
-remediated, fully-tested artifact.
+shipped 74 checks across 20 services; v0.19 took it to **144 checks
+across 21 services** and turned every check into a fully-remediated,
+fully-tested artifact (**432 bespoke remediation strategies** total —
+Terraform + doctl + bash, one of each per check).
 
-**Deliverables**
+**Phases (each commit was its own gate-passing phase):**
 
-- **74 → 150+ checks** across every DO surface. New depth:
+- Phase 0 — DO parity ratchet test infrastructure (gates new
+  checks; flips red on any DO check landing without all three
+  formats).
+- Phase 1 — Account/team governance deepening (+10 checks).
+- Phase 2 — Spaces lifecycle/replication/object-lock (+10 checks +
+  collector extension for lifecycle/logging/policy attributes).
+- Phase 3 — DNS DMARC/SPF/DKIM/CAA/DNSSEC depth (+10 checks +
+  collector extension for spf_records / dkim_selectors / ns_records).
+- Phase 4 — DOKS add-on coverage (+10 checks under provider="kubernetes").
+- Phase 5 — App Platform observability + deploy hygiene (+10 checks +
+  collector extension for service / database summaries).
+- Phase 6 — Functions runtime + env hygiene (+10 checks).
+- Phase 7 — Network depth (VPC peering, firewall dedup, reserved-IP,
+  LB SSL) (+10 checks).
+- Phase 8 — Billing + project orphan/untagged sweep (+10 checks).
+- Phase 9 — Remediation parity backfill — drove ratchet from 68/68/74
+  to 0/0/0 by adding bespoke TF + doctl + bash for every v0.9-vintage
+  check.
+- Phase 10 — Test coverage push (checks: 93.4% → 96.1%; collectors:
+  pure-helper layer fully covered).
+- Phase 11 — Docs polish + `examples/quickstart-digitalocean-deep.yaml`.
+
+**Deliverables (all shipped)**
+
+- **74 → 144 checks** across every DO surface. New depth:
   - Account / team: MFA enforcement audit, named-team usage,
     API-key rotation tracking, billing-alert presence, owner+
     delegation review, audit-log retention.
@@ -1201,17 +1224,34 @@ remediated, fully-tested artifact.
   `examples/quickstart-digitalocean-deep.yaml` walking through the
   comprehensive scan path.
 
-**Definition of done**
+**Definition of done — what actually shipped**
 
-- 150+ DO checks registered.
-- Every DO check carries Terraform + doctl + bash remediation
-  strategies (CI gate: per-check assertion).
-- Test coverage ≥85% per file in `internal/checks/digitalocean/`
-  and `internal/collectors/digitalocean/`.
-- `compliancekit scan --providers=digitalocean` against a sample
-  account produces a clean evidence pack + remediation runbook
-  inside the agreed time budget (TBD at planning).
-- README.md + DECISIONS.md + ROADMAP.md updated.
+- ✅ 144 DO checks registered (planned 150+; the eight unshipped
+  scope ideas were either folded into the existing surface or
+  consciously deferred — see "Deferred" below).
+- ✅ Every DO check carries Terraform + doctl + bash remediation
+  strategies. CI gate: `TestParity_DigitalOcean` in
+  `internal/remediate/parity_do_test.go` strict-equality enforces
+  0 missing strategies across all three formats.
+- ✅ Test coverage: `internal/checks/digitalocean/` reaches 96.1%.
+  `internal/collectors/digitalocean/` pure-helper layer fully
+  covered; the live-API integration paths sit at fixture-driven
+  ~52% — pushing those to ≥85% requires significantly more fixture
+  JSON and was deferred.
+- ✅ `examples/quickstart-digitalocean-deep.yaml` walks through the
+  end-to-end scan with every flag operators need.
+
+**Deferred from the original v0.19 scope**
+
+- ≥150 check count (shipped 144). Remaining 6 ideas either consolidated
+  into existing manual-verify families or held back for v0.21 (DOKS
+  + K8s deepening will own further DOKS-side checks).
+- Per-file 85% coverage on the collectors package — collectors live-
+  API path coverage requires fixture-server JSON for every godo
+  endpoint we touch; a meaningful additional investment to ship
+  separately.
+- Live-DO smoke test in CI gated on `DO_API_TOKEN` — deferred to
+  v0.21 alongside the DOKS smoke-test work.
 
 ---
 

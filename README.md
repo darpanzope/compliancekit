@@ -215,12 +215,12 @@ Full per-check reference (auto-generated, IDs / severities / framework mappings 
 
 | Provider | Status | Checks | Notes |
 |---|---|---:|---|
-| DigitalOcean | v0.9 ✅ | 74 | account hardening (3) + droplets (8) + firewalls (6) + VPCs (3) + LBs (5) + DNS (4) + certs (2) + managed DBs (8) + Spaces (6) + Spaces keys (2) + Container Registry (3) + App Platform (5) + Functions (3) + volumes (2) + snapshots (2) + CDN (2) + reserved IPs (2) + SSH keys (2) + images (2) + monitoring (2) + projects (2) (every DO surface except DOKS, which lands at v0.11) |
+| DigitalOcean | v0.19 ✅ | 144 | account hardening + governance (13) + droplets + lifecycle (12) + firewalls + dedup (12) + VPCs + peering (5) + LBs + TLS depth (10) + DNS + DMARC/SPF/DKIM/CAA/DNSSEC (14) + certs (2) + managed DBs (8) + Spaces + lifecycle/policy/audit (16) + Spaces keys (2) + Container Registry (3) + App Platform + observability (15) + Functions + runtime/env hygiene (13) + volumes (2) + snapshots (2) + CDN (2) + reserved IPs + region hygiene (3) + SSH keys (2) + images (2) + monitoring + alert coverage (3) + projects + billing (12). Every check carries bespoke Terraform + doctl + bash remediation (432 strategies, parity-gated by CI). |
 | Linux over SSH | first-party | 15 | agentless; CIS Ubuntu/Debian benchmark subset; covers sshd, ufw/nftables, auditd, filesystem, users, kernel |
 | AWS | v0.7 ✅ | 30 | IAM (8) + S3 (5) + EC2 (5) + RDS (4) + CloudTrail (3) + KMS (2) + Config (2) + GuardDuty (1) |
 | GCP | v0.8 ✅ | 25 | IAM (6) + Compute (5) + GCS (4) + Cloud SQL (3) + Logging (2) + KMS (2) + BigQuery (3) |
 | Hetzner Cloud | v0.10 ✅ | 15 | servers (5) + firewalls (3) + networks (2) + load balancers (2) + volumes (2) + floating IPs (1) |
-| Kubernetes + EKS / GKE / DOKS-deep | v0.11 ✅ | 139 | generic K8s (95) — pods/controllers/RBAC/network/storage/namespaces/admission/nodes — plus EKS (12) + GKE (13) + DOKS (9) enrichment |
+| Kubernetes + EKS / GKE / DOKS-deep | v0.11 ✅ (+10 DOKS at v0.19) | 149 | generic K8s (95) — pods/controllers/RBAC/network/storage/namespaces/admission/nodes — plus EKS (12) + GKE (13) + DOKS (19, with v0.19 add-on depth: version EOL, taints, env tags, retired sizes, maintenance window, control-plane logging, metrics-server, cert-manager, autoscaler, PSA baseline) |
 | Cloudflare, GitHub, Google Workspace, Vercel, Linode, Vultr | v1.7 | — | tail clouds |
 
 ### Frameworks
