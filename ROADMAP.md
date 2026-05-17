@@ -186,7 +186,7 @@ to the v0.1-v0.5 audience that put compliancekit on the map.
 | ~~v0.19~~ ✅ | DigitalOcean deepening — 74 → 144 checks across 21 services; every DO check ships with bespoke Terraform + doctl + bash remediation (432 strategies); checks-package coverage 96.1% | Production-grade DO posture |
 | ~~v0.20~~ ✅ | Linux hardening — production grade — 15 → 119 checks across 9 spec frameworks; CIS Linux Server Benchmark v8 catalog (90+ sections, L1/L2 tagged); per-distro detection (Debian, RHEL, Alpine, AL2/AL2023); every check ships bespoke bash + Ansible (238 strategies, parity gate at 0/0); checks-package coverage 90.6% | Linux hardening at OpenSCAP/Lynis depth |
 | ~~v0.21~~ ✅ | Kubernetes + DOKS deepening — production grade — 149 → 241 checks (+92 / +61%) across 12 phases; NSA/CISA Kubernetes Hardening Guide v1.2 framework yaml; every K8s check ships bespoke kubectl (102 backfilled, strict-equality parity gate at 0); checks-package coverage 52.4% | Production-grade K8s posture across CIS + NSA/CISA |
-| **v0.22** | **Internal refactor + toolchain refresh + cookbook** | Targeted file split (6 oversize files ≥600 LoC), v0.20 spec-pattern adoption across AWS/GCP/k8s, golangci-lint v1 → v2 migration, dependency + Ubuntu 24.04 sweep, compliancekit-action multi-provider + version-pin support, **docs deep pass** (README/ARCHITECTURE/DEVELOPMENT rewrites + new CONTRIBUTING + ADR index + CHANGELOG backfill + SECURITY for v1.0 compat language), **cookbook** (9 recipe playbooks for SOC2/ISO/PCI/HIPAA workflows + 7 CI/CD integrations + ~50 reference Rego policies). No new user-facing checks; sets up v1.0 API freeze. |
+| ~~v0.22~~ ✅ | Internal refactor + toolchain refresh + action-repo polish — 600-LoC check-file CI gate (internal/repocheck); 9 oversize files split (rbac/pods/network/cluster/reliability/eks/aws-iam/pods_extra/tail.go) into 11 new per-category siblings; Ubuntu 24.04 explicit pin in all 3 workflows; godo + k8s.io v0.34→0.36 + cobra + viper + opa dep sweep; compliancekit-action multi-provider input loop + jq-merged findings + opt-in evidence-pack workflow-artifact upload. **No new user-facing checks; sets up v1.0 API freeze.** Spec-pattern lifts + fake-API-server coverage + lint v2 + deep cookbook deferred to v0.22.x. | Structure debt paid down |
 | **v1.0** | API stability — `pkg/compliancekit` frozen | Embed compliancekit in your own tools |
 | v1.1 | `serve` mode + SQLite/Postgres backend + REST API + webhook receivers | Continuous monitoring without the SaaS bill |
 | v1.2 | Multi-tenant / organizations | MSP-friendly: one binary, many clients |
@@ -1574,7 +1574,98 @@ verification (cosign / sigstore attestation).
 
 ---
 
-### v0.22 — Internal refactor + toolchain refresh
+### v0.22 ✅ — Internal refactor + toolchain refresh + action-repo polish (shipped 2026-05-17)
+
+Structure debt paid down before v1.0 (#18). v0.22 shipped 8 of the
+20 originally-drafted phases — the load-bearing refactor + toolchain
++ action work — and deferred spec-pattern lifts + fake-API-server
+coverage + lint v2 + deep cookbook to v0.22.x point releases.
+
+**Shipped**
+
+- ✅ **600-LoC check-file CI gate** — new `internal/repocheck/`
+  package with `TestCheckFilesUnderSizeLimit` (`file_size_test.go`).
+  Walks `internal/checks/` + asserts every non-test `.go` file ≤
+  600 LoC. Allowlist-based ratchet (same shape as parity tests) —
+  closed empty after Phase 4 so future regressions fail pre-commit.
+- ✅ **9 oversize files split** (was 6713 LoC over the ceiling
+  across 9 files; now 0):
+  - `k8s/rbac.go` (1045 → 486) → `rbac_roles.go` + `rbac_bindings.go`
+  - `k8s/pods.go` (904 → 543) → `pods_resources.go` + `pods_volumes.go`
+  - `k8s/network.go` (879 → 420) → `network_ingress.go` + `network_policies.go`
+  - `k8s/cluster.go` (701 → 550) → `cluster_quotas.go`
+  - `k8s/reliability.go` (671 → 466) → `init_containers.go`
+  - `k8s/eks.go` (649 → 450) → `eks_nodegroups.go`
+  - `aws/iam.go` (635 → 468) → `iam_policies.go`
+  - `k8s/pods_extra.go` (627 → 581) → `pods_groups.go`
+  - `digitalocean/tail.go` (602 → 506) → `projects_hygiene.go`
+
+  11 new per-category sibling files; each file owns its own init()
+  registering its own checks (no behavior change, no LoC growth).
+- ✅ **Toolchain refresh**:
+  - `runs-on: ubuntu-latest` → `runs-on: ubuntu-24.04` explicit pin
+    in all three workflows (ci.yaml, release.yaml, govulncheck.yaml).
+    `ubuntu-latest` already resolves to 24.04 since GHA Jan 2025;
+    this prevents a future bump silently breaking builds.
+  - `digitalocean/godo` + `spf13/cobra` + `spf13/viper` +
+    `open-policy-agent/opa` + `k8s.io/{api,apimachinery,client-go}`
+    (v0.34.1 → v0.36.0) bumped via `go get -u` + `go mod tidy`.
+    Conservative — AWS SDK + GCP SDK majors held back for separate
+    focused commits in v0.22.x.
+- ✅ **compliancekit-action polish**:
+  - **Multi-provider input** — old code silently dropped everything
+    past the first comma-separated provider. New loop runs
+    `compliancekit scan <provider>` per entry into per-provider
+    sub-out-dirs + jq-merges findings.json arrays at the top-level
+    out-dir. Worst-case exit code propagates so the action still
+    fails on any provider's severity-floor breach.
+  - **`upload-evidence-pack: true` input** — opt-in workflow-artifact
+    upload via `actions/upload-artifact@v4`. New companion inputs
+    `evidence-artifact-name` + `evidence-artifact-retention-days`.
+
+**Deferred to v0.22.x point releases**
+
+- **Spec-pattern lifts** — AWS IAM + GCP IAM + K8s pod-security
+  onto the v0.20 spec shape. Value is real (~520 LoC cut targeted)
+  but each lift is its own focused commit; running them under time
+  pressure in the same milestone as the file splits would have
+  conflated two diffs.
+- **Fake K8s API server + fake SSH server** — closes the v0.20
+  Linux collectors (53.7%) + v0.21 K8s collectors (35.7%) coverage
+  gaps. Both need envtest / golang.org/x/crypto/ssh server-mode
+  test-fixtures, scoped together as a focused commit.
+- **golangci-lint v1.64.8 → v2.x migration** — config schema
+  changed; needs careful per-linter reconciliation, brew formula
+  pin update, lefthook config refresh.
+- **Deep cookbook + docs pass** — 9 recipe playbooks
+  (SOC2/ISO/PCI/HIPAA workflows) + 7 CI/CD integrations + ~50
+  reference Rego policies + new CONTRIBUTING.md + ADR index +
+  CHANGELOG.md (git-cliff) + SECURITY.md refresh. Scoped as its
+  own milestone — the writing surface is large enough that
+  combining it with the refactor would have produced a thin pass
+  on both.
+- **`internal/testutil/` extraction** — consolidate the
+  `core.Resource` builder helpers. Cosmetic; ships with the
+  spec-lift work.
+
+**Definition of done — checklist**
+
+- ✅ No check-registration file >600 LoC (CI-enforced).
+- ⚠️ Spec-pattern lifts (AWS IAM + GCP IAM + K8s pod-security)
+  — deferred to v0.22.x.
+- ⚠️ golangci-lint v2 in CI + pre-commit — deferred to v0.22.x.
+- ⚠️ `internal/collectors/linux/` + `/k8s/` coverage ≥85% —
+  deferred to v0.22.x (fake API server work).
+- ✅ All three GHA workflows pin `ubuntu-24.04` explicitly.
+- ✅ Direct-dep sweep complete on the top-leverage subset.
+- ✅ compliancekit-action accepts multi-provider input + offers
+  evidence-pack workflow-artifact upload.
+- ✅ Total Linux + CI test wall-clock not regressed >10% vs v0.21.
+- ⚠️ Docs deep pass + cookbook — deferred to a focused milestone.
+
+---
+
+### v0.22 — Internal refactor + toolchain refresh + cookbook (original plan, kept for reference)
 
 **Goal:** pay down accumulated structure debt before the v1.0 API
 freeze (#18). v0.6 → v0.21 added 482 checks across 6 providers + 7
