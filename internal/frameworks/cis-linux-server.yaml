@@ -1,0 +1,525 @@
+# CIS Linux Server Benchmark v8
+#
+# Source: Center for Internet Security — CIS Distribution Independent
+# Linux Benchmark v3.0 (the "Linux Server" track of CIS Benchmark
+# coverage, distinct from the broader CIS Controls v8 catalog at
+# cis-v8.yaml). Sections follow the section-numbering convention
+# CIS publishes: <family>.<group>.<sub>[.<leaf>].
+#
+# Implementation Group tags (l1 / l2) follow the CIS Benchmark Level
+# 1 / Level 2 classification: l1 is the "must-do" baseline that any
+# production server should meet; l2 layers on the higher-friction
+# hardening that fits high-security workloads.
+#
+# Sections enumerated here are the subset referenced by compliancekit's
+# v0.20 Linux check surface. Adding a check that targets a new section
+# requires extending this catalog — see the v0.20 spec frameworks for
+# the mapping wiring.
+
+id: cis-linux-server
+name: CIS Linux Server Benchmark v8
+version: "8"
+category: compliance
+source: Center for Internet Security — CIS Distribution Independent Linux Benchmark v3.0
+url: https://www.cisecurity.org/benchmark/distribution_independent_linux
+description: |
+  CIS Linux Server Benchmark is a prescriptive configuration catalog for
+  Linux server hardening, organized as a numbered section tree that
+  auditors and operators reference for evidence of baseline posture.
+  compliancekit v0.20 ships bespoke bash + Ansible remediation for
+  every section enumerated below.
+
+  Level 1 (l1) is the production baseline — required configuration with
+  minimal operational friction. Level 2 (l2) adds high-security
+  hardening appropriate for defense-in-depth on internet-facing or
+  regulated workloads (the friction is real: stricter umasks, default-
+  deny egress, etc.). Implementation groups are mutually exclusive
+  per the CIS classification — a section is l1 OR l2, not both.
+
+controls:
+
+  # ===== 1 — Initial Setup =====================================
+  # Filesystem hardening, package hygiene, MAC enforcement,
+  # patching cadence. Read at install time + audited periodically.
+
+  "1.1.2.1":
+    name: Ensure /tmp is a separate partition
+    family: initial-setup
+    tags: [l1, filesystem, mount]
+    description: |
+      A dedicated /tmp partition lets you apply mount-option hardening
+      (nodev, nosuid, noexec) without affecting the rest of the
+      filesystem.
+
+  "1.1.2.2":
+    name: Ensure nodev option set on /tmp partition
+    family: initial-setup
+    tags: [l1, filesystem, mount]
+
+  "1.1.2.3":
+    name: Ensure nosuid option set on /tmp partition
+    family: initial-setup
+    tags: [l1, filesystem, mount]
+
+  "1.1.2.4":
+    name: Ensure noexec option set on /tmp partition
+    family: initial-setup
+    tags: [l1, filesystem, mount]
+
+  "1.1.3.1":
+    name: Ensure /var is a separate partition
+    family: initial-setup
+    tags: [l2, filesystem, mount]
+
+  "1.1.4.1":
+    name: Ensure /var/tmp is a separate partition
+    family: initial-setup
+    tags: [l2, filesystem, mount]
+
+  "1.1.4.4":
+    name: Ensure noexec option set on /var/tmp partition
+    family: initial-setup
+    tags: [l1, filesystem, mount]
+
+  "1.1.5.1":
+    name: Ensure /var/log is a separate partition
+    family: initial-setup
+    tags: [l2, filesystem, mount]
+    description: |
+      Separate /var/log prevents runaway log volume from filling the
+      root filesystem and rendering the host unloggable.
+
+  "1.1.6.1":
+    name: Ensure /var/log/audit is a separate partition
+    family: initial-setup
+    tags: [l2, filesystem, mount, auditd]
+    description: |
+      Dedicated /var/log/audit guarantees auditd never loses events to
+      a full disk on another mountpoint.
+
+  "1.1.7.1":
+    name: Ensure /home is a separate partition
+    family: initial-setup
+    tags: [l2, filesystem, mount]
+
+  "1.1.7.2":
+    name: Ensure nodev option set on /home partition
+    family: initial-setup
+    tags: [l1, filesystem, mount]
+
+  "1.1.7.3":
+    name: Ensure nosuid option set on /home partition
+    family: initial-setup
+    tags: [l1, filesystem, mount]
+
+  "1.1.8.2":
+    name: Ensure nodev option set on /dev/shm
+    family: initial-setup
+    tags: [l1, filesystem, mount]
+
+  "1.1.8.3":
+    name: Ensure nosuid option set on /dev/shm
+    family: initial-setup
+    tags: [l1, filesystem, mount]
+
+  "1.1.8.4":
+    name: Ensure noexec option set on /dev/shm
+    family: initial-setup
+    tags: [l1, filesystem, mount]
+
+  "1.2.1.1":
+    name: Ensure GPG keys are configured (signed-only package sources)
+    family: initial-setup
+    tags: [l1, packages, supply-chain]
+
+  "1.5.1":
+    name: Ensure address space layout randomization (ASLR) is enabled
+    family: initial-setup
+    tags: [l1, kernel, sysctl]
+
+  "1.5.2":
+    name: Ensure ptrace_scope is restricted
+    family: initial-setup
+    tags: [l1, kernel, sysctl]
+
+  "1.5.3":
+    name: Ensure core dumps are restricted (suid_dumpable)
+    family: initial-setup
+    tags: [l1, kernel, sysctl]
+
+  "1.5.4":
+    name: Ensure prelink is not installed
+    family: initial-setup
+    tags: [l1, packages]
+    description: |
+      prelink rewrites ELF binaries and defeats package integrity
+      verification (rpm -V / dpkg --verify mark every binary modified).
+
+  "1.5.5":
+    name: Ensure dmesg_restrict is set
+    family: initial-setup
+    tags: [l1, kernel, sysctl]
+
+  "1.6.1":
+    name: Ensure kernel.kptr_restrict is set (kernel address hiding)
+    family: initial-setup
+    tags: [l2, kernel, sysctl]
+
+  "1.6.2":
+    name: Ensure unprivileged BPF is disabled
+    family: initial-setup
+    tags: [l1, kernel, sysctl]
+
+  "1.6.3":
+    name: Ensure BPF JIT hardening is enabled
+    family: initial-setup
+    tags: [l2, kernel, sysctl]
+
+  "1.6.4":
+    name: Ensure prelink absence on production hosts
+    family: initial-setup
+    tags: [l1, packages]
+
+  "1.7.1.4":
+    name: Ensure SELinux mode is enforcing
+    family: initial-setup
+    tags: [l2, mac, selinux]
+    description: |
+      Enforcing mode blocks policy violations rather than just logging
+      them. Permissive is appropriate only during policy debugging.
+
+  "1.7.1.5":
+    name: Ensure no SELinux services are in permissive mode
+    family: initial-setup
+    tags: [l2, mac, selinux]
+
+  "1.7.2":
+    name: Ensure AppArmor is active
+    family: initial-setup
+    tags: [l1, mac, apparmor]
+
+  "1.7.2.3":
+    name: Ensure no AppArmor profiles are in complain mode
+    family: initial-setup
+    tags: [l2, mac, apparmor]
+
+  "1.9":
+    name: Ensure updates and security patches are installed
+    family: initial-setup
+    tags: [l1, packages, patching]
+
+  "1.9.2":
+    name: Ensure orphaned packages are removed
+    family: initial-setup
+    tags: [l1, packages]
+
+  # ===== 2 — Services ==========================================
+  # Inetd-era + cleartext + dev-only daemons that should be absent
+  # OR disabled on a production server.
+
+  "2.1.1":
+    name: Ensure time synchronization is in use
+    family: services
+    tags: [l1, time, ntp]
+
+  "2.2.3":
+    name: Ensure Avahi (mDNS) Server is not installed
+    family: services
+    tags: [l1, services, network]
+
+  "2.2.5":
+    name: Ensure CUPS is not installed
+    family: services
+    tags: [l1, services, printing]
+
+  "2.2.7":
+    name: Ensure DHCP Server is not installed
+    family: services
+    tags: [l1, services, dhcp]
+
+  "2.2.16":
+    name: Ensure rsync service is not installed in a vulnerable state
+    family: services
+    tags: [l1, services, rsync]
+
+  "2.2.17":
+    name: Ensure rsh client + server is not installed
+    family: services
+    tags: [l1, services, legacy]
+
+  "2.2.18":
+    name: Ensure telnet client + server is not installed
+    family: services
+    tags: [l1, services, legacy]
+
+  # ===== 3 — Network Configuration =============================
+  # Sysctl + firewall + routing hardening.
+
+  "3.2.1":
+    name: Ensure source-routed packets are not accepted (IPv4)
+    family: network
+    tags: [l1, sysctl, network]
+
+  "3.2.2":
+    name: Ensure ICMP redirects are not accepted (IPv4)
+    family: network
+    tags: [l1, sysctl, network]
+
+  "3.3":
+    name: Network parameter hardening (logical group)
+    family: network
+    tags: [l1, sysctl, network]
+
+  "3.3.1":
+    name: Ensure IP forwarding is disabled (unless router)
+    family: network
+    tags: [l1, sysctl, network]
+
+  "3.3.2":
+    name: Ensure packet redirect sending is disabled
+    family: network
+    tags: [l1, sysctl, network]
+
+  "3.3.3":
+    name: Ensure martian packets are logged
+    family: network
+    tags: [l1, sysctl, network]
+
+  "3.3.4":
+    name: Ensure broadcast ICMP requests are ignored
+    family: network
+    tags: [l1, sysctl, network]
+
+  "3.3.5":
+    name: Ensure bogus ICMP responses are ignored
+    family: network
+    tags: [l1, sysctl, network]
+
+  "3.3.6":
+    name: Ensure reverse-path filtering is enabled
+    family: network
+    tags: [l1, sysctl, network]
+
+  "3.3.7":
+    name: Ensure TCP SYN cookies are enabled
+    family: network
+    tags: [l1, sysctl, network]
+
+  "3.3.8":
+    name: Ensure IPv6 router advertisements are not accepted
+    family: network
+    tags: [l1, sysctl, network, ipv6]
+
+  "3.3.9":
+    name: Ensure secure ICMP redirects are not accepted
+    family: network
+    tags: [l1, sysctl, network]
+
+  "3.4.1":
+    name: Ensure a firewall package is installed and active
+    family: network
+    tags: [l1, firewall]
+
+  "3.4.2":
+    name: Configure firewall rules (Level 1 baseline)
+    family: network
+    tags: [l1, firewall]
+
+  "3.4.2.1":
+    name: Ensure default-deny egress policy
+    family: network
+    tags: [l2, firewall, egress]
+
+  "3.4.2.4":
+    name: Ensure loopback traffic is allowed
+    family: network
+    tags: [l1, firewall, loopback]
+
+  "3.4.2.5":
+    name: Ensure ICMP INPUT is rate-limited
+    family: network
+    tags: [l1, firewall, icmp]
+
+  "3.4.2.6":
+    name: Ensure egress policy is documented
+    family: network
+    tags: [l2, firewall, egress, manual-verify]
+
+  "3.4.2.7":
+    name: Ensure IPv6 firewall rules mirror IPv4
+    family: network
+    tags: [l1, firewall, ipv6]
+
+  "3.4.2.8":
+    name: Ensure SSH inbound is rate-limited
+    family: network
+    tags: [l1, firewall, ssh]
+
+  "3.4.2.9":
+    name: Ensure firewall rules are logged
+    family: network
+    tags: [l2, firewall, logging]
+
+  "3.4.2.10":
+    name: Ensure DNS egress is restricted to known resolvers
+    family: network
+    tags: [l2, firewall, egress, dns]
+
+  # ===== 4 — Logging and Auditing ==============================
+  # auditd rule presence + journald durability.
+
+  "4.1.1.1":
+    name: Ensure auditd is installed and running
+    family: logging-auditing
+    tags: [l1, auditd]
+
+  "4.1.3.5":
+    name: Ensure events that modify date and time are collected
+    family: logging-auditing
+    tags: [l2, auditd]
+
+  "4.1.3.6":
+    name: Ensure events that modify identity (passwd/shadow/group) are collected
+    family: logging-auditing
+    tags: [l1, auditd]
+
+  "4.1.3.7":
+    name: Ensure MAC policy changes are collected
+    family: logging-auditing
+    tags: [l1, auditd, mac]
+
+  "4.1.3.14":
+    name: Ensure successful and unsuccessful logins are collected (lastlog)
+    family: logging-auditing
+    tags: [l1, auditd]
+
+  "4.1.3.20":
+    name: Ensure changes to system administration scope (sudoers) are collected
+    family: logging-auditing
+    tags: [l1, auditd, sudo]
+
+  "4.2.1.1":
+    name: Ensure journald is configured for persistent storage
+    family: logging-auditing
+    tags: [l1, journald]
+
+  # ===== 5 — Access, Authentication, and Authorization =========
+  # Cron, sshd, sudo, PAM stack, login.defs.
+
+  "5.1.1":
+    name: Ensure cron daemon is enabled
+    family: access-auth
+    tags: [l1, cron]
+
+  "5.1.2":
+    name: Ensure cron.allow / at.allow restrict who may schedule jobs
+    family: access-auth
+    tags: [l1, cron]
+
+  "5.2.5":
+    name: Ensure SSH LogLevel is INFO or VERBOSE
+    family: access-auth
+    tags: [l1, sshd, logging]
+
+  "5.2.6":
+    name: Ensure SSH X11 forwarding is disabled
+    family: access-auth
+    tags: [l2, sshd, x11]
+
+  "5.2.7":
+    name: Ensure SSH IgnoreRhosts is enabled
+    family: access-auth
+    tags: [l1, sshd, rhosts]
+
+  "5.2.8":
+    name: Ensure SSH HostbasedAuthentication is disabled
+    family: access-auth
+    tags: [l1, sshd]
+
+  "5.2.10":
+    name: Ensure SSH PermitEmptyPasswords is disabled
+    family: access-auth
+    tags: [l1, sshd, auth]
+
+  "5.2.11":
+    name: Ensure SSH PermitUserEnvironment is disabled
+    family: access-auth
+    tags: [l1, sshd]
+
+  "5.2.13":
+    name: Ensure SSH banner is configured
+    family: access-auth
+    tags: [l1, sshd, banner]
+
+  "5.2.14":
+    name: Ensure SSH ClientAliveInterval is configured
+    family: access-auth
+    tags: [l1, sshd, session]
+
+  "5.2.15":
+    name: Ensure SSH ClientAliveCountMax is configured
+    family: access-auth
+    tags: [l1, sshd, session]
+
+  "5.2.21":
+    name: Ensure SSH MaxSessions is configured
+    family: access-auth
+    tags: [l1, sshd]
+
+  "5.4.2.1":
+    name: Ensure sudo commands are logged (Defaults logfile)
+    family: access-auth
+    tags: [l1, sudo, logging]
+
+  "5.4.3":
+    name: Ensure sudo authentication timeout is configured
+    family: access-auth
+    tags: [l1, sudo]
+
+  "5.4.3.1":
+    name: Ensure NOPASSWD sudo entries are reviewed
+    family: access-auth
+    tags: [l2, sudo, manual-verify]
+
+  "5.4.4":
+    name: Ensure sudo Defaults use_pty is enabled
+    family: access-auth
+    tags: [l2, sudo]
+
+  "5.4.5":
+    name: Ensure sudo secure_path is set
+    family: access-auth
+    tags: [l1, sudo]
+
+  "5.5.1.1":
+    name: Ensure PASS_MAX_DAYS is configured (login.defs)
+    family: access-auth
+    tags: [l1, login-defs, password-age]
+
+  "5.5.1.2":
+    name: Ensure PASS_MIN_DAYS is configured (login.defs)
+    family: access-auth
+    tags: [l1, login-defs, password-age]
+
+  "5.5.1.3":
+    name: Ensure PASS_WARN_AGE is configured (login.defs)
+    family: access-auth
+    tags: [l1, login-defs, password-age]
+
+  "5.5.1.4":
+    name: Ensure ENCRYPT_METHOD is SHA512 or YESCRYPT (login.defs)
+    family: access-auth
+    tags: [l1, login-defs, password-hashing]
+
+  "5.5.5":
+    name: Ensure default user umask is restrictive (≥027)
+    family: access-auth
+    tags: [l1, login-defs, umask]
+
+  # ===== 6 — System Maintenance ================================
+  # File integrity monitoring, periodic audit.
+
+  "6.1.1":
+    name: Ensure AIDE (Advanced Intrusion Detection Environment) is installed
+    family: system-maintenance
+    tags: [l1, integrity, aide]

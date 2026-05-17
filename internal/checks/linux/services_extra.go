@@ -220,7 +220,7 @@ func makeServiceCheck(id, title string, sev core.Severity, soc2, iso, cis, tags 
 		Remediation: fmt.Sprintf("systemctl enable --now %s     # must-run\nsystemctl disable --now %s  # must-not-run\nsystemctl mask %s            # must-absent (mask prevents accidental re-enable)\napt-get remove --purge %s    # Debian/Ubuntu absent\ndnf remove %s                # RHEL family absent",
 			unit, unit, unit, packageFromUnit(unit), packageFromUnit(unit)),
 		Frameworks: map[string][]string{
-			"soc2": soc2, "iso27001": iso, "cis-v8": cis,
+			"soc2": soc2, "iso27001": iso, "cis-v8": cis, "cis-linux-server": cis,
 		},
 		Tags:    tags,
 		Scanner: scanner,

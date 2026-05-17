@@ -149,7 +149,7 @@ func auditRuleCheck(spec auditRuleSpec) core.Check {
 		Remediation: fmt.Sprintf("Append to /etc/audit/rules.d/50-cis.rules:\n  -w %s -p wa -k cis_v8\nThen `sudo augenrules --load` (RHEL family) or `sudo systemctl restart auditd` (Debian/Ubuntu).",
 			spec.must[0]),
 		Frameworks: map[string][]string{
-			"soc2": spec.soc2, "iso27001": spec.iso, "cis-v8": spec.cis,
+			"soc2": spec.soc2, "iso27001": spec.iso, "cis-v8": spec.cis, "cis-linux-server": spec.cis,
 		},
 		Tags:    spec.tags,
 		Scanner: spec.scanner,

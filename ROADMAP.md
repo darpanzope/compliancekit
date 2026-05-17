@@ -184,7 +184,7 @@ to the v0.1-v0.5 audience that put compliancekit on the map.
 | ~~v0.17~~ ✅ | Notifications — 8 sinks (Slack, Discord, Teams, Email, Webhook, GitHub PR, Jira, PagerDuty) + dedup + only-new mode + per-sink severity floor | Slack alert on every new high finding |
 | ~~v0.18~~ ✅ | Waivers + in-code skip annotations — 4 CLI subcommands + 6 file types + evidence-pack `waivers.json` + 4 control-mapping columns + ADR-013 | Mute findings the right way |
 | ~~v0.19~~ ✅ | DigitalOcean deepening — 74 → 144 checks across 21 services; every DO check ships with bespoke Terraform + doctl + bash remediation (432 strategies); checks-package coverage 96.1% | Production-grade DO posture |
-| **v0.20** | **Linux hardening — production grade** | 15 → 100+ checks; full CIS Server + STIG + ANSSI; per-distro (Debian, RHEL, Alpine, AL2/AL2023); bash + Ansible per check |
+| ~~v0.20~~ ✅ | Linux hardening — production grade — 15 → 119 checks across 9 spec frameworks; CIS Linux Server Benchmark v8 catalog (90+ sections, L1/L2 tagged); per-distro detection (Debian, RHEL, Alpine, AL2/AL2023); every check ships bespoke bash + Ansible (238 strategies, parity gate at 0/0); checks-package coverage 90.6% | Linux hardening at OpenSCAP/Lynis depth |
 | **v0.21** | **Kubernetes + DOKS deepening — production grade** | 139 → 250+ checks; full CIS K8s + NSA/CISA Hardening Guide + PCI K8s; RBAC graph analysis, supply-chain (cosign), policy-engine presence |
 | **v1.0** | API stability — `pkg/compliancekit` frozen | Embed compliancekit in your own tools |
 | v1.1 | `serve` mode + SQLite/Postgres backend + REST API + webhook receivers | Continuous monitoring without the SaaS bill |
@@ -1255,7 +1255,90 @@ Terraform + doctl + bash, one of each per check).
 
 ---
 
-### v0.20 — Linux hardening (production grade)
+### v0.20 ✅ — Linux hardening (production grade) (shipped 2026-05-17)
+
+v0.5 shipped 15 Linux checks as a foundation; v0.20 took it to
+**119 checks** spanning the CIS Linux Server Benchmark v8 surface
+(kernel sysctl + filesystem + services + sshd + auditd + login.defs
++ PAM/sudo + packages/MAC + firewall depth), with **bespoke bash +
+Ansible remediation for every check** (238 strategies total) and a
+**parity ratchet gate** (`TestParity_Linux`) at strict 0/0 to keep
+future Linux work compliant.
+
+**Shipped**
+
+- ✅ **119 Linux checks** (15 → 119, +693%) organized into 9
+  data-driven spec frameworks: `sysctlSpec`, `mountSeparateSpec` +
+  `mountOptionSpec`, `serviceMustRunSpec` + `serviceMustNotRunSpec`
+  + `serviceMustAbsentSpec`, `sshdSpec`, `auditRuleSpec`,
+  `manualVerifySpec`. Each spec is a struct literal; init() loops
+  the slice + registers via per-shape closure — adding a new check
+  is one struct literal.
+- ✅ **Per-distro detection** via `internal/collectors/linux/
+  osrelease.go` + 5 canonical fixtures (ubuntu 22.04, debian 12,
+  rhel 9, alpine 3.19, amzn 2023). Family predicates
+  (`IsDebianFamily`, `IsRHELFamily`, `IsAlpine`, `IsAmazonLinux`)
+  drive per-distro gating — SELinux check fires only on RHEL,
+  AppArmor only on Debian, nftables-on-RHEL only on RHEL.
+- ✅ **Bespoke bash + Ansible for every check.** Parity ratchet
+  `TestParity_Linux` (internal/remediate/linux_parity_test.go) at
+  strict equality 0/0 — a single Linux check shipped without both
+  formats fails pre-commit. 238 strategies total (119 × 2).
+- ✅ **Bash strategies** use idempotent sed/grep/printf one-liners.
+  sshd_config edits run `sshd -t` validate BEFORE reload so a
+  broken edit cannot lock operators out. Firewall remediations are
+  distro-aware (ufw / firewalld / nftables switch on /etc/os-release).
+- ✅ **Ansible strategies** use lineinfile + ansible.posix.sysctl +
+  ansible.builtin.systemd modules with `become: true`. sshd edits
+  carry `validate: 'sshd -t -f %s'` for the same lockout protection.
+- ✅ **CIS Linux Server Benchmark v8 framework catalog**
+  (`internal/frameworks/cis-linux-server.yaml`) — 90+ sections
+  organized into 6 families (initial-setup, services, network,
+  logging-auditing, access-auth, system-maintenance) with Level 1
+  / Level 2 tags. Wired into every v0.20 spec constructor — checks
+  emit `cis-linux-server` alongside `cis-v8` in their framework map.
+- ✅ **Test coverage** — `internal/checks/linux/` at **90.6%** (≥85%
+  DoD target). Per-spec table-driven tests cover every cmp branch
+  + skip-on-missing-attr + unreachable-host paths.
+- ✅ **`examples/quickstart-linux-hardening.yaml`** walks through
+  the end-to-end scan with inventory + bastion + waivers + Slack
+  notification wiring.
+
+**Deferred from the original v0.20 scope**
+
+- 100+ count target was hit (shipped 119). STIG + ANSSI catalogs
+  not shipped as separate framework yamls — the CIS Linux Server
+  Benchmark control map is the primary v0.20 deliverable; STIG is
+  largely a section-renaming exercise on the same underlying data
+  and was held back to keep the release focused.
+- Per-file 85% coverage on `internal/collectors/linux/` (shipped
+  53.7%). The gap is dominated by the SSH transport layer
+  (`gatherX` functions, `Dial`, `RunCommand` — all 0%) which would
+  need a fake SSH server or interface refactor. Pure parsers
+  (`ParseOSRelease`, `ParseSysctlOutput`, `ParseLoginDefs`,
+  `parseSSHDConfig`, etc.) are at 90%+.
+- Integration tests against per-distro rootfs JSON fixtures —
+  the spec-driven check tests with constructed `core.Resource`
+  literals cover the check logic exhaustively; rootfs fixtures
+  would mostly re-exercise the collectors' SSH path which is the
+  same gap as above.
+
+**Definition of done — checklist**
+
+- ✅ 100+ Linux checks registered (shipped 119).
+- ✅ Every Linux check ships with bash + Ansible remediation
+  (parity ratchet at strict 0/0).
+- ✅ Per-distro detection + gating wired through every distro-
+  specific check (SELinux → RHEL, AppArmor → Debian, nftables-on-
+  RHEL → RHEL).
+- ✅ Test coverage ≥85% on `internal/checks/linux/` (90.6%).
+- ✅ README + ROADMAP updated with new check counts + framework
+  catalog reference; `examples/quickstart-linux-hardening.yaml`
+  exists.
+
+---
+
+### v0.20 — Linux hardening (original plan, kept for reference)
 
 **Goal:** match the depth of OpenSCAP / Lynis on Linux server
 hardening, with the same evidence-pack + remediation experience

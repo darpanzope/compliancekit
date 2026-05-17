@@ -214,7 +214,7 @@ func mountSeparateCheck(spec mountSeparateSpec) core.Check {
 			"For new builds use a partition layout that breaks out /tmp /var /var/log /var/log/audit /home from /. "+
 			"systemd-mount(8) + /etc/fstab carry the persistent state.", spec.target),
 		Frameworks: map[string][]string{
-			"soc2": spec.soc2, "iso27001": spec.iso, "cis-v8": spec.cis,
+			"soc2": spec.soc2, "iso27001": spec.iso, "cis-v8": spec.cis, "cis-linux-server": spec.cis,
 		},
 		Tags:    spec.tags,
 		Scanner: spec.scanner,
@@ -231,7 +231,7 @@ func mountOptionCheck(spec mountOptionSpec) core.Check {
 			"Apply live without reboot: `sudo mount -o remount,%s %s`. Persistence requires the fstab edit.",
 			spec.option, spec.target, spec.target, spec.option, spec.option, spec.target),
 		Frameworks: map[string][]string{
-			"soc2": spec.soc2, "iso27001": spec.iso, "cis-v8": spec.cis,
+			"soc2": spec.soc2, "iso27001": spec.iso, "cis-v8": spec.cis, "cis-linux-server": spec.cis,
 		},
 		Tags:    spec.tags,
 		Scanner: spec.scanner,

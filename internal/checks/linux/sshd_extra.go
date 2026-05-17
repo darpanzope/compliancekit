@@ -106,7 +106,7 @@ func sshdCheck(spec sshdSpec) core.Check {
 			spec.key, firstNonEmpty(spec.cis...), spec.descSuffix),
 		Remediation: renderSshdRemediation(spec),
 		Frameworks: map[string][]string{
-			"soc2": spec.soc2, "iso27001": spec.iso, "cis-v8": spec.cis,
+			"soc2": spec.soc2, "iso27001": spec.iso, "cis-v8": spec.cis, "cis-linux-server": spec.cis,
 		},
 		Tags:    spec.tags,
 		Scanner: spec.scanner,

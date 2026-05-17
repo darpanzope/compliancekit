@@ -1,0 +1,142 @@
+# compliancekit — Linux hardening quickstart (v0.20+)
+#
+# Exercises the full 119-check Linux server hardening surface against
+# a fleet defined in inventory.yaml. Every check ships with bespoke
+# bash + Ansible remediation; the CIS Linux Server Benchmark v8
+# control map is in internal/frameworks/cis-linux-server.yaml.
+#
+# Run:
+#   compliancekit scan --config examples/quickstart-linux-hardening.yaml
+#
+# Output:
+#   evidence/<period>/                     evidence pack (OSCAL + HTML + CSVs)
+#   findings.json                          machine-readable scan output
+#   remediations/{runbook,scripts,ansible} per-format remediation artifacts
+#   poam.csv                               POA&M action list
+#
+# Manual-verify checks (firewall rule logging, AIDE installation, sudo
+# NOPASSWD audit, cron.allow restriction, etc.) emit StatusError when
+# the underlying state can't be inspected via the cheap probes the
+# collector runs. Capture evidence + add waivers.yaml entries — see
+# ADR-013 (waivers vs baselines).
+
+providers:
+  linux:
+    enabled: true
+    inventory_file: inventory.yaml
+    ssh:
+      # Defaults inherited by every host in inventory.yaml unless
+      # overridden per-host.
+      user: $LINUX_SSH_USER
+      key_file: ~/.ssh/compliancekit_rsa
+      port: 22
+      timeout: 15s
+      known_hosts: ~/.ssh/known_hosts     # set to "" to disable host-key checks (NOT for prod)
+      bastion:
+        # Optional: hop through a jumphost. compliancekit dials the
+        # bastion first then opens a tunneled connection to each host.
+        host: bastion.acme.com
+        user: $LINUX_BASTION_USER
+        key_file: ~/.ssh/bastion_rsa
+
+scan:
+  parallel_checks: 16            # 119 checks × N hosts — bump for big fleets
+  fail_on: high                  # any High / Critical finding exits non-zero
+
+frameworks:
+  enabled:
+    - soc2
+    - iso27001
+    - cis-v8                     # CIS Controls v8 (organizational)
+    - cis-linux-server           # NEW in v0.20 — CIS Linux Server Benchmark v8
+    - nist-800-53
+    # - mitre-attack             # threat-model overlay; enable when wanted
+
+waivers:
+  file: waivers.yaml
+  #
+  # Example waivers.yaml entries for common manual-verify findings:
+  #
+  # waivers:
+  #   - check_id:    linux-firewall-egress-policy-documented
+  #     resource_id: linux.host.web-01.acme.com
+  #     reason:      "Documented in runbooks/network/egress-policy.md (commit 4c8f2a1)."
+  #     approver:    secops@acme.com
+  #     expires:     2026-08-15
+  #
+  #   - check_id:    linux-pkg-aide-installed
+  #     resource_id: linux.host.*
+  #     reason:      "Tripwire used in lieu of AIDE; integrity scans run daily via cron."
+  #     approver:    secops@acme.com
+  #     expires:     2027-01-01
+
+evidence:
+  enabled: true
+  output: evidence/
+  formats:
+    - json
+    - html
+    - sarif
+    - ocsf
+  include_pass: true             # pass evidence matters for auditors
+  include_skip: true             # distro-gated skips document scope decisions
+
+remediate:
+  enabled: true
+  output: remediations/
+  formats:
+    - bash                       # POSIX one-liners pasteable over SSH
+    - ansible                    # idempotent playbook fragments
+  emit_runbook: true             # markdown ordered by severity × risk-class
+  emit_poam: true                # POA&M CSV for SOC2 / FedRAMP-style submissions
+
+notify:
+  slack:
+    webhook_url: $SLACK_WEBHOOK
+    severity_floor: high
+    only_new: true               # fire only on diff-vs-baseline new findings
+
+baseline:
+  enabled: true
+  path: baselines/linux-prod.json
+  # First-run: `compliancekit baseline save --providers=linux`
+
+# -----------------------------------------------------------------------------
+# What this scan exercises, end-to-end:
+#
+#   Collector phase
+#     - SSHs to every host in inventory.yaml. Probes:
+#       /etc/os-release, /proc/mounts, sysctl -a, systemctl is-enabled/
+#       is-active, /etc/login.defs, /etc/ssh/sshd_config, auditctl -l,
+#       ufw/firewalld/nftables status, getenforce, aa-status.
+#     - Non-systemd / non-reachable hosts surface their failure
+#       reason as attrs["unreachable_reason"]; per-host checks emit
+#       StatusSkip rather than aborting the scan.
+#
+#   Check phase
+#     - 119 Linux checks across 9 spec frameworks (sysctl, mounts,
+#       services, sshd, auditd rules, login.defs, packages, MAC,
+#       firewall depth) PLUS the 15 legacy v0.5 checks.
+#     - Per-distro gating: SELinux check only fires on RHEL family,
+#       AppArmor only on Debian family, nftables-on-RHEL only on RHEL.
+#     - Manual-verify checks (firewall rule logging, AIDE installed,
+#       NOPASSWD sudo entries) emit StatusError + an inspection hint.
+#
+#   Remediate phase
+#     - Bash: idempotent sed/grep/printf one-liners; sshd_config edits
+#       run `sshd -t` validate BEFORE reload so a broken edit cannot
+#       lock you out.
+#     - Ansible: lineinfile / ansible.posix.sysctl / ansible.builtin.
+#       systemd tasks with `become: true`. SSHD edits use validate:
+#       'sshd -t -f %s' for the same lockout protection.
+#
+#   Evidence phase
+#     - OSCAL Assessment Results JSON includes the new cis-linux-server
+#       framework control mappings (~90 Linux Server Benchmark sections
+#       across 6 families: initial-setup, services, network, logging-
+#       auditing, access-auth, system-maintenance).
+#     - HTML index renders the per-family pass/fail breakdown; CSVs
+#       map each finding to its CIS section + Level 1 / Level 2 tag.
+#
+# Typical wall-clock against a 10-host fleet: 30-45 seconds.
+# -----------------------------------------------------------------------------

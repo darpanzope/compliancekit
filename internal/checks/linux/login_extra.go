@@ -341,7 +341,7 @@ func manualVerifyCheck(spec manualVerifySpec) core.Check {
 			firstNonEmpty(spec.cis...), spec.descSuffix),
 		Remediation: fmt.Sprintf("Per-distro PAM + sudoers grammars are deferred; verify via %s + record evidence (screenshot or shell output) in waivers.yaml per ADR-013.", spec.hint),
 		Frameworks: map[string][]string{
-			"soc2": spec.soc2, "iso27001": spec.iso, "cis-v8": spec.cis,
+			"soc2": spec.soc2, "iso27001": spec.iso, "cis-v8": spec.cis, "cis-linux-server": spec.cis,
 		},
 		Tags:    spec.tags,
 		Scanner: spec.scanner,

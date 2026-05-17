@@ -216,7 +216,7 @@ Full per-check reference (auto-generated, IDs / severities / framework mappings 
 | Provider | Status | Checks | Notes |
 |---|---|---:|---|
 | DigitalOcean | v0.19 ✅ | 144 | account hardening + governance (13) + droplets + lifecycle (12) + firewalls + dedup (12) + VPCs + peering (5) + LBs + TLS depth (10) + DNS + DMARC/SPF/DKIM/CAA/DNSSEC (14) + certs (2) + managed DBs (8) + Spaces + lifecycle/policy/audit (16) + Spaces keys (2) + Container Registry (3) + App Platform + observability (15) + Functions + runtime/env hygiene (13) + volumes (2) + snapshots (2) + CDN (2) + reserved IPs + region hygiene (3) + SSH keys (2) + images (2) + monitoring + alert coverage (3) + projects + billing (12). Every check carries bespoke Terraform + doctl + bash remediation (432 strategies, parity-gated by CI). |
-| Linux over SSH | first-party | 15 | agentless; CIS Ubuntu/Debian benchmark subset; covers sshd, ufw/nftables, auditd, filesystem, users, kernel |
+| Linux over SSH | v0.20 ✅ | 119 | agentless; full CIS Linux Server Benchmark v8 surface across 9 spec frameworks: kernel sysctl (28) + filesystem mounts (15) + systemd services (10) + sshd deepening (10) + auditd rule presence (10) + login.defs / PAM / sudo (10) + packages + MAC SELinux/AppArmor (10) + firewall depth (10) + distro detection + legacy v0.5 baseline (16). Per-distro gating (Ubuntu/Debian, RHEL/CentOS/Rocky/Alma, Alpine, AL2/AL2023). Every check ships bespoke bash + Ansible (238 strategies, parity-gated at 0/0). |
 | AWS | v0.7 ✅ | 30 | IAM (8) + S3 (5) + EC2 (5) + RDS (4) + CloudTrail (3) + KMS (2) + Config (2) + GuardDuty (1) |
 | GCP | v0.8 ✅ | 25 | IAM (6) + Compute (5) + GCS (4) + Cloud SQL (3) + Logging (2) + KMS (2) + BigQuery (3) |
 | Hetzner Cloud | v0.10 ✅ | 15 | servers (5) + firewalls (3) + networks (2) + load balancers (2) + volumes (2) + floating IPs (1) |
@@ -225,13 +225,14 @@ Full per-check reference (auto-generated, IDs / severities / framework mappings 
 
 ### Frameworks
 
-Every check maps across **seven shipping frameworks** (v0.12+) — 548 controls total. Operators can scope controls out of audit via `tailoring:` in `compliancekit.yaml`; the evidence pack carries every scope-out with its written justification.
+Every check maps across **eight shipping frameworks** (v0.12+ baseline plus the v0.20 CIS Linux Server Benchmark catalog) — 638 controls total. Operators can scope controls out of audit via `tailoring:` in `compliancekit.yaml`; the evidence pack carries every scope-out with its written justification.
 
 | Framework | Version | Coverage | Category |
 |---|---|---:|---|
 | SOC 2 Trust Services Criteria | 2017 (with 2022 PoF) | 60 (full CC1-CC9 + A + C + PI + P) | compliance |
 | ISO/IEC 27001 Annex A | 2022 | 93 (full Annex A: org, people, physical, technological) | compliance |
 | CIS Controls v8 | v8 | 153 safeguards × IG1/IG2/IG3 taxonomy | compliance |
+| CIS Linux Server Benchmark | v8 | 90 sections × Level 1 / Level 2 (initial-setup, services, network, logging-auditing, access-auth, system-maintenance) | compliance |
 | NIST SP 800-53 | r5 | 131 (cloud + Linux subset across 14 families) | compliance |
 | HIPAA Security Rule | 45 CFR §§164.308/310/312 | 50 implementation specs × required/addressable | compliance |
 | PCI DSS | v4.0 | 61 sub-requirements × 12 themes | compliance |
