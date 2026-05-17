@@ -39,6 +39,66 @@ func TestPassMaxDays(t *testing.T) {
 	}
 }
 
+func TestPassMinDays(t *testing.T) {
+	cases := []struct {
+		name string
+		ld   linuxcol.LoginDefs
+		want core.Status
+	}{
+		{"7 days → pass", linuxcol.LoginDefs{HasPassMinDays: true, PassMinDays: 7}, core.StatusPass},
+		{"1 day → pass (boundary)", linuxcol.LoginDefs{HasPassMinDays: true, PassMinDays: 1}, core.StatusPass},
+		{"0 days → fail (must be ≥1)", linuxcol.LoginDefs{HasPassMinDays: true, PassMinDays: 0}, core.StatusFail},
+		{"unset → fail", linuxcol.LoginDefs{}, core.StatusFail},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			g := newGraph(t, loginHost("h", c.ld))
+			findings, _ := PassMinDays(context.Background(), g)
+			if findings[0].Status != c.want {
+				t.Errorf("status=%v want %v", findings[0].Status, c.want)
+			}
+		})
+	}
+}
+
+func TestPassWarnAge(t *testing.T) {
+	cases := []struct {
+		name string
+		ld   linuxcol.LoginDefs
+		want core.Status
+	}{
+		{"14 days → pass", linuxcol.LoginDefs{HasPassWarnAge: true, PassWarnAge: 14}, core.StatusPass},
+		{"7 days → pass (boundary)", linuxcol.LoginDefs{HasPassWarnAge: true, PassWarnAge: 7}, core.StatusPass},
+		{"3 days → fail (must be ≥7)", linuxcol.LoginDefs{HasPassWarnAge: true, PassWarnAge: 3}, core.StatusFail},
+		{"unset → fail", linuxcol.LoginDefs{}, core.StatusFail},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			g := newGraph(t, loginHost("h", c.ld))
+			findings, _ := PassWarnAge(context.Background(), g)
+			if findings[0].Status != c.want {
+				t.Errorf("status=%v want %v", findings[0].Status, c.want)
+			}
+		})
+	}
+}
+
+func TestLoginDefsUnreadable_AllReturnError(t *testing.T) {
+	// Host without login_defs attr → every login-defs check should
+	// surface StatusError so operators know data collection failed.
+	host := core.Resource{
+		ID: "linux.host.h", Type: linuxcol.HostType, Name: "h", Provider: "linux",
+		Attributes: map[string]any{"reachable": true},
+	}
+	g := newGraph(t, host)
+	for _, fn := range []core.CheckFunc{PassMaxDays, PassMinDays, PassWarnAge, EncryptMethod, UmaskCheck} {
+		findings, _ := fn(context.Background(), g)
+		if findings[0].Status != core.StatusError {
+			t.Errorf("status=%v want StatusError when login_defs absent", findings[0].Status)
+		}
+	}
+}
+
 func TestEncryptMethod(t *testing.T) {
 	cases := []struct {
 		method string
