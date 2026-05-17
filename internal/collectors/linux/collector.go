@@ -182,6 +182,9 @@ func (c *Collector) gatherOne(ctx context.Context, host Host) core.Resource {
 		attrs["login_defs_error"] = err.Error()
 	}
 
+	// v0.20 phase 9 — MAC (SELinux / AppArmor) state.
+	attrs["mac"] = gatherMAC(ctx, client)
+
 	return core.Resource{
 		ID:         "linux.host." + host.Host,
 		Type:       HostType,
