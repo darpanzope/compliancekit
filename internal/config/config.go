@@ -42,6 +42,15 @@ type Config struct {
 	// in the same Findings slice and the same evidence pack.
 	Ingest []IngestSource `mapstructure:"ingest" yaml:"ingest,omitempty"`
 
+	// Waivers declares the path to the operator's waivers.yaml file.
+	// When set, scan loads the file at run time and mutes any
+	// finding matching an active waiver (Status → skip, Waiver
+	// block populated). Expired waivers emit their own info-level
+	// `compliancekit-waiver-expired` finding so the auditor sees
+	// the lapse rather than silent re-coverage. Per ADR-013;
+	// v0.18+.
+	Waivers WaiversConfig `mapstructure:"waivers" yaml:"waivers,omitempty"`
+
 	// SourcePath is the resolved path of the YAML file Load read from, or ""
 	// if no file was found and defaults plus environment were used alone.
 	// Populated by Load; excluded from marshaling because it is not part
@@ -312,6 +321,19 @@ type IngestSource struct {
 	// rule has no mapping entry, rather than emitting the finding
 	// with no framework attribution + a warning. Default false.
 	FailOnUnmapped bool `mapstructure:"fail_on_unmapped" yaml:"fail_on_unmapped,omitempty"`
+}
+
+// WaiversConfig declares the path to the operator's waivers.yaml
+// file. v0.18+. Schema is intentionally minimal at v0.18 — broader
+// scopes (per-framework / per-tag) deferred until narrow waivers
+// prove insufficient; per ADR-013.
+type WaiversConfig struct {
+	// File is the path to waivers.yaml. Empty = waivers feature
+	// off. Relative paths resolve against the working directory
+	// at scan time. Missing file is NOT an error; corrupted file
+	// fails the scan loudly per ADR-013 (a noisy un-muted scan
+	// is worse than a fail-fast).
+	File string `mapstructure:"file" yaml:"file,omitempty"`
 }
 
 // ProfileConfig is one named subset of the check catalog declared

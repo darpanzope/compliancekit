@@ -119,6 +119,10 @@ func runScan(ctx context.Context, w io.Writer, opts scanOptions, providerFilter 
 		return err
 	}
 
+	if err := applyWaivers(w, &result, cfg); err != nil {
+		return err
+	}
+
 	if err := os.MkdirAll(cfg.Output.OutDir, 0o750); err != nil {
 		return fmt.Errorf("create out_dir %s: %w", cfg.Output.OutDir, err)
 	}
