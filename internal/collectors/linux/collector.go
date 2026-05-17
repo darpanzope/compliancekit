@@ -106,6 +106,20 @@ func (c *Collector) gatherOne(ctx context.Context, host Host) core.Resource {
 
 	attrs := map[string]any{"reachable": true}
 
+	// v0.20 phase 1 — distro detection runs FIRST so downstream
+	// gatherers + checks can branch on os_release.id without
+	// re-probing. The map shape keeps the typed OSRelease struct
+	// (osrelease.go) reachable for typed unpacking in the checks.
+	if rel, err := gatherOSRelease(ctx, client); err == nil {
+		attrs["os_release"] = rel
+		attrs["distro_id"] = rel.ID
+		attrs["distro_id_like"] = rel.IDLike
+		attrs["distro_version"] = rel.VersionID
+		attrs["distro_pretty_name"] = rel.PrettyName
+	} else {
+		attrs["os_release_error"] = err.Error()
+	}
+
 	if sshd, err := gatherSSHDConfig(ctx, client); err == nil {
 		attrs["sshd_config"] = sshd
 	} else {
