@@ -6,7 +6,7 @@
   Source of truth: internal/checks/**/*.go (the core.Check vars).
 -->
 
-This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **482 checks** across the providers below.
+This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **574 checks** across the providers below.
 
 Each check below has:
 
@@ -26,18 +26,18 @@ To inspect a single check from the CLI: `compliancekit checks show <id>`.
 | `digitalocean` | 144 |
 | `gcp` | 25 |
 | `hetzner` | 15 |
-| `kubernetes` | 149 |
+| `kubernetes` | 241 |
 | `linux` | 119 |
-| **total** | **482** |
+| **total** | **574** |
 
 ## By severity
 
 | Severity | Checks |
 |---|---:|
-| `critical` | 18 |
-| `high` | 120 |
-| `medium` | 196 |
-| `low` | 148 |
+| `critical` | 25 |
+| `high` | 155 |
+| `medium` | 228 |
+| `low` | 166 |
 
 ## aws
 
@@ -5005,6 +5005,175 @@ _Tags:_ `hygiene`, `volume`
 
 ## kubernetes
 
+### `k8s-admission-webhook-excludes-kube-system`
+
+**Admission webhooks should exclude kube-system via namespaceSelector** &middot; severity `low` &middot; service `admission` &middot; resource `k8s.validatingwebhookconfig`
+
+A webhook that intercepts kube-system can break the control plane (apiserver can't talk to itself, kubelet can't register). CIS recommends excluding kube-system via namespaceSelector. Info-only if the webhook is a control-plane webhook (cert-manager etc.) — but most validators should leave system namespaces alone.
+
+_Remediation:_
+
+> Add to every webhook entry:
+  namespaceSelector:
+    matchExpressions:
+      - key: kubernetes.io/metadata.name
+        operator: NotIn
+        values: [kube-system, kube-public, kube-node-lease]
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `6.7` | Centralize Access Control |
+| `iso27001` | `A.5.30` | ICT readiness for business continuity |
+| `soc2` | `A1.2` | Backup and Recovery Infrastructure |
+
+_Tags:_ `admission`, `k8s`, `webhook`
+
+---
+
+### `k8s-admission-webhook-timeout-bounded`
+
+**Admission webhooks must set timeoutSeconds ≤ 10** &middot; severity `high` &middot; service `admission` &middot; resource `k8s.validatingwebhookconfig`
+
+The k8s default timeoutSeconds is 10s (since 1.14). Webhooks that override to a higher value can stall the apiserver under load — a slow webhook becomes a denial-of-service against every CREATE/UPDATE in the cluster. CIS recommends ≤10s; SIG-auth recommends much lower (1-3s) for hot-path validators.
+
+_Remediation:_
+
+> In your ValidatingWebhookConfiguration / MutatingWebhookConfiguration, set `timeoutSeconds: 5` (or lower for hot-path validators). Cache expensive lookups inside the webhook implementation so the apiserver call returns fast.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `6.7` | Centralize Access Control |
+| `iso27001` | `A.5.30` | ICT readiness for business continuity |
+| `soc2` | `A1.2` | Backup and Recovery Infrastructure |
+
+_Tags:_ `admission`, `k8s`, `webhook`
+
+---
+
+### `k8s-cluster-gatekeeper-installed`
+
+**OPA Gatekeeper should be installed for policy enforcement** &middot; severity `medium` &middot; service `policy` &middot; resource `k8s.cluster`
+
+Gatekeeper is the OPA-based admission policy engine. Provides ConstraintTemplate (the policy) + Constraint (the binding to resources) + audit Status. Either Gatekeeper OR Kyverno (k8s-cluster-kyverno-installed) satisfies the policy-engine requirement — most clusters pick one.
+
+_Remediation:_
+
+> Install via Helm:
+  helm repo add gatekeeper https://open-policy-agent.github.io/gatekeeper/charts
+  helm install gatekeeper gatekeeper/gatekeeper -n gatekeeper-system --create-namespace
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `6.7` | Centralize Access Control |
+| `iso27001` | `A.5.15` | Access control |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `gatekeeper`, `k8s`, `manual-verify`, `policy`
+
+---
+
+### `k8s-cluster-kyverno-installed`
+
+**Kyverno should be installed for policy enforcement** &middot; severity `medium` &middot; service `policy` &middot; resource `k8s.cluster`
+
+Kyverno is the Kubernetes-native admission policy engine. Express policies as Kubernetes resources (ClusterPolicy / Policy) with validate / mutate / generate / verifyImages rules. Either Kyverno OR Gatekeeper (k8s-cluster-gatekeeper-installed) satisfies the policy-engine requirement.
+
+_Remediation:_
+
+> Install via Helm:
+  helm repo add kyverno https://kyverno.github.io/kyverno/
+  helm install kyverno kyverno/kyverno -n kyverno --create-namespace
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `6.7` | Centralize Access Control |
+| `iso27001` | `A.5.15` | Access control |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `k8s`, `kyverno`, `manual-verify`, `policy`
+
+---
+
+### `k8s-cluster-olm-installed`
+
+**Operator Lifecycle Manager (OLM) should be installed for operator hygiene** &middot; severity `low` &middot; service `operator` &middot; resource `k8s.cluster`
+
+OLM provides versioned operator install + upgrade channels + per-operator Subscription with auto-approve gating. Without OLM, operators ship raw manifests + upgrades become manual kubectl apply rounds. Required only on clusters running Kubernetes operators (not all clusters do); info-level since some clusters legitimately don't run any.
+
+_Remediation:_
+
+> Install via operatorhub.io:
+  curl -sL https://github.com/operator-framework/operator-lifecycle-manager/releases/download/v0.28.0/install.sh | bash -s v0.28.0
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `7.3` | Perform Automated Operating System Patch Management |
+| `iso27001` | `A.5.30` | ICT readiness for business continuity |
+| `soc2` | `A1.2` | Backup and Recovery Infrastructure |
+
+_Tags:_ `k8s`, `manual-verify`, `olm`, `operator`
+
+---
+
+### `k8s-cluster-policy-engine-enforce-mode`
+
+**Policy-engine policies should be in enforce mode (not audit-only) in production** &middot; severity `medium` &middot; service `policy` &middot; resource `k8s.cluster`
+
+Gatekeeper Constraints + Kyverno ClusterPolicies both support audit-only mode (`enforcementAction: dryrun` / `validationFailureAction: audit`). Audit mode logs violations but doesn't block them — useful for staged rollout, dangerous if left on permanently. Production posture should be enforce with named-namespace exceptions for migration windows.
+
+_Remediation:_
+
+> For Gatekeeper Constraints:
+  enforcementAction: deny
+For Kyverno ClusterPolicies:
+  validationFailureAction: enforce
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `6.7` | Centralize Access Control |
+| `iso27001` | `A.5.15` | Access control |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `k8s`, `manual-verify`, `policy`
+
+---
+
+### `k8s-cluster-registry-tls-only`
+
+**All image registries used by the cluster should require TLS** &middot; severity `high` &middot; service `supply-chain` &middot; resource `k8s.cluster`
+
+An insecure-registry (HTTP, or HTTPS with a self-signed cert the kubelet was configured to trust) breaks the supply-chain signature/digest chain. Most managed K8s services reject insecure registries by default; self-managed clusters can set insecure-registries via /etc/containerd/config.toml — audit required.
+
+_Remediation:_
+
+> On self-managed kubelets: remove insecure_registries entries from /etc/containerd/config.toml + restart containerd. On EKS/GKE/DOKS: default posture is TLS-only; this check passes.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `3.10` | Encrypt Sensitive Data in Transit |
+| `cis-v8` | `4.6` | Securely Manage Enterprise Assets and Software |
+| `iso27001` | `A.5.14` | Information transfer |
+| `iso27001` | `A.8.24` | Use of cryptography |
+| `soc2` | `CC6.7` | Transmission, Movement, and Disposal of Information |
+
+_Tags:_ `k8s`, `manual-verify`, `registry`, `supply-chain`
+
+---
+
 ### `k8s-configmap-secret-shaped-data`
 
 **ConfigMaps should not hold credential-shaped keys** &middot; severity `high` &middot; service `secrets` &middot; resource `k8s.configmap`
@@ -5048,6 +5217,334 @@ _Maps to:_
 | `soc2` | `A1.1` | Capacity Management |
 
 _Tags:_ `configmap`, `k8s`, `size`
+
+---
+
+### `k8s-cp-apiserver-anonymous-auth`
+
+**kube-apiserver --anonymous-auth must be false** &middot; severity `high` &middot; service `apiserver` &middot; resource `k8s.cluster`
+
+CIS Kubernetes Benchmark §1.2.1. AnonymousAuth lets system:anonymous reach the API. Even read-only endpoints can leak resource shape under enumeration. The k8s default is true on self-managed clusters before 1.6 + some hardened defaults flip to false.
+
+_Remediation:_
+
+> On self-managed: set --anonymous-auth=false in the apiserver static pod manifest at /etc/kubernetes/manifests/kube-apiserver.yaml. On managed K8s the vendor sets this — confirm in the cloud provider's API server hardening docs.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.5.15` | Access control |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `apiserver`, `cis-k8s`, `control-plane`, `k8s`, `manual-verify`
+
+---
+
+### `k8s-cp-apiserver-audit-log-path`
+
+**kube-apiserver --audit-log-path must be set** &middot; severity `high` &middot; service `apiserver` &middot; resource `k8s.cluster`
+
+CIS Kubernetes Benchmark §1.2.18. Without --audit-log-path the apiserver emits no audit log. SOC 2 + ISO 27001 require API audit trails; this is the load-bearing setting.
+
+_Remediation:_
+
+> Set --audit-log-path=/var/log/kubernetes/audit/audit.log + --audit-policy-file with a Policy that captures at least RequestResponse for Secret + ConfigMap writes. On managed K8s, vendor exposes the audit log via cloud-provider logging — confirm + retain ≥30d.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.15` | Logging |
+| `soc2` | `CC7.2` | System Component Monitoring |
+
+_Tags:_ `apiserver`, `audit`, `cis-k8s`, `control-plane`, `k8s`, `manual-verify`
+
+---
+
+### `k8s-cp-apiserver-audit-log-retention`
+
+**kube-apiserver --audit-log-maxage must be ≥30 days** &middot; severity `medium` &middot; service `apiserver` &middot; resource `k8s.cluster`
+
+CIS Kubernetes Benchmark §1.2.19. --audit-log-maxage (days), --audit-log-maxbackup (rotated files), --audit-log-maxsize (MB per file). Defaults are too small for SOC 2 evidence — 30d + 10 backups + 100MB is the canonical production tuning.
+
+_Remediation:_
+
+> --audit-log-maxage=30 --audit-log-maxbackup=10 --audit-log-maxsize=100. On managed K8s, configure cloud-provider log retention to ≥30d (CloudWatch / Stackdriver / DO Logging).
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.15` | Logging |
+| `soc2` | `CC7.2` | System Component Monitoring |
+
+_Tags:_ `apiserver`, `audit`, `cis-k8s`, `control-plane`, `k8s`, `manual-verify`
+
+---
+
+### `k8s-cp-apiserver-authorization-mode`
+
+**kube-apiserver --authorization-mode must include Node + RBAC** &middot; severity `critical` &middot; service `apiserver` &middot; resource `k8s.cluster`
+
+CIS Kubernetes Benchmark §1.2.7. AuthorizationMode=AlwaysAllow disables authorization entirely. Production-safe value is Node,RBAC — Node restricts kubelets to per-node resources; RBAC enforces every other authorization decision.
+
+_Remediation:_
+
+> Set --authorization-mode=Node,RBAC in the apiserver static pod manifest. On managed K8s the vendor sets this — confirm in docs.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.5.15` | Access control |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `apiserver`, `cis-k8s`, `control-plane`, `k8s`, `manual-verify`
+
+---
+
+### `k8s-cp-apiserver-encryption-at-rest`
+
+**kube-apiserver --encryption-provider-config must be set (etcd encryption)** &middot; severity `high` &middot; service `apiserver` &middot; resource `k8s.cluster`
+
+CIS Kubernetes Benchmark §1.2.29. Without --encryption-provider-config, every Secret in etcd is stored at-rest in plaintext. EncryptionConfiguration must use aescbc or kms (not aesgcm — IV reuse risk) + cover at least secrets, with a non-identity provider as the first entry.
+
+_Remediation:_
+
+> Create /etc/kubernetes/encryption.yaml with kind: EncryptionConfiguration + at least one aescbc/kms provider as the first entry for resources: [secrets]. Reference via --encryption-provider-config. On managed K8s, enable cloud-provider envelope encryption (EKS Secrets Encryption with KMS; GKE Application-layer Secrets Encryption; DOKS encryption at rest is on by default).
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.5.34` | Privacy and protection of PII |
+| `iso27001` | `A.8.24` | Use of cryptography |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC6.7` | Transmission, Movement, and Disposal of Information |
+
+_Tags:_ `apiserver`, `cis-k8s`, `control-plane`, `encryption`, `k8s`, `manual-verify`
+
+---
+
+### `k8s-cp-apiserver-node-restriction-admission`
+
+**kube-apiserver admission-plugins must include NodeRestriction** &middot; severity `high` &middot; service `apiserver` &middot; resource `k8s.cluster`
+
+CIS Kubernetes Benchmark §1.2.16. NodeRestriction limits kubelet writes to its own Node + Pod objects. Without it, a compromised kubelet token can modify cluster-wide resources. Default-enabled on k8s ≥ 1.13.
+
+_Remediation:_
+
+> Ensure --enable-admission-plugins includes NodeRestriction (don't override the default-on list without adding it back).
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.5.15` | Access control |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `admission`, `apiserver`, `cis-k8s`, `control-plane`, `k8s`, `manual-verify`
+
+---
+
+### `k8s-cp-apiserver-profiling-disabled`
+
+**kube-apiserver --profiling must be false** &middot; severity `medium` &middot; service `apiserver` &middot; resource `k8s.cluster`
+
+CIS Kubernetes Benchmark §1.2.17. --profiling enables /debug/pprof endpoints. Unauthenticated access to pprof leaks heap layout + can DoS the process. Default is true on legacy clusters; CIS recommends explicit false.
+
+_Remediation:_
+
+> Set --profiling=false on the kube-apiserver. Same for controller-manager + scheduler. Managed K8s typically defaults to false — confirm in vendor docs.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.20` | Networks security |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `apiserver`, `cis-k8s`, `control-plane`, `k8s`, `manual-verify`
+
+---
+
+### `k8s-cp-cm-bind-address-localhost`
+
+**controller-manager --bind-address must be 127.0.0.1** &middot; severity `medium` &middot; service `controller-manager` &middot; resource `k8s.cluster`
+
+CIS Kubernetes Benchmark §1.4.7. controller-manager's healthz + metrics are unauthenticated. Binding only to 127.0.0.1 means only the kubelet on the same node can reach them, not pods or external clients.
+
+_Remediation:_
+
+> Set --bind-address=127.0.0.1. Same for kube-scheduler (check k8s-cp-scheduler-bind-address-localhost).
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.20` | Networks security |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `cis-k8s`, `control-plane`, `controller-manager`, `k8s`, `manual-verify`
+
+---
+
+### `k8s-cp-cm-use-service-account-credentials`
+
+**controller-manager --use-service-account-credentials must be true** &middot; severity `high` &middot; service `controller-manager` &middot; resource `k8s.cluster`
+
+CIS Kubernetes Benchmark §1.4.3. When true, each controller runs with its own ServiceAccount token rather than sharing the controller-manager's master token. Per-controller RBAC isolation = compromise of one controller doesn't hand the attacker the master credentials.
+
+_Remediation:_
+
+> Set --use-service-account-credentials=true on kube-controller-manager. Default is true on k8s ≥ 1.6; confirm not overridden.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.5.15` | Access control |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `cis-k8s`, `control-plane`, `controller-manager`, `k8s`, `manual-verify`
+
+---
+
+### `k8s-cp-etcd-auto-tls-false`
+
+**etcd --auto-tls + --peer-auto-tls must be false** &middot; severity `high` &middot; service `etcd` &middot; resource `k8s.cluster`
+
+CIS Kubernetes Benchmark §1.3.1. auto-tls / peer-auto-tls generate self-signed certs at startup. Self-signed = no path validation, no rotation, no audit. Production posture is operator-issued certs.
+
+_Remediation:_
+
+> Set --auto-tls=false + --peer-auto-tls=false; provide proper certs via --cert-file / --peer-cert-file.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.24` | Use of cryptography |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC6.7` | Transmission, Movement, and Disposal of Information |
+
+_Tags:_ `cis-k8s`, `control-plane`, `etcd`, `k8s`, `manual-verify`, `tls`
+
+---
+
+### `k8s-cp-etcd-client-cert-auth`
+
+**etcd --client-cert-auth must be true** &middot; severity `critical` &middot; service `etcd` &middot; resource `k8s.cluster`
+
+CIS Kubernetes Benchmark §1.3.3. Without --client-cert-auth=true any client reaching the etcd port can read + write the entire cluster state. The apiserver presents a client cert; etcd MUST require it.
+
+_Remediation:_
+
+> Set --client-cert-auth=true on the etcd static pod. Pair with --cert-file / --key-file / --trusted-ca-file. Managed K8s vendors run etcd in their control plane; not operator-controllable.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.5.15` | Access control |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `cis-k8s`, `control-plane`, `etcd`, `k8s`, `manual-verify`
+
+---
+
+### `k8s-cp-etcd-peer-client-cert-auth`
+
+**etcd --peer-client-cert-auth must be true** &middot; severity `critical` &middot; service `etcd` &middot; resource `k8s.cluster`
+
+CIS Kubernetes Benchmark §1.3.5. Peer authentication between etcd nodes prevents a rogue etcd-like server from joining the cluster + receiving the data replication stream. Without it, any pod on the etcd network can impersonate a peer.
+
+_Remediation:_
+
+> Set --peer-client-cert-auth=true. Pair with --peer-cert-file / --peer-key-file / --peer-trusted-ca-file. Managed K8s vendor-controlled.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.5.15` | Access control |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `cis-k8s`, `control-plane`, `etcd`, `k8s`, `manual-verify`
+
+---
+
+### `k8s-cp-kubelet-anonymous-auth-false`
+
+**kubelet --anonymous-auth must be false** &middot; severity `high` &middot; service `kubelet` &middot; resource `k8s.cluster`
+
+CIS Kubernetes Benchmark §4.2.1. Anonymous kubelet access lets unauthenticated callers query /spec, /stats, /logs — all leaking workload secrets or facilitating container escape. Default false on k8s ≥ 1.10 but explicit check catches downgraded configs.
+
+_Remediation:_
+
+> In /var/lib/kubelet/config.yaml set:
+  authentication:
+    anonymous:
+      enabled: false
+    webhook:
+      enabled: true
+  authorization:
+    mode: Webhook
+Then restart kubelet.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.5.15` | Access control |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `cis-k8s`, `control-plane`, `k8s`, `kubelet`, `manual-verify`
+
+---
+
+### `k8s-cp-kubelet-read-only-port-zero`
+
+**kubelet --read-only-port must be 0 (disabled)** &middot; severity `high` &middot; service `kubelet` &middot; resource `k8s.cluster`
+
+CIS Kubernetes Benchmark §4.2.4. The kubelet read-only port (default 10255, since-removed in upstream defaults but lingering in older configs) exposes pod status + spec without authentication. Set to 0 to disable.
+
+_Remediation:_
+
+> In /var/lib/kubelet/config.yaml set readOnlyPort: 0. Restart kubelet.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.5.15` | Access control |
+| `iso27001` | `A.8.20` | Networks security |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `cis-k8s`, `control-plane`, `k8s`, `kubelet`, `manual-verify`
+
+---
+
+### `k8s-cp-scheduler-bind-address-localhost`
+
+**scheduler --bind-address must be 127.0.0.1** &middot; severity `medium` &middot; service `scheduler` &middot; resource `k8s.cluster`
+
+CIS Kubernetes Benchmark §1.5.2. scheduler's healthz + metrics endpoints share the apiserver-adjacent risk profile of controller-manager. Loopback-only binding prevents lateral discovery.
+
+_Remediation:_
+
+> Set --bind-address=127.0.0.1 on kube-scheduler.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.20` | Networks security |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `cis-k8s`, `control-plane`, `k8s`, `manual-verify`, `scheduler`
 
 ---
 
@@ -5241,6 +5738,27 @@ _Tags:_ `controllers`, `k8s`, `rollout`
 
 ---
 
+### `k8s-doks-audit-log-shipping-configured`
+
+**DOKS audit logs should ship to DO Logging or external SIEM** &middot; severity `medium` &middot; service `doks` &middot; resource `k8s.cluster`
+
+doks deepening. DOKS exposes the apiserver audit log via DO Logging. Without log shipping the operator has no off-cluster trail of API access.
+
+_Remediation:_
+
+> Enable DO Logging on the cluster: Cluster → Insights → enable log forwarding to DO Logging or a third-party SIEM (Datadog, Logz.io).
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.15` | Logging |
+| `soc2` | `CC7.2` | System Component Monitoring |
+
+_Tags:_ `audit`, `doks`, `k8s`, `manual-verify`
+
+---
+
 ### `k8s-doks-auto-upgrade`
 
 **DOKS clusters should enable auto-upgrade** &middot; severity `medium` &middot; service `doks` &middot; resource `digitalocean.doks.cluster`
@@ -5377,6 +5895,27 @@ _Tags:_ `doks`, `ha`, `k8s`
 
 ---
 
+### `k8s-doks-image-pull-from-do-registry`
+
+**DOKS pods should pull from DO Container Registry not arbitrary public** &middot; severity `low` &middot; service `doks` &middot; resource `k8s.cluster`
+
+doks deepening. DOCR is the DO-native registry with built-in IAM integration. Workloads pulling from arbitrary public registries miss the integrated audit + IAM-bound access.
+
+_Remediation:_
+
+> Mirror upstream images into DOCR: `doctl registry repository list` + `crane copy <upstream> registry.digitalocean.com/<my-registry>/<name>`. Update manifests to reference the mirrored registry.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.32` | Change management |
+| `soc2` | `CC6.7` | Transmission, Movement, and Disposal of Information |
+
+_Tags:_ `doks`, `k8s`, `manual-verify`, `registry`
+
+---
+
 ### `k8s-doks-maintenance-window`
 
 **DOKS clusters should configure a maintenance window** &middot; severity `low` &middot; service `doks` &middot; resource `digitalocean.doks.cluster`
@@ -5441,6 +5980,27 @@ _Maps to:_
 | `soc2` | `CC7.2` | System Component Monitoring |
 
 _Tags:_ `addon`, `doks`, `k8s`, `manual-verify`
+
+---
+
+### `k8s-doks-nodepool-auto-upgrade-explicit`
+
+**DOKS node pools should enable auto-upgrade** &middot; severity `medium` &middot; service `doks` &middot; resource `k8s.cluster`
+
+doks deepening. DOKS auto-upgrade lifts node-pool images to the latest patch during the maintenance window without operator intervention. Without it, nodes accumulate kernel + container-runtime CVEs.
+
+_Remediation:_
+
+> doctl kubernetes cluster node-pool update <cluster> <pool> --auto-upgrade=true
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.8` | Management of technical vulnerabilities |
+| `soc2` | `CC7.1` | Detection and Monitoring of Vulnerabilities |
+
+_Tags:_ `doks`, `k8s`, `manual-verify`, `patching`
 
 ---
 
@@ -5578,6 +6138,27 @@ _Tags:_ `doks`, `k8s`, `manual-verify`, `psa`
 
 ---
 
+### `k8s-doks-public-endpoint-disabled`
+
+**DOKS cluster should disable the public apiserver endpoint** &middot; severity `high` &middot; service `doks` &middot; resource `k8s.cluster`
+
+doks deepening. Private endpoint forces all apiserver calls through the DO VPC. Without it the apiserver is reachable from the internet (NLB-fronted).
+
+_Remediation:_
+
+> `doctl kubernetes cluster update <cluster> --set-public-access=false` or via UI: Cluster → Settings → Networking → Public Access OFF. Plan operator access via a bastion / VPN before flipping.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.20` | Networks security |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `doks`, `endpoint`, `k8s`, `manual-verify`
+
+---
+
 ### `k8s-doks-registry-integration`
 
 **DOKS clusters should integrate with DO Container Registry** &middot; severity `low` &middot; service `doks` &middot; resource `digitalocean.doks.cluster`
@@ -5669,6 +6250,27 @@ _Tags:_ `doks`, `k8s`, `network`
 
 ---
 
+### `k8s-doks-vpc-firewall-restricted`
+
+**DOKS VPC firewall should restrict apiserver inbound to operator CIDRs** &middot; severity `high` &middot; service `doks` &middot; resource `k8s.cluster`
+
+doks deepening. Even with private endpoint enabled, the cluster's underlying VPC firewall must restrict source IPs to operator + CI ranges. CIS recommends explicit allowlist rather than relying on private endpoint alone.
+
+_Remediation:_
+
+> Configure VPC firewall rules via `doctl compute firewall update <fw> --inbound-rules='...'` to restrict tcp/443 to operator CIDRs.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.22` | Segregation of networks |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `doks`, `firewall`, `k8s`, `manual-verify`
+
+---
+
 ### `k8s-eks-authentication-mode`
 
 **EKS clusters should use API access entries (not aws-auth ConfigMap)** &middot; severity `low` &middot; service `eks` &middot; resource `aws.eks.cluster`
@@ -5741,6 +6343,48 @@ _Tags:_ `eks`, `k8s`, `logging`
 
 ---
 
+### `k8s-eks-control-plane-logs-comprehensive`
+
+**EKS should enable all 5 control-plane log types** &middot; severity `high` &middot; service `eks` &middot; resource `k8s.cluster`
+
+eks deepening. EKS supports 5 log types: api, audit, authenticator, controllerManager, scheduler. CIS + SOC 2 evidence needs at least api + audit + authenticator. All five is the production default.
+
+_Remediation:_
+
+> aws eks update-cluster-config --name <cluster> --logging '{"clusterLogging":[{"types":["api","audit","authenticator","controllerManager","scheduler"],"enabled":true}]}'
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.15` | Logging |
+| `soc2` | `CC7.2` | System Component Monitoring |
+
+_Tags:_ `eks`, `k8s`, `logging`, `manual-verify`
+
+---
+
+### `k8s-eks-endpoint-fully-private`
+
+**EKS cluster endpoint should be private-only** &middot; severity `high` &middot; service `eks` &middot; resource `k8s.cluster`
+
+eks deepening. EKS clusters default to public + private endpoint. Best practice for production: private-only or public restricted to operator CIDR ranges.
+
+_Remediation:_
+
+> aws eks update-cluster-config --name <cluster> --resources-vpc-config endpointPublicAccess=false,endpointPrivateAccess=true
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.20` | Networks security |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `eks`, `endpoint`, `k8s`, `manual-verify`
+
+---
+
 ### `k8s-eks-irsa-enabled`
 
 **EKS clusters should expose an OIDC provider for IRSA** &middot; severity `medium` &middot; service `eks` &middot; resource `aws.eks.cluster`
@@ -5762,6 +6406,52 @@ _Maps to:_
 | `soc2` | `CC6.3` | Authorization, Modification, and Removal |
 
 _Tags:_ `eks`, `iam`, `irsa`, `k8s`
+
+---
+
+### `k8s-eks-irsa-workload-scoped`
+
+**EKS workloads should use IRSA (IAM Roles for Service Accounts) not node IAM** &middot; severity `medium` &middot; service `eks` &middot; resource `k8s.cluster`
+
+eks deepening. IRSA scopes AWS IAM credentials per-pod via the cluster's OIDC provider. Without it, every pod inherits the node IAM role — broad blast radius.
+
+_Remediation:_
+
+> 1) aws eks describe-cluster --query 'cluster.identity.oidc.issuer' to confirm OIDC enabled. 2) Per workload, create IAM role + trust policy bound to (cluster, namespace, serviceaccount). 3) Annotate the SA: eks.amazonaws.com/role-arn=<arn>.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.5.15` | Access control |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `eks`, `iam`, `irsa`, `k8s`, `manual-verify`
+
+---
+
+### `k8s-eks-node-imdsv2-required`
+
+**EKS node IMDS should require IMDSv2 + hop-limit 1** &middot; severity `high` &middot; service `eks` &middot; resource `k8s.cluster`
+
+eks deepening. IMDSv2 with hop-limit-1 prevents in-cluster pods from reaching the EC2 instance metadata service (169.254.169.254) — the pivot point for AWS credential theft via SSRF.
+
+_Remediation:_
+
+> Update node group launch template metadata options:
+  HttpTokens: required
+  HttpPutResponseHopLimit: 1
+  HttpEndpoint: enabled
+Apply via `aws ec2 modify-launch-template` + roll the node group.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.20` | Networks security |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `eks`, `imds`, `k8s`, `manual-verify`
 
 ---
 
@@ -5934,6 +6624,28 @@ _Tags:_ `eks`, `encryption`, `k8s`, `secrets`
 
 ---
 
+### `k8s-eks-secrets-kms-cmk`
+
+**EKS secrets must be envelope-encrypted with KMS** &middot; severity `high` &middot; service `eks` &middot; resource `k8s.cluster`
+
+eks deepening. EKS Secrets Encryption uses a customer-managed KMS key to wrap the etcd-side encryption keys. Without it, secrets at-rest in etcd use only EKS-default encryption.
+
+_Remediation:_
+
+> aws eks associate-encryption-config --cluster-name <cluster> --encryption-config '[{"resources":["secrets"],"provider":{"keyArn":"<KMS_ARN>"}}]'
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.24` | Use of cryptography |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC6.7` | Transmission, Movement, and Disposal of Information |
+
+_Tags:_ `eks`, `encryption`, `k8s`, `manual-verify`
+
+---
+
 ### `k8s-eks-version-supported`
 
 **EKS clusters should run a supported K8s version** &middot; severity `high` &middot; service `eks` &middot; resource `aws.eks.cluster`
@@ -5976,6 +6688,48 @@ _Maps to:_
 | `soc2` | `CC8.1` | Change Management Process |
 
 _Tags:_ `gke`, `k8s`, `supply-chain`
+
+---
+
+### `k8s-gke-binary-authorization-enforce`
+
+**GKE should enable Binary Authorization for image signature enforcement** &middot; severity `medium` &middot; service `gke` &middot; resource `k8s.cluster`
+
+gke deepening. Binary Authorization enforces image-signature policies at deploy time — only images signed by approved attestors can run. GCP-native equivalent of cosign verify-images at admission.
+
+_Remediation:_
+
+> 1) gcloud container clusters update <cluster> --binauthz-evaluation-mode=PROJECT_SINGLETON_POLICY_ENFORCE. 2) Define a Policy: gcloud container binauthz policy import policy.yaml.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.32` | Change management |
+| `soc2` | `CC6.7` | Transmission, Movement, and Disposal of Information |
+
+_Tags:_ `binary-auth`, `gke`, `k8s`, `manual-verify`, `supply-chain`
+
+---
+
+### `k8s-gke-database-encryption-cmek`
+
+**GKE etcd secrets should use customer-managed KMS encryption (CMEK)** &middot; severity `medium` &middot; service `gke` &middot; resource `k8s.cluster`
+
+gke deepening. GKE Application-layer Secrets Encryption wraps etcd-stored Secrets with a customer-managed Cloud KMS key. CMEK = customer-managed = operator controls the key lifecycle, rotation, and access audit.
+
+_Remediation:_
+
+> 1) Create Cloud KMS key. 2) Grant the GKE service account roles/cloudkms.cryptoKeyEncrypterDecrypter on the key. 3) gcloud container clusters update <cluster> --database-encryption-key=projects/<P>/locations/<L>/keyRings/<R>/cryptoKeys/<K>
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.24` | Use of cryptography |
+| `soc2` | `CC6.7` | Transmission, Movement, and Disposal of Information |
+
+_Tags:_ `cmek`, `encryption`, `gke`, `k8s`, `manual-verify`
 
 ---
 
@@ -6197,6 +6951,27 @@ _Tags:_ `gke`, `k8s`, `private`
 
 ---
 
+### `k8s-gke-private-nodes-and-endpoint`
+
+**GKE cluster should be private (no public node IPs, private endpoint)** &middot; severity `high` &middot; service `gke` &middot; resource `k8s.cluster`
+
+gke deepening. Private GKE cluster removes public IPs from nodes + makes the apiserver private-endpoint-only. The standard production posture for GKE workloads handling regulated data.
+
+_Remediation:_
+
+> gcloud container clusters update <cluster> --enable-private-nodes --enable-private-endpoint --master-ipv4-cidr=172.16.0.0/28
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.20` | Networks security |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `endpoint`, `gke`, `k8s`, `manual-verify`
+
+---
+
 ### `k8s-gke-release-channel`
 
 **GKE clusters should subscribe to a release channel** &middot; severity `low` &middot; service `gke` &middot; resource `gcp.gke.cluster`
@@ -6243,6 +7018,27 @@ _Tags:_ `gke`, `k8s`, `shielded`
 
 ---
 
+### `k8s-gke-shielded-nodes-secure-boot`
+
+**GKE node pools should enable Shielded Nodes** &middot; severity `high` &middot; service `gke` &middot; resource `k8s.cluster`
+
+gke deepening. Shielded Nodes enable Secure Boot + integrity monitoring + vTPM on GKE nodes. Blocks kernel-mode rootkits + boot-time tampering. Default-on for new clusters since 2020 but pre-existing pools may not.
+
+_Remediation:_
+
+> gcloud container clusters update <cluster> --enable-shielded-nodes
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.20` | Networks security |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `gke`, `k8s`, `manual-verify`, `shielded-nodes`
+
+---
+
 ### `k8s-gke-workload-identity`
 
 **GKE clusters should enable Workload Identity** &middot; severity `high` &middot; service `gke` &middot; resource `gcp.gke.cluster`
@@ -6264,6 +7060,27 @@ _Maps to:_
 | `soc2` | `CC6.3` | Authorization, Modification, and Removal |
 
 _Tags:_ `gke`, `iam`, `k8s`
+
+---
+
+### `k8s-gke-workload-identity-cluster-wide`
+
+**GKE should enable Workload Identity for GCP IAM scoping** &middot; severity `high` &middot; service `gke` &middot; resource `k8s.cluster`
+
+gke deepening. Workload Identity binds Kubernetes ServiceAccount → GCP ServiceAccount via the cluster's OIDC, scoping cloud IAM per-pod. Without it every pod inherits the node SA — broad blast radius.
+
+_Remediation:_
+
+> gcloud container clusters update <cluster> --workload-pool=<PROJECT>.svc.id.goog
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.5.15` | Access control |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `gke`, `k8s`, `manual-verify`, `workload-identity`
 
 ---
 
@@ -6335,6 +7152,120 @@ _Maps to:_
 | `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `ingress`, `k8s`, `network`
+
+---
+
+### `k8s-ingress-no-auth-snippet`
+
+**Ingress objects must not use nginx auth-snippet annotation** &middot; severity `high` &middot; service `network` &middot; resource `k8s.ingress`
+
+auth-snippet runs arbitrary nginx config inside the auth subrequest path — same class of escape as configuration-snippet but scoped to the auth flow. Disabled by default in patched controllers.
+
+_Remediation:_
+
+> Use auth-url / auth-signin annotations with a side-car auth service (oauth2-proxy, authelia) instead.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `4.7` | Manage Default Accounts on Enterprise Assets and Software |
+| `iso27001` | `A.8.7` | Protection against malware |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `cve`, `ingress`, `k8s`, `network`
+
+---
+
+### `k8s-ingress-no-configuration-snippet`
+
+**Ingress objects must not use nginx configuration-snippet (RCE — CVE-2021-25742)** &middot; severity `critical` &middot; service `network` &middot; resource `k8s.ingress`
+
+The nginx.ingress.kubernetes.io/configuration-snippet annotation injects raw nginx config into the controller. CVE-2021-25742 escalated this to full ingress-controller compromise via Lua evaluation. Patched ingress-nginx releases disable the annotation by default + require a controller flag to re-enable, but the manifest annotation is still a strong signal of misconfiguration.
+
+_Remediation:_
+
+> Remove the annotation. Express the same intent via ingress-nginx-supported fields (rewrite-target, ssl-redirect, server-alias) or move the customization into a sidecar / separate nginx Deployment.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `16.6` | Establish and Maintain a Severity Rating System and Process for Application Vulnerabilities |
+| `cis-v8` | `4.7` | Manage Default Accounts on Enterprise Assets and Software |
+| `iso27001` | `A.8.20` | Networks security |
+| `iso27001` | `A.8.7` | Protection against malware |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `cve`, `ingress`, `k8s`, `network`
+
+---
+
+### `k8s-ingress-no-lua-plugins`
+
+**Ingress objects must not enable nginx Lua plugins via annotation** &middot; severity `high` &middot; service `network` &middot; resource `k8s.ingress`
+
+Lua plugin annotations (lua-resty-*, server-snippet with Lua blocks) expose the Lua VM the ingress-nginx controller embeds. Patched controllers disable Lua-eval annotations by default; their presence in a manifest signals either an older controller version OR an explicit re-enable.
+
+_Remediation:_
+
+> Remove lua-* annotations. If you genuinely need Lua middleware, deploy it as a sidecar nginx with a hand-curated Lua bundle outside the ingress-nginx controller.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `4.7` | Manage Default Accounts on Enterprise Assets and Software |
+| `iso27001` | `A.8.7` | Protection against malware |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `ingress`, `k8s`, `lua`, `network`
+
+---
+
+### `k8s-ingress-no-rules-defined`
+
+**Ingress objects without rules expose every host via the controller's default-backend** &middot; severity `medium` &middot; service `network` &middot; resource `k8s.ingress`
+
+An Ingress with zero rules uses the controller's default-backend for every request to every host. Typically a manifest mistake (rules block deleted by accident) or a debug primitive that escaped into production. The default-backend usually serves a 404 page — but it's still a per-host wildcard that interferes with other Ingress objects on the same controller.
+
+_Remediation:_
+
+> Add explicit rules with host: + paths:. Use the controller's defaultBackend field at the controller level for cluster-wide fallback, not at the Ingress level.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `4.6` | Securely Manage Enterprise Assets and Software |
+| `iso27001` | `A.8.22` | Segregation of networks |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `ingress`, `k8s`, `network`
+
+---
+
+### `k8s-ingress-no-server-snippet`
+
+**Ingress objects must not use nginx server-snippet (CVE-2021-25742 sibling)** &middot; severity `critical` &middot; service `network` &middot; resource `k8s.ingress`
+
+Same risk class as configuration-snippet: server-snippet injects nginx server-block config. Patched ingress-nginx releases require a controller flag to enable; manifest annotation is a strong signal of misconfiguration.
+
+_Remediation:_
+
+> Remove the annotation; express via supported fields.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `16.6` | Establish and Maintain a Severity Rating System and Process for Application Vulnerabilities |
+| `cis-v8` | `4.7` | Manage Default Accounts on Enterprise Assets and Software |
+| `iso27001` | `A.8.20` | Networks security |
+| `iso27001` | `A.8.7` | Protection against malware |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `cve`, `ingress`, `k8s`, `network`
 
 ---
 
@@ -6423,6 +7354,28 @@ _Maps to:_
 | `cis-v8` | `4.1` | Establish and Maintain a Secure Configuration Process |
 | `iso27001` | `A.8.32` | Change management |
 | `soc2` | `CC8.1` | Change Management Process |
+
+_Tags:_ `admission`, `k8s`, `webhook`
+
+---
+
+### `k8s-mutating-webhook-side-effects-none`
+
+**MutatingWebhooks should declare sideEffects=None (or NoneOnDryRun)** &middot; severity `medium` &middot; service `admission` &middot; resource `k8s.mutatingwebhookconfig`
+
+sideEffects tells the apiserver whether the webhook changes state outside the in-request resource (e.g. writes to external systems). `Some` blocks dry-run support; `Unknown` is deprecated. CIS + SIG-api-machinery require None or NoneOnDryRun so dry-run requests can probe the cluster without triggering side-effect-ful webhook code.
+
+_Remediation:_
+
+> In the MutatingWebhookConfiguration, set `sideEffects: None` (or `NoneOnDryRun` if the webhook genuinely runs different code under dry-run). Refactor the webhook to eliminate out-of-band writes triggered by the apiserver call.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `6.7` | Centralize Access Control |
+| `iso27001` | `A.5.30` | ICT readiness for business continuity |
+| `soc2` | `A1.2` | Backup and Recovery Infrastructure |
 
 _Tags:_ `admission`, `k8s`, `webhook`
 
@@ -6593,6 +7546,39 @@ _Maps to:_
 | `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `k8s`, `network`, `policy`
+
+---
+
+### `k8s-networkpolicy-cloud-metadata-egress-blocked`
+
+**NetworkPolicies should block egress to 169.254.169.254 (cloud metadata)** &middot; severity `high` &middot; service `network` &middot; resource `k8s.networkpolicy`
+
+Cloud metadata service (AWS IMDS, GCP metadata, Azure IMDS) lives at 169.254.169.254. A pod that can reach it can request node-role IAM credentials — instant pivot to cloud-account access. NetworkPolicy egress with ipBlock except 169.254.169.254/32 is the standard mitigation; IMDSv2 hop-limit-1 protection works on EC2 but not on GCP / Azure. Manual-verify since the check requires walking every NetworkPolicy ipBlock list per pod-selector.
+
+_Remediation:_
+
+> Add an explicit egress block to every NetworkPolicy:
+  - to:
+      - ipBlock:
+          cidr: 0.0.0.0/0
+          except:
+            - 169.254.169.254/32
+            - 169.254.170.2/32   # ECS task metadata
+            - fd00:ec2::254/128    # IMDSv6
+On EKS, also enable IMDSv2-only on node groups via the launch template.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `12.5` | Centralize Network Authentication, Authorization, and Auditing (AAA) |
+| `cis-v8` | `6.6` | Establish and Maintain an Inventory of Authentication and Authorization Systems |
+| `iso27001` | `A.8.20` | Networks security |
+| `iso27001` | `A.8.22` | Segregation of networks |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `k8s`, `manual-verify`, `metadata`, `network`
 
 ---
 
@@ -6951,6 +7937,32 @@ _Tags:_ `k8s`, `nodes`, `topology`
 
 ---
 
+### `k8s-operator-subscription-manual-approval`
+
+**OLM Subscriptions should use Manual approval (not Automatic) for production** &middot; severity `low` &middot; service `operator` &middot; resource `k8s.cluster`
+
+Subscription `installPlanApproval: Automatic` auto-installs every operator upgrade that lands in the subscribed channel — including major versions with breaking changes. Production posture is Manual approval with a per-upgrade review window. Info-only since some staging clusters legitimately want Automatic.
+
+_Remediation:_
+
+> Edit each Subscription:
+  spec:
+    installPlanApproval: Manual
+Approve pending InstallPlans via `kubectl get installplan -n <ns>` + `kubectl patch installplan <name> -n <ns> --type=merge -p '{"spec":{"approved":true}}'`.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `7.3` | Perform Automated Operating System Patch Management |
+| `iso27001` | `A.8.32` | Change management |
+| `soc2` | `CC6.7` | Transmission, Movement, and Disposal of Information |
+| `soc2` | `CC7.1` | Detection and Monitoring of Vulnerabilities |
+
+_Tags:_ `k8s`, `manual-verify`, `olm`, `operator`
+
+---
+
 ### `k8s-pod-allow-privilege-escalation`
 
 **Containers should not allow privilege escalation** &middot; severity `high` &middot; service `pod-security` &middot; resource `k8s.pod`
@@ -6973,6 +7985,29 @@ _Maps to:_
 | `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `k8s`, `pod-security`, `privilege-escalation`
+
+---
+
+### `k8s-pod-apparmor-profile-set`
+
+**Pods should set an AppArmor profile (not Unconfined)** &middot; severity `medium` &middot; service `pod-security` &middot; resource `k8s.pod`
+
+AppArmor confines a container's syscall + filesystem reach per profile. `runtime/default` is the upstream-shipped baseline; `unconfined` removes confinement entirely. CIS recommends explicit profile selection — `unset` makes posture ambiguous across nodes that may or may not have a default profile loaded.
+
+_Remediation:_
+
+> Annotate per container: `container.apparmor.security.beta.kubernetes.io/<name>: runtime/default` (or a custom profile). On k8s ≥ 1.30, prefer `securityContext.appArmorProfile: {type: RuntimeDefault}` at the container level.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `4.1` | Establish and Maintain a Secure Configuration Process |
+| `cis-v8` | `4.7` | Manage Default Accounts on Enterprise Assets and Software |
+| `iso27001` | `A.8.20` | Networks security |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `apparmor`, `k8s`, `pod-security`
 
 ---
 
@@ -7047,6 +8082,119 @@ _Maps to:_
 | `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `capabilities`, `k8s`, `pod-security`
+
+---
+
+### `k8s-pod-default-service-account`
+
+**Pods should not use the 'default' ServiceAccount** &middot; severity `medium` &middot; service `pod-security` &middot; resource `k8s.pod`
+
+Every namespace ships with a default ServiceAccount. Pods that use it accumulate ambient RBAC over time — anything granted to default:default leaks to every workload in the namespace. CIS requires explicit per-workload SAs so RBAC is reviewable per pod.
+
+_Remediation:_
+
+> Create a per-workload ServiceAccount + reference it: `spec.serviceAccountName: <name>`. Apply automountServiceAccountToken: false on default to surface accidental usage.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `6.2` | Establish an Access Revoking Process |
+| `cis-v8` | `6.8` | Define and Maintain Role-Based Access Control |
+| `iso27001` | `A.5.15` | Access control |
+| `iso27001` | `A.5.18` | Access rights |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC6.3` | Authorization, Modification, and Removal |
+
+_Tags:_ `k8s`, `pod-security`, `rbac`, `serviceaccount`
+
+---
+
+### `k8s-pod-dns-policy-not-default`
+
+**Pods should not use dnsPolicy=Default (host resolver)** &middot; severity `medium` &middot; service `pod-security` &middot; resource `k8s.pod`
+
+dnsPolicy=Default reads /etc/resolv.conf from the node — pods inherit the host's DNS view, including any node-local DNS that may resolve internal names a tenanted workload should not see. ClusterFirst (the default) routes to the cluster DNS service so policy lives in one place.
+
+_Remediation:_
+
+> Set `spec.dnsPolicy: ClusterFirst` (or omit — that's the default). Reserve Default for host-networked add-ons that genuinely need the node resolver.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `4.1` | Establish and Maintain a Secure Configuration Process |
+| `iso27001` | `A.8.20` | Networks security |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `dns`, `k8s`, `pod-security`
+
+---
+
+### `k8s-pod-ephemeral-storage-limit`
+
+**Containers should declare ephemeral-storage limits** &middot; severity `medium` &middot; service `reliability` &middot; resource `k8s.pod`
+
+ephemeral-storage covers the writable layer + emptyDir + log writes. Unlimited ephemeral-storage means a runaway log loop or zip-bomb tmpfile fills the node disk → kubelet evicts every pod on the node. Setting an explicit limit makes the OOM-style eviction local to the offending pod.
+
+_Remediation:_
+
+> Set `resources.limits.ephemeral-storage: 1Gi` (or higher per workload disk profile). Pair with a matching `resources.requests.ephemeral-storage` so the scheduler reserves the budget.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `11.2` | Perform Automated Backups |
+| `iso27001` | `A.5.30` | ICT readiness for business continuity |
+| `soc2` | `A1.2` | Backup and Recovery Infrastructure |
+
+_Tags:_ `ephemeral-storage`, `k8s`, `reliability`, `resources`
+
+---
+
+### `k8s-pod-fs-group-set`
+
+**Pods with volumes should set securityContext.fsGroup** &middot; severity `low` &middot; service `pod-security` &middot; resource `k8s.pod`
+
+fsGroup makes the kubelet recursively chgrp emptyDir + projected volumes to the named GID so non-root containers can write to them. Without fsGroup, containers with runAsNonRoot=true frequently fail with EACCES on volume mount and operators reach for runAsUser=0 — undoing the security baseline.
+
+_Remediation:_
+
+> Set `spec.securityContext.fsGroup: <gid>` (commonly 1000) alongside runAsNonRoot=true so the volume permissions match the non-root UID the containers run as.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `4.1` | Establish and Maintain a Secure Configuration Process |
+| `iso27001` | `A.8.20` | Networks security |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `filesystem`, `k8s`, `pod-security`
+
+---
+
+### `k8s-pod-has-owner-ref`
+
+**Standalone pods (no owner reference) should be reviewed** &middot; severity `low` &middot; service `reliability` &middot; resource `k8s.pod`
+
+A pod without an ownerReference (Deployment / StatefulSet / DaemonSet / Job / CronJob) survives an apiserver restart but does NOT get rescheduled on node failure. Used as a one-off debug primitive (`kubectl run --restart=Never`); usually a mistake in production where the operator forgot to wrap the spec in a controller.
+
+_Remediation:_
+
+> Wrap the pod spec in a Deployment / StatefulSet / Job controller. For genuinely ephemeral debug, use `kubectl debug` or namespaced `kubectl run --rm -it --restart=Never`.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `11.2` | Perform Automated Backups |
+| `iso27001` | `A.5.30` | ICT readiness for business continuity |
+| `soc2` | `A1.2` | Backup and Recovery Infrastructure |
+
+_Tags:_ `k8s`, `lifecycle`, `reliability`
 
 ---
 
@@ -7168,6 +8316,153 @@ _Tags:_ `k8s`, `network`, `pod-security`
 
 ---
 
+### `k8s-pod-host-users-disabled`
+
+**Pods should set hostUsers=false on k8s 1.30+** &middot; severity `medium` &middot; service `pod-security` &middot; resource `k8s.pod`
+
+hostUsers=false (default on 1.30+ via UserNamespaces feature gate) puts each pod in its own user namespace — UID 0 inside the pod maps to an unprivileged UID on the host. Significant kernel breakout mitigation. Setting explicit hostUsers: false is the production-safe path while the default migrates across versions.
+
+_Remediation:_
+
+> Add `spec.hostUsers: false`. Test workload compatibility first — applications that mount host volumes with hard-coded UIDs can break under user-namespace remapping.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `4.1` | Establish and Maintain a Secure Configuration Process |
+| `cis-v8` | `4.7` | Manage Default Accounts on Enterprise Assets and Software |
+| `iso27001` | `A.8.20` | Networks security |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `k8s`, `pod-security`, `user-namespace`
+
+---
+
+### `k8s-pod-image-attestation-required`
+
+**Container images should ship in-toto SLSA attestations** &middot; severity `medium` &middot; service `supply-chain` &middot; resource `k8s.pod`
+
+in-toto attestations (SLSA build provenance, vulnerability scan results, SBOMs) live alongside the image in the registry. Admission-time verification against attestation policies (min SLSA level 3, scan-results-passing) closes the build/deploy gap. Manual-verify — the surface lives in admission controllers + registry attachments, not pod spec.
+
+_Remediation:_
+
+> Use cosign attest + cosign verify-attestation in admission. SLSA build provenance via GitHub Actions / slsa-github-generator; SBOM via syft + cosign attest --type=spdx.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `16.6` | Establish and Maintain a Severity Rating System and Process for Application Vulnerabilities |
+| `cis-v8` | `7.1` | Establish and Maintain a Vulnerability Management Process |
+| `iso27001` | `A.8.32` | Change management |
+| `soc2` | `CC6.7` | Transmission, Movement, and Disposal of Information |
+| `soc2` | `CC7.1` | Detection and Monitoring of Vulnerabilities |
+
+_Tags:_ `k8s`, `manual-verify`, `slsa`, `supply-chain`
+
+---
+
+### `k8s-pod-image-base-os-not-eol`
+
+**Container images should not be built on EOL base OS** &middot; severity `medium` &middot; service `supply-chain` &middot; resource `k8s.pod`
+
+Base images on EOL distributions (debian:9, ubuntu:18.04, alpine:3.10, centos:7) no longer receive security updates. Manual-verify since determining the base requires registry introspection (`crane manifest` + label parsing) or a vuln scanner (Trivy, Grype) — both better fed via the v0.14 ingest path than re-implemented in compliancekit.
+
+_Remediation:_
+
+> Rebase onto a supported distribution. Use endoflife.date as the canonical reference for support windows. Wire Trivy / Grype output into compliancekit via `--ingest <scanner-output>` for automated EOL detection.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `7.1` | Establish and Maintain a Vulnerability Management Process |
+| `cis-v8` | `7.3` | Perform Automated Operating System Patch Management |
+| `iso27001` | `A.8.8` | Management of technical vulnerabilities |
+| `soc2` | `CC7.1` | Detection and Monitoring of Vulnerabilities |
+
+_Tags:_ `base-os`, `k8s`, `manual-verify`, `supply-chain`
+
+---
+
+### `k8s-pod-image-cosign-signature-verified`
+
+**Container images should be cosign-verified at admission** &middot; severity `high` &middot; service `supply-chain` &middot; resource `k8s.pod`
+
+Cosign-signed images carry a registry-side signature verifiable against a public key (or keyless via Sigstore). Pairing the signature with admission-time verification (policy-controller, kyverno-verify-images, ratify) blocks any image whose signature isn't valid for the org's signing key. Manual-verify since the verification flow lives in admission webhooks, not in pod spec.
+
+_Remediation:_
+
+> Install one of:
+  - sigstore policy-controller (https://docs.sigstore.dev/policy-controller/overview/)
+  - Kyverno verify-images policy (https://kyverno.io/policies/#verify-image)
+  - Ratify (https://ratify.dev/).
+Configure with the public key of your build signer + an allow-list of subjects.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `16.6` | Establish and Maintain a Severity Rating System and Process for Application Vulnerabilities |
+| `cis-v8` | `4.6` | Securely Manage Enterprise Assets and Software |
+| `iso27001` | `A.8.32` | Change management |
+| `soc2` | `CC6.7` | Transmission, Movement, and Disposal of Information |
+| `soc2` | `CC7.1` | Detection and Monitoring of Vulnerabilities |
+
+_Tags:_ `cosign`, `k8s`, `manual-verify`, `sigstore`, `supply-chain`
+
+---
+
+### `k8s-pod-image-digest-pinned`
+
+**Containers should pin images by sha256 digest** &middot; severity `high` &middot; service `supply-chain` &middot; resource `k8s.pod`
+
+Image references should include a `@sha256:...` digest. Tags — including :latest, semver tags, and date tags — are mutable on the registry side: a registry owner can push a new image at an existing tag and every pull thereafter gets the new content. Pinning the digest defeats the supply-chain attack class (Codecov, SolarWinds, etc.).
+
+_Remediation:_
+
+> Reference images by digest: `ghcr.io/org/app@sha256:abc...`. Use cosign verify-and-resolve in CI to translate a verified tag into the corresponding digest before pushing the manifest. Build systems that update images automatically (Renovate, dependabot) can handle digest pinning without manual rewrites.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `16.6` | Establish and Maintain a Severity Rating System and Process for Application Vulnerabilities |
+| `cis-v8` | `4.6` | Securely Manage Enterprise Assets and Software |
+| `cis-v8` | `7.1` | Establish and Maintain a Vulnerability Management Process |
+| `iso27001` | `A.8.32` | Change management |
+| `soc2` | `CC6.7` | Transmission, Movement, and Disposal of Information |
+| `soc2` | `CC7.1` | Detection and Monitoring of Vulnerabilities |
+
+_Tags:_ `image`, `k8s`, `supply-chain`
+
+---
+
+### `k8s-pod-image-from-trusted-registry`
+
+**Container images should be pulled only from allow-listed registries** &middot; severity `medium` &middot; service `supply-chain` &middot; resource `k8s.pod`
+
+Pulling from arbitrary public registries (Docker Hub, quay.io, ghcr.io of unverified orgs) opens supply-chain risk. Enterprise practice is to mirror approved upstream images into a registry the org controls + admission-block pulls from anywhere else. Manual-verify since the trusted-registry list varies per org (no universal default).
+
+_Remediation:_
+
+> Implement registry-allowlist at admission via Gatekeeper ConstraintTemplate or Kyverno ClusterPolicy. Mirror upstream images via `crane copy` or a pull-through cache.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `16.6` | Establish and Maintain a Severity Rating System and Process for Application Vulnerabilities |
+| `cis-v8` | `7.3` | Perform Automated Operating System Patch Management |
+| `iso27001` | `A.8.32` | Change management |
+| `soc2` | `CC6.7` | Transmission, Movement, and Disposal of Information |
+
+_Tags:_ `k8s`, `manual-verify`, `registry`, `supply-chain`
+
+---
+
 ### `k8s-pod-image-pull-policy`
 
 **Containers with mutable tags should set imagePullPolicy=Always** &middot; severity `low` &middot; service `pod-security` &middot; resource `k8s.pod`
@@ -7187,6 +8482,57 @@ _Maps to:_
 | `soc2` | `CC8.1` | Change Management Process |
 
 _Tags:_ `image`, `k8s`, `pod-security`, `supply-chain`
+
+---
+
+### `k8s-pod-image-pull-policy-consistent`
+
+**imagePullPolicy must be consistent with the tag pinning level** &middot; severity `low` &middot; service `supply-chain` &middot; resource `k8s.pod`
+
+imagePullPolicy: IfNotPresent + a mutable tag = pod on the same node can pull stale content if the tag has been rewritten upstream. imagePullPolicy: Always + a sha256 digest = every restart pulls + verifies the digest (waste, since the digest is immutable). The right pairing:
+  - Digest-pinned image    → IfNotPresent (verify is implicit in digest match).
+  - Mutable-tagged image → Always (force re-pull).
+
+_Remediation:_
+
+> Pair tag-pinning + pull-policy:
+  - sha256 digest: imagePullPolicy: IfNotPresent
+  - mutable tag:   imagePullPolicy: Always
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `4.6` | Securely Manage Enterprise Assets and Software |
+| `iso27001` | `A.8.32` | Change management |
+| `soc2` | `CC6.7` | Transmission, Movement, and Disposal of Information |
+
+_Tags:_ `image`, `k8s`, `supply-chain`
+
+---
+
+### `k8s-pod-image-pull-secret-set`
+
+**Pods pulling from private registries should reference an imagePullSecret** &middot; severity `low` &middot; service `supply-chain` &middot; resource `k8s.pod`
+
+Private registry pulls without an imagePullSecret fall back to the kubelet's node-level credentials (ECR / GCR / ACR via cloud IAM). Sometimes that's intentional (workload identity); often it's accidental + means the workload inherits the node's broader image-pull permissions. Audit-verify per workload whether the implicit-credential fallback is intended.
+
+_Remediation:_
+
+> Define a Secret of type `kubernetes.io/dockerconfigjson` + reference it via `spec.imagePullSecrets`. For ECR / GCR / ACR, prefer the cloud-provider native auth (IRSA on EKS, Workload Identity on GKE).
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `16.6` | Establish and Maintain a Severity Rating System and Process for Application Vulnerabilities |
+| `cis-v8` | `6.7` | Centralize Access Control |
+| `iso27001` | `A.5.15` | Access control |
+| `iso27001` | `A.8.32` | Change management |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC6.7` | Transmission, Movement, and Disposal of Information |
+
+_Tags:_ `k8s`, `manual-verify`, `registry`, `supply-chain`
 
 ---
 
@@ -7215,6 +8561,144 @@ _Tags:_ `image`, `k8s`, `pod-security`, `supply-chain`
 
 ---
 
+### `k8s-pod-image-tag-not-empty`
+
+**Container images must specify an explicit tag (no implicit :latest)** &middot; severity `high` &middot; service `supply-chain` &middot; resource `k8s.pod`
+
+An image reference without a tag (`nginx` rather than `nginx:1.25.3`) implicitly resolves to `:latest`. The audit trail then doesn't even show that latest was selected — operators often miss that no-tag means mutable-pull. Fail-fast at manifest review beats production discovery.
+
+_Remediation:_
+
+> Always pin a tag in the image reference. Combine with digest pinning (k8s-pod-image-digest-pinned) for the strongest supply-chain posture.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `4.6` | Securely Manage Enterprise Assets and Software |
+| `iso27001` | `A.8.32` | Change management |
+| `soc2` | `CC6.7` | Transmission, Movement, and Disposal of Information |
+
+_Tags:_ `image`, `k8s`, `supply-chain`
+
+---
+
+### `k8s-pod-image-tag-not-mutable`
+
+**Container images should not use mutable tags (latest, master, develop)** &middot; severity `high` &middot; service `supply-chain` &middot; resource `k8s.pod`
+
+Tags like :latest, :master, :develop, :main are conventionally floating — a new push to the registry replaces the image any prior pull resolved. Combined with imagePullPolicy: IfNotPresent (the default for non-:latest tags) the production pod can stay on an old version while new pods pulled fresh content. Combined with imagePullPolicy: Always, every pod restart is a supply-chain surface. Pinning the digest (k8s-pod-image-digest-pinned) is strictly stronger; this check catches the lower bar.
+
+_Remediation:_
+
+> Replace mutable tags with semver tags (`:v1.2.3`) or sha256 digests (`@sha256:...`). Use Renovate / dependabot to keep the references current.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `4.6` | Securely Manage Enterprise Assets and Software |
+| `cis-v8` | `7.1` | Establish and Maintain a Vulnerability Management Process |
+| `iso27001` | `A.8.32` | Change management |
+| `soc2` | `CC6.7` | Transmission, Movement, and Disposal of Information |
+| `soc2` | `CC7.1` | Detection and Monitoring of Vulnerabilities |
+
+_Tags:_ `image`, `k8s`, `supply-chain`
+
+---
+
+### `k8s-pod-image-vuln-scan-fresh`
+
+**Images should have a Trivy / Grype scan within the last 7 days** &middot; severity `medium` &middot; service `supply-chain` &middot; resource `k8s.pod`
+
+Image vulnerability scanning is point-in-time; CVEs are disclosed continuously. A scan older than 7 days is at risk of missing fresh CVEs in dependencies. Best practice: re-scan + alert on new high/critical findings at least daily, or on every new image push. Manual-verify since scan metadata lives in the scanner's own database (ingest via v0.14 vulnerabilities.csv closes this loop).
+
+_Remediation:_
+
+> Schedule daily Trivy / Grype scans (`trivy image --security-checks vuln <image>`) + ingest the results into compliancekit via `--ingest trivy-json:<path>`.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `7.1` | Establish and Maintain a Vulnerability Management Process |
+| `cis-v8` | `7.3` | Perform Automated Operating System Patch Management |
+| `cis-v8` | `7.4` | Perform Automated Application Patch Management |
+| `iso27001` | `A.8.8` | Management of technical vulnerabilities |
+| `soc2` | `CC7.1` | Detection and Monitoring of Vulnerabilities |
+
+_Tags:_ `k8s`, `manual-verify`, `supply-chain`, `vuln-scan`
+
+---
+
+### `k8s-pod-init-container-no-priv-escalation`
+
+**Init containers should disable allowPrivilegeEscalation** &middot; severity `medium` &middot; service `pod-security` &middot; resource `k8s.pod`
+
+allowPrivilegeEscalation defaults to true, which lets a setuid binary in the init container gain root via the same mechanism main containers are flagged for. Same posture for init as for runtime containers.
+
+_Remediation:_
+
+> Add `securityContext.allowPrivilegeEscalation: false` to every initContainers[] entry.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `4.1` | Establish and Maintain a Secure Configuration Process |
+| `cis-v8` | `4.7` | Manage Default Accounts on Enterprise Assets and Software |
+| `iso27001` | `A.8.20` | Networks security |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `init-container`, `k8s`, `pod-security`
+
+---
+
+### `k8s-pod-init-container-readonly-rootfs`
+
+**Init containers should declare readOnlyRootFilesystem** &middot; severity `low` &middot; service `pod-security` &middot; resource `k8s.pod`
+
+Init containers are often given runtime tooling permissions the main app doesn't need (git, curl, jq writing to /tmp). They still need the same securityContext discipline — readOnlyRootFS applied at the init-container level + emptyDir mount for /tmp makes init-container compromise less useful to an attacker.
+
+_Remediation:_
+
+> Add `securityContext.readOnlyRootFilesystem: true` to every initContainers[] entry. Mount /tmp via a writable emptyDir volume if the init step needs scratch space.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `4.1` | Establish and Maintain a Secure Configuration Process |
+| `iso27001` | `A.8.20` | Networks security |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `init-container`, `k8s`, `pod-security`
+
+---
+
+### `k8s-pod-init-container-resource-limits`
+
+**Init containers should declare CPU + memory limits** &middot; severity `low` &middot; service `reliability` &middot; resource `k8s.pod`
+
+Init containers run before the pod is ready + are easy to forget when adding resource limits — CIS 5.x explicitly calls out the init-container omission. Without limits, an init step (git clone of a large repo, decompression) can exhaust node memory before the main containers even start.
+
+_Remediation:_
+
+> Add `resources.limits.cpu` + `resources.limits.memory` to every initContainers[] entry — typically modest (100m / 64Mi).
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `11.2` | Perform Automated Backups |
+| `cis-v8` | `4.6` | Securely Manage Enterprise Assets and Software |
+| `iso27001` | `A.5.30` | ICT readiness for business continuity |
+| `soc2` | `A1.2` | Backup and Recovery Infrastructure |
+
+_Tags:_ `init-container`, `k8s`, `reliability`, `resources`
+
+---
+
 ### `k8s-pod-liveness-probe`
 
 **Containers should declare a liveness probe** &middot; severity `low` &middot; service `pod-security` &middot; resource `k8s.pod`
@@ -7235,6 +8719,74 @@ _Maps to:_
 | `soc2` | `CC7.3` | Security Incident Evaluation |
 
 _Tags:_ `k8s`, `pod-security`, `reliability`
+
+---
+
+### `k8s-pod-no-host-ports`
+
+**Pods should not bind hostPort (narrower than hostNetwork but same risk class)** &middot; severity `medium` &middot; service `pod-security` &middot; resource `k8s.pod`
+
+hostPort opens a port on every node the pod can be scheduled to — even nodes where the pod isn't running. Bypasses NetworkPolicy + Service abstraction. Sometimes legitimate for ingress controllers with hostNetwork unavailable, but in those cases the host-firewall protection has to be set up manually. CIS recommends auditing every use.
+
+_Remediation:_
+
+> Remove `containers[].ports[].hostPort`. For node-local ingress, use a NodePort Service or a hostNetwork pod with an explicit nftables/iptables rule. Audit any remaining hostPort usage against your network-perimeter policy.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `12.5` | Centralize Network Authentication, Authorization, and Auditing (AAA) |
+| `cis-v8` | `4.1` | Establish and Maintain a Secure Configuration Process |
+| `iso27001` | `A.8.20` | Networks security |
+| `iso27001` | `A.8.22` | Segregation of networks |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `host-namespace`, `k8s`, `network`, `pod-security`
+
+---
+
+### `k8s-pod-prestop-hook-for-graceful-drain`
+
+**Long-lived containers should declare a preStop hook** &middot; severity `low` &middot; service `reliability` &middot; resource `k8s.pod`
+
+preStop runs before SIGTERM during graceful shutdown — the place to deregister from service discovery / flush buffers / close DB connections. Without it, the pod takes its terminationGracePeriod to SIGKILL with whatever in-flight requests happened to be on the wire. Info-only since preStop is workload-specific — the check surfaces pods without one for operator review.
+
+_Remediation:_
+
+> Add a preStop hook — typically `lifecycle.preStop.exec` calling the app's shutdown endpoint, or `lifecycle.preStop.httpGet`. Pair with terminationGracePeriodSeconds wide enough for the hook to complete.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `11.2` | Perform Automated Backups |
+| `iso27001` | `A.5.30` | ICT readiness for business continuity |
+| `soc2` | `A1.2` | Backup and Recovery Infrastructure |
+
+_Tags:_ `k8s`, `lifecycle`, `manual-verify`, `reliability`
+
+---
+
+### `k8s-pod-priority-class-explicit`
+
+**Production pods should set priorityClassName explicitly** &middot; severity `low` &middot; service `pod-security` &middot; resource `k8s.pod`
+
+An unset priorityClassName puts the pod at priority 0, meaning it can be preempted by anything system-cluster-critical or higher. Setting an explicit priority makes the eviction order intentional — and lets the scheduler distinguish critical workloads from best-effort under pressure.
+
+_Remediation:_
+
+> Define a PriorityClass + reference it: `spec.priorityClassName: <name>`. CIS recommends two named tiers (`production`, `batch`) at minimum. Skipped by default for kube-system.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `11.2` | Perform Automated Backups |
+| `iso27001` | `A.5.30` | ICT readiness for business continuity |
+| `soc2` | `A1.2` | Backup and Recovery Infrastructure |
+
+_Tags:_ `k8s`, `pod-security`, `scheduling`
 
 ---
 
@@ -7262,6 +8814,28 @@ _Maps to:_
 | `soc2` | `CC6.8` | Prevention or Detection of Unauthorized or Malicious Software |
 
 _Tags:_ `k8s`, `pod-security`, `privileged`
+
+---
+
+### `k8s-pod-readiness-probe`
+
+**Containers should declare a readiness probe** &middot; severity `medium` &middot; service `reliability` &middot; resource `k8s.pod`
+
+Without a readiness probe the kube-apiserver assumes a pod is ready as soon as the kubelet reports Running. That puts traffic on instances that haven't finished initialization — observable as timeouts the moment a Deployment scales up. Each application container should declare a readiness probe (HTTP / TCP / exec).
+
+_Remediation:_
+
+> Add `readinessProbe.httpGet.path: /healthz` (or TCP) to every container in the pod spec. Distinct from livenessProbe — a failing liveness probe restarts the container; a failing readiness probe removes it from Service endpoints but keeps it running for debug.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `11.2` | Perform Automated Backups |
+| `iso27001` | `A.5.30` | ICT readiness for business continuity |
+| `soc2` | `A1.2` | Backup and Recovery Infrastructure |
+
+_Tags:_ `k8s`, `probes`, `reliability`
 
 ---
 
@@ -7336,6 +8910,28 @@ _Tags:_ `k8s`, `pod-security`, `resources`
 
 ---
 
+### `k8s-pod-run-as-group-set`
+
+**Pods should set securityContext.runAsGroup** &middot; severity `low` &middot; service `pod-security` &middot; resource `k8s.pod`
+
+Without explicit runAsGroup, processes inherit the GID baked into the image (often root:0). Setting a non-zero runAsGroup makes file-write-as-root impossible even if a container escapes runAsUser.
+
+_Remediation:_
+
+> Set `spec.securityContext.runAsGroup: 1000` (or similar). Apply at pod level so it inherits across every container.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `4.1` | Establish and Maintain a Secure Configuration Process |
+| `iso27001` | `A.8.20` | Networks security |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `k8s`, `pod-security`, `uid-gid`
+
+---
+
 ### `k8s-pod-run-as-non-root`
 
 **Containers should run as a non-root user** &middot; severity `high` &middot; service `pod-security` &middot; resource `k8s.pod`
@@ -7358,6 +8954,51 @@ _Maps to:_
 | `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `k8s`, `pod-security`, `root`
+
+---
+
+### `k8s-pod-runtime-class-explicit`
+
+**Untrusted workloads should set runtimeClassName (gVisor / Kata)** &middot; severity `low` &middot; service `pod-security` &middot; resource `k8s.pod`
+
+RuntimeClass lets per-pod runtime selection — gVisor for shared-cluster multi-tenancy, Kata for hardware-isolation. Default runc shares the host kernel. This check is information-only (StatusInfo when unset) — production posture varies by cluster shape; only enforce on clusters with multi-tenant or untrusted-workload tiers.
+
+_Remediation:_
+
+> Define a RuntimeClass + reference it: `spec.runtimeClassName: gvisor`. RuntimeClass requires the CRI to support the named handler (e.g. gVisor's runsc).
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `4.7` | Manage Default Accounts on Enterprise Assets and Software |
+| `iso27001` | `A.8.20` | Networks security |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `k8s`, `manual-verify`, `pod-security`, `runtime-class`
+
+---
+
+### `k8s-pod-seccomp-not-unconfined`
+
+**Pods should not set seccompProfile.type=Unconfined** &middot; severity `high` &middot; service `pod-security` &middot; resource `k8s.pod`
+
+Seccomp Unconfined removes the syscall allow-list entirely. This complements `k8s-pod-seccomp-profile` (which fails when seccomp is unset): a pod can have seccomp explicitly Unconfined and pass the `is set` check while being strictly worse than the default. CIS Pod Security Standards 'restricted' profile rejects Unconfined.
+
+_Remediation:_
+
+> Set `securityContext.seccompProfile.type: RuntimeDefault` (or `Localhost` with a per-node profile). Never use Unconfined outside debug workflows.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `4.1` | Establish and Maintain a Secure Configuration Process |
+| `cis-v8` | `4.7` | Manage Default Accounts on Enterprise Assets and Software |
+| `iso27001` | `A.8.20` | Networks security |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `k8s`, `pod-security`, `seccomp`
 
 ---
 
@@ -7406,6 +9047,141 @@ _Maps to:_
 | `soc2` | `CC6.7` | Transmission, Movement, and Disposal of Information |
 
 _Tags:_ `env`, `k8s`, `secrets`
+
+---
+
+### `k8s-pod-share-process-namespace`
+
+**Pods should not enable shareProcessNamespace** &middot; severity `high` &middot; service `pod-security` &middot; resource `k8s.pod`
+
+shareProcessNamespace=true puts every container in the pod into a shared PID namespace. A compromise in any sidecar then has /proc visibility into every other container's process tree — credential scraping, signal sending, file-handle leak. CIS Kubernetes Benchmark v1.x §5.2.x.
+
+_Remediation:_
+
+> Remove `spec.shareProcessNamespace` (defaults to false). If you need cross-container debugging, prefer ephemeral debug containers (`kubectl debug -it ... --image=...`) over leaving shareProcessNamespace=true in the manifest.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `4.1` | Establish and Maintain a Secure Configuration Process |
+| `iso27001` | `A.8.20` | Networks security |
+| `iso27001` | `A.8.22` | Segregation of networks |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `k8s`, `namespace`, `pod-security`
+
+---
+
+### `k8s-pod-startup-probe-for-slow-start`
+
+**Slow-starting containers should declare a startup probe** &middot; severity `low` &middot; service `reliability` &middot; resource `k8s.pod`
+
+A startup probe disables liveness + readiness checks until it succeeds. Without it, slow-starting containers (JVM, .NET, large model loads) get killed by liveness probes before they're ready. Info-level — required only for slow-start workloads, not every pod. The check flags pods that have liveness but no startup probe, leaving the decision to the operator.
+
+_Remediation:_
+
+> Add a startupProbe with a generous failureThreshold × periodSeconds (e.g. failureThreshold: 30, periodSeconds: 10 → 5-minute startup budget). Once it succeeds, the regular liveness + readiness probes take over.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `11.2` | Perform Automated Backups |
+| `iso27001` | `A.5.30` | ICT readiness for business continuity |
+| `soc2` | `A1.2` | Backup and Recovery Infrastructure |
+
+_Tags:_ `k8s`, `manual-verify`, `probes`, `reliability`
+
+---
+
+### `k8s-pod-supplemental-groups-configured`
+
+**Pods with shared volumes should configure supplementalGroups** &middot; severity `low` &middot; service `pod-security` &middot; resource `k8s.pod`
+
+supplementalGroups grants the pod's processes membership in the named GIDs for the lifetime of the container. Required for NFS / CIFS / CSI volumes that authorize by group, and for any image whose `id` reports group memberships the manifest hasn't explicitly granted. Manual-verify pattern — info-only when unset.
+
+_Remediation:_
+
+> Set `spec.securityContext.supplementalGroups: [<gid1>, <gid2>]` to match the volume's group ownership. Required reading for any workload mounting RWX NFS / CIFS.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `4.1` | Establish and Maintain a Secure Configuration Process |
+| `iso27001` | `A.5.15` | Access control |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `k8s`, `manual-verify`, `pod-security`, `uid-gid`
+
+---
+
+### `k8s-pod-termination-grace-period-explicit`
+
+**Pods should set terminationGracePeriodSeconds explicitly** &middot; severity `low` &middot; service `reliability` &middot; resource `k8s.pod`
+
+The k8s default (30s) is wrong for almost every workload: too short for slow-draining databases / cache flushes, way too long for batch jobs. Setting an explicit value makes the shutdown budget intentional + observable per workload. Production databases typically need 60-300s; stateless web tier 10-30s; batch jobs 0-5s.
+
+_Remediation:_
+
+> Set `spec.terminationGracePeriodSeconds: <N>` matching the workload's drain time. Pair with preStop hooks for graceful-shutdown signaling.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `11.2` | Perform Automated Backups |
+| `iso27001` | `A.5.30` | ICT readiness for business continuity |
+| `soc2` | `A1.2` | Backup and Recovery Infrastructure |
+
+_Tags:_ `k8s`, `lifecycle`, `reliability`
+
+---
+
+### `k8s-pod-topology-spread-constraints`
+
+**Multi-replica pods should declare topologySpreadConstraints** &middot; severity `medium` &middot; service `reliability` &middot; resource `k8s.pod`
+
+topologySpreadConstraints tells the scheduler how to fan pods across zones / hosts. Without it, the default scheduler can pack every replica on a single node — an entire workload goes down with one node failure. anti-affinity is the older alternative; topology spread is the modern one with finer control (skew, whenUnsatisfiable).
+
+_Remediation:_
+
+> Add `topologySpreadConstraints: [{maxSkew: 1, topologyKey: topology.kubernetes.io/zone, whenUnsatisfiable: DoNotSchedule, labelSelector: {matchLabels: {app: <name>}}}]`. Use ScheduleAnyway in dev, DoNotSchedule in prod.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `11.2` | Perform Automated Backups |
+| `iso27001` | `A.5.30` | ICT readiness for business continuity |
+| `soc2` | `A1.2` | Backup and Recovery Infrastructure |
+
+_Tags:_ `k8s`, `reliability`, `topology`
+
+---
+
+### `k8s-pod-volume-subpath-restricted`
+
+**Pods using volume subPath should be audited (CVE-2017-1002101 family)** &middot; severity `medium` &middot; service `pod-security` &middot; resource `k8s.pod`
+
+volumeMount.subPath was the entry point for the symlink-race CVE class (CVE-2017-1002101, CVE-2021-25741). Patched in modern kubelets but the pattern remains risky against emptyDir + hostPath volumes — a container that wins a TOCTOU race can escape the subPath sandbox. Auditors flag every use for review.
+
+_Remediation:_
+
+> Prefer separate Volume mounts at distinct mountPaths. If subPath is required, ensure the underlying volume is configMap / secret / downwardAPI (not emptyDir / hostPath) so the host filesystem is not the substrate.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `7.1` | Establish and Maintain a Vulnerability Management Process |
+| `iso27001` | `A.8.20` | Networks security |
+| `iso27001` | `A.8.7` | Protection against malware |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `cve`, `k8s`, `pod-security`, `subpath`
 
 ---
 
@@ -7793,6 +9569,242 @@ _Maps to:_
 | `soc2` | `CC6.8` | Prevention or Detection of Unauthorized or Malicious Software |
 
 _Tags:_ `critical`, `impersonate`, `k8s`, `rbac`
+
+---
+
+### `k8s-rbac-no-create-pods-eviction`
+
+**Roles should not grant create on pods/eviction (forced reschedule)** &middot; severity `medium` &middot; service `rbac` &middot; resource `k8s.cluster_role`
+
+pods/eviction lets the subject forcibly evict a pod ignoring PodDisruptionBudgets — useful to drain a node, useful in DoS playbooks. Cluster-autoscaler + descheduler need it; almost nothing else does.
+
+_Remediation:_
+
+> Restrict to autoscaler service accounts. For ad-hoc eviction, operators should use `kubectl drain` with proper PDB handling — not bypass it via the eviction subresource.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `6.7` | Centralize Access Control |
+| `cis-v8` | `6.8` | Define and Maintain Role-Based Access Control |
+| `iso27001` | `A.5.30` | ICT readiness for business continuity |
+| `soc2` | `A1.2` | Backup and Recovery Infrastructure |
+
+_Tags:_ `eviction`, `k8s`, `pods`, `rbac`
+
+---
+
+### `k8s-rbac-no-csr-create`
+
+**Roles should not grant create on CertificateSigningRequests** &middot; severity `high` &middot; service `rbac` &middot; resource `k8s.cluster_role`
+
+Subjects that create CSRs can request certificates for any identity, including the kubelet identity. Paired with a subject that can approve them (k8s-rbac-csr-approve) it's full identity forgery.
+
+_Remediation:_
+
+> CSR creation is needed only by kubelets + bootstrap workflows. Restrict to specific service accounts; consider separating CSR-create from CSR-approve across distinct subjects.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `6.7` | Centralize Access Control |
+| `cis-v8` | `6.8` | Define and Maintain Role-Based Access Control |
+| `iso27001` | `A.5.15` | Access control |
+| `iso27001` | `A.8.24` | Use of cryptography |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC6.7` | Transmission, Movement, and Disposal of Information |
+
+_Tags:_ `csr`, `k8s`, `rbac`
+
+---
+
+### `k8s-rbac-no-deletecollection-pods`
+
+**Roles should not grant deletecollection on pods** &middot; severity `medium` &middot; service `rbac` &middot; resource `k8s.cluster_role`
+
+deletecollection on pods is a single-call denial-of-service primitive — `kubectl delete pods --all` across every namespace the subject can see. Used in lateral-movement playbooks to disrupt operations while exfiltration runs.
+
+_Remediation:_
+
+> Use `delete` with specific resourceNames or labelSelector on the verb invocation instead of granting deletecollection.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `6.7` | Centralize Access Control |
+| `cis-v8` | `6.8` | Define and Maintain Role-Based Access Control |
+| `iso27001` | `A.5.30` | ICT readiness for business continuity |
+| `soc2` | `A1.2` | Backup and Recovery Infrastructure |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `dos`, `k8s`, `pods`, `rbac`
+
+---
+
+### `k8s-rbac-no-mutatingwebhook-write`
+
+**Roles should not grant write on MutatingWebhookConfigurations** &middot; severity `critical` &middot; service `rbac` &middot; resource `k8s.cluster_role`
+
+MutatingWebhookConfiguration writes let the subject register a webhook that rewrites every CREATE/UPDATE request — injecting privileged containers / overriding image fields / adding sidecars. Effectively cluster-admin without the role.
+
+_Remediation:_
+
+> Restrict to webhook-management operators with resourceNames pinning specific webhooks they own.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `6.8` | Define and Maintain Role-Based Access Control |
+| `iso27001` | `A.5.15` | Access control |
+| `iso27001` | `A.8.2` | Privileged access rights |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `admission`, `k8s`, `rbac`
+
+---
+
+### `k8s-rbac-no-namespaces-write`
+
+**Roles should not grant write on namespaces** &middot; severity `high` &middot; service `rbac` &middot; resource `k8s.cluster_role`
+
+Namespace creation / deletion is administrative; delete on a namespace destroys every resource inside it. Update lets the subject change ResourceQuota / LimitRange / PodSecurityAdmission labels.
+
+_Remediation:_
+
+> Restrict namespace writes to platform / multi-tenant control-plane operators. Most workloads need read-only namespaces access.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `6.7` | Centralize Access Control |
+| `cis-v8` | `6.8` | Define and Maintain Role-Based Access Control |
+| `iso27001` | `A.8.2` | Privileged access rights |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `k8s`, `namespaces`, `rbac`
+
+---
+
+### `k8s-rbac-no-patch-nodes`
+
+**Roles should not grant patch on Node objects** &middot; severity `high` &middot; service `rbac` &middot; resource `k8s.cluster_role`
+
+`patch nodes` allows arbitrary taint manipulation + label changes that drive workload scheduling. A subject with this verb can cordon every node except one + use it as an exfiltration funnel; or strip taints that protect critical workloads from preemption.
+
+_Remediation:_
+
+> Restrict patch on nodes to operators (cluster-autoscaler) with `resourceNames` if granular control is needed.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `6.8` | Define and Maintain Role-Based Access Control |
+| `iso27001` | `A.8.2` | Privileged access rights |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `k8s`, `nodes`, `rbac`
+
+---
+
+### `k8s-rbac-no-update-clusterroles`
+
+**Roles should not grant update on ClusterRoles (privilege escalation)** &middot; severity `critical` &middot; service `rbac` &middot; resource `k8s.cluster_role`
+
+`update clusterroles` lets the subject rewrite any ClusterRole — including system:masters or cluster-admin — to include themselves as subjects via permission flip. Functionally equivalent to a backdoor cluster-admin.
+
+_Remediation:_
+
+> Strip `update` (+ `patch`) verbs on clusterroles.rbac.authorization.k8s.io. The escalate verb check (k8s-rbac-escalate) already catches the canonical escalation path; this complements it for the direct overwrite case.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `6.8` | Define and Maintain Role-Based Access Control |
+| `iso27001` | `A.5.15` | Access control |
+| `iso27001` | `A.5.18` | Access rights |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `escalation`, `k8s`, `rbac`
+
+---
+
+### `k8s-rbac-no-update-pods-ephemeralcontainers`
+
+**Roles should not grant write on pods/ephemeralcontainers (debug attach)** &middot; severity `high` &middot; service `rbac` &middot; resource `k8s.cluster_role`
+
+pods/ephemeralcontainers lets a subject attach a new container to a running pod with arbitrary image + securityContext. Same blast radius as `pods/exec` but persistent in spec — a debug container with privileged: true is full node compromise from anywhere on the pod's network namespace.
+
+_Remediation:_
+
+> Restrict to incident-response service accounts only. Pair with audit-log monitoring (verbs: create/patch/update on pods/ephemeralcontainers) for SOC visibility.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `6.7` | Centralize Access Control |
+| `cis-v8` | `6.8` | Define and Maintain Role-Based Access Control |
+| `iso27001` | `A.5.15` | Access control |
+| `iso27001` | `A.8.20` | Networks security |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `ephemeral`, `k8s`, `pods`, `rbac`
+
+---
+
+### `k8s-rbac-no-update-pods-status`
+
+**Roles should not grant update on pods/status (liveness spoofing)** &middot; severity `high` &middot; service `rbac` &middot; resource `k8s.cluster_role`
+
+Writes to pods/status let a subject mark unhealthy pods Ready (sending traffic to broken instances) or mark healthy pods Failed (forcing reschedule). Used in attacks on canary / blue-green deploys to bypass health-gate.
+
+_Remediation:_
+
+> pods/status writes are needed only by kubelet + specific controllers (node-problem-detector). Restrict to those service accounts; deny for anything else.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `6.7` | Centralize Access Control |
+| `cis-v8` | `6.8` | Define and Maintain Role-Based Access Control |
+| `iso27001` | `A.8.2` | Privileged access rights |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `k8s`, `pods`, `rbac`
+
+---
+
+### `k8s-rbac-no-validatingwebhook-write`
+
+**Roles should not grant write on ValidatingWebhookConfigurations** &middot; severity `high` &middot; service `rbac` &middot; resource `k8s.cluster_role`
+
+ValidatingWebhookConfiguration writes let the subject register or remove admission validators — bypassing OPA / Gatekeeper / Kyverno enforcement by deregistering them.
+
+_Remediation:_
+
+> Restrict to webhook-management operators. Pair with audit-log monitoring on validatingwebhookconfigurations.admissionregistration.k8s.io.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `6.8` | Define and Maintain Role-Based Access Control |
+| `iso27001` | `A.5.15` | Access control |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `admission`, `k8s`, `rbac`
 
 ---
 
@@ -8352,6 +10364,75 @@ _Tags:_ `exposure`, `k8s`, `loadbalancer`, `network`
 
 ---
 
+### `k8s-service-mixed-tls-plaintext-ports`
+
+**Services should not expose plaintext + TLS on overlapping ports** &middot; severity `low` &middot; service `network` &middot; resource `k8s.service`
+
+A Service exposing both 80 (plaintext) and 443 (TLS) with no `targetPort` discrimination forces the workload to handle both — common pattern for legacy apps but discouraged in zero-trust setups where TLS termination should happen at the ingress / sidecar tier. Info-only — flags Services with both port 80 + 443 for review.
+
+_Remediation:_
+
+> Remove the :80 port from the Service. Terminate TLS at the Ingress / sidecar tier (envoy, linkerd-proxy). For the legitimate case (HTTP-redirect-to-HTTPS), serve the redirect from the Ingress, not the backend Service.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `3.10` | Encrypt Sensitive Data in Transit |
+| `iso27001` | `A.5.14` | Information transfer |
+| `iso27001` | `A.8.24` | Use of cryptography |
+| `soc2` | `CC6.7` | Transmission, Movement, and Disposal of Information |
+
+_Tags:_ `k8s`, `manual-verify`, `network`, `service`, `tls`
+
+---
+
+### `k8s-service-no-publish-not-ready-addresses`
+
+**Services should not enable publishNotReadyAddresses (bypasses readiness)** &middot; severity `medium` &middot; service `network` &middot; resource `k8s.service`
+
+publishNotReadyAddresses: true makes the Service add endpoints for pods that are not yet Ready. Legitimate for headless discovery services (StatefulSet-style cluster bootstrap) but a common foot-gun for general workloads — it routes traffic to pods that have failed their readiness probe. Manual-verify since the current collector doesn't surface the field.
+
+_Remediation:_
+
+> Leave publishNotReadyAddresses unset (defaults to false). For StatefulSet bootstrap use cases, ensure the StatefulSet is the only consumer of the headless Service.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `11.2` | Perform Automated Backups |
+| `iso27001` | `A.5.30` | ICT readiness for business continuity |
+| `soc2` | `A1.2` | Backup and Recovery Infrastructure |
+
+_Tags:_ `k8s`, `manual-verify`, `network`, `service`
+
+---
+
+### `k8s-service-no-zero-cidr-source-range`
+
+**Service loadBalancerSourceRanges must not contain 0.0.0.0/0** &middot; severity `high` &middot; service `network` &middot; resource `k8s.service`
+
+Setting loadBalancerSourceRanges to 0.0.0.0/0 defeats the field's purpose — it's identical to leaving the field unset but misleadingly claims source-IP restriction in audit. Auditors flag explicit zero-CIDR as worse than no restriction (false-sense-of-security antipattern).
+
+_Remediation:_
+
+> Either remove loadBalancerSourceRanges entirely (so the field's absence is honest) or replace 0.0.0.0/0 with a CIDR list of legitimate ingress sources.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `12.5` | Centralize Network Authentication, Authorization, and Auditing (AAA) |
+| `cis-v8` | `4.6` | Securely Manage Enterprise Assets and Software |
+| `iso27001` | `A.8.20` | Networks security |
+| `iso27001` | `A.8.22` | Segregation of networks |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `k8s`, `loadbalancer`, `network`
+
+---
+
 ### `k8s-service-nodeport`
 
 **Services should generally not use type: NodePort** &middot; severity `low` &middot; service `network` &middot; resource `k8s.service`
@@ -8398,6 +10479,28 @@ _Maps to:_
 | `soc2` | `CC6.7` | Transmission, Movement, and Disposal of Information |
 
 _Tags:_ `defense-in-depth`, `k8s`, `network`, `policy`
+
+---
+
+### `k8s-service-selector-too-broad`
+
+**Services should not have empty / 1-label selectors (cross-workload exposure)** &middot; severity `medium` &middot; service `network` &middot; resource `k8s.service`
+
+A Service with no selector or a single common label (`app: nginx`) routes traffic to every pod in the namespace matching that label — including pods the operator didn't intend to expose. Namespace label-collisions are common. Audit recommends multi-label selectors with version + instance discriminators.
+
+_Remediation:_
+
+> Add a discriminating label to both the Service selector AND the target pods — typically `app.kubernetes.io/instance` or a per-deployment unique label.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `4.6` | Securely Manage Enterprise Assets and Software |
+| `iso27001` | `A.8.22` | Segregation of networks |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `k8s`, `network`, `service`
 
 ---
 
