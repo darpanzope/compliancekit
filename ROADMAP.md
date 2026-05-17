@@ -186,6 +186,7 @@ to the v0.1-v0.5 audience that put compliancekit on the map.
 | ~~v0.19~~ ✅ | DigitalOcean deepening — 74 → 144 checks across 21 services; every DO check ships with bespoke Terraform + doctl + bash remediation (432 strategies); checks-package coverage 96.1% | Production-grade DO posture |
 | ~~v0.20~~ ✅ | Linux hardening — production grade — 15 → 119 checks across 9 spec frameworks; CIS Linux Server Benchmark v8 catalog (90+ sections, L1/L2 tagged); per-distro detection (Debian, RHEL, Alpine, AL2/AL2023); every check ships bespoke bash + Ansible (238 strategies, parity gate at 0/0); checks-package coverage 90.6% | Linux hardening at OpenSCAP/Lynis depth |
 | **v0.21** | **Kubernetes + DOKS deepening — production grade** | 139 → 250+ checks; full CIS K8s + NSA/CISA Hardening Guide + PCI K8s; RBAC graph analysis, supply-chain (cosign), policy-engine presence |
+| **v0.22** | **Internal refactor + toolchain refresh + cookbook** | Targeted file split (6 oversize files ≥600 LoC), v0.20 spec-pattern adoption across AWS/GCP/k8s, golangci-lint v1 → v2 migration, dependency + Ubuntu 24.04 sweep, compliancekit-action multi-provider + version-pin support, **docs deep pass** (README/ARCHITECTURE/DEVELOPMENT rewrites + new CONTRIBUTING + ADR index + CHANGELOG backfill + SECURITY for v1.0 compat language), **cookbook** (9 recipe playbooks for SOC2/ISO/PCI/HIPAA workflows + 7 CI/CD integrations + ~50 reference Rego policies). No new user-facing checks; sets up v1.0 API freeze. |
 | **v1.0** | API stability — `pkg/compliancekit` frozen | Embed compliancekit in your own tools |
 | v1.1 | `serve` mode + SQLite/Postgres backend + REST API + webhook receivers | Continuous monitoring without the SaaS bill |
 | v1.2 | Multi-tenant / organizations | MSP-friendly: one binary, many clients |
@@ -1450,6 +1451,263 @@ verification (cosign / sigstore attestation).
 - Test coverage ≥85% per file in `internal/checks/k8s/` and
   `internal/collectors/k8s/`.
 - README + CHECKS.md updated.
+
+---
+
+### v0.22 — Internal refactor + toolchain refresh
+
+**Goal:** pay down accumulated structure debt before the v1.0 API
+freeze (#18). v0.6 → v0.21 added 482 checks across 6 providers + 7
+ingest adapters + 10 remediation formats + 8 notify sinks + waivers
++ policy DSL. The package boundaries are sound (kubescape / Trivy /
+Prowler all settled on the same flat per-provider layout) so v0.22
+is **deliberately not a directory rearrangement**. The win is in
+file-level navigability, adopting the v0.20 spec-driven pattern
+where it pays off, and getting the toolchain current before we
+freeze the API surface.
+
+Scoped tight to keep the milestone reviewable + to avoid blocking
+v1.0 on refactor scope creep. **No new user-facing checks.**
+
+**Why this slot and not a continuous refactor**
+
+Three of the six providers (DigitalOcean v0.19, Linux v0.20,
+Kubernetes v0.21) each shipped 90+ new files in a single milestone.
+Refactoring mid-deepening means re-refactoring after each one. v0.22
+runs *after* v0.21 closes for the same reason v0.20 ran after v0.19:
+the spec-driven pattern only crystallizes after enough surface
+exists to recognize the shape worth lifting out.
+
+**Deliverables**
+
+- **File split — 6 oversize files.** Mechanical split along
+  existing logical boundaries; no behavior change. CI gate: no
+  check-registration file >600 LoC after this milestone.
+  - `internal/checks/k8s/rbac.go` (1045 LoC) → `rbac_roles.go` +
+    `rbac_bindings.go` + `rbac_serviceaccounts.go`
+  - `internal/checks/k8s/pods.go` (904 LoC) → `pods_security.go` +
+    `pods_resources.go` + `pods_network.go`
+  - `internal/checks/k8s/network.go` (879 LoC) → `network_policies.go`
+    + `network_ingress.go` + `network_services.go`
+  - `internal/checks/k8s/cluster.go` (701 LoC) → `cluster_admission.go`
+    + `cluster_apiserver.go`
+  - `internal/checks/k8s/eks.go` (649 LoC) → split by EKS family
+    (control-plane / nodegroup / addons)
+  - `internal/checks/aws/iam.go` (635 LoC) → split by IAM resource
+    type (users / policies / roles / mfa)
+- **Spec-driven pattern adoption.** The v0.20 spec-shape (struct
+  literal slice + init() loop + per-shape closure) drove the
+  Linux check surface from 15 → 119 with minimal LoC growth. Lift
+  it into the providers where 50%+ of checks share a shape:
+  - **AWS IAM** — policy-attached-to-user, password-policy, MFA-
+    enforced, access-key-rotation all fit one spec; cuts ~150 LoC.
+  - **GCP IAM** — same shape; cuts ~120 LoC.
+  - **K8s pod-security** — runAsNonRoot, allowPrivilegeEscalation,
+    readOnlyRootFilesystem, hostNetwork, hostPID, hostIPC all fit
+    one `psSpec`; cuts ~250 LoC.
+- **Lint + toolchain refresh.**
+  - **golangci-lint v1.64.8 → v2.x.** Migration is non-trivial —
+    config schema changed (`linters:` block restructured),
+    `gocyclo` thresholds re-tune, removed linters need
+    substitutes. Reconcile [`.golangci.yaml`](.golangci.yaml) +
+    update [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) +
+    [`feedback-collab`] memory + Homebrew formula pin.
+  - **Go 1.27** when GA (currently 1.26.3); bump `go.mod`,
+    `.github/workflows/*.yaml` `GO_VERSION`, Dockerfile, and the
+    GoReleaser build matrix.
+  - **Ubuntu runner pin.** `runs-on: ubuntu-latest` is already
+    24.04 since GHA bumped the alias in Jan 2025. Pin explicitly
+    to `ubuntu-24.04` in all three workflows (`ci.yaml`,
+    `release.yaml`, `govulncheck.yaml`) so a future
+    `ubuntu-latest` bump to 26.04 doesn't silently break builds.
+  - **Dependency sweep.** `go list -u -m all` per phase; bump
+    AWS / GCP / godo / hcloud / k8s.io / OPA / cobra / viper to
+    their latest minor versions; `go mod tidy`. Per-bump test
+    + lint + integration smoke before staging.
+- **Test infrastructure.**
+  - **Fake SSH server** for `internal/collectors/linux/` — closes
+    the v0.20 deferred coverage gap (53.7% → ≥85%). The
+    `gatherX` / `Dial` / `RunCommand` 0% blocks all gate on this.
+  - **Test helpers consolidation** — `internal/testutil/` for
+    the `core.Resource` builder helpers that have drifted into
+    per-package `*_test.go` files (`hostWithSSHD`, `hostWithMAC`,
+    `hostWithAuditRules` in checks/linux; equivalents in checks/k8s,
+    checks/digitalocean). One canonical builder, per-provider
+    convenience constructors.
+- **compliancekit-action repo polish.**
+  - **Multi-provider input.** Today `providers: digitalocean,linux`
+    silently runs only the first (`scan` accepts one positional).
+    Loop the comma-separated list + aggregate findings; backwards-
+    compat with single-provider input.
+  - **Version pinning.** `version: latest` resolves at job start —
+    fragile against new releases mid-CI. Default to a pinned
+    `latest-stable` (the latest non-prerelease tag at action
+    build time); `latest` becomes opt-in.
+  - **Output upload polish.** Optional `upload-evidence-pack:
+    true` action input that uploads `evidence/` as a workflow
+    artifact using `actions/upload-artifact@v4`.
+  - **Node 20 → Node 22.** GitHub deprecated Node 16 in 2024;
+    bump for the upload-sarif sub-action versions that depend on
+    it (`github/codeql-action@v3` is already there; ensure other
+    composite sub-actions are on `@v4`).
+  - **Action test matrix.** `tests/` folder with workflow runners
+    exercising every action input combination on `ubuntu-24.04` +
+    `ubuntu-22.04` (back-compat) + `macos-14` (mac runners exist).
+- **Docs polish (deep pass — first since v0.12).** Every shipping
+  doc gets a reread + rewrite where it's drifted. Not surface
+  edits — real restructure where v0.6 → v0.21 changed the shape
+  of the project.
+  - **README.md** — top-of-fold pitch tightened against the 482-
+    check / 8-framework reality. "What's in the box" rewritten
+    (the v0.6 table doesn't reflect spec-driven checks, waivers,
+    Rego, notify, ingest, remediate). New "How auditors actually
+    use this" section sourced from the v0.18-v0.20 evidence-pack
+    work.
+  - **docs/ARCHITECTURE.md** — §6 (Code organization) refreshed
+    for the spec-pattern + 600-LoC invariant. §13 (Air-gapped
+    operation) re-validated against the v0.13-v0.16 embed
+    additions (frameworks, policies, mappings). New §X
+    (Spec-driven check authoring) walks the pattern end-to-end.
+  - **docs/DEVELOPMENT.md** — golangci-lint v2 config shape,
+    spec-pattern authoring loop (struct → init() → register →
+    test), the new `internal/testutil` helper API, the
+    `*_<GOOS>_test.go` build-tag gotcha codified.
+  - **CONTRIBUTING.md** — new, top-level. End-to-end "add a new
+    check" walkthrough using the v0.20 spec-pattern; for each
+    of the four provider archetypes (cloud-API, K8s-API,
+    SSH-host, file-system) show the minimal struct + test +
+    spec + remediation snippet to land a single check.
+  - **ADR index consolidation.** docs/decisions/README.md (new)
+    indexes ADR-001 → ADR-013 with status (Accepted / Resolved /
+    Superseded / Revisited-at-v1.0). Retrospective table — which
+    decisions held under load, which decisions need a second look
+    before the v1.0 freeze.
+  - **SECURITY.md** refresh — 2-year backwards-compat commitment
+    language drafted ahead of v1.0. CVE-disclosure email + GPG
+    key + 90-day disclosure window per industry norm.
+  - **CHANGELOG.md** — new, auto-generated from conventional
+    commit history via [git-cliff](https://git-cliff.org/) so it
+    stays in sync. v0.1 → v0.20 backfilled from the existing
+    tags + this ROADMAP.
+  - **docs/checks.md** — regenerated (counts unchanged; remediation
+    text changes for the AWS/GCP/k8s checks lifted into specs).
+- **Deep examples — the "compliancekit Cookbook".** The
+  existing `examples/quickstart-*.yaml` files are config-shape
+  references. The Cookbook is the *workflow* layer — what
+  auditors / SREs / security teams actually do with compliancekit
+  over a quarter, not just "here's a config that scans X".
+  - **`examples/recipes/`** — markdown playbooks, one per workflow:
+    - `soc2-audit-pack.md` — SOC 2 12-week evidence collection
+      timeline; what to capture each week; how to wire to your
+      auditor's portal.
+    - `iso27001-readiness.md` — ISO 27001:2022 Annex A readiness
+      pass; control-by-control evidence checklist with which
+      compliancekit checks satisfy what.
+    - `pci-quarterly-scan.md` — PCI DSS v4.0 quarterly scan +
+      waiver + POA&M emit flow; QSA-ready evidence pack.
+    - `hipaa-baa-attestation.md` — HIPAA Security Rule §164.308/
+      310/312 evidence walk with BAA-required artifact mapping.
+    - `multi-cloud-fleet.md` — AWS + GCP + DO + Hetzner in one
+      CI workflow with consolidated reporting + per-cloud waiver
+      partitioning.
+    - `k8s-pod-security-rollout.md` — applying CIS K8s benchmark
+      + Pod Security Admission enforcement in stages, with
+      waiver-based progressive rollout.
+    - `linux-cis-l1-to-l2.md` — progressive CIS Linux Server
+      hardening from L1 baseline → L2 high-security, leaning on
+      the v0.20 tagged-section catalog.
+    - `ci-gate-tuning.md` — composing `fail-on` × `severity-floor`
+      × `baseline-diff` × `only-new-findings` for your team's risk
+      tolerance; common pitfalls.
+    - `evidence-pack-shipping.md` — what auditors actually want:
+      OSCAL vs HTML vs CSV vs SARIF, redaction policies, raw-
+      finding access via `--include-raw`, sha256 manifest
+      verification.
+  - **`examples/integrations/`** — end-to-end working configs for
+    the toolchains people actually run:
+    - `github-actions/` — multiple workflows: scheduled audit,
+      PR-gate, baseline-diff, evidence-pack-on-tag, multi-cloud
+      matrix.
+    - `gitlab-ci/`, `jenkins/`, `circleci/` — equivalent shapes
+      for non-GitHub teams.
+    - `argocd/` — running compliancekit as an ArgoCD sync-wave
+      pre-step so K8s deployments gate on compliance.
+    - `datadog/` — forwarding `findings.json` to DD via fluent-bit
+      so security teams see findings in the same UI as their
+      observability data.
+    - `splunk/` — same, for Splunk shops.
+  - **`docs/cookbook.md`** — single-page index of every recipe
+    + every integration, with a "use-case → recipe" navigation
+    table so an SRE landing cold can find the right playbook in
+    <30 seconds.
+  - **`examples/policies/` extension** — the v0.16 Rego examples
+    cover 15 reimplementations across providers. Extend with a
+    full reference policy library (~50 policies) showing the
+    canonical Rego pattern for each spec shape lifted in this
+    milestone.
+
+**Phase shape (estimate, per-commit-gate maintained)**
+
+| Phase | Scope |
+|---|---|
+| 0 | Repo audit + file-size CI gate (fails pre-commit if any check file >600 LoC) |
+| 1 | Split k8s/rbac.go (1045 → 3 files) |
+| 2 | Split k8s/pods.go (904 → 3 files) |
+| 3 | Split k8s/network.go + cluster.go + eks.go + aws/iam.go |
+| 4 | AWS IAM spec-pattern lift |
+| 5 | GCP IAM spec-pattern lift |
+| 6 | K8s pod-security spec-pattern lift |
+| 7 | Fake SSH server + collectors/linux coverage 53.7% → ≥85% |
+| 8 | internal/testutil helpers extraction |
+| 9 | golangci-lint v1 → v2 config migration + reconcile |
+| 10 | Go 1.27 bump (gated on Go 1.27 GA — fallback: defer to v0.23) |
+| 11 | Dependency sweep (AWS SDK / GCP SDK / godo / k8s.io / OPA / cobra / viper) |
+| 12 | Ubuntu 24.04 pin + workflow YAML refresh |
+| 13 | compliancekit-action multi-provider + version-pin + Node 22 + test matrix |
+| 14 | README rewrite + ARCHITECTURE deep refresh |
+| 15 | DEVELOPMENT.md + new CONTRIBUTING.md + ADR index consolidation |
+| 16 | SECURITY.md refresh + CHANGELOG.md backfill (git-cliff) |
+| 17 | examples/recipes/ — 9 workflow playbooks |
+| 18 | examples/integrations/ — 7 CI/CD + observability integrations |
+| 19 | examples/policies/ extension — ~50 reference Rego policies + cookbook index |
+| 20 | Final docs/checks.md regen + ROADMAP polish |
+
+**Definition of done**
+
+- No check-registration file >600 LoC (enforced by CI gate).
+- AWS / GCP IAM + K8s pod-security on spec-driven shape; net LoC
+  decrease ≥400 across those areas.
+- golangci-lint v2.x in CI + pre-commit; v1.64.8 references purged
+  from docs.
+- `internal/collectors/linux/` coverage ≥85% (closes v0.20 defer).
+- All three GHA workflows pin `ubuntu-24.04` explicitly.
+- `go list -u -m all` shows no minor-version drift on the top-15
+  most-used deps.
+- compliancekit-action accepts comma-separated `providers:` input
+  + offers `version: latest-stable`.
+- Total Linux + CI test wall-clock not regressed >10% vs v0.21.
+- **Docs deep pass shipped:** README + ARCHITECTURE + DEVELOPMENT
+  rewritten where drifted; new CONTRIBUTING.md + ADR index +
+  CHANGELOG.md backfilled; SECURITY.md refreshed for v1.0 compat
+  language.
+- **Cookbook shipped:** 9 recipe playbooks + 7 integration configs
+  + ~50 reference Rego policies + single-page cookbook index at
+  `docs/cookbook.md`.
+
+**Out of scope at v0.22 (explicit deferrals)**
+
+- **New checks or new framework catalogs.** Goes to v0.21
+  (K8s deepening) or v1.1+ (post-API-freeze).
+- **`pkg/compliancekit` extraction.** That's the v1.0 milestone
+  (#18). v0.22 stays under `internal/`.
+- **Multi-binary split** (`ck-collector`, `ck-emit`, etc.).
+  No demand signal yet; revisit at v2.x if the plugin marketplace
+  needs it.
+- **Per-service subfolders under each provider.** Considered + ruled
+  out — every comparable scanner (kubescape, Trivy, Prowler,
+  steampipe) keeps flat per-provider packages because Go subpackage
+  semantics impose more friction than the navigability win is worth.
+- **macOS / Windows / BSD hardening.** Stays at v1.6.
 
 ---
 
