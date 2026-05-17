@@ -153,6 +153,15 @@ func (c *Collector) gatherOne(ctx context.Context, host Host) core.Resource {
 		attrs["mounts_error"] = err.Error()
 	}
 
+	// v0.20 phase 4 — systemd unit state for the services-hardening
+	// checks (must-be-running set + must-be-disabled set + insecure
+	// inetd-era services that must be absent entirely).
+	if svc, err := gatherServices(ctx, client); err == nil {
+		attrs["services"] = svc
+	} else {
+		attrs["services_error"] = err.Error()
+	}
+
 	if users, err := gatherUsers(ctx, client); err == nil {
 		attrs["users"] = users
 	} else {
