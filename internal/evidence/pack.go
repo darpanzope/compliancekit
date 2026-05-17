@@ -88,6 +88,7 @@ type Result struct {
 	OSCALARPath         string                  // <OutDir>/assessment-results.oscal.json (v0.13+)
 	OSCALProfilePath    string                  // <OutDir>/profile.oscal.json (v0.13+)
 	VulnerabilitiesPath string                  // <OutDir>/vulnerabilities.csv (v0.14+); empty when no CVE findings
+	WaiversPath         string                  // <OutDir>/waivers.json (v0.18+); empty when no waiver-muted findings
 	Generated           time.Time               // header timestamp actually used
 	ControlIndex        map[string][]ControlRef // framework -> controls covered (display order)
 }

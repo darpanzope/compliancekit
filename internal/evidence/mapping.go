@@ -50,6 +50,11 @@ var mappingColumns = []string{
 	// v0.13 additions:
 	"finding_source", // "native" | "ingest" — where the finding came from
 	"finding_tool",   // populated for ingest findings (e.g. "trivy", "aws-security-hub"); empty for native
+	// v0.18 additions — waiver attribution (additive per ADR-013):
+	"waiver_active",   // "true" when a waiver muted this finding (Finding.Waiver != nil); "false" otherwise
+	"waiver_reason",   // operator's justification from the matching waiver; empty when not waived
+	"waiver_approver", // who signed off; empty when not waived
+	"waiver_expires",  // YYYY-MM-DD; empty when not waived
 }
 
 // writeMappingCSV emits <out>/control-mapping.csv with one row per
@@ -100,6 +105,7 @@ func writeMappingCSV(outDir string, controls []ControlRef, tailoring *frameworks
 				title = chk.Title
 			}
 			sourceType, sourceTool := sourceColumns(fnd)
+			waiverActive, waiverReason, waiverApprover, waiverExpires := waiverColumns(fnd)
 			row := []string{
 				c.FrameworkID,
 				c.ControlID,
@@ -121,6 +127,10 @@ func writeMappingCSV(outDir string, controls []ControlRef, tailoring *frameworks
 				justification,
 				sourceType,
 				sourceTool,
+				waiverActive,
+				waiverReason,
+				waiverApprover,
+				waiverExpires,
 			}
 			if err := w.Write(row); err != nil {
 				return "", fmt.Errorf("write row: %w", err)
@@ -143,6 +153,25 @@ func sourceColumns(f core.Finding) (sourceType, sourceTool string) {
 		return "native", ""
 	}
 	return f.Source.Type, f.Source.Tool
+}
+
+// waiverColumns returns the (active, reason, approver, expires)
+// values for the v0.18 waiver attribution columns. Nil Waiver →
+// all empty + active="false". Populated Waiver → all four fields
+// rendered for the audit trail.
+//
+// Per ADR-013 the waiver block is visible in the evidence pack —
+// the auditor sees the acknowledgement plus the reason + approver
+// rather than the finding silently disappearing.
+func waiverColumns(f core.Finding) (active, reason, approver, expires string) {
+	if f.Waiver == nil {
+		return "false", "", "", ""
+	}
+	expiresStr := ""
+	if !f.Waiver.Expires.IsZero() {
+		expiresStr = f.Waiver.Expires.Format("2006-01-02")
+	}
+	return "true", f.Waiver.Reason, f.Waiver.Approver, expiresStr
 }
 
 // resolveControlMeta looks up the framework and control to surface

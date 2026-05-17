@@ -42,6 +42,15 @@ func writeOSCALAndVulnArtifacts(abs string, findings []core.Finding, result *Res
 		result.VulnerabilitiesPath = vulnPath
 		result.FilesWritten++
 	}
+
+	waiverPath, err := writeWaiversJSON(abs, findings)
+	if err != nil {
+		return err
+	}
+	if waiverPath != "" {
+		result.WaiversPath = waiverPath
+		result.FilesWritten++
+	}
 	return nil
 }
 
