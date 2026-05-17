@@ -83,6 +83,14 @@ func (c *Collector) podResource(scope *ContextScope, pod *corev1.Pod) core.Resou
 		"containers":         collectContainers(pod),
 		"owner_kind":         firstOwnerKind(pod.OwnerReferences),
 		"owner_name":         firstOwnerName(pod.OwnerReferences),
+		// v0.21 phase 1 — pod-security deepening surface.
+		"share_process_namespace": boolPtrOrNil(pod.Spec.ShareProcessNamespace),
+		"dns_policy":              string(pod.Spec.DNSPolicy),
+		"priority_class_name":     pod.Spec.PriorityClassName,
+		"runtime_class_name":      stringPtrOrEmpty(pod.Spec.RuntimeClassName),
+		"host_users":              boolPtrOrNil(pod.Spec.HostUsers),
+		"apparmor_profile":        apparmorProfileFromAnnotations(pod.Annotations),
+		"volume_subpath_mounts":   collectVolumeSubpathMounts(pod),
 	}
 	r := core.Resource{
 		ID:         fmt.Sprintf("%s.%s.%s.%s", PodType, scope.Name, pod.Namespace, pod.Name),
@@ -158,6 +166,82 @@ func flattenPodSecurityContext(sc *corev1.PodSecurityContext) map[string]any {
 	if sc.SeccompProfile != nil {
 		out["seccomp_type"] = string(sc.SeccompProfile.Type)
 	}
+	// v0.21 phase 1 — fs/run-as-group + supplemental groups for
+	// the new pod-security deepening checks.
+	if sc.RunAsGroup != nil {
+		out["run_as_group"] = *sc.RunAsGroup
+	}
+	if sc.FSGroup != nil {
+		out["fs_group"] = *sc.FSGroup
+	}
+	if len(sc.SupplementalGroups) > 0 {
+		groups := make([]int64, len(sc.SupplementalGroups))
+		copy(groups, sc.SupplementalGroups)
+		out["supplemental_groups"] = groups
+	}
+	return out
+}
+
+// boolPtrOrNil returns the dereferenced bool or nil when ptr is nil so
+// downstream checks can distinguish "explicitly false" from "unset"
+// (k8s defaults vary: ShareProcessNamespace nil ⇒ false, HostUsers nil
+// ⇒ true on k8s ≥ 1.30).
+func boolPtrOrNil(b *bool) any {
+	if b == nil {
+		return nil
+	}
+	return *b
+}
+
+// stringPtrOrEmpty returns the dereferenced string or "" when the
+// caller didn't set RuntimeClassName.
+func stringPtrOrEmpty(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
+}
+
+// apparmorProfileFromAnnotations extracts the per-container AppArmor
+// profile annotations (`container.apparmor.security.beta.kubernetes.io/<name>`)
+// + flattens to "container=profile" pairs. Returns empty slice on
+// k8s ≥ 1.30 hosts that have migrated to securityContext.appArmorProfile
+// (left to per-container surface).
+func apparmorProfileFromAnnotations(ann map[string]string) []string {
+	if len(ann) == 0 {
+		return nil
+	}
+	const prefix = "container.apparmor.security.beta.kubernetes.io/"
+	out := []string{}
+	for k, v := range ann {
+		if strings.HasPrefix(k, prefix) {
+			out = append(out, strings.TrimPrefix(k, prefix)+"="+v)
+		}
+	}
+	return out
+}
+
+// collectVolumeSubpathMounts walks every container's volumeMounts +
+// returns "container/volume:subPath" entries. subPath is a documented
+// symlink-attack vector (CVE-2017-1002101 family) when the volume is
+// emptyDir or a hostPath; auditors want the list surfaced.
+func collectVolumeSubpathMounts(pod *corev1.Pod) []string {
+	out := []string{}
+	walk := func(cs []corev1.Container) {
+		for _, c := range cs {
+			for _, vm := range c.VolumeMounts {
+				if vm.SubPath != "" || vm.SubPathExpr != "" {
+					sp := vm.SubPath
+					if sp == "" {
+						sp = vm.SubPathExpr
+					}
+					out = append(out, c.Name+"/"+vm.Name+":"+sp)
+				}
+			}
+		}
+	}
+	walk(pod.Spec.InitContainers)
+	walk(pod.Spec.Containers)
 	return out
 }
 
