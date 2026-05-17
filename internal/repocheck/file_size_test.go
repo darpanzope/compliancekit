@@ -40,7 +40,7 @@ const maxCheckFileLOC = 600
 var legacyOversizeAllowlist = map[string]int{
 	// rbac.go split out at v0.22 phase 1 (→ rbac_roles.go + rbac_bindings.go).
 	// pods.go split out at v0.22 phase 2 (→ pods_resources.go + pods_volumes.go).
-	"internal/checks/k8s/network.go":       879,
+	// network.go split out at v0.22 phase 3 (→ network_ingress.go + network_policies.go).
 	"internal/checks/k8s/cluster.go":       701,
 	"internal/checks/k8s/reliability.go":   671,
 	"internal/checks/k8s/eks.go":           649,
