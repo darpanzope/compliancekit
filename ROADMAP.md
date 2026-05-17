@@ -183,6 +183,9 @@ to the v0.1-v0.5 audience that put compliancekit on the map.
 | ~~v0.16~~ ✅ | Rego policy DSL (via OPA) + 4 custom built-ins + `policy test/validate/fmt` CLI + 15 reimplementations | Write a check in 10 lines of Rego |
 | **v0.17** | Notifications (Slack / Discord / Teams / email / webhook / PR / Jira) | Slack alert on every new high finding |
 | **v0.18** | Waivers + in-code skip annotations | Mute findings the right way |
+| **v0.19** | **DigitalOcean deepening — production grade** | 74 → 150+ checks, every DO surface covered; every check ships with TF + doctl + bash remediation + tests |
+| **v0.20** | **Linux hardening — production grade** | 15 → 100+ checks; full CIS Server + STIG + ANSSI; per-distro (Debian, RHEL, Alpine, AL2/AL2023); bash + Ansible per check |
+| **v0.21** | **Kubernetes + DOKS deepening — production grade** | 139 → 250+ checks; full CIS K8s + NSA/CISA Hardening Guide + PCI K8s; RBAC graph analysis, supply-chain (cosign), policy-engine presence |
 | **v1.0** | API stability — `pkg/compliancekit` frozen | Embed compliancekit in your own tools |
 | v1.1 | `serve` mode + SQLite/Postgres backend + REST API + webhook receivers | Continuous monitoring without the SaaS bill |
 | v1.2 | Multi-tenant / organizations | MSP-friendly: one binary, many clients |
@@ -1010,6 +1013,188 @@ auditable.
   waived finding listed with the reason and approver, not hidden.
 - ADR-008 (to be written at v0.18 time): waivers vs. baselines —
   what is each for, when to use which.
+
+---
+
+### v0.19 — DigitalOcean deepening (production grade)
+
+**Goal:** the most comprehensive open-source DigitalOcean security
+scanner that exists. DO is the indie-SaaS audience the project was
+built around; everything else is depth in service of that. v0.9
+shipped 74 checks across 20 services; v0.19 doubles the depth into
+the surfaces v0.9 deferred (account governance, MFA enforcement,
+DNS authentication records, Spaces lifecycle, billing exposure,
+project audits) and turns every existing check into a fully-
+remediated, fully-tested artifact.
+
+**Deliverables**
+
+- **74 → 150+ checks** across every DO surface. New depth:
+  - Account / team: MFA enforcement audit, named-team usage,
+    API-key rotation tracking, billing-alert presence, owner+
+    delegation review, audit-log retention.
+  - Spaces: lifecycle policies (expiration / noncurrent versions),
+    transfer acceleration, replication, server-access-logging,
+    object-lock + retention modes.
+  - DNS: complete DMARC dimensions (p=, sp=, pct=, rua/ruf), SPF
+    record correctness, DKIM selector presence, CAA per-CA pinning,
+    DNSSEC enablement.
+  - DOKS: full add-on coverage (DO Container Registry integration
+    depth, metrics-server, cert-manager presence, cluster-autoscaler
+    config), control-plane logging destinations, node-pool
+    upgrade-strategy validation, image-pull-secret governance.
+  - App Platform: alert policy completeness, observability stack
+    (logs forward / metrics forward), build-time secret scanning,
+    deploy-on-push branch protection, custom-domain cert hygiene.
+  - Functions: namespace tenancy, runtime EOL audit, env-var
+    secrets-vs-plain audit, log-policy presence.
+  - Network: VPC peering pair correctness, firewall rule
+    deduplication, reserved-IP orphan audit, load-balancer SSL
+    cipher / proto floor enforcement.
+  - Billing + project: orphaned resources across all 20 services,
+    untagged resources (cost-attribution hygiene), per-project
+    resource caps.
+- **Every check ships with three remediations:** Terraform block,
+  doctl one-liner, bash fallback. Per ADR-011 + ADR-006, generation
+  only. RiskClass classified at strategy authorship.
+- **Per-check unit tests** with collector-shaped fixtures
+  (`internal/checks/digitalocean/<service>_test.go`); integration
+  tests in `internal/cli/scan_do_integration_test.go` against
+  multi-service synthetic graphs.
+- **Optional live-DO smoke** gated on `DO_API_TOKEN` env var:
+  scan a known account, assert ≥N findings, no collector errors.
+- **Final phase: docs polish + CLI help cleanup** for every new
+  surface — `--help` strings precise, `compliancekit checks show`
+  shows full prose for every shipped DO check, new
+  `examples/quickstart-digitalocean-deep.yaml` walking through the
+  comprehensive scan path.
+
+**Definition of done**
+
+- 150+ DO checks registered.
+- Every DO check carries Terraform + doctl + bash remediation
+  strategies (CI gate: per-check assertion).
+- Test coverage ≥85% per file in `internal/checks/digitalocean/`
+  and `internal/collectors/digitalocean/`.
+- `compliancekit scan --providers=digitalocean` against a sample
+  account produces a clean evidence pack + remediation runbook
+  inside the agreed time budget (TBD at planning).
+- README.md + DECISIONS.md + ROADMAP.md updated.
+
+---
+
+### v0.20 — Linux hardening (production grade)
+
+**Goal:** match the depth of OpenSCAP / Lynis on Linux server
+hardening, with the same evidence-pack + remediation experience
+operators get on cloud surfaces. v0.5 shipped 15 Linux checks as
+a foundation; v0.20 takes that to full CIS Benchmark + STIG
+coverage.
+
+**Deliverables**
+
+- **15 → 100+ checks** mapped to:
+  - **CIS Benchmark Linux Server** (Level 1 + Level 2, with
+    IG1/IG2/IG3 implementation-group taxonomy threaded through).
+  - **STIG** Linux subset (the subset relevant to cloud servers).
+  - **ANSSI** Linux Server hardening guide subset (French gov
+    equivalent — broader audience signal).
+- Coverage categories:
+  - **Kernel sysctl** — full network + memory + filesystem +
+    randomization knobs (~30 checks).
+  - **Filesystem** — separate-partition checks (/tmp, /var,
+    /var/log, /var/log/audit, /home), mount options (nodev,
+    nosuid, noexec), permissions on system files.
+  - **Services** — systemd unit hardening (PrivateTmp, NoNewPriv,
+    ProtectSystem, CapabilityBoundingSet), enabled-services audit.
+  - **Auth** — PAM stack (faillock, pwquality, lastlog), sudo
+    (NOPASSWD audit, secure_path), sshd full coverage
+    (HostKey rotation, MAC/Cipher floor, KexAlgorithms, AllowUsers).
+  - **Audit** — auditd rules (CIS 4.1.x subset: identity, mac,
+    perm, sudoers, mounts, time, network, login), journald
+    persistent storage + forward-to-syslog, rsyslog config.
+  - **Network** — iptables / nftables / ufw / firewalld depth,
+    ICMP behavior, IPv6 hardening.
+  - **Packages** — apt/dnf signing keys present, unused packages
+    removed, prelink absent (kernel/CIS deprecates), aide presence
+    + cron job.
+  - **MAC** — SELinux enforcing / AppArmor enabled per-service
+    profile audit.
+- **Per-distro support:** Debian/Ubuntu (apt-based), RHEL/CentOS/
+  Rocky/Alma (dnf), Alpine (apk), Amazon Linux 2 / 2023. Distro
+  detected at collection time; per-distro test fixtures.
+- **Every check with bash + Ansible remediation.** Idempotent
+  Ansible tasks; bash one-liners safe to paste over SSH.
+- **Integration tests** against rootfs fixtures (committed JSON
+  representations of `/etc/sysctl.d`, `/etc/ssh/sshd_config`,
+  `/etc/pam.d/*`, `/etc/audit/audit.rules` etc.) per distro.
+- **Final phase: docs polish** — per-check remediation prose
+  cleaned, `--help` polished, new `examples/quickstart-linux-
+  hardening.yaml` walking through CIS Server Level 1.
+
+**Definition of done**
+
+- 100+ Linux checks registered with full per-distro coverage.
+- Per-distro CIS Benchmark mapping coverage (which IG covers what).
+- Every Linux check ships with bash + Ansible remediation.
+- Test coverage ≥85% per file in `internal/checks/linux/` and
+  `internal/collectors/linux/`.
+- README + CHECKS.md updated with the new authoring conventions.
+
+---
+
+### v0.21 — Kubernetes + DOKS deepening (production grade)
+
+**Goal:** the most comprehensive open-source Kubernetes security
+scanner. v0.11 shipped 139 K8s checks (already strong); v0.21
+takes that to full CIS Kubernetes Benchmark + NSA/CISA Kubernetes
+Hardening Guide + PCI Kubernetes controls + supply-chain
+verification (cosign / sigstore attestation).
+
+**Deliverables**
+
+- **139 → 250+ checks** covering:
+  - **CIS Kubernetes Benchmark v1.x** — full Master + Worker +
+    Policies sections.
+  - **NSA / CISA Kubernetes Hardening Guide** — full coverage,
+    mapped as a separate framework (`nsa-cisa-k8s`).
+  - **PCI DSS Kubernetes** — the K8s-specific subset of PCI v4.0.
+  - **Supply chain** — image signature verification (cosign),
+    in-toto attestation presence, image source registry
+    allowlist enforcement, base image age + EOL audit.
+  - **Policy engine** — Gatekeeper or Kyverno presence, ConstraintTemplate /
+    ClusterPolicy coverage audit, admission-webhook timing.
+  - **Operator patterns** — Operator-Lifecycle-Manager presence,
+    operator RBAC scope, CR completion tracking.
+  - **RBAC graph analysis** — who can escalate to cluster-admin
+    via what chain (currently flagged but not graphed).
+  - **DOKS depth** — full add-on coverage, registry-integration
+    completeness, node-image freshness, control-plane logging
+    destinations.
+  - **EKS + GKE depth** — match the DOKS depth.
+- **Helm chart hardening** — checks for charts deployed via Helm:
+  pinned versions, RBAC scope, secrets handling, hook usage,
+  test-pod inclusion.
+- **Every check with kubectl + Helm + Terraform remediation.**
+  Per ADR-011 + ADR-006, generation only.
+- **Integration tests against kind clusters** (committed kubeconfig
+  + deployed-resource fixtures), plus optional **DOKS smoke**
+  gated on `DO_API_TOKEN` + `DOKS_CLUSTER_ID`.
+- **Final phase: docs polish** — per-check remediation prose,
+  `--help` polished, new `examples/quickstart-kubernetes-deep.yaml`
+  + `examples/quickstart-doks-deep.yaml` walking through full CIS
+  + NSA coverage.
+
+**Definition of done**
+
+- 250+ K8s checks registered.
+- NSA / CISA Hardening Guide ships as a new framework catalog
+  (`internal/frameworks/nsa-cisa-k8s.yaml`).
+- Every K8s check carries kubectl + Helm + Terraform remediation
+  (CI gate).
+- Test coverage ≥85% per file in `internal/checks/k8s/` and
+  `internal/collectors/k8s/`.
+- README + CHECKS.md updated.
 
 ---
 
