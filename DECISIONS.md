@@ -434,6 +434,59 @@ Concrete shape:
 
 ---
 
+## ADR-013 — Waivers vs baselines: distinct concerns, distinct mechanisms
+**Date:** 2026-05-17 (v0.18 kickoff)
+**Status:** Accepted
+
+### Question
+v0.6 shipped baselines: snapshots of the current findings set used as the starting point for `compliancekit diff`. v0.18 ships waivers: explicit operator acknowledgements that a specific (check, resource) pair is non-compliant by design. The two mechanisms overlap if you squint — both "make a finding stop alarming." Are they the same thing? If not, what is each for, and when does an operator use which?
+
+### Decision
+Waivers and baselines are **two different mechanisms for two different problems**, and v0.18 ships them as separate features with explicit handoff rules.
+
+**Baselines** answer "what is our current state?" They are a snapshot tool. They have:
+- No time bound (a baseline is the snapshot at the moment it was captured)
+- No reason field (a baseline does not justify, it records)
+- No approver field (no one signs off on a snapshot)
+- One purpose: drive the `diff` engine to flag NEW findings since the snapshot
+
+**Waivers** answer "what have we decided to accept?" They are a decision tool. They have:
+- A required Expires date (a decision that lasts forever is not a decision, it is denial)
+- A required Reason field (an undocumented acceptance is not auditable)
+- A required Approver field (an unattributed acceptance is not accountable)
+- One purpose: mute a specific (check, resource) pair WITHOUT hiding it from the auditor
+
+Concretely: a waived finding flows through every reporter as `StatusSkip` with a `core.WaiverRef` block populated. The auditor sees the finding AND the reason AND the approver AND the expiry. Baselines, by contrast, drop pre-existing findings from `diff` output entirely — the auditor sees them only by re-comparing to the older baseline.
+
+When to use which:
+- "I am building a new fleet on a 10-year-old codebase; I want to know what's NEW from today forward" → **baseline**.
+- "We acknowledge bucket X is public because CloudFront serves it; do not flag it again until 2026-12-31" → **waiver**.
+- Both can coexist on the same scan; they are evaluated independently.
+
+### Reasoning
+- **Conflating the two would make one of them worse.** A baseline with a "reason" field becomes a half-built waiver system without expiry. A waiver without a reason becomes a partial baseline with hidden state. Two mechanisms with clear contracts beat one mechanism with overloaded semantics.
+- **Audit trail matters more than terseness.** The CIS / SOC 2 / ISO model of "deviations are acceptable when documented + approved + time-bounded" maps 1:1 onto waivers. Baselines don't fit the model because they don't carry the metadata auditors require.
+- **Visibility over silencing.** A waiver muting a finding into StatusSkip leaves the finding visible in evidence packs — the auditor sees the deviation and the reason. The alternative (drop the finding entirely) destroys the audit trail.
+- **Expiry is non-negotiable.** Permanent waivers degrade into permanent ignore lists; the lapse is the forcing function that keeps the security team reviewing acceptances. Expired waivers stop muting and SURFACE as info-level findings of their own — the auditor sees the lapse, not silent re-coverage.
+- **Reason length floor.** v0.18 enforces ≥16 non-whitespace characters in the reason field at load time. Catches "see ticket" / "OK" / "approved" without rejecting real explanations. Cheap defense against the audit-trail erosion every shipped exception-system experiences.
+
+### Rejected alternatives
+- **Unify waivers + baselines into one suppression mechanism.** Rejected. The two operations are semantically different (snapshot vs decision); operators need both. Forcing one shape onto the other compromises both.
+- **Permanent waivers (no expiry).** Rejected. Becomes a hidden ignore list within 18 months of adoption; every operator who has shipped an ignore-list with no expiry process can attest. Expiry is the forcing function that keeps waivers fresh.
+- **Allow waivers to mark findings as StatusPass (instead of StatusSkip).** Rejected. The auditor must see "this fails compliance but you decided it's OK", not "this passes compliance." StatusSkip + WaiverRef preserves both pieces of information.
+- **Per-framework / per-tag broader waivers.** Considered for v0.18; deferred. The exact (CheckID, ResourceID) pair is the operator-facing unit of acceptance; broader scopes (e.g. "waive all NIST 800-53 SI-2 across the staging account") risk overreach. Add only when narrow waivers prove insufficient in practice.
+
+### Consequences
+- `internal/waivers/` ships the loader + matcher + expiry logic. `core.WaiverRef` joins `Vulnerability` + `Secret` as a typed metadata block on `core.Finding`.
+- Two declaration paths: `waivers.yaml` central file + `// compliancekit:waive <check-id> <reason>` in-code annotations. Both lift into the same WaiverList with `WaiverRef.Source` recording the provenance.
+- The evidence pack's `control-mapping.csv` gains 4 waiver columns at v0.18: `waiver_active`, `waiver_reason`, `waiver_approver`, `waiver_expires`. Additive — v0.4+ consumers reading by column name keep working.
+- Expired waivers emit a new info-level CheckID `compliancekit-waiver-expired` per expiry, so an auditor sees the lapse as an explicit finding rather than as a silently-revived prior finding.
+- `compliancekit waivers list / show / validate / check` subcommand mirrors the v0.13 `mapping` and v0.17 `notify --list` ergonomics: declarative state inspection without round-tripping `scan`.
+- `compliancekit doctor` gains a waivers line: "N active, M expiring in 30 days, K expired" so operational health is visible.
+- ADR is intentionally narrow: it codifies the boundary between waivers + baselines and the audit-trail-protecting rules (expiry required, reason floor, visibility). Future ADRs can introduce broader scopes or different precedence rules without revisiting these core invariants.
+
+---
+
 ## Open questions (not yet decided)
 
 - **Plugin host model:** subprocess gRPC (Terraform-provider pattern), WASM via wazero, or both? Decision at v2.0.

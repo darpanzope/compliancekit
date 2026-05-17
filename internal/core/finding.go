@@ -70,6 +70,15 @@ type Finding struct {
 	// fingerprint, never the raw secret value — ADR-010 codifies
 	// this hard rule.
 	Secret *Secret `json:"secret,omitempty"`
+
+	// Waiver is the v0.18+ typed metadata block populated when a
+	// matching waiver muted this finding. Auditor-visible by
+	// design: the Finding flows through every reporter as
+	// StatusSkip with this block populated so the auditor sees
+	// the acknowledgement + reason + approver. A nil Waiver means
+	// the finding ran through the normal status machinery, NOT
+	// that it was waived for an unrelated reason. See ADR-013.
+	Waiver *WaiverRef `json:"waiver,omitempty"`
 }
 
 // Source describes where a Finding came from. Native findings produced
