@@ -101,3 +101,13 @@ func init() {
 		})
 	}
 }
+
+// v0.21 phase 10 — kubectl backfill for the 2 legacy pod-level check
+// IDs that pod_security.go (the v0.11 base) didn't carry kubectl
+// strategies for. See backfill_helper.go for the renderer.
+func init() {
+	registerBackfillIDs(
+		"k8s-pod-host-port",
+		"k8s-pod-secret-via-env",
+	)
+}

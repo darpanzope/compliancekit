@@ -79,3 +79,21 @@ func init() {
 		})
 	}
 }
+
+// v0.21 phase 10 — kubectl backfill for the 9 legacy network-tier
+// check IDs that network.go (the v0.11 base) didn't carry kubectl
+// strategies for. Covers NetworkPolicy depth + Ingress + Service.
+// See backfill_helper.go for the renderer.
+func init() {
+	registerBackfillIDs(
+		"k8s-ingress-dangerous-annotations",
+		"k8s-ingress-default-backend",
+		"k8s-networkpolicy-allow-all-egress",
+		"k8s-networkpolicy-allow-all-ingress",
+		"k8s-networkpolicy-empty-selector",
+		"k8s-networkpolicy-from-all-namespaces",
+		"k8s-networkpolicy-namespace-coverage",
+		"k8s-service-loadbalancer-no-tls",
+		"k8s-service-nodeport",
+	)
+}

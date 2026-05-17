@@ -69,3 +69,20 @@ func init() {
 		})
 	}
 }
+
+// v0.21 phase 10 — kubectl backfill for the 9 legacy admission /
+// namespace / policy / resourcequota check IDs. See
+// backfill_helper.go for the renderer.
+func init() {
+	registerBackfillIDs(
+		"k8s-mutating-webhook-side-effects",
+		"k8s-validating-webhook-failure-policy",
+		"k8s-webhook-namespace-selector",
+		"k8s-namespace-default-workload",
+		"k8s-namespace-stuck-terminating",
+		"k8s-policy-engine-present",
+		"k8s-resourcequota-compute-limit",
+		"k8s-resourcequota-object-counts",
+		"k8s-resourcequota-pod-limit",
+	)
+}

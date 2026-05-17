@@ -77,3 +77,18 @@ kubectl apply -f /tmp/cr.yaml --server-side --force-conflicts
 		})
 	}
 }
+
+// v0.21 phase 10 — kubectl backfill for the 6 legacy RBAC check IDs.
+// Each pulls the per-check Remediation from the Check struct + an
+// `kubectl get clusterrole,clusterrolebinding,...` audit preface.
+// See backfill_helper.go for the renderer.
+func init() {
+	registerBackfillIDs(
+		"k8s-rbac-bind",
+		"k8s-rbac-empty-subjects",
+		"k8s-rbac-pods-portforward",
+		"k8s-rbac-secrets-readable",
+		"k8s-rbac-stale-role-ref",
+		"k8s-rbac-user-subject",
+	)
+}

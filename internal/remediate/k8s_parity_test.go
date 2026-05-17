@@ -45,10 +45,11 @@ import (
 //	Phase 0  (baseline)            — count measured at v0.21 entry
 //	Phases 1-9 (new check surface) — stays flat (every new check
 //	                                  lands with a kubectl strategy)
-//	Phase 10 (parity backfill)     — drives to 0
+//	Phase 10 (parity backfill)     — drove to 0 (strict equality gate)
 //
-// At 0 the test becomes a strict equality gate.
-const maxMissingKubectlK8s = 102
+// At 0 the test is a strict equality gate — a single K8s check
+// shipped without a bespoke kubectl strategy will fail pre-commit.
+const maxMissingKubectlK8s = 0
 
 func TestParity_Kubernetes(t *testing.T) {
 	var k8sChecks []core.Check

@@ -93,3 +93,16 @@ func init() {
 		})
 	}
 }
+
+// v0.21 phase 10 — kubectl backfill for the 5 legacy job /
+// cronjob / daemonset legacy check IDs. See backfill_helper.go
+// for the renderer.
+func init() {
+	registerBackfillIDs(
+		"k8s-cronjob-concurrency",
+		"k8s-cronjob-history-limit",
+		"k8s-cronjob-starting-deadline",
+		"k8s-daemonset-control-plane-tolerance",
+		"k8s-job-backoff-limit",
+	)
+}
