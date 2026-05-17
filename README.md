@@ -329,6 +329,73 @@ Deployment" sees the upstream image's CVEs too. Per-tool mapping
 tables ship embedded; `compliancekit mapping list / show / validate
 / diff` manages overrides.
 
+### Waivers (v0.18+)
+
+Mute findings the right way — explicit, time-bounded, auditable.
+Per [ADR-013](DECISIONS.md#adr-013--waivers-vs-baselines-distinct-concerns-distinct-mechanisms),
+waivers are decisions (require reason + approver + expiry) while
+baselines are snapshots (no metadata). Both can coexist; waived
+findings stay visible in the evidence pack with full justification.
+
+`waivers.yaml` shape:
+
+```yaml
+waivers:
+  - check_id:    aws-s3-no-public-acls
+    resource_id: aws.s3.bucket.public-cdn
+    reason:      "public CDN bucket; CloudFront enforces signed URLs at the edge"
+    approver:    security@acme.com
+    expires:     2099-12-31
+```
+
+Wire it into `compliancekit.yaml` and `scan` mutes matching findings
+(StatusSkip + Waiver block populated) during the run:
+
+```yaml
+waivers:
+  file: ./waivers.yaml
+```
+
+In-code annotations work in 6 file types (Terraform, YAML, Bash,
+Python, Dockerfile, Go) so operators can co-locate the waiver with
+the resource it covers:
+
+```hcl
+resource "aws_s3_bucket" "public_cdn" {
+  # compliancekit:waive aws-s3-no-public-acls aws.s3.bucket.public-cdn \
+  #   reason="public CDN bucket; CloudFront enforces signed URLs" \
+  #   approver=security@acme.com expires=2026-12-31
+}
+```
+
+Defaults when keyword args are omitted: 90-day expiry (forces
+re-review), approver `@annotation`, reason references the file +
+line so the auditor knows where to investigate.
+
+CLI surface:
+
+```bash
+compliancekit waivers list                              # active + expired table
+compliancekit waivers show aws-s3-no-public-acls aws.s3.bucket.public-cdn
+compliancekit waivers validate                          # schema + duplicate gate
+compliancekit waivers check --in=findings.json          # CI gate: every fail must have a waiver
+```
+
+Glob matching on both CheckID and ResourceID (`aws-s3-*`,
+`digitalocean.droplet.*`) when narrow waivers prove repetitive.
+Expired waivers stop muting AND emit their own info-level
+`compliancekit-waiver-expired` finding so auditors see the lapse.
+
+Evidence pack additions:
+
+- `control-mapping.csv` gains 4 columns: `waiver_active`,
+  `waiver_reason`, `waiver_approver`, `waiver_expires`.
+- New `waivers.json` artifact at the pack root with one entry per
+  muted finding (cross-references the full Finding for audit traceability).
+
+`compliancekit doctor` reports waivers health alongside provider
+checks: "N active, M expired, K expiring within 30d".
+
 ### Notifications (v0.17+)
 
 `compliancekit notify --in=findings.json` dispatches actionable

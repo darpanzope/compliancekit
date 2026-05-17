@@ -17,6 +17,7 @@ import (
 	linuxcol "github.com/darpanzope/compliancekit/internal/collectors/linux"
 	"github.com/darpanzope/compliancekit/internal/config"
 	"github.com/darpanzope/compliancekit/internal/notify"
+	"github.com/darpanzope/compliancekit/internal/waivers"
 )
 
 // doctorOptions holds the parsed flags and dependencies for the doctor
@@ -93,6 +94,11 @@ func runDoctor(ctx context.Context, w io.Writer, opts doctorOptions) error {
 	// verify their sink credentials independently.
 	reportNotifySinks(w)
 
+	// Waivers report runs unconditionally — operators want to see
+	// "N active, M expiring in 30d" health regardless of whether
+	// providers are configured this run.
+	reportWaivers(w, cfg.Waivers.File)
+
 	if !cfg.AnyProviderEnabled() {
 		fmt.Fprintf(w, "%s no providers enabled in config; enable at least one to scan\n", iconWarn)
 		return fmt.Errorf("no providers enabled")
@@ -155,6 +161,37 @@ func reportNotifySinks(w io.Writer) {
 		}
 		fmt.Fprintf(w, "    %s %s (threshold=%s)\n", mark, s.Name(), s.Threshold())
 	}
+}
+
+// reportWaivers prints the waivers health line. Three counts:
+// active, expired, expiring within 30 days. Missing path means
+// waivers feature off — prints a single info line and exits.
+// v0.18+.
+func reportWaivers(w io.Writer, path string) {
+	if path == "" {
+		fmt.Fprintf(w, "%s waivers: feature disabled (set `waivers.file` in config to enable)\n", iconInfo)
+		return
+	}
+	now := time.Now().UTC()
+	list, errs := waivers.LoadFile(path, now)
+	if len(errs) > 0 {
+		// Errors here would have failed `scan` outright; surface
+		// them so operators can fix without running scan.
+		fmt.Fprintf(w, "%s waivers: %s — %d load error(s)\n", iconFail, path, len(errs))
+		for _, e := range errs {
+			fmt.Fprintf(w, "    %s %v\n", iconFail, e)
+		}
+		return
+	}
+	active, expired, expiring := list.Counts(now)
+	icon := iconPass
+	if expired > 0 || expiring > 0 {
+		// Expiring within 30d is worth flagging warm; expired
+		// already-lapsed is worth flagging warning.
+		icon = iconWarn
+	}
+	fmt.Fprintf(w, "%s waivers: %s — %d active, %d expired, %d expiring within 30d\n",
+		icon, path, active, expired, expiring)
 }
 
 // reportProvider emits the status line(s) for one provider. The error is

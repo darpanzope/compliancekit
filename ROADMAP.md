@@ -182,7 +182,7 @@ to the v0.1-v0.5 audience that put compliancekit on the map.
 | ~~v0.15~~ ✅ | Remediation generators (Bash, Terraform, kubectl, Helm, Ansible, aws/gcloud/az/doctl/hcloud + POA&M + Jira/Linear) | Copy-paste this Terraform to fix |
 | ~~v0.16~~ ✅ | Rego policy DSL (via OPA) + 4 custom built-ins + `policy test/validate/fmt` CLI + 15 reimplementations | Write a check in 10 lines of Rego |
 | ~~v0.17~~ ✅ | Notifications — 8 sinks (Slack, Discord, Teams, Email, Webhook, GitHub PR, Jira, PagerDuty) + dedup + only-new mode + per-sink severity floor | Slack alert on every new high finding |
-| **v0.18** | Waivers + in-code skip annotations | Mute findings the right way |
+| ~~v0.18~~ ✅ | Waivers + in-code skip annotations — 4 CLI subcommands + 6 file types + evidence-pack `waivers.json` + 4 control-mapping columns + ADR-013 | Mute findings the right way |
 | **v0.19** | **DigitalOcean deepening — production grade** | 74 → 150+ checks, every DO surface covered; every check ships with TF + doctl + bash remediation + tests |
 | **v0.20** | **Linux hardening — production grade** | 15 → 100+ checks; full CIS Server + STIG + ANSSI; per-distro (Debian, RHEL, Alpine, AL2/AL2023); bash + Ansible per check |
 | **v0.21** | **Kubernetes + DOKS deepening — production grade** | 139 → 250+ checks; full CIS K8s + NSA/CISA Hardening Guide + PCI K8s; RBAC graph analysis, supply-chain (cosign), policy-engine presence |
@@ -1055,23 +1055,96 @@ no telemetry / no phone-home.
 
 ---
 
-### v0.18 — Waivers + in-code skip annotations
+### v0.18 ✅ — Waivers + in-code skip annotations (shipped 2026-05-17)
 
-**Goal:** mute findings the right way — explicit, time-bounded,
-auditable.
+**Scope expanded from the original ROADMAP:** glob matching on both
+CheckID + ResourceID (originally exact-only), 6 file types for
+in-code annotations (.tf .tfvars .yaml .yml .sh .bash .py .go +
+Dockerfile/*.dockerfile), CLI surface with 4 subcommands (list /
+show / validate / check), evidence-pack `waivers.json` artifact
+plus 4 additive control-mapping.csv columns, full doctor
+integration. Architectural shape codified in
+[ADR-013](DECISIONS.md#adr-013--waivers-vs-baselines-distinct-concerns-distinct-mechanisms).
 
-**Deliverables**
+**What shipped (8 phases, 8 commits, ~3k LOC)**
 
-- `waivers.yaml` schema: `{check_id, resource_id, expires, reason,
-  approver}`. Expired waivers stop muting and surface as info-level
-  findings of their own.
-- In-code annotations: `// compliancekit:waive <check-id> <reason>`
-  comments in IaC and Bash files. Lifted into the graph at scan
-  time the same way godoc comments are lifted into doc tools.
-- **Waivers are visible in the evidence pack** — the auditor sees a
-  waived finding listed with the reason and approver, not hidden.
-- ADR-008 (to be written at v0.18 time): waivers vs. baselines —
-  what is each for, when to use which.
+- **`internal/waivers/` foundation** — Waiver struct + WaiverList +
+  validating loader. Per ADR-013: every waiver REQUIRES expiry (no
+  permanent waivers — they degrade into hidden ignore-lists);
+  reason floor of 16 non-whitespace chars (catches "OK" / "see
+  ticket" without rejecting real prose); duplicate (CheckID,
+  ResourceID) rejected because it hides which approver authorized.
+- **`core.WaiverRef`** typed metadata block on `core.Finding`
+  (joins Vulnerability + Secret from v0.14). Auditor-visible by
+  design — a waived finding flows through every reporter as
+  StatusSkip with WaiverRef populated, NOT hidden.
+- **Loader + Matcher**: glob-based matching on both CheckID and
+  ResourceID via `filepath.Match` (operators waiving a whole check
+  family use `aws-s3-*`; a whole resource family uses
+  `digitalocean.droplet.*`). First-match-wins; deterministic
+  ordering across runs.
+- **Apply + expired-waiver synthesis**: mutates findings in place
+  (StatusSkip + WaiverRef + `waived` tag), AND synthesizes one
+  info-level `compliancekit-waiver-expired` finding per lapsed
+  waiver so the auditor sees the lapse as an explicit finding.
+- **In-code annotation scanner** for 6 file types:
+  `# compliancekit:waive <check-id> <resource-id> [reason="..."]
+  [approver=...] [expires=YYYY-MM-DD]` (and `//` form for Go +
+  HCL). Languages: Terraform/HCL, YAML, Bash, Python, Dockerfile,
+  Go. Default expiry = now + 90 days (forces re-review); default
+  approver = `@annotation`; default reason references the file +
+  line so the auditor knows where to look. Skips .git / vendor /
+  node_modules / .terraform / dist / build / .cache.
+- **Scan engine integration**: `applyWaivers` hook in `runScan`
+  loads + applies waivers right after ingest merge. Synthesized
+  expired findings appended to result.Findings so reporters see
+  them. Summary line "waivers: N active, M expired, K expiring
+  within 30d — muted P finding(s)".
+- **Evidence pack additions** (additive — v0.4+ CSV consumers
+  reading by column name keep working):
+  - 4 new columns on `control-mapping.csv`: `waiver_active`,
+    `waiver_reason`, `waiver_approver`, `waiver_expires`.
+  - New `waivers.json` artifact at the pack root with one entry
+    per muted finding (cross-references the full `core.Finding`
+    so an auditor can pivot from waiver → original finding).
+- **`compliancekit waivers` CLI** — 4 subcommands:
+  - `list` — tabulate active + expired with expiring-within-30d
+    flagged; counts header.
+  - `show <check-id> <resource-id>` — full detail for one waiver
+    including multi-line reason + source path.
+  - `validate` — schema + duplicate check; non-zero exit on errors
+    (CI gate).
+  - `check --in=findings.json` — non-zero exit if any actionable
+    finding lacks a matching waiver (CI gate for "every fail-on=
+    high finding must have a documented acceptance").
+- **Doctor integration**: prints "waivers: <path> — N active, M
+  expired, K expiring within 30d" line, with ⚠ icon when any
+  waivers are expired or expiring-soon.
+
+**Definition of done — what shipped**
+
+- ✅ `waivers.yaml` schema with required {check_id, resource_id,
+  reason ≥16 chars, approver, expires}.
+- ✅ In-code annotations across 6 file types + auto-defaulting for
+  reason/approver/expires when not specified.
+- ✅ Expired waivers emit `compliancekit-waiver-expired` info
+  findings so lapses are explicit, not silent.
+- ✅ Evidence pack visibility: waivers.json + 4 new
+  control-mapping.csv columns. Per ADR-013, waived findings stay
+  visible to auditors with full justification + approver context.
+- ✅ `compliancekit waivers list/show/validate/check` CLI surface.
+- ✅ `compliancekit doctor` reports waivers health.
+- ✅ ADR-013 codifies the waivers-vs-baselines boundary.
+
+**Deferred to a future milestone**
+
+- Broader scopes (per-framework / per-tag waivers) — narrow
+  (CheckID, ResourceID) is the v0.18 unit. Add when narrow proves
+  insufficient.
+- Multi-approver chains for high-severity waivers — out of v0.18
+  scope; the audit-log-via-evidence-pack covers basic accountability.
+- Waiver application via Web UI / workflow integration — that's
+  v1.4 GRC layer + v1.5 auditor portal.
 
 ---
 
