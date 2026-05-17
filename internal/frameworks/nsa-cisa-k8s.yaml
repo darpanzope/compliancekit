@@ -1,0 +1,237 @@
+# NSA / CISA Kubernetes Hardening Guide
+#
+# Source: National Security Agency + Cybersecurity and Infrastructure
+# Security Agency — Kubernetes Hardening Guide (v1.2, August 2022).
+# https://media.defense.gov/2022/Aug/29/2003066362/-1/-1/0/CTR_KUBERNETES_HARDENING_GUIDE_1.2_20220829.PDF
+#
+# The Guide is organized into 5 chapters; controls below are the
+# enumerated recommendations within each chapter that compliancekit's
+# v0.21 K8s check surface maps to. The chapter numbering follows the
+# document's table of contents.
+#
+# Chapters:
+#   1. Kubernetes pod security
+#   2. Network separation and hardening
+#   3. Authentication and authorization
+#   4. Audit logging and threat detection
+#   5. Upgrading and application security practices
+#
+# Distinct from CIS Kubernetes Benchmark (cis-k8s-style sections
+# 1.x-5.x reference operator configuration) — NSA/CISA is principle-
+# oriented + government-derived (US DoD threat model focus), CIS is
+# benchmark-oriented + commercial.
+
+id: nsa-cisa-k8s
+name: NSA / CISA Kubernetes Hardening Guide
+version: "1.2"
+category: compliance
+source: National Security Agency + Cybersecurity and Infrastructure Security Agency — Kubernetes Hardening Guide (August 2022)
+url: https://media.defense.gov/2022/Aug/29/2003066362/-1/-1/0/CTR_KUBERNETES_HARDENING_GUIDE_1.2_20220829.PDF
+description: |
+  The NSA/CISA Kubernetes Hardening Guide is the US government's
+  prescriptive baseline for Kubernetes production deployments. v1.2
+  (the current revision) covers pod security, network separation,
+  AuthN/AuthZ, audit logging + threat detection, and upgrade/
+  application practices. Maps cleanly to CIS Kubernetes Benchmark
+  but with a tighter focus on the threat model US DoD assumes
+  (nation-state lateral movement, supply chain compromise).
+
+  compliancekit v0.21 ships mappings for the 30+ specific
+  recommendations enumerable from the document's chapter-section
+  structure. Controls without compliancekit coverage today are
+  noted; v0.21.x + v0.22 close those gaps.
+
+controls:
+
+  # ===== 1. Kubernetes pod security =====
+  # The document's longest chapter — pod-spec hardening at the
+  # securityContext + image + capability level.
+
+  "1.1":
+    name: Use containers built to run as non-root user
+    family: pod-security
+    tags: [pod-security, image]
+    description: |
+      Containers should be built with a non-root user in the Dockerfile
+      and the manifest should set runAsNonRoot=true so a malicious or
+      vulnerable image cannot run as UID 0 inside the container — much
+      less escape to UID 0 on the host.
+
+  "1.2":
+    name: Run containers with immutable file systems
+    family: pod-security
+    tags: [pod-security, filesystem]
+
+  "1.3":
+    name: Scan container images for possible vulnerabilities
+    family: pod-security
+    tags: [pod-security, supply-chain, vuln-scan]
+
+  "1.4":
+    name: Use technical controls to prevent privilege escalation
+    family: pod-security
+    tags: [pod-security, capabilities]
+    description: |
+      Set allowPrivilegeEscalation=false on every container. Drop ALL
+      Linux capabilities + selectively add only the ones needed.
+
+  "1.5":
+    name: Reject containers that execute as the root user
+    family: pod-security
+    tags: [pod-security, runAsUser]
+
+  "1.6":
+    name: Use sandboxed runtimes for untrusted workloads
+    family: pod-security
+    tags: [pod-security, runtime-class]
+    description: |
+      gVisor / Kata Containers as RuntimeClass for workloads from
+      untrusted sources (multi-tenant SaaS, CI pipelines running
+      customer code). Default runc shares the host kernel.
+
+  "1.7":
+    name: Prevent the use of host networking and ports
+    family: pod-security
+    tags: [pod-security, host-namespace, network]
+
+  "1.8":
+    name: Use Pod Security policies / admission to enforce baseline
+    family: pod-security
+    tags: [pod-security, admission]
+    description: |
+      Pod Security Admission (k8s ≥ 1.23 / GA 1.25) is the upstream
+      replacement for PodSecurityPolicy. Apply restricted profile to
+      namespaces by default; carve out exceptions for known privileged
+      workloads only.
+
+  # ===== 2. Network separation and hardening =====
+
+  "2.1":
+    name: Use a network policy to restrict pod-to-pod communication
+    family: network
+    tags: [network, networkpolicy]
+    description: |
+      Default-deny ingress + egress NetworkPolicy per namespace, then
+      explicit allow rules. Blocks lateral movement within the cluster.
+
+  "2.2":
+    name: Place all credentials and sensitive information in Kubernetes Secrets
+    family: network
+    tags: [network, secrets]
+
+  "2.3":
+    name: Encrypt Kubernetes secrets at rest in etcd
+    family: network
+    tags: [network, encryption]
+    description: |
+      EncryptionConfiguration with aescbc / kms provider so etcd-stored
+      Secrets are not plaintext on disk.
+
+  "2.4":
+    name: Use TLS encryption for all network communications
+    family: network
+    tags: [network, tls]
+
+  "2.5":
+    name: Secure the etcd datastore
+    family: network
+    tags: [network, etcd]
+    description: |
+      etcd client + peer authentication via certificates. Without it,
+      anything reaching the etcd port can read + write the entire
+      cluster state.
+
+  "2.6":
+    name: Limit access to control plane nodes using a firewall + RBAC
+    family: network
+    tags: [network, control-plane]
+
+  # ===== 3. Authentication and authorization =====
+
+  "3.1":
+    name: Disable anonymous login
+    family: auth
+    tags: [auth, anonymous]
+    description: |
+      Both apiserver --anonymous-auth=false and kubelet
+      authentication.anonymous.enabled=false. Anonymous access is the
+      lowest-effort lateral-movement path.
+
+  "3.2":
+    name: Use strong user authentication
+    family: auth
+    tags: [auth]
+    description: |
+      OIDC for human users (federated to corporate IdP), x509 client
+      certificates for system components, ServiceAccount tokens for
+      pods. Static-token-file + basic-auth are deprecated and must
+      not be used.
+
+  "3.3":
+    name: Create RBAC policies to restrict administrator, user and service account activity
+    family: auth
+    tags: [auth, rbac]
+    description: |
+      RBAC with least-privilege ClusterRoles. No wildcards on verbs /
+      resources / apiGroups. ServiceAccount per workload.
+
+  "3.4":
+    name: Prohibit anonymous access to apiserver endpoints
+    family: auth
+    tags: [auth, anonymous]
+
+  # ===== 4. Audit logging and threat detection =====
+
+  "4.1":
+    name: Enable audit logging (disabled by default)
+    family: logging
+    tags: [logging, audit]
+    description: |
+      Set --audit-policy-file + --audit-log-path on the apiserver.
+      Policy must capture at least RequestResponse for Secret +
+      ConfigMap writes + Metadata for everything else.
+
+  "4.2":
+    name: Persist logs to ensure availability in the case of failure
+    family: logging
+    tags: [logging, durability]
+    description: |
+      Ship audit logs off-cluster to a log aggregator (Splunk, ELK,
+      Datadog, CloudWatch, Stackdriver) so a compromised cluster
+      can't wipe its own audit trail.
+
+  "4.3":
+    name: Configure a metrics logger
+    family: logging
+    tags: [logging, metrics]
+
+  "4.4":
+    name: Configure log auditors / monitors
+    family: logging
+    tags: [logging, threat-detection]
+    description: |
+      Audit log monitoring for the SIEM signatures of common K8s
+      attack patterns: privileged container creation, kubectl exec
+      against system pods, RBAC escalation rules.
+
+  "4.5":
+    name: Throughout the environment, leverage a Service Mesh
+    family: logging
+    tags: [logging, service-mesh]
+
+  # ===== 5. Upgrading and application security practices =====
+
+  "5.1":
+    name: Promptly apply security patches and updates
+    family: maintenance
+    tags: [maintenance, patching]
+
+  "5.2":
+    name: Perform periodic vulnerability scans and penetration tests
+    family: maintenance
+    tags: [maintenance, vuln-scan]
+
+  "5.3":
+    name: Remove components from the environment when no longer needed
+    family: maintenance
+    tags: [maintenance, hygiene]
