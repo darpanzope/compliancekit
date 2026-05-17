@@ -38,7 +38,7 @@ const maxCheckFileLOC = 600
 // is removed in the same commit. By Phase 3 close the map is empty +
 // the test becomes a strict equality gate.
 var legacyOversizeAllowlist = map[string]int{
-	"internal/checks/k8s/rbac.go":          1045,
+	// rbac.go split out at v0.22 phase 1 (→ rbac_roles.go + rbac_bindings.go).
 	"internal/checks/k8s/pods.go":          904,
 	"internal/checks/k8s/network.go":       879,
 	"internal/checks/k8s/cluster.go":       701,
