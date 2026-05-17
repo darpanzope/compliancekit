@@ -460,9 +460,13 @@ func imageRegistries(p core.Resource) []string {
 //   - "nginx" / "library/nginx" → "docker.io"
 //   - "ghcr.io/org/repo"        → "ghcr.io"
 //   - "private:5000/img"        → "private:5000"
+//
+// Per the OCI distribution spec: split on the first '/' — if the head
+// looks like a hostname (contains '.' or ':' or is literally
+// "localhost") it IS the registry; otherwise the ref omits the
+// registry and defaults to docker.io.
 func registryFromImage(image string) string {
-	image = strings.SplitN(image, "@", 2)[0] // strip digest
-	image = strings.SplitN(image, ":", 2)[0] // strip tag (port:tag heuristic below)
+	image = strings.SplitN(image, "@", 2)[0] // strip digest first
 	parts := strings.SplitN(image, "/", 2)
 	if len(parts) < 2 {
 		return "docker.io"
