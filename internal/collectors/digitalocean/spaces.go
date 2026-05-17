@@ -122,12 +122,11 @@ func (c *Collector) spacesBucketResource(ctx context.Context, client *s3.Client,
 		attrs["collect_error_versioning"] = err.Error()
 	}
 
-	// Lifecycle
-	_, lcErr := client.GetBucketLifecycleConfiguration(ctx, &s3.GetBucketLifecycleConfigurationInput{Bucket: aws.String(bucket)})
-	attrs["lifecycle_configured"] = lcErr == nil
-	if lcErr != nil && !isNoSuchConfigurationErr(lcErr) {
-		attrs["collect_error_lifecycle"] = lcErr.Error()
-	}
+	// Lifecycle — v0.19 phase 2 surfaces rule-level detail so checks
+	// can distinguish "lifecycle configured but covers nothing useful"
+	// from "fully-configured lifecycle". The previous boolean alone is
+	// kept for back-compat with the existing CheckSpacesLifecycle.
+	collectSpacesLifecycle(ctx, client, bucket, attrs)
 
 	// Encryption
 	_, encErr := client.GetBucketEncryption(ctx, &s3.GetBucketEncryptionInput{Bucket: aws.String(bucket)})
@@ -147,13 +146,19 @@ func (c *Collector) spacesBucketResource(ctx context.Context, client *s3.Client,
 		}
 	}
 
-	// Logging
-	logging, logErr := client.GetBucketLogging(ctx, &s3.GetBucketLoggingInput{Bucket: aws.String(bucket)})
-	if logErr == nil {
-		attrs["logging_enabled"] = logging.LoggingEnabled != nil
-	} else {
-		attrs["collect_error_logging"] = logErr.Error()
-	}
+	// Logging — v0.19 phase 2 also captures the target bucket and
+	// prefix so checks can flag "logs writing to the source bucket"
+	// (audit/operations footgun) and "logs going somewhere we don't
+	// control" (the prefix needs review).
+	collectSpacesLogging(ctx, client, bucket, attrs)
+
+	// Bucket policy — v0.19 phase 2 introduces a policy_configured
+	// boolean. We don't capture the policy body here: the body is
+	// JSON and downstream policies (or the Rego ruleset) can parse
+	// it themselves once we widen the surface. For phase 2 we only
+	// need "policy exists" vs "policy missing" to flag prod buckets
+	// without an explicit deny posture.
+	collectSpacesPolicy(ctx, client, bucket, attrs)
 
 	r := core.Resource{
 		ID:         fmt.Sprintf("%s.%s.%s", SpacesBucketType, region, bucket),
@@ -164,6 +169,58 @@ func (c *Collector) spacesBucketResource(ctx context.Context, client *s3.Client,
 	}
 	c.stamp(&r, region)
 	return r
+}
+
+// collectSpacesLifecycle fetches GetBucketLifecycleConfiguration and
+// writes lifecycle_configured + per-rule summary attrs. Extracted
+// from spacesBucketResource to keep cyclomatic complexity under the
+// project ceiling.
+func collectSpacesLifecycle(ctx context.Context, client *s3.Client, bucket string, attrs map[string]any) {
+	lcResp, lcErr := client.GetBucketLifecycleConfiguration(ctx, &s3.GetBucketLifecycleConfigurationInput{Bucket: aws.String(bucket)})
+	attrs["lifecycle_configured"] = lcErr == nil
+	if lcErr != nil && !isNoSuchConfigurationErr(lcErr) {
+		attrs["collect_error_lifecycle"] = lcErr.Error()
+	}
+	if lcErr != nil || lcResp == nil {
+		return
+	}
+	attrs["lifecycle_rule_count"] = len(lcResp.Rules)
+	hasExp, hasMPU := false, false
+	for _, rule := range lcResp.Rules {
+		if rule.Expiration != nil {
+			hasExp = true
+		}
+		if rule.AbortIncompleteMultipartUpload != nil {
+			hasMPU = true
+		}
+	}
+	attrs["lifecycle_has_expiration"] = hasExp
+	attrs["lifecycle_has_mpu_abort"] = hasMPU
+}
+
+// collectSpacesLogging fetches GetBucketLogging and writes
+// logging_enabled + target attrs. Extracted for complexity.
+func collectSpacesLogging(ctx context.Context, client *s3.Client, bucket string, attrs map[string]any) {
+	logging, logErr := client.GetBucketLogging(ctx, &s3.GetBucketLoggingInput{Bucket: aws.String(bucket)})
+	if logErr != nil {
+		attrs["collect_error_logging"] = logErr.Error()
+		return
+	}
+	attrs["logging_enabled"] = logging.LoggingEnabled != nil
+	if logging.LoggingEnabled != nil {
+		attrs["logging_target_bucket"] = aws.ToString(logging.LoggingEnabled.TargetBucket)
+		attrs["logging_target_prefix"] = aws.ToString(logging.LoggingEnabled.TargetPrefix)
+	}
+}
+
+// collectSpacesPolicy fetches GetBucketPolicy and writes
+// policy_configured. Extracted for complexity.
+func collectSpacesPolicy(ctx context.Context, client *s3.Client, bucket string, attrs map[string]any) {
+	_, polErr := client.GetBucketPolicy(ctx, &s3.GetBucketPolicyInput{Bucket: aws.String(bucket)})
+	attrs["policy_configured"] = polErr == nil
+	if polErr != nil && !isNoSuchConfigurationErr(polErr) {
+		attrs["collect_error_policy"] = polErr.Error()
+	}
 }
 
 // aclHasPublicGrant returns true if any Grantee on the ACL
