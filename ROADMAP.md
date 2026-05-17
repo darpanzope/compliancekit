@@ -181,7 +181,7 @@ to the v0.1-v0.5 audience that put compliancekit on the map.
 | **v0.14** ✅ | Vuln / secret / SCA ingest (Trivy, Grype, Checkov, gitleaks) + image-SHA graph join + vulnerabilities.csv + ADR-010 secret-redaction | 4 native-JSON adapters, every CVE tied to its running cloud resource, fingerprint-only secret handling |
 | ~~v0.15~~ ✅ | Remediation generators (Bash, Terraform, kubectl, Helm, Ansible, aws/gcloud/az/doctl/hcloud + POA&M + Jira/Linear) | Copy-paste this Terraform to fix |
 | ~~v0.16~~ ✅ | Rego policy DSL (via OPA) + 4 custom built-ins + `policy test/validate/fmt` CLI + 15 reimplementations | Write a check in 10 lines of Rego |
-| **v0.17** | Notifications (Slack / Discord / Teams / email / webhook / PR / Jira) | Slack alert on every new high finding |
+| ~~v0.17~~ ✅ | Notifications — 8 sinks (Slack, Discord, Teams, Email, Webhook, GitHub PR, Jira, PagerDuty) + dedup + only-new mode + per-sink severity floor | Slack alert on every new high finding |
 | **v0.18** | Waivers + in-code skip annotations | Mute findings the right way |
 | **v0.19** | **DigitalOcean deepening — production grade** | 74 → 150+ checks, every DO surface covered; every check ships with TF + doctl + bash remediation + tests |
 | **v0.20** | **Linux hardening — production grade** | 15 → 100+ checks; full CIS Server + STIG + ANSSI; per-distro (Debian, RHEL, Alpine, AL2/AL2023); bash + Ansible per check |
@@ -975,24 +975,83 @@ is now Resolved.
 
 ---
 
-### v0.17 — Notifications
+### v0.17 ✅ — Notifications (shipped 2026-05-17)
 
-**Goal:** Slack the right channel when a new high-severity finding
-lands. The minimum-viable continuous-monitoring story without
-running the daemon.
+**Scope expanded from the original ROADMAP:** 8 sinks instead of 7
+(PagerDuty Events v2 added because operational escalation is the
+"production-grade" story the indie-SaaS audience needs). Mirrors
+the v0.13 ingest + v0.15 remediate architecture: one Notifier
+interface, one Default registry, per-sink env-driven configuration,
+no telemetry / no phone-home.
 
-**Deliverables**
+**What shipped (11 phases, 11 commits, ~3k LOC)**
 
-- Slack / Discord / Teams / email / generic webhook / GitHub PR
-  comment / Jira-issue sinks behind a unified
-  `compliancekit notify` subcommand.
-- Sinks are pluggable: each lives in `internal/notify/<channel>.go`
-  with a small interface so a contributor can add a new sink in <100
-  LoC.
-- Configurable severity threshold per sink; configurable "only-new-
-  findings" mode that reads a baseline.
-- **No telemetry, no phone-home, ever** — applies here. Every
-  notification target is operator-configured.
+- **`internal/notify/notify.go` — foundation.** Notifier interface
+  (Name / Configured / Threshold / Send), Notification struct
+  (Finding + pre-rendered Title + CommonMark Body + deep-link URL +
+  Tags + dedup Fingerprint), Result accumulator, Registry +
+  Default + Register pattern.
+- **`BuildNotifications + Dispatch`.** Builder filters non-actionable
+  findings + renders the canonical title/body once; dispatcher fans
+  out to every Configured sink whose Threshold permits the
+  notification. Per-sink errors wrap with the sink name and DON'T
+  block siblings — one failing channel never silences the rest.
+- **8 sinks**, each in `internal/notify/<sink>.go` with an httptest
+  contract test:
+  - **slack** — Block Kit payload, both incoming-webhook + bot-token
+    paths supported in one type; parses both Slack response shapes
+    (webhook plain-text "ok", API `{"ok": true/false}`).
+  - **discord** — embed payload with severity-mapped 24-bit color.
+  - **teams** — MessageCard payload (legacy connector); bullets
+    converted to "•" glyph for mobile/desktop consistency.
+  - **webhook** — generic JSON POST with `compliancekit.
+    notification.v1` schema + optional `X-CompliancekitSignature:
+    sha256=<hex(HMAC-SHA256(secret, body))>` header.
+  - **email** — SMTP with auto-selected TLS mode (port 465 → tls,
+    587 → starttls, 25 → none); PLAIN auth optional; multipart
+    MIME with text/plain only (HTML deferred).
+  - **github-pr** — single summary comment per dispatch (not per
+    finding — avoids PR-comment spam) as a Markdown table.
+  - **jira** — thin adapter over the v0.15 `tickets.Jira` client;
+    `JIRA_NOTIFY_*` env falls back to `JIRA_*`.
+  - **pagerduty** — Events v2 enqueue with `dedup_key` =
+    notification.Fingerprint so re-firing findings update existing
+    incidents. Defaults to critical-only threshold (don't wake on-
+    call on noise).
+- **`compliancekit notify` CLI.** `--in` findings JSON, `--baseline`
+  for only-new-findings mode (subtracts by Finding.Fingerprint),
+  `--severity` global floor (stacks with per-sink threshold;
+  strictest wins), `--project` + `--url-prefix` for body rendering,
+  `--dry-run` for the per-sink plan, `--list` for the
+  Configured/Threshold table.
+- **`compliancekit doctor` integration.** New "notify:" line prints
+  `N sink(s) registered, M configured` plus a per-sink Configured +
+  Threshold breakdown. Runs unconditionally (no provider config
+  required) so operators can verify sink credentials independently
+  of scan config.
+
+**Definition of done — what was actually shipped**
+
+- ✅ 8 sinks, each ≤300 LOC including tests.
+- ✅ Per-sink severity threshold + global `--severity` floor.
+- ✅ Only-new-findings mode reads `compliancekit baseline` output.
+- ✅ Rate-limit + dedup via Finding.Fingerprint (PagerDuty `dedup_key`
+  + only-new subtraction; finer rate-limit deferred until a sink
+  reports the need).
+- ✅ Doctor reports per-sink configuration status.
+- ✅ No telemetry / no phone-home — every target is operator-
+  configured via env vars.
+
+**Deferred to a future milestone**
+
+- Mattermost / Rocket.Chat — Slack-webhook-compatible, add when
+  someone asks.
+- Adaptive Card Teams payload — wait for the October 2026 MessageCard
+  retirement deadline.
+- HTML email — overkill until someone reports plain-text rendering
+  is a problem.
+- Per-sink rate limit — only PagerDuty has a real rate concern today,
+  and its `dedup_key` covers that. Add when a sink complains.
 
 ---
 

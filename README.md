@@ -329,6 +329,46 @@ Deployment" sees the upstream image's CVEs too. Per-tool mapping
 tables ship embedded; `compliancekit mapping list / show / validate
 / diff` manages overrides.
 
+### Notifications (v0.17+)
+
+`compliancekit notify --in=findings.json` dispatches actionable
+findings to 8 channels — Slack, Discord, Microsoft Teams, Email
+(SMTP), generic webhook, GitHub PR comment, Jira, and PagerDuty.
+Every sink is operator-configured via env vars; missing credentials
+mean the sink is silently skipped (one channel never blocks the
+others).
+
+| Sink | Env vars | Notes |
+|---|---|---|
+| `slack` | `SLACK_WEBHOOK_URL` or `SLACK_BOT_TOKEN` + `SLACK_CHANNEL` | Block Kit payload, severity emoji |
+| `discord` | `DISCORD_WEBHOOK_URL` | Embed with severity-colored bar |
+| `teams` | `TEAMS_WEBHOOK_URL` | Legacy MessageCard connector |
+| `email` | `SMTP_HOST/PORT/USERNAME/PASSWORD/FROM/TO` | Auto-selects TLS/STARTTLS/plain by port |
+| `webhook` | `COMPLIANCEKIT_WEBHOOK_URL` + optional `COMPLIANCEKIT_WEBHOOK_SECRET` | HMAC-SHA256 signing in `X-CompliancekitSignature` header |
+| `github-pr` | `GITHUB_TOKEN` + `GITHUB_REPO` + `GITHUB_PR_NUMBER` | Single summary comment per dispatch (no spam) |
+| `jira` | `JIRA_NOTIFY_HOST/EMAIL/TOKEN/PROJECT` | Reuses the v0.15 ticket client |
+| `pagerduty` | `PAGERDUTY_INTEGRATION_KEY` | Events v2; `dedup_key` from finding fingerprint; defaults to critical-only |
+
+Per-sink severity floor: `<SINK>_THRESHOLD=high` (or info / low /
+medium / high / critical). The stricter of per-sink + global
+`--severity` wins. PagerDuty defaults to critical so a fresh install
+doesn't wake on-call on noise.
+
+Only-new-findings mode reads a v0.6 baseline and subtracts already-
+known findings before dispatch — channels don't repeat on every scan:
+
+```bash
+compliancekit notify --in=findings.json \
+  --baseline=.compliancekit/baseline.json \
+  --severity=high \
+  --url-prefix=https://compliance.acme.com
+```
+
+`compliancekit notify --list` shows registered sinks + per-sink
+Configured/Threshold state. `compliancekit doctor` also reports the
+notify section so misconfigured sinks surface alongside provider
+problems.
+
 ### Rego policies (v0.16+)
 
 Community-authored checks in <10 lines of Rego — no Go toolchain

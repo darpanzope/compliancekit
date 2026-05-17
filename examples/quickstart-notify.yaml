@@ -1,0 +1,81 @@
+# compliancekit.yaml — v0.17 notification dispatch quickstart.
+#
+# Flow:
+#
+#   compliancekit scan --config=compliancekit.yaml --out=findings.json
+#   compliancekit baseline create -i findings.json -o .compliancekit/baseline.json
+#   # ...later, after another scan...
+#   compliancekit notify --in=findings.json \
+#     --baseline=.compliancekit/baseline.json \
+#     --severity=high
+#
+# All sink credentials come from env vars. Missing creds = sink
+# silently skipped (Configured()=false). One failing sink never
+# blocks the others. Per ADR-006 no telemetry / no phone-home; every
+# notification target is operator-configured.
+
+project: acme-prod
+environment: prod
+
+providers:
+  digitalocean:
+    enabled: true
+
+severity:
+  fail_on: critical
+  min_report: medium
+
+output:
+  format: [json, markdown, sarif]
+  out_dir: ./out
+  evidence: true
+
+# ----------------------------------------------------------------------
+# Notification env vars (configure outside compliancekit.yaml so
+# secrets never land in version control):
+#
+#   # Slack (incoming webhook or bot-token + channel)
+#   export SLACK_WEBHOOK_URL='https://hooks.slack.com/services/.../...'
+#   export SLACK_THRESHOLD=medium
+#
+#   # Discord
+#   export DISCORD_WEBHOOK_URL='https://discord.com/api/webhooks/.../...'
+#
+#   # Microsoft Teams
+#   export TEAMS_WEBHOOK_URL='https://outlook.office.com/webhook/...'
+#
+#   # Email (SMTP)
+#   export SMTP_HOST=smtp.example.com
+#   export SMTP_PORT=587            # auto-selects starttls
+#   export SMTP_USERNAME=compliance@acme.com
+#   export SMTP_PASSWORD="$(pass smtp/compliance)"
+#   export SMTP_FROM=compliance@acme.com
+#   export SMTP_TO=security@acme.com,ops@acme.com
+#
+#   # Generic webhook with HMAC signing
+#   export COMPLIANCEKIT_WEBHOOK_URL=https://siem.acme.com/hooks/cck
+#   export COMPLIANCEKIT_WEBHOOK_SECRET='shared-secret-32-bytes'
+#
+#   # GitHub PR comment (single summary comment per dispatch)
+#   export GITHUB_TOKEN="$(gh auth token)"
+#   export GITHUB_REPO=acme/checkout-service
+#   export GITHUB_PR_NUMBER=1247
+#
+#   # Jira (falls back to JIRA_* used by `compliancekit remediate`)
+#   export JIRA_NOTIFY_HOST=acme.atlassian.net
+#   export JIRA_NOTIFY_EMAIL=compliance@acme.com
+#   export JIRA_NOTIFY_TOKEN="$(pass jira/api-token)"
+#   export JIRA_NOTIFY_PROJECT=SEC
+#
+#   # PagerDuty Events v2 (defaults to critical-only)
+#   export PAGERDUTY_INTEGRATION_KEY=00112233445566778899aabbccddeeff
+#
+# Verify sinks before sending:
+#
+#   compliancekit notify --list                   # sink table with status
+#   compliancekit doctor                          # full system check
+#
+# Dry-run to see per-sink plan without sending:
+#
+#   compliancekit notify --in=findings.json --dry-run
+# ----------------------------------------------------------------------

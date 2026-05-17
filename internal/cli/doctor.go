@@ -16,6 +16,7 @@ import (
 	k8scol "github.com/darpanzope/compliancekit/internal/collectors/k8s"
 	linuxcol "github.com/darpanzope/compliancekit/internal/collectors/linux"
 	"github.com/darpanzope/compliancekit/internal/config"
+	"github.com/darpanzope/compliancekit/internal/notify"
 )
 
 // doctorOptions holds the parsed flags and dependencies for the doctor
@@ -86,6 +87,12 @@ func runDoctor(ctx context.Context, w io.Writer, opts doctorOptions) error {
 	fmt.Fprintf(w, "%s output: format=%s, evidence=%v, out_dir=%s\n",
 		iconPass, strings.Join(cfg.Output.Format, ","), cfg.Output.Evidence, cfg.Output.OutDir)
 
+	// Notification sinks report runs regardless of provider config —
+	// operators may run `compliancekit notify` against findings JSON
+	// generated elsewhere (CI pipelines, ingest, etc.) and want to
+	// verify their sink credentials independently.
+	reportNotifySinks(w)
+
 	if !cfg.AnyProviderEnabled() {
 		fmt.Fprintf(w, "%s no providers enabled in config; enable at least one to scan\n", iconWarn)
 		return fmt.Errorf("no providers enabled")
@@ -118,6 +125,36 @@ func runDoctor(ctx context.Context, w io.Writer, opts doctorOptions) error {
 			}),
 	)
 	return combined
+}
+
+// reportNotifySinks prints the per-sink Configured + Threshold
+// status. Run unconditionally because v0.17's "missing creds is
+// fine" model means there is no error case to gate on — we just
+// want operators to see at a glance which channels would receive
+// a `compliancekit notify` invocation.
+func reportNotifySinks(w io.Writer) {
+	sinks := notify.Default.Sinks()
+	if len(sinks) == 0 {
+		return
+	}
+	configured := 0
+	for _, s := range sinks {
+		if s.Configured() {
+			configured++
+		}
+	}
+	icon := iconInfo
+	if configured > 0 {
+		icon = iconPass
+	}
+	fmt.Fprintf(w, "%s notify: %d sink(s) registered, %d configured\n", icon, len(sinks), configured)
+	for _, s := range sinks {
+		mark := iconInfo
+		if s.Configured() {
+			mark = iconPass
+		}
+		fmt.Fprintf(w, "    %s %s (threshold=%s)\n", mark, s.Name(), s.Threshold())
+	}
 }
 
 // reportProvider emits the status line(s) for one provider. The error is
