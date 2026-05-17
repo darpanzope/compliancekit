@@ -110,6 +110,31 @@ inputs:
     required: false
     default: 'true'
 
+  upload-evidence-pack:
+    description: |
+      Whether to upload the generated evidence pack as a workflow
+      artifact (via actions/upload-artifact@v4). Only effective when
+      `evidence: true` AND a findings.json is produced. Default 'false'
+      to keep the action's artifact footprint small for users who
+      don't want to ship the pack out of CI.
+    required: false
+    default: 'false'
+
+  evidence-artifact-name:
+    description: |
+      Name of the workflow artifact written when upload-evidence-pack
+      is true. Defaults to 'compliancekit-evidence-pack'.
+    required: false
+    default: compliancekit-evidence-pack
+
+  evidence-artifact-retention-days:
+    description: |
+      Retention window (days) for the uploaded evidence-pack artifact.
+      0 = use the org/repo default. Maximum per GitHub is 90 for
+      public repos, 400 for private/internal.
+    required: false
+    default: '0'
+
 outputs:
   reports-dir:
     description: Absolute path to the output directory the scan wrote.
@@ -183,32 +208,63 @@ runs:
       run: |
         set -eu
         mkdir -p "${CK_OUT_DIR}"
-        ARGS=(scan)
-        if [ -n "${CK_PROVIDERS}" ]; then
-          # 'scan' accepts a single provider positional today; with
-          # comma-separated input we loop in the future. For v0.5
-          # we forward the first one only.
-          first=${CK_PROVIDERS%%,*}
-          ARGS+=("${first}")
+
+        # v0.22 — multi-provider input. Previously only the first
+        # comma-separated provider was forwarded; now we loop one
+        # `compliancekit scan` per provider into a per-provider
+        # out-dir + concatenate the findings.json arrays via jq.
+        # Single-provider input (the common case) takes the same
+        # path with a 1-element list — no behavior change.
+
+        run_one_scan() {
+          local provider="$1"
+          local out_subdir="$2"
+          mkdir -p "${out_subdir}"
+          local args=(scan)
+          [ -n "${provider}" ] && args+=("${provider}")
+          [ -n "${CK_CONFIG}" ] && [ -f "${CK_CONFIG}" ] && args+=(--config "${CK_CONFIG}")
+          args+=(--out-dir "${out_subdir}")
+          args+=(--output "${CK_OUTPUT}")
+          if [ "${CK_FAIL_ON}" != "never" ]; then
+            args+=(--fail-on "${CK_FAIL_ON}")
+          fi
+          echo "+ compliancekit ${args[*]}"
+          set +e
+          compliancekit "${args[@]}"
+          local rc=$?
+          set -e
+          echo "${rc}"
+        }
+
+        worst_rc=0
+
+        if [ -z "${CK_PROVIDERS}" ]; then
+          # No provider input — single scan against every enabled provider.
+          worst_rc=$(run_one_scan "" "${CK_OUT_DIR}")
+        else
+          # Multi-provider: per-provider out-dirs + final findings.json
+          # merge at CK_OUT_DIR/findings.json.
+          IFS=',' read -ra PROVS <<< "${CK_PROVIDERS}"
+          merged_findings="${CK_OUT_DIR}/findings.json"
+          per_provider_files=()
+          for prov in "${PROVS[@]}"; do
+            prov="$(echo "${prov}" | xargs)"  # trim whitespace
+            [ -z "${prov}" ] && continue
+            sub="${CK_OUT_DIR}/${prov}"
+            rc=$(run_one_scan "${prov}" "${sub}")
+            [ "${rc}" -gt "${worst_rc}" ] && worst_rc="${rc}"
+            [ -f "${sub}/findings.json" ] && per_provider_files+=("${sub}/findings.json")
+          done
+          # Merge per-provider findings.json arrays via jq when available.
+          if command -v jq >/dev/null 2>&1 && [ ${#per_provider_files[@]} -gt 0 ]; then
+            jq -s 'add' "${per_provider_files[@]}" > "${merged_findings}"
+            echo "+ merged ${#per_provider_files[@]} per-provider findings.json → ${merged_findings}"
+          fi
         fi
-        [ -n "${CK_CONFIG}" ] && [ -f "${CK_CONFIG}" ] && ARGS+=(--config "${CK_CONFIG}")
-        ARGS+=(--out-dir "${CK_OUT_DIR}")
-        ARGS+=(--output "${CK_OUTPUT}")
-        if [ "${CK_FAIL_ON}" != "never" ]; then
-          ARGS+=(--fail-on "${CK_FAIL_ON}")
-        fi
-        echo "+ compliancekit ${ARGS[*]}"
-        # Capture exit code rather than letting `set -e` kill the
-        # step so we still upload SARIF / generate evidence on a
-        # findings-gated non-zero exit. The exit propagates at the
-        # end after every artifact is in place.
-        set +e
-        compliancekit "${ARGS[@]}"
-        scan_rc=$?
-        set -e
+
         abs_out=$(cd "${CK_OUT_DIR}" && pwd)
         echo "reports-dir=${abs_out}" >> "$GITHUB_OUTPUT"
-        echo "scan-rc=${scan_rc}" >> "$GITHUB_OUTPUT"
+        echo "scan-rc=${worst_rc}" >> "$GITHUB_OUTPUT"
 
     - name: Upload SARIF to Code Scanning
       if: ${{ inputs.upload-sarif == 'true' && contains(inputs.output, 'sarif') }}
@@ -231,6 +287,18 @@ runs:
         compliancekit "${ARGS[@]}"
         abs_evidence=$(cd "${CK_REPORTS}/evidence" && pwd)
         echo "evidence-dir=${abs_evidence}" >> "$GITHUB_OUTPUT"
+
+    # v0.22 — optional workflow-artifact upload of the evidence pack.
+    # Opt-in via upload-evidence-pack: true. Stays off by default to
+    # keep small repos from accidentally retaining large packs.
+    - name: Upload evidence pack as workflow artifact
+      if: ${{ inputs.upload-evidence-pack == 'true' && steps.evidence.outputs.evidence-dir != '' }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ inputs.evidence-artifact-name }}
+        path: ${{ steps.evidence.outputs.evidence-dir }}
+        retention-days: ${{ inputs.evidence-artifact-retention-days }}
+        if-no-files-found: warn
 
     - name: Propagate scan exit code
       shell: bash
