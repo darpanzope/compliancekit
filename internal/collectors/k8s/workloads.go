@@ -91,6 +91,10 @@ func (c *Collector) podResource(scope *ContextScope, pod *corev1.Pod) core.Resou
 		"host_users":              boolPtrOrNil(pod.Spec.HostUsers),
 		"apparmor_profile":        apparmorProfileFromAnnotations(pod.Annotations),
 		"volume_subpath_mounts":   collectVolumeSubpathMounts(pod),
+		// v0.21 phase 2 — workload reliability surface.
+		"termination_grace_period":    int64PtrOrZero(pod.Spec.TerminationGracePeriodSeconds),
+		"topology_spread_constraints": len(pod.Spec.TopologySpreadConstraints),
+		"init_container_count":        len(pod.Spec.InitContainers),
 	}
 	r := core.Resource{
 		ID:         fmt.Sprintf("%s.%s.%s.%s", PodType, scope.Name, pod.Namespace, pod.Name),
@@ -139,7 +143,32 @@ func containerMap(c *corev1.Container, kind string) map[string]any {
 		"has_memory_request":    !c.Resources.Requests.Memory().IsZero(),
 		"has_liveness_probe":    c.LivenessProbe != nil,
 		"host_ports":            hostPortsList(c.Ports),
+		// v0.21 phase 2 — reliability + supply-chain surface.
+		"has_readiness_probe":         c.ReadinessProbe != nil,
+		"has_startup_probe":           c.StartupProbe != nil,
+		"has_ephemeral_storage_limit": !c.Resources.Limits.StorageEphemeral().IsZero(),
+		"image_digest_pinned":         isImageDigestPinned(c.Image),
 	}
+}
+
+// int64PtrOrZero returns the dereferenced *int64 or 0 when nil — used
+// for TerminationGracePeriodSeconds where k8s emits a default of 30
+// when unset (but we want the raw field for "operator explicitly set
+// this" semantics on the v0.21 reliability checks).
+func int64PtrOrZero(i *int64) int64 {
+	if i == nil {
+		return 0
+	}
+	return *i
+}
+
+// isImageDigestPinned returns true when the image reference contains a
+// "@sha256:" digest suffix. Pinned digests defeat the tag-mutation
+// supply-chain attack (where a registry owner pushes a malicious image
+// at an existing tag). Tags alone — including :latest, semver tags,
+// and date tags — are mutable.
+func isImageDigestPinned(image string) bool {
+	return strings.Contains(image, "@sha256:")
 }
 
 func collectHostPathVolumes(vols []corev1.Volume) []string {
