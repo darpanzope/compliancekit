@@ -162,3 +162,66 @@ func TestAppManualVerifyChecks(t *testing.T) {
 		})
 	}
 }
+
+// v0.19 phase 10 — coverage backfill for the two checks not yet
+// exercised by the Phase 5 test set.
+
+func TestAppServicesLogDestVariants(t *testing.T) {
+	cases := []struct {
+		name      string
+		total, ok int
+		want      core.Status
+	}{
+		{"none", 0, 0, ""},
+		{"all", 3, 3, core.StatusPass},
+		{"partial", 3, 1, core.StatusFail},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			g := newAccountGraph(mkApp("a", map[string]any{
+				"service_count":          c.total,
+				"services_with_log_dest": c.ok,
+			}))
+			findings, _ := AppServicesLogDest(context.Background(), g)
+			if c.want == "" {
+				if len(findings) != 0 {
+					t.Errorf("expected no findings")
+				}
+				return
+			}
+			if findings[0].Status != c.want {
+				t.Errorf("status=%v want %v", findings[0].Status, c.want)
+			}
+		})
+	}
+}
+
+func TestAppServicesAlertsVariants(t *testing.T) {
+	cases := []struct {
+		name      string
+		total, ok int
+		want      core.Status
+	}{
+		{"none", 0, 0, ""},
+		{"all", 2, 2, core.StatusPass},
+		{"partial", 4, 2, core.StatusFail},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			g := newAccountGraph(mkApp("a", map[string]any{
+				"service_count":        c.total,
+				"services_with_alerts": c.ok,
+			}))
+			findings, _ := AppServicesAlerts(context.Background(), g)
+			if c.want == "" {
+				if len(findings) != 0 {
+					t.Errorf("expected no findings")
+				}
+				return
+			}
+			if findings[0].Status != c.want {
+				t.Errorf("status=%v want %v", findings[0].Status, c.want)
+			}
+		})
+	}
+}

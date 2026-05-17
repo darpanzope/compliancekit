@@ -88,3 +88,17 @@ func checkFnFromID(t *testing.T, id string) func(context.Context, *core.Resource
 	}
 	return fn
 }
+
+func TestDropletAgedOversized(t *testing.T) {
+	aged := mkDroplet("aged", map[string]any{"created_at": time.Now().Add(-365 * 24 * time.Hour).UTC()})
+	young := mkDroplet("young", map[string]any{"created_at": time.Now().Add(-30 * 24 * time.Hour).UTC()})
+	g := newAccountGraph(aged, young)
+	findings, _ := DropletAgedOversized(context.Background(), g)
+	by := map[string]core.Status{}
+	for _, f := range findings {
+		by[f.Resource.Name] = f.Status
+	}
+	if by["aged"] != core.StatusFail || by["young"] != core.StatusPass {
+		t.Errorf("statuses=%+v", by)
+	}
+}

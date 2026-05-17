@@ -168,3 +168,21 @@ func TestNetworkManualVerifyChecks(t *testing.T) {
 		})
 	}
 }
+
+func TestFWEmptyTagSource(t *testing.T) {
+	withTag := mkFW("with-tag", []godo.InboundRule{
+		{Protocol: "tcp", PortRange: "443", Sources: &godo.Sources{Tags: []string{"bastion"}}},
+	}, nil)
+	noTag := mkFW("no-tag", []godo.InboundRule{
+		{Protocol: "tcp", PortRange: "443", Sources: &godo.Sources{Addresses: []string{"0.0.0.0/0"}}},
+	}, nil)
+	g := newAccountGraph(withTag, noTag)
+	findings, _ := FWEmptyTagSource(context.Background(), g)
+	// no-tag has no tag sources → no finding emitted
+	if len(findings) != 1 {
+		t.Fatalf("findings=%d want 1 (only with-tag firewall fires)", len(findings))
+	}
+	if findings[0].Status != core.StatusError {
+		t.Errorf("status=%v want StatusError", findings[0].Status)
+	}
+}
