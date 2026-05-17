@@ -39,7 +39,7 @@ const maxCheckFileLOC = 600
 // the test becomes a strict equality gate.
 var legacyOversizeAllowlist = map[string]int{
 	// rbac.go split out at v0.22 phase 1 (→ rbac_roles.go + rbac_bindings.go).
-	"internal/checks/k8s/pods.go":          904,
+	// pods.go split out at v0.22 phase 2 (→ pods_resources.go + pods_volumes.go).
 	"internal/checks/k8s/network.go":       879,
 	"internal/checks/k8s/cluster.go":       701,
 	"internal/checks/k8s/reliability.go":   671,
