@@ -174,6 +174,14 @@ func (c *Collector) gatherOne(ctx context.Context, host Host) core.Resource {
 		attrs["kernel_error"] = err.Error()
 	}
 
+	// v0.20 phase 5 — /etc/login.defs feeds the password-age + umask
+	// + encryption-method checks.
+	if ld, err := gatherLoginDefs(ctx, client); err == nil {
+		attrs["login_defs"] = ld
+	} else {
+		attrs["login_defs_error"] = err.Error()
+	}
+
 	return core.Resource{
 		ID:         "linux.host." + host.Host,
 		Type:       HostType,
