@@ -51,7 +51,8 @@ func NewPagerDuty(cfg PagerDutyConfig) *PagerDuty {
 	if cfg.EventsURL == "" {
 		cfg.EventsURL = "https://events.pagerduty.com/v2/enqueue"
 	}
-	if cfg.SeverityFloor == core.SeverityInfo {
+	if cfg.SeverityFloor == core.SeverityUnknown {
+		// Zero-value of core.Severity is SeverityUnknown.
 		// PagerDuty pages humans — default to critical-only to
 		// avoid waking on-call on noise. Operators with a different
 		// risk appetite override via PAGERDUTY_THRESHOLD.
