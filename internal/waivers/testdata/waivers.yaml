@@ -1,0 +1,18 @@
+waivers:
+  - check_id: aws-s3-no-public-acls
+    resource_id: aws.s3.bucket.public-cdn
+    reason: "public CDN bucket; CloudFront serves at the edge with signed URLs for non-public content"
+    approver: security@acme.com
+    expires: 2099-12-31
+
+  - check_id: k8s-pod-privileged
+    resource_id: k8s.pod.kube-system.calico-node
+    reason: "Calico CNI requires CAP_NET_ADMIN on the host network namespace; alternative cluster networking deferred"
+    approver: platform@acme.com
+    expires: 2099-12-31
+
+  - check_id: linux-sshd-no-root-login
+    resource_id: linux.host.bastion-01
+    reason: "bastion ships with root SSH for emergency recovery; multi-factor MFA enforced via PAM"
+    approver: ops-lead@acme.com
+    expires: 2026-06-30T00:00:00Z
