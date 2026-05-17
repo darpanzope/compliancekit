@@ -6,7 +6,7 @@
   Source of truth: internal/checks/**/*.go (the core.Check vars).
 -->
 
-This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **378 checks** across the providers below.
+This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **482 checks** across the providers below.
 
 Each check below has:
 
@@ -27,17 +27,17 @@ To inspect a single check from the CLI: `compliancekit checks show <id>`.
 | `gcp` | 25 |
 | `hetzner` | 15 |
 | `kubernetes` | 149 |
-| `linux` | 15 |
-| **total** | **378** |
+| `linux` | 119 |
+| **total** | **482** |
 
 ## By severity
 
 | Severity | Checks |
 |---|---:|
 | `critical` | 18 |
-| `high` | 99 |
-| `medium` | 135 |
-| `low` | 126 |
+| `high` | 120 |
+| `medium` | 196 |
+| `low` | 148 |
 
 ## aws
 
@@ -8567,6 +8567,246 @@ _Tags:_ `exploit-mitigation`, `kernel`
 
 ---
 
+### `linux-audit-rule-group`
+
+**auditd must watch /etc/group** &middot; severity `medium` &middot; service `audit` &middot; resource `linux.host`
+
+auditd watch rule for [/etc/group]; CIS Linux Server v8 §4.1.3.7. Watch group-membership changes — a privilege-escalation primitive (add user to wheel/sudo).
+
+_Remediation:_
+
+> Append to /etc/audit/rules.d/50-cis.rules:
+  -w /etc/group -p wa -k cis_v8
+Then `sudo augenrules --load` (RHEL family) or `sudo systemctl restart auditd` (Debian/Ubuntu).
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `4.1.3.7` | Ensure MAC policy changes are collected |
+| `iso27001` | `A.8.15` | Logging |
+| `soc2` | `CC7.2` | System Component Monitoring |
+
+_Tags:_ `audit`, `identity`
+
+---
+
+### `linux-audit-rule-gshadow`
+
+**auditd must watch /etc/gshadow** &middot; severity `medium` &middot; service `audit` &middot; resource `linux.host`
+
+auditd watch rule for [/etc/gshadow]; CIS Linux Server v8 §4.1.3.7. Group-password file. Rarely edited; an unexpected write is high-signal.
+
+_Remediation:_
+
+> Append to /etc/audit/rules.d/50-cis.rules:
+  -w /etc/gshadow -p wa -k cis_v8
+Then `sudo augenrules --load` (RHEL family) or `sudo systemctl restart auditd` (Debian/Ubuntu).
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `4.1.3.7` | Ensure MAC policy changes are collected |
+| `iso27001` | `A.8.15` | Logging |
+| `soc2` | `CC7.2` | System Component Monitoring |
+
+_Tags:_ `audit`, `identity`
+
+---
+
+### `linux-audit-rule-lastlog`
+
+**auditd must watch /var/log/lastlog (login records)** &middot; severity `medium` &middot; service `audit` &middot; resource `linux.host`
+
+auditd watch rule for [/var/log/lastlog]; CIS Linux Server v8 §4.1.3.6. lastlog tracks per-user last-login time; tampering is a forensic-evasion signal.
+
+_Remediation:_
+
+> Append to /etc/audit/rules.d/50-cis.rules:
+  -w /var/log/lastlog -p wa -k cis_v8
+Then `sudo augenrules --load` (RHEL family) or `sudo systemctl restart auditd` (Debian/Ubuntu).
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `4.1.3.6` | Ensure events that modify identity (passwd/shadow/group) are collected |
+| `iso27001` | `A.8.15` | Logging |
+| `soc2` | `CC7.2` | System Component Monitoring |
+
+_Tags:_ `audit`, `login`
+
+---
+
+### `linux-audit-rule-localtime`
+
+**auditd must watch /etc/localtime** &middot; severity `low` &middot; service `audit` &middot; resource `linux.host`
+
+auditd watch rule for [/etc/localtime]; CIS Linux Server v8 §4.1.3.5. Timezone changes shift every log timestamp; a recorded change is essential for correlation.
+
+_Remediation:_
+
+> Append to /etc/audit/rules.d/50-cis.rules:
+  -w /etc/localtime -p wa -k cis_v8
+Then `sudo augenrules --load` (RHEL family) or `sudo systemctl restart auditd` (Debian/Ubuntu).
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `4.1.3.5` | Ensure events that modify date and time are collected |
+| `iso27001` | `A.8.17` | Clock synchronization |
+| `soc2` | `CC7.2` | System Component Monitoring |
+
+_Tags:_ `audit`, `time`
+
+---
+
+### `linux-audit-rule-mac-policy`
+
+**auditd must watch /etc/apparmor/ (or /etc/apparmor.d/)** &middot; severity `medium` &middot; service `audit` &middot; resource `linux.host`
+
+auditd watch rule for [/etc/apparmor]; CIS Linux Server v8 §4.1.3.14. AppArmor policy changes — same rationale as the SELinux watch but for the alternative MAC.
+
+_Remediation:_
+
+> Append to /etc/audit/rules.d/50-cis.rules:
+  -w /etc/apparmor -p wa -k cis_v8
+Then `sudo augenrules --load` (RHEL family) or `sudo systemctl restart auditd` (Debian/Ubuntu).
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `4.1.3.14` | Ensure successful and unsuccessful logins are collected (lastlog) |
+| `iso27001` | `A.8.7` | Protection against malware |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `apparmor`, `audit`
+
+---
+
+### `linux-audit-rule-passwd`
+
+**auditd must watch /etc/passwd** &middot; severity `high` &middot; service `audit` &middot; resource `linux.host`
+
+auditd watch rule for [/etc/passwd]; CIS Linux Server v8 §4.1.3.7. Watch writes to /etc/passwd; every legitimate user-add / user-mod produces a record.
+
+_Remediation:_
+
+> Append to /etc/audit/rules.d/50-cis.rules:
+  -w /etc/passwd -p wa -k cis_v8
+Then `sudo augenrules --load` (RHEL family) or `sudo systemctl restart auditd` (Debian/Ubuntu).
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `4.1.3.7` | Ensure MAC policy changes are collected |
+| `iso27001` | `A.8.15` | Logging |
+| `soc2` | `CC7.2` | System Component Monitoring |
+
+_Tags:_ `audit`, `identity`
+
+---
+
+### `linux-audit-rule-selinux`
+
+**auditd must watch /etc/selinux/ + /usr/share/selinux/** &middot; severity `medium` &middot; service `audit` &middot; resource `linux.host`
+
+auditd watch rule for [/etc/selinux]; CIS Linux Server v8 §4.1.3.14. MAC policy changes (SELinux config) should be audit-trailed.
+
+_Remediation:_
+
+> Append to /etc/audit/rules.d/50-cis.rules:
+  -w /etc/selinux -p wa -k cis_v8
+Then `sudo augenrules --load` (RHEL family) or `sudo systemctl restart auditd` (Debian/Ubuntu).
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `4.1.3.14` | Ensure successful and unsuccessful logins are collected (lastlog) |
+| `iso27001` | `A.8.7` | Protection against malware |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `audit`, `selinux`
+
+---
+
+### `linux-audit-rule-shadow`
+
+**auditd must watch /etc/shadow** &middot; severity `high` &middot; service `audit` &middot; resource `linux.host`
+
+auditd watch rule for [/etc/shadow]; CIS Linux Server v8 §4.1.3.7. Direct edits to /etc/shadow bypass passwd/chpasswd; an audit record catches the attempt.
+
+_Remediation:_
+
+> Append to /etc/audit/rules.d/50-cis.rules:
+  -w /etc/shadow -p wa -k cis_v8
+Then `sudo augenrules --load` (RHEL family) or `sudo systemctl restart auditd` (Debian/Ubuntu).
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `4.1.3.7` | Ensure MAC policy changes are collected |
+| `iso27001` | `A.8.15` | Logging |
+| `soc2` | `CC7.2` | System Component Monitoring |
+
+_Tags:_ `audit`, `identity`
+
+---
+
+### `linux-audit-rule-sudoers`
+
+**auditd must watch /etc/sudoers + /etc/sudoers.d** &middot; severity `high` &middot; service `audit` &middot; resource `linux.host`
+
+auditd watch rule for [/etc/sudoers]; CIS Linux Server v8 §4.1.3.20. Watch sudoers edits — most privileged-access drift starts here. /etc/sudoers.d should also be watched.
+
+_Remediation:_
+
+> Append to /etc/audit/rules.d/50-cis.rules:
+  -w /etc/sudoers -p wa -k cis_v8
+Then `sudo augenrules --load` (RHEL family) or `sudo systemctl restart auditd` (Debian/Ubuntu).
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `4.1.3.20` | Ensure changes to system administration scope (sudoers) are collected |
+| `iso27001` | `A.5.15` | Access control |
+| `soc2` | `CC6.3` | Authorization, Modification, and Removal |
+
+_Tags:_ `audit`, `sudo`
+
+---
+
+### `linux-audit-rule-time-change`
+
+**auditd must watch time-change syscalls** &middot; severity `medium` &middot; service `audit` &middot; resource `linux.host`
+
+auditd watch rule for [adjtimex]; CIS Linux Server v8 §4.1.3.5. adjtimex / settimeofday / clock_settime calls — a backdoor for log-correlation evasion.
+
+_Remediation:_
+
+> Append to /etc/audit/rules.d/50-cis.rules:
+  -w adjtimex -p wa -k cis_v8
+Then `sudo augenrules --load` (RHEL family) or `sudo systemctl restart auditd` (Debian/Ubuntu).
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `4.1.3.5` | Ensure events that modify date and time are collected |
+| `iso27001` | `A.8.17` | Clock synchronization |
+| `soc2` | `CC7.2` | System Component Monitoring |
+
+_Tags:_ `audit`, `time`
+
+---
+
 ### `linux-auditd-running`
 
 **auditd must be running** &middot; severity `medium` &middot; service `audit` &middot; resource `linux.host`
@@ -8587,6 +8827,28 @@ _Maps to:_
 | `soc2` | `CC7.3` | Security Incident Evaluation |
 
 _Tags:_ `audit`, `logging`
+
+---
+
+### `linux-distro-supported`
+
+**/etc/os-release ID must be on the supported-distro allowlist** &middot; severity `medium` &middot; service `distro` &middot; resource `linux.host`
+
+v0.20 introduces per-distro behavior in many Linux checks (package manager, init system, sysctl key names). The collector reads /etc/os-release at the top of every gather pass; if the ID isn't on the allowlist (debian, ubuntu, rhel, centos, rocky, almalinux, fedora, alpine, amzn) downstream checks fall through to generic defaults that may misclassify findings. Pin the host to a supported distro OR open a tracking issue to extend the allowlist.
+
+_Remediation:_
+
+> Either migrate the workload to a supported distro (Ubuntu LTS / Debian Stable / RHEL family / Alpine / Amazon Linux 2 or 2023), or open an issue at https://github.com/darpanzope/compliancekit/issues with the target distro + /etc/os-release contents so it can be added to `supportedDistros` in `internal/checks/linux/distro.go`.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `7.3` | Perform Automated Operating System Patch Management |
+| `iso27001` | `A.8.8` | Management of technical vulnerabilities |
+| `soc2` | `CC7.1` | Detection and Monitoring of Vulnerabilities |
+
+_Tags:_ `distro`, `platform`
 
 ---
 
@@ -8638,6 +8900,231 @@ _Tags:_ `default-policy`, `firewall`, `network`
 
 ---
 
+### `linux-firewall-dns-egress-restricted`
+
+**DNS egress must be restricted to known resolvers** &middot; severity `low` &middot; service `auth` &middot; resource `linux.host`
+
+Manual-verify check; CIS Linux Server v8 §3.4.2.10. Unrestricted port 53 egress is a common DNS-tunneling exfil channel. Restrict to your resolver IPs.
+
+_Remediation:_
+
+> Per-distro PAM + sudoers grammars are deferred; verify via `sudo iptables -L OUTPUT | grep 53` + cross-reference /etc/resolv.conf. + record evidence (screenshot or shell output) in waivers.yaml per ADR-013.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `3.4.2.10` | Ensure DNS egress is restricted to known resolvers |
+| `iso27001` | `A.8.20` | Networks security |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `dns`, `firewall`, `manual-verify`
+
+---
+
+### `linux-firewall-egress-policy-documented`
+
+**Egress allow-list must be documented** &middot; severity `low` &middot; service `auth` &middot; resource `linux.host`
+
+Manual-verify check; CIS Linux Server v8 §3.4.2.6. Default-deny egress requires a documented allow-list (which fqdns + ports + protocols are intentional). Without that list, every new outbound flow that fails is a guess.
+
+_Remediation:_
+
+> Per-distro PAM + sudoers grammars are deferred; verify via Document the allow-list in your runbook; the firewall rules should match. + record evidence (screenshot or shell output) in waivers.yaml per ADR-013.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `3.4.2.6` | Ensure egress policy is documented |
+| `iso27001` | `A.8.20` | Networks security |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `egress`, `firewall`, `manual-verify`
+
+---
+
+### `linux-firewall-icmp-input-restricted`
+
+**ICMP INPUT must be rate-limited** &middot; severity `low` &middot; service `auth` &middot; resource `linux.host`
+
+Manual-verify check; CIS Linux Server v8 §3.4.2.5. Unbounded ICMP echo replies are a ping-flood amplifier. Limit to ≤5/sec.
+
+_Remediation:_
+
+> Per-distro PAM + sudoers grammars are deferred; verify via `sudo iptables -L INPUT | grep -i icmp` OR `sudo nft list ruleset | grep icmp` + record evidence (screenshot or shell output) in waivers.yaml per ADR-013.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `3.4.2.5` | Ensure ICMP INPUT is rate-limited |
+| `iso27001` | `A.8.20` | Networks security |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `firewall`, `icmp`, `manual-verify`
+
+---
+
+### `linux-firewall-ipv6-rules-present`
+
+**IPv6 firewall rules must mirror IPv4** &middot; severity `medium` &middot; service `auth` &middot; resource `linux.host`
+
+Manual-verify check; CIS Linux Server v8 §3.4.2.7. An IPv4-only firewall on a dual-stack host leaves the IPv6 stack default-permit. Hosts with IPv6 enabled need ip6tables / inet6 rules to mirror IPv4.
+
+_Remediation:_
+
+> Per-distro PAM + sudoers grammars are deferred; verify via `sudo ip6tables -L | head` OR `sudo nft list ruleset | grep ip6` + record evidence (screenshot or shell output) in waivers.yaml per ADR-013.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `3.4.2.7` | Ensure IPv6 firewall rules mirror IPv4 |
+| `iso27001` | `A.8.20` | Networks security |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `firewall`, `ipv6`, `manual-verify`
+
+---
+
+### `linux-firewall-loopback-allowed`
+
+**Firewall must allow loopback traffic** &middot; severity `medium` &middot; service `auth` &middot; resource `linux.host`
+
+Manual-verify check; CIS Linux Server v8 §3.4.2.4. Localhost / 127.0.0.0/8 / ::1 traffic must be allowed. Most distros include this rule by default; explicit-deny INPUT policies sometimes drop it.
+
+_Remediation:_
+
+> Per-distro PAM + sudoers grammars are deferred; verify via `sudo iptables -L INPUT | grep -i lo` OR `sudo nft list ruleset | grep iif lo` + record evidence (screenshot or shell output) in waivers.yaml per ADR-013.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `3.4.2.4` | Ensure loopback traffic is allowed |
+| `iso27001` | `A.8.20` | Networks security |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `firewall`, `loopback`, `manual-verify`
+
+---
+
+### `linux-firewall-nftables-on-rhel`
+
+**RHEL-family hosts should run nftables (modern replacement for iptables)** &middot; severity `low` &middot; service `firewall` &middot; resource `linux.host`
+
+nftables is the upstream replacement for iptables; RHEL 8+ ships with firewalld backed by nftables. Hosts in the RHEL family running iptables-only miss the cleaner rule grammar + atomic rule replacement. Debian/Ubuntu still defaults to ufw — this check skips there.
+
+_Remediation:_
+
+> sudo systemctl enable --now nftables
+Migrate iptables rules via `iptables-restore-translate -f /etc/sysconfig/iptables`.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `3.4.2` | Configure firewall rules (Level 1 baseline) |
+| `iso27001` | `A.8.20` | Networks security |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `firewall`, `nftables`, `rhel`
+
+---
+
+### `linux-firewall-rules-logged`
+
+**Firewall drops should be logged** &middot; severity `low` &middot; service `auth` &middot; resource `linux.host`
+
+Manual-verify check; CIS Linux Server v8 §3.4.2.8. Logged drops feed the SIEM with reconnaissance / scan signals. Most distros disable LOG by default to keep dmesg quiet.
+
+_Remediation:_
+
+> Per-distro PAM + sudoers grammars are deferred; verify via `sudo iptables -L | grep LOG` OR `sudo nft list ruleset | grep log` + record evidence (screenshot or shell output) in waivers.yaml per ADR-013.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `3.4.2.8` | Ensure SSH inbound is rate-limited |
+| `iso27001` | `A.8.15` | Logging |
+| `soc2` | `CC7.2` | System Component Monitoring |
+
+_Tags:_ `firewall`, `logging`, `manual-verify`
+
+---
+
+### `linux-firewall-some-active`
+
+**Some firewall must be active (ufw, nftables, or firewalld)** &middot; severity `high` &middot; service `firewall` &middot; resource `linux.host`
+
+A host with NO active firewall trusts the upstream cloud provider's security groups entirely. Defense in depth wants both — at minimum a nftables default-deny INPUT table on RHEL-family or ufw active on Debian-family.
+
+_Remediation:_
+
+> Debian/Ubuntu: sudo ufw enable
+RHEL family: sudo systemctl enable --now nftables firewalld
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `3.4.1` | Ensure a firewall package is installed and active |
+| `iso27001` | `A.8.20` | Networks security |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `firewall`, `must-active`
+
+---
+
+### `linux-firewall-ssh-rate-limited`
+
+**SSH ingress must be rate-limited** &middot; severity `medium` &middot; service `auth` &middot; resource `linux.host`
+
+Manual-verify check; CIS Linux Server v8 §3.4.2.9. Rate-limiting SSH (e.g. ufw limit 22) blocks credential-stuffing without changing the auth posture.
+
+_Remediation:_
+
+> Per-distro PAM + sudoers grammars are deferred; verify via `sudo ufw status verbose | grep -i limit` OR `sudo iptables -L | grep recent` + record evidence (screenshot or shell output) in waivers.yaml per ADR-013.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `3.4.2.9` | Ensure firewall rules are logged |
+| `iso27001` | `A.8.20` | Networks security |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `firewall`, `manual-verify`, `ssh`
+
+---
+
+### `linux-firewall-ufw-default-deny-outgoing`
+
+**ufw default policy: outgoing must be deny on egress-controlled hosts** &middot; severity `medium` &middot; service `firewall` &middot; resource `linux.host`
+
+Default-deny egress is the modern way to constrain a compromised process from beacons / data-exfil. CIS Linux Server v8 §3.4.2.1 recommends explicit egress allow-lists with default deny. Waive on hosts that need broad outbound access (build runners, package mirrors).
+
+_Remediation:_
+
+> sudo ufw default deny outgoing
+sudo ufw allow out 443/tcp comment 'HTTPS'
+sudo ufw allow out 53      comment 'DNS'
+sudo ufw reload
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `3.4.2.1` | Ensure default-deny egress policy |
+| `iso27001` | `A.8.20` | Networks security |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `egress`, `firewall`, `ufw`
+
+---
+
 ### `linux-journald-persistent`
 
 **journald must use persistent storage** &middot; severity `low` &middot; service `audit` &middot; resource `linux.host`
@@ -8658,6 +9145,577 @@ _Maps to:_
 | `soc2` | `CC7.2` | System Component Monitoring |
 
 _Tags:_ `audit`, `journald`, `logging`
+
+---
+
+### `linux-login-defs-encrypt-method`
+
+**/etc/login.defs ENCRYPT_METHOD must be SHA512 or YESCRYPT** &middot; severity `high` &middot; service `auth` &middot; resource `linux.host`
+
+ENCRYPT_METHOD controls the hash algorithm used to store new user passwords in /etc/shadow. SHA512 + YESCRYPT are the only acceptable choices in 2026 (DES + MD5 are trivially crackable; SHA256 is acceptable but SHA512 is the explicit CIS pick). CIS Linux Server v8 §5.5.1.4.
+
+_Remediation:_
+
+> /etc/login.defs:
+  ENCRYPT_METHOD YESCRYPT   # or SHA512
+Rehash existing accounts on next password change.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.24` | Use of cryptography |
+| `soc2` | `CC6.7` | Transmission, Movement, and Disposal of Information |
+
+_Tags:_ `auth`, `password-hashing`
+
+---
+
+### `linux-login-defs-pass-max-days`
+
+**/etc/login.defs PASS_MAX_DAYS must be ≤ 365** &middot; severity `medium` &middot; service `auth` &middot; resource `linux.host`
+
+PASS_MAX_DAYS bounds the maximum password lifetime for accounts created from /etc/login.defs defaults. CIS Linux Server v8 §5.5.1.1 requires ≤365 (NIST 800-63B aligned). Existing accounts may need `chage --maxdays` separately.
+
+_Remediation:_
+
+> Edit /etc/login.defs:
+  PASS_MAX_DAYS   365
+Apply to existing users:
+  awk -F: '($3>=1000 && $3<60000) {print $1}' /etc/passwd | xargs -I{} chage --maxdays 365 {}
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.5.17` | Authentication information |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `auth`, `password-age`
+
+---
+
+### `linux-login-defs-pass-min-days`
+
+**/etc/login.defs PASS_MIN_DAYS must be ≥ 1** &middot; severity `medium` &middot; service `auth` &middot; resource `linux.host`
+
+PASS_MIN_DAYS prevents a user from cycling through their password history in a single sitting (defeats reuse-prevention). CIS §5.5.1.2 requires ≥1.
+
+_Remediation:_
+
+> /etc/login.defs:
+  PASS_MIN_DAYS   1
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.5.17` | Authentication information |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `auth`, `password-age`
+
+---
+
+### `linux-login-defs-pass-warn-age`
+
+**/etc/login.defs PASS_WARN_AGE must be ≥ 7** &middot; severity `low` &middot; service `auth` &middot; resource `linux.host`
+
+PASS_WARN_AGE controls how many days ahead of expiry the user sees a warning at login. ≥7 days gives the user a meaningful chance to rotate before being locked out. CIS §5.5.1.3.
+
+_Remediation:_
+
+> /etc/login.defs:
+  PASS_WARN_AGE   7
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.5.17` | Authentication information |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `auth`, `password-age`
+
+---
+
+### `linux-login-defs-umask`
+
+**/etc/login.defs UMASK must be 027 or stricter** &middot; severity `medium` &middot; service `auth` &middot; resource `linux.host`
+
+Default UMASK 022 (group + world readable) is too permissive for shared / multi-tenant systems. 027 (no group write, no world access) is the CIS Linux Server v8 §5.5.5 recommendation.
+
+_Remediation:_
+
+> /etc/login.defs:
+  UMASK   027
+Also check /etc/profile.d/*.sh + /etc/bashrc for shell-level overrides.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `iso27001` | `A.8.7` | Protection against malware |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `auth`, `umask`
+
+---
+
+### `linux-mac-apparmor-active`
+
+**AppArmor must be active on Debian-family hosts** &middot; severity `high` &middot; service `mac` &middot; resource `linux.host`
+
+AppArmor is the Debian/Ubuntu MAC layer. Active = kernel module loaded AND at least one profile loaded. CIS Linux Server v8 §1.7.2.
+
+_Remediation:_
+
+> sudo apt-get install -y apparmor apparmor-utils
+sudo systemctl enable --now apparmor
+sudo aa-enforce /etc/apparmor.d/*
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `1.7.2` | Ensure AppArmor is active |
+| `iso27001` | `A.8.7` | Protection against malware |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `apparmor`, `mac`
+
+---
+
+### `linux-mac-apparmor-no-complain-mode`
+
+**AppArmor profiles must not be in complain mode (production)** &middot; severity `medium` &middot; service `auth` &middot; resource `linux.host`
+
+Manual-verify check; CIS Linux Server v8 §1.7.2.3. complain-mode profiles log violations but don't enforce. Per-profile knob; verify production profiles are in enforce.
+
+_Remediation:_
+
+> Per-distro PAM + sudoers grammars are deferred; verify via `sudo aa-status | grep -A 100 'profiles are in complain mode'` + record evidence (screenshot or shell output) in waivers.yaml per ADR-013.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `1.7.2.3` | Ensure no AppArmor profiles are in complain mode |
+| `iso27001` | `A.8.7` | Protection against malware |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `apparmor`, `mac`, `manual-verify`
+
+---
+
+### `linux-mac-selinux-enforcing`
+
+**SELinux must be enforcing on RHEL-family hosts** &middot; severity `high` &middot; service `mac` &middot; resource `linux.host`
+
+SELinux 'enforcing' is the production posture — 'permissive' logs violations without blocking them (useful only during policy tuning); 'disabled' removes the MAC layer entirely. CIS Linux Server v8 §1.7.1.4 requires enforcing on RHEL-family hosts.
+
+_Remediation:_
+
+> sudo setenforce 1                # live
+sudo sed -i 's/^SELINUX=.*/SELINUX=enforcing/' /etc/selinux/config   # persist
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `1.7.1.4` | Ensure SELinux mode is enforcing |
+| `iso27001` | `A.8.7` | Protection against malware |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `mac`, `selinux`
+
+---
+
+### `linux-mac-selinux-no-permissive-services`
+
+**No SELinux services should be in permissive mode** &middot; severity `medium` &middot; service `auth` &middot; resource `linux.host`
+
+Manual-verify check; CIS Linux Server v8 §1.7.1.5. Per-service permissive overrides (semanage permissive) are sometimes added during policy debug + forgotten. Audit periodically.
+
+_Remediation:_
+
+> Per-distro PAM + sudoers grammars are deferred; verify via `sudo semanage permissive -l` + record evidence (screenshot or shell output) in waivers.yaml per ADR-013.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `1.7.1.5` | Ensure no SELinux services are in permissive mode |
+| `iso27001` | `A.8.7` | Protection against malware |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `mac`, `manual-verify`, `selinux`
+
+---
+
+### `linux-mount-dev-shm-nodev`
+
+**/dev/shm must be mounted with nodev** &middot; severity `medium` &middot; service `filesystem` &middot; resource `linux.host`
+
+nodev mount option on /dev/shm; CIS Linux Server v8 §1.1.8.2. nodev on /dev/shm prevents the world-writable tmpfs from hosting device files.
+
+_Remediation:_
+
+> Edit /etc/fstab — append nodev to the options column for /dev/shm:
+
+  UUID=... /dev/shm tmpfs defaults,rw,nodev 0 0
+
+Apply live without reboot: `sudo mount -o remount,nodev /dev/shm`. Persistence requires the fstab edit.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `1.1.8.2` | Ensure nodev option set on /dev/shm |
+| `iso27001` | `A.8.7` | Protection against malware |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `mount`, `nodev`
+
+---
+
+### `linux-mount-dev-shm-noexec`
+
+**/dev/shm must be mounted with noexec** &middot; severity `medium` &middot; service `filesystem` &middot; resource `linux.host`
+
+noexec mount option on /dev/shm; CIS Linux Server v8 §1.1.8.4. noexec on /dev/shm; same rationale as /tmp.
+
+_Remediation:_
+
+> Edit /etc/fstab — append noexec to the options column for /dev/shm:
+
+  UUID=... /dev/shm tmpfs defaults,rw,noexec 0 0
+
+Apply live without reboot: `sudo mount -o remount,noexec /dev/shm`. Persistence requires the fstab edit.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `1.1.8.4` | Ensure noexec option set on /dev/shm |
+| `iso27001` | `A.8.7` | Protection against malware |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `mount`, `noexec`
+
+---
+
+### `linux-mount-dev-shm-nosuid`
+
+**/dev/shm must be mounted with nosuid** &middot; severity `medium` &middot; service `filesystem` &middot; resource `linux.host`
+
+nosuid mount option on /dev/shm; CIS Linux Server v8 §1.1.8.3. nosuid on /dev/shm; same rationale as /tmp.
+
+_Remediation:_
+
+> Edit /etc/fstab — append nosuid to the options column for /dev/shm:
+
+  UUID=... /dev/shm tmpfs defaults,rw,nosuid 0 0
+
+Apply live without reboot: `sudo mount -o remount,nosuid /dev/shm`. Persistence requires the fstab edit.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `1.1.8.3` | Ensure nosuid option set on /dev/shm |
+| `iso27001` | `A.8.7` | Protection against malware |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `mount`, `nosuid`
+
+---
+
+### `linux-mount-home-nodev`
+
+**/home must be mounted with nodev** &middot; severity `low` &middot; service `filesystem` &middot; resource `linux.host`
+
+nodev mount option on /home; CIS Linux Server v8 §1.1.7.2. nodev on /home prevents user-created device files.
+
+_Remediation:_
+
+> Edit /etc/fstab — append nodev to the options column for /home:
+
+  UUID=... /home tmpfs defaults,rw,nodev 0 0
+
+Apply live without reboot: `sudo mount -o remount,nodev /home`. Persistence requires the fstab edit.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `1.1.7.2` | Ensure nodev option set on /home partition |
+| `iso27001` | `A.8.7` | Protection against malware |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `mount`, `nodev`
+
+---
+
+### `linux-mount-home-nosuid`
+
+**/home must be mounted with nosuid** &middot; severity `medium` &middot; service `filesystem` &middot; resource `linux.host`
+
+nosuid mount option on /home; CIS Linux Server v8 §1.1.7.3. nosuid on /home stops users from staging setuid binaries in their own home directories.
+
+_Remediation:_
+
+> Edit /etc/fstab — append nosuid to the options column for /home:
+
+  UUID=... /home tmpfs defaults,rw,nosuid 0 0
+
+Apply live without reboot: `sudo mount -o remount,nosuid /home`. Persistence requires the fstab edit.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `1.1.7.3` | Ensure nosuid option set on /home partition |
+| `iso27001` | `A.8.7` | Protection against malware |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `mount`, `nosuid`
+
+---
+
+### `linux-mount-home-separate`
+
+**/home must be its own filesystem** &middot; severity `low` &middot; service `filesystem` &middot; resource `linux.host`
+
+Separate mount for /home; CIS Linux Server v8 §1.1.7.1. Separate /home admits nodev/nosuid + lets user-data backups be filesystem-snapshot-driven independently of OS state.
+
+_Remediation:_
+
+> Plan downtime + repartition: create a dedicated partition / LVM volume + mount at /home. For new builds use a partition layout that breaks out /tmp /var /var/log /var/log/audit /home from /. systemd-mount(8) + /etc/fstab carry the persistent state.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `1.1.7.1` | Ensure /home is a separate partition |
+| `iso27001` | `A.8.7` | Protection against malware |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `mount`, `separate-partition`
+
+---
+
+### `linux-mount-tmp-nodev`
+
+**/tmp must be mounted with nodev** &middot; severity `medium` &middot; service `filesystem` &middot; resource `linux.host`
+
+nodev mount option on /tmp; CIS Linux Server v8 §1.1.2.2. nodev prevents the creation of device files on /tmp, blocking a class of exploits where an attacker mknods their own /dev/sda.
+
+_Remediation:_
+
+> Edit /etc/fstab — append nodev to the options column for /tmp:
+
+  UUID=... /tmp tmpfs defaults,rw,nodev 0 0
+
+Apply live without reboot: `sudo mount -o remount,nodev /tmp`. Persistence requires the fstab edit.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `1.1.2.2` | Ensure nodev option set on /tmp partition |
+| `iso27001` | `A.8.7` | Protection against malware |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `mount`, `nodev`
+
+---
+
+### `linux-mount-tmp-noexec`
+
+**/tmp must be mounted with noexec** &middot; severity `medium` &middot; service `filesystem` &middot; resource `linux.host`
+
+noexec mount option on /tmp; CIS Linux Server v8 §1.1.2.4. noexec prevents executing arbitrary files dropped in /tmp — blocks a common payload-execution staging area for fileless malware + exploit kits.
+
+_Remediation:_
+
+> Edit /etc/fstab — append noexec to the options column for /tmp:
+
+  UUID=... /tmp tmpfs defaults,rw,noexec 0 0
+
+Apply live without reboot: `sudo mount -o remount,noexec /tmp`. Persistence requires the fstab edit.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `1.1.2.4` | Ensure noexec option set on /tmp partition |
+| `iso27001` | `A.8.7` | Protection against malware |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `mount`, `noexec`
+
+---
+
+### `linux-mount-tmp-nosuid`
+
+**/tmp must be mounted with nosuid** &middot; severity `medium` &middot; service `filesystem` &middot; resource `linux.host`
+
+nosuid mount option on /tmp; CIS Linux Server v8 §1.1.2.3. nosuid disables SUID bit honoring on /tmp — a copied-out setuid binary can't elevate privileges.
+
+_Remediation:_
+
+> Edit /etc/fstab — append nosuid to the options column for /tmp:
+
+  UUID=... /tmp tmpfs defaults,rw,nosuid 0 0
+
+Apply live without reboot: `sudo mount -o remount,nosuid /tmp`. Persistence requires the fstab edit.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `1.1.2.3` | Ensure nosuid option set on /tmp partition |
+| `iso27001` | `A.8.7` | Protection against malware |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `mount`, `nosuid`
+
+---
+
+### `linux-mount-tmp-separate`
+
+**/tmp must be its own filesystem** &middot; severity `medium` &middot; service `filesystem` &middot; resource `linux.host`
+
+Separate mount for /tmp; CIS Linux Server v8 §1.1.2.1. Isolating /tmp lets the operator quota it, mount it with nodev/nosuid/noexec, and reset it on reboot — none of which work when /tmp is a directory in /.
+
+_Remediation:_
+
+> Plan downtime + repartition: create a dedicated partition / LVM volume + mount at /tmp. For new builds use a partition layout that breaks out /tmp /var /var/log /var/log/audit /home from /. systemd-mount(8) + /etc/fstab carry the persistent state.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `1.1.2.1` | Ensure /tmp is a separate partition |
+| `iso27001` | `A.8.7` | Protection against malware |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `mount`, `separate-partition`
+
+---
+
+### `linux-mount-var-log-audit-separate`
+
+**/var/log/audit must be its own filesystem** &middot; severity `high` &middot; service `filesystem` &middot; resource `linux.host`
+
+Separate mount for /var/log/audit; CIS Linux Server v8 §1.1.6.1. auditd takes the host offline if /var/log/audit fills up (default behavior). Separate filesystem with a generous size prevents accidental DoS-by-log-overflow.
+
+_Remediation:_
+
+> Plan downtime + repartition: create a dedicated partition / LVM volume + mount at /var/log/audit. For new builds use a partition layout that breaks out /tmp /var /var/log /var/log/audit /home from /. systemd-mount(8) + /etc/fstab carry the persistent state.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `1.1.6.1` | Ensure /var/log/audit is a separate partition |
+| `iso27001` | `A.8.15` | Logging |
+| `soc2` | `CC7.2` | System Component Monitoring |
+
+_Tags:_ `audit`, `mount`, `separate-partition`
+
+---
+
+### `linux-mount-var-log-separate`
+
+**/var/log must be its own filesystem** &middot; severity `medium` &middot; service `filesystem` &middot; resource `linux.host`
+
+Separate mount for /var/log; CIS Linux Server v8 §1.1.5.1. Separate /var/log keeps log growth from breaking other /var consumers + admits per-mount quotas / forwarding.
+
+_Remediation:_
+
+> Plan downtime + repartition: create a dedicated partition / LVM volume + mount at /var/log. For new builds use a partition layout that breaks out /tmp /var /var/log /var/log/audit /home from /. systemd-mount(8) + /etc/fstab carry the persistent state.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `1.1.5.1` | Ensure /var/log is a separate partition |
+| `iso27001` | `A.8.15` | Logging |
+| `soc2` | `CC7.2` | System Component Monitoring |
+
+_Tags:_ `logging`, `mount`, `separate-partition`
+
+---
+
+### `linux-mount-var-separate`
+
+**/var must be its own filesystem** &middot; severity `medium` &middot; service `filesystem` &middot; resource `linux.host`
+
+Separate mount for /var; CIS Linux Server v8 §1.1.3.1. Isolating /var prevents log-file growth from filling root and lets the operator mount with nodev.
+
+_Remediation:_
+
+> Plan downtime + repartition: create a dedicated partition / LVM volume + mount at /var. For new builds use a partition layout that breaks out /tmp /var /var/log /var/log/audit /home from /. systemd-mount(8) + /etc/fstab carry the persistent state.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `1.1.3.1` | Ensure /var is a separate partition |
+| `iso27001` | `A.8.7` | Protection against malware |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `mount`, `separate-partition`
+
+---
+
+### `linux-mount-var-tmp-noexec`
+
+**/var/tmp must be mounted with noexec** &middot; severity `medium` &middot; service `filesystem` &middot; resource `linux.host`
+
+noexec mount option on /var/tmp; CIS Linux Server v8 §1.1.4.4. noexec on /var/tmp; same rationale as /tmp.
+
+_Remediation:_
+
+> Edit /etc/fstab — append noexec to the options column for /var/tmp:
+
+  UUID=... /var/tmp tmpfs defaults,rw,noexec 0 0
+
+Apply live without reboot: `sudo mount -o remount,noexec /var/tmp`. Persistence requires the fstab edit.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `1.1.4.4` | Ensure noexec option set on /var/tmp partition |
+| `iso27001` | `A.8.7` | Protection against malware |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `mount`, `noexec`
+
+---
+
+### `linux-mount-var-tmp-separate`
+
+**/var/tmp must be its own filesystem** &middot; severity `low` &middot; service `filesystem` &middot; resource `linux.host`
+
+Separate mount for /var/tmp; CIS Linux Server v8 §1.1.4.1. Separate /var/tmp prevents user-created files in /var/tmp from competing with /var space + admits separate noexec/nosuid/nodev.
+
+_Remediation:_
+
+> Plan downtime + repartition: create a dedicated partition / LVM volume + mount at /var/tmp. For new builds use a partition layout that breaks out /tmp /var /var/log /var/log/audit /home from /. systemd-mount(8) + /etc/fstab carry the persistent state.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `1.1.4.1` | Ensure /var/tmp is a separate partition |
+| `iso27001` | `A.8.7` | Protection against malware |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `mount`, `separate-partition`
 
 ---
 
@@ -8705,6 +9763,50 @@ _Tags:_ `kernel`, `network`
 
 ---
 
+### `linux-pam-faillock-configured`
+
+**PAM must enforce account lockout after failed attempts (faillock / tally2)** &middot; severity `high` &middot; service `auth` &middot; resource `linux.host`
+
+Manual-verify check; CIS Linux Server v8 §5.4.2.1. faillock (RHEL family, Ubuntu 22.04+) or pam_tally2 (older) implements account lockout after N failed password attempts. PAM stack varies per distro; verify the appropriate module is present + configured (CIS recommends deny=5, unlock_time=900).
+
+_Remediation:_
+
+> Per-distro PAM + sudoers grammars are deferred; verify via `sudo grep -E 'pam_faillock|pam_tally2' /etc/pam.d/* | head` + record evidence (screenshot or shell output) in waivers.yaml per ADR-013.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `5.4.2.1` | Ensure sudo commands are logged (Defaults logfile) |
+| `iso27001` | `A.8.5` | Secure authentication |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `manual-verify`, `pam`
+
+---
+
+### `linux-pam-pwquality-configured`
+
+**PAM pwquality must enforce length + complexity** &middot; severity `medium` &middot; service `auth` &middot; resource `linux.host`
+
+Manual-verify check; CIS Linux Server v8 §5.4.3.1. pam_pwquality (or pam_passwdqc) enforces minimum password length (≥14 per CIS) + complexity classes. /etc/security/pwquality.conf carries the knobs.
+
+_Remediation:_
+
+> Per-distro PAM + sudoers grammars are deferred; verify via `sudo cat /etc/security/pwquality.conf | grep -v '^#'` + record evidence (screenshot or shell output) in waivers.yaml per ADR-013.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `5.4.3.1` | Ensure NOPASSWD sudo entries are reviewed |
+| `iso27001` | `A.5.17` | Authentication information |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `manual-verify`, `pam`
+
+---
+
 ### `linux-passwd-perms`
 
 **/etc/passwd must be 0644 or stricter** &middot; severity `medium` &middot; service `filesystem` &middot; resource `linux.host`
@@ -8724,6 +9826,398 @@ _Maps to:_
 | `soc2` | `CC6.1` | Logical and Physical Access Controls |
 
 _Tags:_ `filesystem`, `passwd`
+
+---
+
+### `linux-pkg-aide-installed`
+
+**AIDE (file integrity) should be installed** &middot; severity `medium` &middot; service `auth` &middot; resource `linux.host`
+
+Manual-verify check; CIS Linux Server v8 §6.1.1. AIDE periodically hashes system files + reports drift. Pair with a cron entry that emails the report.
+
+_Remediation:_
+
+> Per-distro PAM + sudoers grammars are deferred; verify via `which aide && systemctl is-active aidecheck.timer` + record evidence (screenshot or shell output) in waivers.yaml per ADR-013.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `6.1.1` | Ensure AIDE (Advanced Intrusion Detection Environment) is installed |
+| `iso27001` | `A.8.7` | Protection against malware |
+| `soc2` | `CC7.2` | System Component Monitoring |
+
+_Tags:_ `aide`, `manual-verify`, `packages`
+
+---
+
+### `linux-pkg-cron-restricted-to-root`
+
+**cron.allow + at.allow must restrict to root (or specific users)** &middot; severity `low` &middot; service `auth` &middot; resource `linux.host`
+
+Manual-verify check; CIS Linux Server v8 §5.1.2. Default cron permits every user to schedule jobs. Restrict via /etc/cron.allow (whitelist) + ensure /etc/cron.deny is empty/absent.
+
+_Remediation:_
+
+> Per-distro PAM + sudoers grammars are deferred; verify via `ls -la /etc/cron.allow /etc/cron.deny /etc/at.allow /etc/at.deny 2>/dev/null` + record evidence (screenshot or shell output) in waivers.yaml per ADR-013.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `5.1.2` | Ensure cron.allow / at.allow restrict who may schedule jobs |
+| `iso27001` | `A.5.15` | Access control |
+| `soc2` | `CC6.3` | Authorization, Modification, and Removal |
+
+_Tags:_ `cron`, `manual-verify`, `packages`
+
+---
+
+### `linux-pkg-gpg-keys-trusted-only`
+
+**Package manager must trust only documented signing keys** &middot; severity `high` &middot; service `auth` &middot; resource `linux.host`
+
+Manual-verify check; CIS Linux Server v8 §1.2.1.1. apt + dnf both maintain a keychain of repository signing keys. Periodic audit catches keys added during ad-hoc 'add-apt-repository' sessions that were never reviewed.
+
+_Remediation:_
+
+> Per-distro PAM + sudoers grammars are deferred; verify via `apt-key list 2>/dev/null` or `dnf repolist --enablerepo='*'` + record evidence (screenshot or shell output) in waivers.yaml per ADR-013.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `1.2.1.1` | Ensure GPG keys are configured (signed-only package sources) |
+| `iso27001` | `A.8.32` | Change management |
+| `soc2` | `CC6.7` | Transmission, Movement, and Disposal of Information |
+
+_Tags:_ `gpg`, `manual-verify`, `packages`
+
+---
+
+### `linux-pkg-no-orphaned-packages`
+
+**Orphaned packages should be removed** &middot; severity `low` &middot; service `auth` &middot; resource `linux.host`
+
+Manual-verify check; CIS Linux Server v8 §1.9.2. Packages with no rdepends are removable. Reduces attack surface for CVEs in dependencies the host doesn't actually use.
+
+_Remediation:_
+
+> Per-distro PAM + sudoers grammars are deferred; verify via Debian: `apt-get autoremove --dry-run`. RHEL: `dnf autoremove` + record evidence (screenshot or shell output) in waivers.yaml per ADR-013.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `1.9.2` | Ensure orphaned packages are removed |
+| `iso27001` | `A.8.7` | Protection against malware |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `hygiene`, `manual-verify`, `packages`
+
+---
+
+### `linux-pkg-no-unattended-upgrades`
+
+**Auto-updates of security patches should be enabled** &middot; severity `medium` &middot; service `auth` &middot; resource `linux.host`
+
+Manual-verify check; CIS Linux Server v8 §1.9. Debian/Ubuntu: unattended-upgrades package. RHEL: dnf-automatic.timer. Periodic kernel + library updates without operator intervention.
+
+_Remediation:_
+
+> Per-distro PAM + sudoers grammars are deferred; verify via `systemctl is-active unattended-upgrades` OR `systemctl is-active dnf-automatic.timer` + record evidence (screenshot or shell output) in waivers.yaml per ADR-013.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `1.9` | Ensure updates and security patches are installed |
+| `iso27001` | `A.8.8` | Management of technical vulnerabilities |
+| `soc2` | `CC7.1` | Detection and Monitoring of Vulnerabilities |
+
+_Tags:_ `manual-verify`, `packages`, `patching`
+
+---
+
+### `linux-pkg-prelink-absent`
+
+**prelink must not be installed** &middot; severity `medium` &middot; service `auth` &middot; resource `linux.host`
+
+Manual-verify check; CIS Linux Server v8 §1.6.4. prelink rewrites ELF binaries to speed up library resolution — defeats package integrity verification (rpm -V / dpkg --verify report every binary modified).
+
+_Remediation:_
+
+> Per-distro PAM + sudoers grammars are deferred; verify via `dpkg -l prelink 2>/dev/null` or `rpm -q prelink 2>/dev/null` + record evidence (screenshot or shell output) in waivers.yaml per ADR-013.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `1.6.4` | Ensure prelink absence on production hosts |
+| `iso27001` | `A.8.7` | Protection against malware |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `manual-verify`, `packages`, `prelink`
+
+---
+
+### `linux-service-auditd-enabled`
+
+**auditd must be enabled at boot** &middot; severity `high` &middot; service `services` &middot; resource `linux.host`
+
+systemd unit auditd.service; CIS Linux Server v8 §4.1.1.1. auditd captures the syscall-level audit trail every CIS / STIG / PCI control depends on. Enable at boot so a missed start doesn't blind the auditor.
+
+_Remediation:_
+
+> systemctl enable --now auditd.service     # must-run
+systemctl disable --now auditd.service  # must-not-run
+systemctl mask auditd.service            # must-absent (mask prevents accidental re-enable)
+apt-get remove --purge auditd.service    # Debian/Ubuntu absent
+dnf remove auditd.service                # RHEL family absent
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `4.1.1.1` | Ensure auditd is installed and running |
+| `iso27001` | `A.8.15` | Logging |
+| `soc2` | `CC7.2` | System Component Monitoring |
+
+_Tags:_ `audit`, `must-run`, `services`
+
+---
+
+### `linux-service-avahi-disabled`
+
+**avahi-daemon must be disabled** &middot; severity `medium` &middot; service `services` &middot; resource `linux.host`
+
+systemd unit avahi-daemon.service; CIS Linux Server v8 §2.2.3. Avahi (mDNS / zeroconf) is for ad-hoc LANs. Servers don't need it; running broadcasts hostnames + capabilities to anyone on the segment.
+
+_Remediation:_
+
+> systemctl enable --now avahi-daemon.service     # must-run
+systemctl disable --now avahi-daemon.service  # must-not-run
+systemctl mask avahi-daemon.service            # must-absent (mask prevents accidental re-enable)
+apt-get remove --purge avahi-daemon    # Debian/Ubuntu absent
+dnf remove avahi-daemon                # RHEL family absent
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `2.2.3` | Ensure Avahi (mDNS) Server is not installed |
+| `iso27001` | `A.8.7` | Protection against malware |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `mdns`, `must-not-run`, `services`
+
+---
+
+### `linux-service-cron-active`
+
+**cron daemon must be running (cron or cronie)** &middot; severity `medium` &middot; service `services` &middot; resource `linux.host`
+
+systemd unit cron.service; CIS Linux Server v8 §5.1.1. Many hardening tasks (log rotation, aide scan, certificate renewal) are scheduled via cron. A missing cron daemon silently breaks those.
+
+_Remediation:_
+
+> systemctl enable --now cron.service     # must-run
+systemctl disable --now cron.service  # must-not-run
+systemctl mask cron.service            # must-absent (mask prevents accidental re-enable)
+apt-get remove --purge cron.service    # Debian/Ubuntu absent
+dnf remove cron.service                # RHEL family absent
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `5.1.1` | Ensure cron daemon is enabled |
+| `iso27001` | `A.8.7` | Protection against malware |
+| `soc2` | `CC7.2` | System Component Monitoring |
+
+_Tags:_ `must-run`, `services`
+
+---
+
+### `linux-service-cups-disabled`
+
+**cups (print server) must be disabled** &middot; severity `low` &middot; service `services` &middot; resource `linux.host`
+
+systemd unit cups.service; CIS Linux Server v8 §2.2.5. Print services on a cloud server are a CIS hardening miss + a CVE attack surface for nothing.
+
+_Remediation:_
+
+> systemctl enable --now cups.service     # must-run
+systemctl disable --now cups.service  # must-not-run
+systemctl mask cups.service            # must-absent (mask prevents accidental re-enable)
+apt-get remove --purge cups    # Debian/Ubuntu absent
+dnf remove cups                # RHEL family absent
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `2.2.5` | Ensure CUPS is not installed |
+| `iso27001` | `A.8.7` | Protection against malware |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `must-not-run`, `print`, `services`
+
+---
+
+### `linux-service-dhcpd-disabled`
+
+**DHCP server must be disabled on non-DHCP hosts** &middot; severity `medium` &middot; service `services` &middot; resource `linux.host`
+
+systemd unit isc-dhcp-server.service; CIS Linux Server v8 §2.2.7. A rogue DHCP server poisons the LAN's gateway. Most cloud workloads aren't DHCP servers; disable if not used.
+
+_Remediation:_
+
+> systemctl enable --now isc-dhcp-server.service     # must-run
+systemctl disable --now isc-dhcp-server.service  # must-not-run
+systemctl mask isc-dhcp-server.service            # must-absent (mask prevents accidental re-enable)
+apt-get remove --purge isc-dhcp-server.service    # Debian/Ubuntu absent
+dnf remove isc-dhcp-server.service                # RHEL family absent
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `2.2.7` | Ensure DHCP Server is not installed |
+| `iso27001` | `A.8.7` | Protection against malware |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `dhcp`, `must-not-run`, `services`
+
+---
+
+### `linux-service-rsh-absent`
+
+**rsh / rlogin / rexec must not be installed** &middot; severity `high` &middot; service `services` &middot; resource `linux.host`
+
+systemd unit rsh.service; CIS Linux Server v8 §2.2.17. Same as telnet — cleartext credential transmission with no upside.
+
+_Remediation:_
+
+> systemctl enable --now rsh.service     # must-run
+systemctl disable --now rsh.service  # must-not-run
+systemctl mask rsh.service            # must-absent (mask prevents accidental re-enable)
+apt-get remove --purge rsh-server inetutils-rsh    # Debian/Ubuntu absent
+dnf remove rsh-server inetutils-rsh                # RHEL family absent
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `2.2.17` | Ensure rsh client + server is not installed |
+| `iso27001` | `A.8.24` | Use of cryptography |
+| `soc2` | `CC6.7` | Transmission, Movement, and Disposal of Information |
+
+_Tags:_ `cleartext`, `must-absent`, `services`
+
+---
+
+### `linux-service-rsyslog-active`
+
+**rsyslog (or journald-forwarder) must be running** &middot; severity `high` &middot; service `services` &middot; resource `linux.host`
+
+systemd unit rsyslog.service; CIS Linux Server v8 §4.2.1.1. rsyslog forwards local logs off-host (TCP/RFC5424 to a SIEM). journald-only setups can use systemd-journal-upload instead but the SOC2 evidence requirement is the same: ≥90d off-host retention.
+
+_Remediation:_
+
+> systemctl enable --now rsyslog.service     # must-run
+systemctl disable --now rsyslog.service  # must-not-run
+systemctl mask rsyslog.service            # must-absent (mask prevents accidental re-enable)
+apt-get remove --purge rsyslog.service    # Debian/Ubuntu absent
+dnf remove rsyslog.service                # RHEL family absent
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `4.2.1.1` | Ensure journald is configured for persistent storage |
+| `iso27001` | `A.8.15` | Logging |
+| `soc2` | `CC7.2` | System Component Monitoring |
+
+_Tags:_ `logging`, `must-run`, `services`
+
+---
+
+### `linux-service-telnet-absent`
+
+**telnetd must not be installed** &middot; severity `high` &middot; service `services` &middot; resource `linux.host`
+
+systemd unit telnetd.service; CIS Linux Server v8 §2.2.16. telnet sends credentials in cleartext. Has no legitimate place on a 2026 server — there's always an ssh alternative.
+
+_Remediation:_
+
+> systemctl enable --now telnetd.service     # must-run
+systemctl disable --now telnetd.service  # must-not-run
+systemctl mask telnetd.service            # must-absent (mask prevents accidental re-enable)
+apt-get remove --purge telnetd inetutils-telnetd    # Debian/Ubuntu absent
+dnf remove telnetd inetutils-telnetd                # RHEL family absent
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `2.2.16` | Ensure rsync service is not installed in a vulnerable state |
+| `iso27001` | `A.8.24` | Use of cryptography |
+| `soc2` | `CC6.7` | Transmission, Movement, and Disposal of Information |
+
+_Tags:_ `cleartext`, `must-absent`, `services`
+
+---
+
+### `linux-service-tftp-absent`
+
+**tftp server must not be installed** &middot; severity `high` &middot; service `services` &middot; resource `linux.host`
+
+systemd unit tftp-server.service; CIS Linux Server v8 §2.2.18. TFTP has no authentication. Boot servers (PXE, switch firmware) sometimes need it; flag + waive in that case.
+
+_Remediation:_
+
+> systemctl enable --now tftp-server.service     # must-run
+systemctl disable --now tftp-server.service  # must-not-run
+systemctl mask tftp-server.service            # must-absent (mask prevents accidental re-enable)
+apt-get remove --purge tftpd-hpa tftp-server    # Debian/Ubuntu absent
+dnf remove tftpd-hpa tftp-server                # RHEL family absent
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `2.2.18` | Ensure telnet client + server is not installed |
+| `iso27001` | `A.8.7` | Protection against malware |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `cleartext`, `must-absent`, `services`
+
+---
+
+### `linux-service-time-sync-active`
+
+**Time-sync daemon must be running (chrony or systemd-timesyncd)** &middot; severity `high` &middot; service `services` &middot; resource `linux.host`
+
+systemd unit chronyd.service; CIS Linux Server v8 §2.1.1. Accurate clocks are prerequisite for log correlation, TLS validity, Kerberos. chronyd is the modern default; systemd-timesyncd is acceptable on hosts that don't need server-grade chrony features.
+
+_Remediation:_
+
+> systemctl enable --now chronyd.service     # must-run
+systemctl disable --now chronyd.service  # must-not-run
+systemctl mask chronyd.service            # must-absent (mask prevents accidental re-enable)
+apt-get remove --purge chronyd.service    # Debian/Ubuntu absent
+dnf remove chronyd.service                # RHEL family absent
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `2.1.1` | Ensure time synchronization is in use |
+| `iso27001` | `A.8.17` | Clock synchronization |
+| `soc2` | `CC7.2` | System Component Monitoring |
+
+_Tags:_ `must-run`, `services`, `time`
 
 ---
 
@@ -8747,6 +10241,126 @@ _Maps to:_
 | `soc2` | `CC6.1` | Logical and Physical Access Controls |
 
 _Tags:_ `filesystem`, `shadow`
+
+---
+
+### `linux-sshd-banner-set`
+
+**sshd_config Banner must be set (typically /etc/issue.net)** &middot; severity `low` &middot; service `sshd` &middot; resource `linux.host`
+
+banner; CIS Linux Server v8 §5.2.13. Login banner is the audit-evidence point for legal-notice display. /etc/issue.net is the CIS-conventional path.
+
+_Remediation:_
+
+> Edit /etc/ssh/sshd_config:
+  banner /etc/issue.net
+Then `sudo systemctl reload sshd`.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `5.2.13` | Ensure SSH banner is configured |
+| `iso27001` | `A.5.10` | Acceptable use of information and other associated assets |
+| `soc2` | `CC1.4` | Commitment to Competence |
+
+_Tags:_ `banner`, `sshd`
+
+---
+
+### `linux-sshd-client-alive-count-max`
+
+**sshd_config ClientAliveCountMax must be ≤ 3** &middot; severity `low` &middot; service `sshd` &middot; resource `linux.host`
+
+clientalivecountmax; CIS Linux Server v8 §5.2.15. ClientAliveCountMax × ClientAliveInterval is the idle ceiling. ≤3 (CIS recommended) keeps the total under ~15 min when paired with the recommended interval.
+
+_Remediation:_
+
+> Edit /etc/ssh/sshd_config:
+  clientalivecountmax 3
+Then `sudo systemctl reload sshd`.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `5.2.15` | Ensure SSH ClientAliveCountMax is configured |
+| `iso27001` | `A.5.16` | Identity management |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `session`, `sshd`
+
+---
+
+### `linux-sshd-client-alive-interval`
+
+**sshd_config ClientAliveInterval must be > 0 and ≤ 300** &middot; severity `low` &middot; service `sshd` &middot; resource `linux.host`
+
+clientaliveinterval; CIS Linux Server v8 §5.2.14. Idle SSH sessions get reaped after ClientAliveInterval × ClientAliveCountMax seconds. ≤300s caps abandoned tmux/screen sessions.
+
+_Remediation:_
+
+> Edit /etc/ssh/sshd_config:
+  clientaliveinterval 300
+Then `sudo systemctl reload sshd`.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `5.2.14` | Ensure SSH ClientAliveInterval is configured |
+| `iso27001` | `A.5.16` | Identity management |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `session`, `sshd`
+
+---
+
+### `linux-sshd-hostbased-auth-disabled`
+
+**sshd_config HostbasedAuthentication must be no** &middot; severity `medium` &middot; service `sshd` &middot; resource `linux.host`
+
+hostbasedauthentication; CIS Linux Server v8 §5.2.8. Host-based authentication trusts the client host's hostkey — a per-host trust model that's hard to revoke and easy to mismanage.
+
+_Remediation:_
+
+> Edit /etc/ssh/sshd_config:
+  hostbasedauthentication no
+Then `sudo systemctl reload sshd`.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `5.2.8` | Ensure SSH HostbasedAuthentication is disabled |
+| `iso27001` | `A.5.16` | Identity management |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `sshd`
+
+---
+
+### `linux-sshd-ignore-rhosts`
+
+**sshd_config IgnoreRhosts must be yes** &middot; severity `medium` &middot; service `sshd` &middot; resource `linux.host`
+
+ignorerhosts; CIS Linux Server v8 §5.2.7. .rhosts is rsh-era trust; IgnoreRhosts=yes (the default) tells sshd not to honor the file.
+
+_Remediation:_
+
+> Edit /etc/ssh/sshd_config:
+  ignorerhosts yes
+Then `sudo systemctl reload sshd`.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `5.2.7` | Ensure SSH IgnoreRhosts is enabled |
+| `iso27001` | `A.5.16` | Identity management |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `rhosts`, `sshd`
 
 ---
 
@@ -8774,6 +10388,30 @@ _Tags:_ `resource-exhaustion`, `sshd`
 
 ---
 
+### `linux-sshd-loglevel-info-or-verbose`
+
+**sshd_config LogLevel must be INFO or VERBOSE** &middot; severity `medium` &middot; service `sshd` &middot; resource `linux.host`
+
+loglevel; CIS Linux Server v8 §5.2.5. VERBOSE logs key fingerprints for every login (essential for audit). INFO is the upstream default and acceptable; QUIET drops too much detail.
+
+_Remediation:_
+
+> Edit /etc/ssh/sshd_config:
+  loglevel VERBOSE
+Then `sudo systemctl reload sshd`.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `5.2.5` | Ensure SSH LogLevel is INFO or VERBOSE |
+| `iso27001` | `A.8.15` | Logging |
+| `soc2` | `CC7.2` | System Component Monitoring |
+
+_Tags:_ `logging`, `sshd`
+
+---
+
 ### `linux-sshd-max-auth-tries`
 
 **SSH MaxAuthTries should be 4 or less** &middot; severity `low` &middot; service `sshd` &middot; resource `linux.host`
@@ -8793,6 +10431,30 @@ _Maps to:_
 | `soc2` | `CC6.1` | Logical and Physical Access Controls |
 
 _Tags:_ `brute-force`, `sshd`
+
+---
+
+### `linux-sshd-max-sessions`
+
+**sshd_config MaxSessions must be ≤ 10** &middot; severity `low` &middot; service `sshd` &middot; resource `linux.host`
+
+maxsessions; CIS Linux Server v8 §5.2.21. MaxSessions caps the concurrent sessions one auth'd user may open. ≤10 (CIS) constrains a compromised key's blast radius.
+
+_Remediation:_
+
+> Edit /etc/ssh/sshd_config:
+  maxsessions 10
+Then `sudo systemctl reload sshd`.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `5.2.21` | Ensure SSH MaxSessions is configured |
+| `iso27001` | `A.8.20` | Networks security |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `sshd`
 
 ---
 
@@ -8844,6 +10506,54 @@ _Tags:_ `access-control`, `sshd`
 
 ---
 
+### `linux-sshd-permit-empty-passwords`
+
+**sshd_config PermitEmptyPasswords must be no** &middot; severity `high` &middot; service `sshd` &middot; resource `linux.host`
+
+permitemptypasswords; CIS Linux Server v8 §5.2.10. Empty passwords are an open door. The CIS default is no; verify even if you've never seen this misconfigured.
+
+_Remediation:_
+
+> Edit /etc/ssh/sshd_config:
+  permitemptypasswords no
+Then `sudo systemctl reload sshd`.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `5.2.10` | Ensure SSH PermitEmptyPasswords is disabled |
+| `iso27001` | `A.5.16` | Identity management |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `auth`, `sshd`
+
+---
+
+### `linux-sshd-permit-user-environment`
+
+**sshd_config PermitUserEnvironment must be no** &middot; severity `medium` &middot; service `sshd` &middot; resource `linux.host`
+
+permituserenvironment; CIS Linux Server v8 §5.2.11. PermitUserEnvironment=yes lets ~/.ssh/environment override LD_PRELOAD, PATH, etc. — sufficient for any local privilege escalation that needs an envvar.
+
+_Remediation:_
+
+> Edit /etc/ssh/sshd_config:
+  permituserenvironment no
+Then `sudo systemctl reload sshd`.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `5.2.11` | Ensure SSH PermitUserEnvironment is disabled |
+| `iso27001` | `A.8.7` | Protection against malware |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `sshd`
+
+---
+
 ### `linux-sshd-protocol-2`
 
 **SSH must use protocol version 2 only** &middot; severity `low` &middot; service `sshd` &middot; resource `linux.host`
@@ -8863,6 +10573,747 @@ _Maps to:_
 | `soc2` | `CC6.1` | Logical and Physical Access Controls |
 
 _Tags:_ `crypto`, `sshd`
+
+---
+
+### `linux-sshd-x11-forwarding-disabled`
+
+**sshd_config X11Forwarding must be no** &middot; severity `medium` &middot; service `sshd` &middot; resource `linux.host`
+
+x11forwarding; CIS Linux Server v8 §5.2.6. X11 forwarding exposes the local DISPLAY through the SSH tunnel — historically a vector for keystroke capture. Production servers don't need it.
+
+_Remediation:_
+
+> Edit /etc/ssh/sshd_config:
+  x11forwarding no
+Then `sudo systemctl reload sshd`.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `5.2.6` | Ensure SSH X11 forwarding is disabled |
+| `iso27001` | `A.8.20` | Networks security |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `sshd`, `x11`
+
+---
+
+### `linux-sudo-logging`
+
+**sudo must log to syslog or a dedicated log file** &middot; severity `medium` &middot; service `auth` &middot; resource `linux.host`
+
+Manual-verify check; CIS Linux Server v8 §5.4.5. sudo's default logging is via syslog. Verify the syslog target collects sudoers entries OR add a Defaults logfile= line.
+
+_Remediation:_
+
+> Per-distro PAM + sudoers grammars are deferred; verify via `sudo grep -E '^Defaults.*(logfile|syslog)' /etc/sudoers` + record evidence (screenshot or shell output) in waivers.yaml per ADR-013.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `5.4.5` | Ensure sudo secure_path is set |
+| `iso27001` | `A.8.15` | Logging |
+| `soc2` | `CC7.2` | System Component Monitoring |
+
+_Tags:_ `manual-verify`, `sudo`
+
+---
+
+### `linux-sudo-nopasswd-audit`
+
+**Audit /etc/sudoers + /etc/sudoers.d for NOPASSWD entries** &middot; severity `high` &middot; service `auth` &middot; resource `linux.host`
+
+Manual-verify check; CIS Linux Server v8 §5.4.4. NOPASSWD entries let a compromised account elevate without re-auth. Every entry should be (a) auditable + (b) narrowly scoped (Cmnd_Alias) — not blanket. Per-distro PAM + sudoers parsing is deferred to a future milestone; verify manually.
+
+_Remediation:_
+
+> Per-distro PAM + sudoers grammars are deferred; verify via `sudo grep -r NOPASSWD /etc/sudoers /etc/sudoers.d/` + record evidence (screenshot or shell output) in waivers.yaml per ADR-013.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `5.4.4` | Ensure sudo Defaults use_pty is enabled |
+| `iso27001` | `A.5.15` | Access control |
+| `soc2` | `CC6.3` | Authorization, Modification, and Removal |
+
+_Tags:_ `manual-verify`, `sudo`
+
+---
+
+### `linux-sudo-secure-path`
+
+**/etc/sudoers must set secure_path (no user-controlled PATH)** &middot; severity `medium` &middot; service `auth` &middot; resource `linux.host`
+
+Manual-verify check; CIS Linux Server v8 §5.4.3. secure_path strips the user's PATH and substitutes a hardcoded list — prevents trojan binaries in ~/bin from being run via sudo. Distro defaults differ; verify.
+
+_Remediation:_
+
+> Per-distro PAM + sudoers grammars are deferred; verify via `sudo grep ^Defaults.*secure_path /etc/sudoers` + record evidence (screenshot or shell output) in waivers.yaml per ADR-013.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `5.4.3` | Ensure sudo authentication timeout is configured |
+| `iso27001` | `A.5.15` | Access control |
+| `soc2` | `CC6.3` | Authorization, Modification, and Removal |
+
+_Tags:_ `manual-verify`, `sudo`
+
+---
+
+### `linux-sysctl-accept-redirects-all`
+
+**ICMP redirects must be ignored (all)** &middot; severity `medium` &middot; service `kernel` &middot; resource `linux.host`
+
+ICMP redirects let any host on the LAN tell the kernel to route through a different gateway — an obvious MITM primitive. Always disabled on servers.
+
+_Remediation:_
+
+> /etc/sysctl.d/60-network-hardening.conf:
+  net.ipv4.conf.all.accept_redirects = 0
+  net.ipv4.conf.default.accept_redirects = 0
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `3.3.2` | Ensure packet redirect sending is disabled |
+| `iso27001` | `A.8.20` | Networks security |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `icmp`, `network`, `sysctl`
+
+---
+
+### `linux-sysctl-accept-redirects-default`
+
+**ICMP redirects must be ignored (default)** &middot; severity `medium` &middot; service `kernel` &middot; resource `linux.host`
+
+Paired with the 'all' counterpart; default applies to new interfaces.
+
+_Remediation:_
+
+> See linux-sysctl-accept-redirects-all.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `3.3.2` | Ensure packet redirect sending is disabled |
+| `iso27001` | `A.8.20` | Networks security |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `icmp`, `network`, `sysctl`
+
+---
+
+### `linux-sysctl-accept-source-route-default`
+
+**Source-routed packets must be dropped (default)** &middot; severity `medium` &middot; service `kernel` &middot; resource `linux.host`
+
+Source routing lets the sender dictate the path a packet takes — bypasses upstream firewalls + reverses NAT mappings. Always disabled on servers.
+
+_Remediation:_
+
+> /etc/sysctl.d/60-network-hardening.conf:
+  net.ipv4.conf.all.accept_source_route = 0
+  net.ipv4.conf.default.accept_source_route = 0
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `3.3.1` | Ensure IP forwarding is disabled (unless router) |
+| `iso27001` | `A.8.20` | Networks security |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `network`, `sysctl`
+
+---
+
+### `linux-sysctl-bpf-jit-harden`
+
+**net.core.bpf_jit_harden must be ≥1** &middot; severity `medium` &middot; service `kernel` &middot; resource `linux.host`
+
+BPF JIT hardening mitigates CPU speculative-execution side-channel attacks in JIT-compiled BPF programs. 1=privileged hardening; 2=all programs hardened.
+
+_Remediation:_
+
+> /etc/sysctl.d/60-kernel-hardening.conf:
+  net.core.bpf_jit_harden = 2
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `1.5.5` | Ensure dmesg_restrict is set |
+| `iso27001` | `A.8.7` | Protection against malware |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `bpf`, `kernel`, `sysctl`
+
+---
+
+### `linux-sysctl-dmesg-restrict`
+
+**kernel.dmesg_restrict must be enabled** &middot; severity `medium` &middot; service `kernel` &middot; resource `linux.host`
+
+dmesg_restrict prevents unprivileged users from reading the kernel ring buffer (KASLR offsets, addresses of loaded modules, hardware MAC addresses). 1 = root-only; 0 = anyone.
+
+_Remediation:_
+
+> /etc/sysctl.d/60-kernel-hardening.conf:
+  kernel.dmesg_restrict = 1
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `1.5.1` | Ensure address space layout randomization (ASLR) is enabled |
+| `iso27001` | `A.8.7` | Protection against malware |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `info-leak`, `kernel`, `sysctl`
+
+---
+
+### `linux-sysctl-icmp-echo-ignore-broadcasts`
+
+**Smurf-amplifier ICMP echo must be ignored** &middot; severity `medium` &middot; service `kernel` &middot; resource `linux.host`
+
+Ignoring broadcast ICMP echo blocks the classic Smurf DoS amplifier where attackers spoof a victim address and broadcast an echo request.
+
+_Remediation:_
+
+> /etc/sysctl.d/60-network-hardening.conf:
+  net.ipv4.icmp_echo_ignore_broadcasts = 1
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `3.3.5` | Ensure bogus ICMP responses are ignored |
+| `iso27001` | `A.8.20` | Networks security |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `icmp`, `network`, `sysctl`
+
+---
+
+### `linux-sysctl-icmp-ignore-bogus-error-responses`
+
+**Bogus ICMP error responses must be ignored** &middot; severity `low` &middot; service `kernel` &middot; resource `linux.host`
+
+Silently drops bogus ICMP error responses that some routers emit in violation of RFC 1122 — reduces kernel-log noise that masks real attacks.
+
+_Remediation:_
+
+> /etc/sysctl.d/60-network-hardening.conf:
+  net.ipv4.icmp_ignore_bogus_error_responses = 1
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `3.3.6` | Ensure reverse-path filtering is enabled |
+| `iso27001` | `A.8.20` | Networks security |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `icmp`, `network`, `sysctl`
+
+---
+
+### `linux-sysctl-ip-forward-disabled`
+
+**IPv4 forwarding must be disabled on non-router hosts** &middot; severity `medium` &middot; service `kernel` &middot; resource `linux.host`
+
+ip_forward=1 turns the host into a router (forwards packets between interfaces). Container hosts running Docker/k8s flip this to 1 intentionally; non-router servers leave it at 0. Waive on Docker / k8s nodes via waivers.yaml.
+
+_Remediation:_
+
+> /etc/sysctl.d/60-network-hardening.conf:
+  net.ipv4.ip_forward = 0
+Waive when the host genuinely routes (k8s node, NAT gateway).
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `3.2.2` | Ensure ICMP redirects are not accepted (IPv4) |
+| `iso27001` | `A.8.20` | Networks security |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `network`, `sysctl`
+
+---
+
+### `linux-sysctl-ipv6-accept-ra-all`
+
+**IPv6 router advertisements must be ignored (all)** &middot; severity `medium` &middot; service `kernel` &middot; resource `linux.host`
+
+Router Advertisements let any host on the L2 segment set the default IPv6 gateway — Stateless Address Autoconfig (SLAAC) primitive. On managed cloud networks (static IPv6 from the provider) disabling RA blocks rogue-router attacks.
+
+_Remediation:_
+
+> /etc/sysctl.d/60-ipv6-hardening.conf:
+  net.ipv6.conf.all.accept_ra = 0
+  net.ipv6.conf.default.accept_ra = 0
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `3.3.9` | Ensure secure ICMP redirects are not accepted |
+| `iso27001` | `A.8.20` | Networks security |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `ipv6`, `network`, `sysctl`
+
+---
+
+### `linux-sysctl-ipv6-accept-ra-default`
+
+**IPv6 router advertisements must be ignored (default)** &middot; severity `medium` &middot; service `kernel` &middot; resource `linux.host`
+
+Default counterpart to the 'all' rule.
+
+_Remediation:_
+
+> See linux-sysctl-ipv6-accept-ra-all.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `3.3.9` | Ensure secure ICMP redirects are not accepted |
+| `iso27001` | `A.8.20` | Networks security |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `ipv6`, `network`, `sysctl`
+
+---
+
+### `linux-sysctl-ipv6-accept-redirects-all`
+
+**IPv6 ICMP redirects must be ignored (all)** &middot; severity `medium` &middot; service `kernel` &middot; resource `linux.host`
+
+Same MITM concern as IPv4 ICMP redirects, applied to the v6 stack.
+
+_Remediation:_
+
+> /etc/sysctl.d/60-ipv6-hardening.conf:
+  net.ipv6.conf.all.accept_redirects = 0
+  net.ipv6.conf.default.accept_redirects = 0
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `3.3.2` | Ensure packet redirect sending is disabled |
+| `iso27001` | `A.8.20` | Networks security |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `ipv6`, `network`, `sysctl`
+
+---
+
+### `linux-sysctl-ipv6-accept-redirects-default`
+
+**IPv6 ICMP redirects must be ignored (default)** &middot; severity `medium` &middot; service `kernel` &middot; resource `linux.host`
+
+Default counterpart to the 'all' rule.
+
+_Remediation:_
+
+> See linux-sysctl-ipv6-accept-redirects-all.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `3.3.2` | Ensure packet redirect sending is disabled |
+| `iso27001` | `A.8.20` | Networks security |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `ipv6`, `network`, `sysctl`
+
+---
+
+### `linux-sysctl-ipv6-source-route-all`
+
+**IPv6 source routing must be disabled (all)** &middot; severity `medium` &middot; service `kernel` &middot; resource `linux.host`
+
+Same path-spoofing concern as IPv4 source routing, applied to the v6 stack.
+
+_Remediation:_
+
+> /etc/sysctl.d/60-ipv6-hardening.conf:
+  net.ipv6.conf.all.accept_source_route = 0
+  net.ipv6.conf.default.accept_source_route = 0
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `3.3.1` | Ensure IP forwarding is disabled (unless router) |
+| `iso27001` | `A.8.20` | Networks security |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `ipv6`, `network`, `sysctl`
+
+---
+
+### `linux-sysctl-ipv6-source-route-default`
+
+**IPv6 source routing must be disabled (default)** &middot; severity `medium` &middot; service `kernel` &middot; resource `linux.host`
+
+Default counterpart to the 'all' rule.
+
+_Remediation:_
+
+> See linux-sysctl-ipv6-source-route-all.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `3.3.1` | Ensure IP forwarding is disabled (unless router) |
+| `iso27001` | `A.8.20` | Networks security |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `ipv6`, `network`, `sysctl`
+
+---
+
+### `linux-sysctl-kptr-restrict`
+
+**kernel.kptr_restrict must be ≥1 (CIS: 2)** &middot; severity `medium` &middot; service `kernel` &middot; resource `linux.host`
+
+kptr_restrict hides kernel pointer values from /proc — defeats KASLR-defeat exploits that scrape /proc/kallsyms etc. 1 redacts for unprivileged; 2 redacts for everyone.
+
+_Remediation:_
+
+> /etc/sysctl.d/60-kernel-hardening.conf:
+  kernel.kptr_restrict = 2
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `1.5.2` | Ensure ptrace_scope is restricted |
+| `iso27001` | `A.8.7` | Protection against malware |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `info-leak`, `kernel`, `sysctl`
+
+---
+
+### `linux-sysctl-log-martians-all`
+
+**Martian packets must be logged (all)** &middot; severity `low` &middot; service `kernel` &middot; resource `linux.host`
+
+Martian packets (impossible source addresses) are logged when this knob is enabled — a useful signal that something is either spoofing or seriously misconfigured upstream.
+
+_Remediation:_
+
+> /etc/sysctl.d/60-network-hardening.conf:
+  net.ipv4.conf.all.log_martians = 1
+  net.ipv4.conf.default.log_martians = 1
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `3.3.8` | Ensure IPv6 router advertisements are not accepted |
+| `iso27001` | `A.8.15` | Logging |
+| `soc2` | `CC7.2` | System Component Monitoring |
+
+_Tags:_ `logging`, `network`, `sysctl`
+
+---
+
+### `linux-sysctl-log-martians-default`
+
+**Martian packets must be logged (default)** &middot; severity `low` &middot; service `kernel` &middot; resource `linux.host`
+
+Default counterpart to the 'all' rule.
+
+_Remediation:_
+
+> See linux-sysctl-log-martians-all.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `3.3.8` | Ensure IPv6 router advertisements are not accepted |
+| `iso27001` | `A.8.15` | Logging |
+| `soc2` | `CC7.2` | System Component Monitoring |
+
+_Tags:_ `logging`, `network`, `sysctl`
+
+---
+
+### `linux-sysctl-protected-hardlinks`
+
+**fs.protected_hardlinks must be enabled** &middot; severity `medium` &middot; service `kernel` &middot; resource `linux.host`
+
+protected_hardlinks blocks unprivileged users from creating hardlinks to files they don't own — a classic prelude to /etc/passwd race exploits.
+
+_Remediation:_
+
+> /etc/sysctl.d/60-fs-hardening.conf:
+  fs.protected_hardlinks = 1
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `1.6.2` | Ensure unprivileged BPF is disabled |
+| `iso27001` | `A.8.7` | Protection against malware |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `filesystem`, `sysctl`
+
+---
+
+### `linux-sysctl-protected-symlinks`
+
+**fs.protected_symlinks must be enabled** &middot; severity `medium` &middot; service `kernel` &middot; resource `linux.host`
+
+protected_symlinks restricts symlink-following in world-writable directories — kills TOCTOU race exploits via /tmp symlinks.
+
+_Remediation:_
+
+> /etc/sysctl.d/60-fs-hardening.conf:
+  fs.protected_symlinks = 1
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `1.6.3` | Ensure BPF JIT hardening is enabled |
+| `iso27001` | `A.8.7` | Protection against malware |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `filesystem`, `sysctl`
+
+---
+
+### `linux-sysctl-rp-filter-all`
+
+**net.ipv4.conf.all.rp_filter must be strict (1)** &middot; severity `medium` &middot; service `kernel` &middot; resource `linux.host`
+
+Reverse Path filtering rejects packets arriving on an interface that wouldn't be used to reply (IP spoofing mitigation). Strict mode (1) matches the RFC 3704 recommendation.
+
+_Remediation:_
+
+> /etc/sysctl.d/60-network-hardening.conf:
+  net.ipv4.conf.all.rp_filter = 1
+  net.ipv4.conf.default.rp_filter = 1
+Then `sysctl --system`.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `3.3.7` | Ensure TCP SYN cookies are enabled |
+| `iso27001` | `A.8.20` | Networks security |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `network`, `rp-filter`, `sysctl`
+
+---
+
+### `linux-sysctl-rp-filter-default`
+
+**net.ipv4.conf.default.rp_filter must be strict (1)** &middot; severity `medium` &middot; service `kernel` &middot; resource `linux.host`
+
+The 'default' value is applied to any new interface created after sysctl is set; pair with the 'all' counterpart so currently-attached + future interfaces both filter.
+
+_Remediation:_
+
+> See linux-sysctl-rp-filter-all — set both keys together.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `3.3.7` | Ensure TCP SYN cookies are enabled |
+| `iso27001` | `A.8.20` | Networks security |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `network`, `rp-filter`, `sysctl`
+
+---
+
+### `linux-sysctl-secure-redirects-all`
+
+**Secure ICMP redirects must be disabled (all)** &middot; severity `low` &middot; service `kernel` &middot; resource `linux.host`
+
+secure_redirects accepts redirects from gateways in the default route — slightly safer than accept_redirects but still rejected by CIS for servers.
+
+_Remediation:_
+
+> /etc/sysctl.d/60-network-hardening.conf:
+  net.ipv4.conf.all.secure_redirects = 0
+  net.ipv4.conf.default.secure_redirects = 0
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `3.3.3` | Ensure martian packets are logged |
+| `iso27001` | `A.8.20` | Networks security |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `icmp`, `network`, `sysctl`
+
+---
+
+### `linux-sysctl-secure-redirects-default`
+
+**Secure ICMP redirects must be disabled (default)** &middot; severity `low` &middot; service `kernel` &middot; resource `linux.host`
+
+Default counterpart to the 'all' rule.
+
+_Remediation:_
+
+> See linux-sysctl-secure-redirects-all.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `3.3.3` | Ensure martian packets are logged |
+| `iso27001` | `A.8.20` | Networks security |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `icmp`, `network`, `sysctl`
+
+---
+
+### `linux-sysctl-send-redirects-default`
+
+**Kernel must not send ICMP redirects (default)** &middot; severity `medium` &middot; service `kernel` &middot; resource `linux.host`
+
+Only routers should emit ICMP redirects. End-user servers + cloud workloads disable both 'all' and 'default'.
+
+_Remediation:_
+
+> /etc/sysctl.d/60-network-hardening.conf:
+  net.ipv4.conf.all.send_redirects = 0
+  net.ipv4.conf.default.send_redirects = 0
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `3.2.1` | Ensure source-routed packets are not accepted (IPv4) |
+| `iso27001` | `A.8.20` | Networks security |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `network`, `sysctl`
+
+---
+
+### `linux-sysctl-suid-dumpable`
+
+**fs.suid_dumpable must be 0 (no core dumps from SUID)** &middot; severity `high` &middot; service `kernel` &middot; resource `linux.host`
+
+SUID programs that core dump can leak privileged memory (cached secrets, fd contents). Per CIS, 0 = SUID processes never core dump; 1 = always; 2 = root-readable only.
+
+_Remediation:_
+
+> /etc/sysctl.d/60-fs-hardening.conf:
+  fs.suid_dumpable = 0
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `1.6.1` | Ensure kernel.kptr_restrict is set (kernel address hiding) |
+| `iso27001` | `A.8.7` | Protection against malware |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `filesystem`, `suid`, `sysctl`
+
+---
+
+### `linux-sysctl-tcp-syncookies`
+
+**net.ipv4.tcp_syncookies must be enabled** &middot; severity `high` &middot; service `kernel` &middot; resource `linux.host`
+
+SYN cookies allow the kernel to handle the SYN queue without reserving state until the three-way handshake completes — the primary defense against SYN flood denial-of-service. Disabled-by-default on some older builds; enable by setting net.ipv4.tcp_syncookies=1.
+
+_Remediation:_
+
+> Persist via /etc/sysctl.d/60-tcp-syncookies.conf:
+  net.ipv4.tcp_syncookies = 1
+Then `sysctl --system` to apply.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `3.3.4` | Ensure broadcast ICMP requests are ignored |
+| `cis-v8` | `9.2` | Use DNS Filtering Services |
+| `iso27001` | `A.8.20` | Networks security |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `network`, `syn-flood`, `sysctl`
+
+---
+
+### `linux-sysctl-unprivileged-bpf-disabled`
+
+**kernel.unprivileged_bpf_disabled must be 1** &middot; severity `high` &middot; service `kernel` &middot; resource `linux.host`
+
+Unprivileged eBPF has been a recurring source of LPE CVEs (CVE-2021-3490, CVE-2022-23222, CVE-2023-2236). Disable unless a specific workload (Cilium, Falco) needs it; even then, prefer CAP_BPF over universal access.
+
+_Remediation:_
+
+> /etc/sysctl.d/60-kernel-hardening.conf:
+  kernel.unprivileged_bpf_disabled = 1
+Waive on hosts running Cilium / Falco / eBPF observability.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `1.5.4` | Ensure prelink is not installed |
+| `iso27001` | `A.8.7` | Protection against malware |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `bpf`, `kernel`, `sysctl`
+
+---
+
+### `linux-sysctl-yama-ptrace-scope`
+
+**kernel.yama.ptrace_scope must be ≥1** &middot; severity `medium` &middot; service `kernel` &middot; resource `linux.host`
+
+Yama restricts ptrace() across processes the caller didn't fork — kills the LD_PRELOAD-then-attach style credential extraction. 0=permissive, 1=restricted (recommended), 2=admin-only, 3=disabled.
+
+_Remediation:_
+
+> /etc/sysctl.d/60-kernel-hardening.conf:
+  kernel.yama.ptrace_scope = 1
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-linux-server` | `1.5.3` | Ensure core dumps are restricted (suid_dumpable) |
+| `iso27001` | `A.8.7` | Protection against malware |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `kernel`, `sysctl`
 
 ---
 
