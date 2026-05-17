@@ -38,15 +38,16 @@ const maxCheckFileLOC = 600
 // is removed in the same commit. By Phase 3 close the map is empty +
 // the test becomes a strict equality gate.
 var legacyOversizeAllowlist = map[string]int{
-	// rbac.go split out at v0.22 phase 1 (→ rbac_roles.go + rbac_bindings.go).
-	// pods.go split out at v0.22 phase 2 (→ pods_resources.go + pods_volumes.go).
-	// network.go split out at v0.22 phase 3 (→ network_ingress.go + network_policies.go).
-	"internal/checks/k8s/cluster.go":       701,
-	"internal/checks/k8s/reliability.go":   671,
-	"internal/checks/k8s/eks.go":           649,
-	"internal/checks/aws/iam.go":           635,
-	"internal/checks/k8s/pods_extra.go":    627,
-	"internal/checks/digitalocean/tail.go": 602,
+	// Allowlist closed at v0.22 phase 4. Splits done:
+	// - rbac.go      → phase 1 (rbac_roles.go + rbac_bindings.go)
+	// - pods.go      → phase 2 (pods_resources.go + pods_volumes.go)
+	// - network.go   → phase 3 (network_ingress.go + network_policies.go)
+	// - cluster.go   → phase 4 (cluster_quotas.go)
+	// - reliability  → phase 4 (init_containers.go)
+	// - eks.go       → phase 4 (eks_nodegroups.go)
+	// - aws/iam.go   → phase 4 (iam_policies.go)
+	// - pods_extra   → phase 4 (pods_groups.go)
+	// - tail.go      → phase 4 (projects_hygiene.go)
 }
 
 func TestCheckFilesUnderSizeLimit(t *testing.T) {
