@@ -47,6 +47,7 @@ Run 'compliancekit doctor' first to validate your config and connectivity.`,
 	cmd.AddCommand(newMappingCmd())
 	cmd.AddCommand(newRemediateCmd())
 	cmd.AddCommand(newPolicyCmd())
+	cmd.AddCommand(newNotifyCmd())
 
 	return cmd
 }
