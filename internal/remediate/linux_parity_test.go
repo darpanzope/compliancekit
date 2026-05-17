@@ -36,12 +36,13 @@ import (
 //	Phase 0 (baseline)             — counts measured at v0.20 entry
 //	Phases 2-9 (new check surface) — stays flat (every new check
 //	                                  lands with bash + Ansible)
-//	Phase 10 (parity backfill)      — drives both to 0
+//	Phase 10 (parity backfill)     — drove both to 0 (strict equality gate)
 //
-// At 0 the test becomes a strict equality gate.
+// Both ceilings are 0. A single Linux check shipped without a bespoke
+// bash + Ansible strategy will fail this test.
 const (
 	maxMissingAnsibleLinux = 0
-	maxMissingBashLinux    = 4
+	maxMissingBashLinux    = 0
 )
 
 func TestParity_Linux(t *testing.T) {

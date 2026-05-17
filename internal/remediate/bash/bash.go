@@ -47,8 +47,16 @@ func init() {
 		[]string{"linux-sshd-no-root-login"}, renderSSHDRootLogin)
 	register("bash-sshd-passwordauth",
 		[]string{"linux-sshd-no-password-auth"}, renderSSHDPasswordAuth)
+	register("bash-sshd-maxauthtries",
+		[]string{"linux-sshd-max-auth-tries"}, renderSSHDMaxAuthTries)
+	register("bash-sshd-logingracetime",
+		[]string{"linux-sshd-login-grace-time"}, renderSSHDLoginGraceTime)
+	register("bash-sshd-protocol",
+		[]string{"linux-sshd-protocol-2"}, renderSSHDProtocol)
 	register("bash-firewall-active",
 		[]string{"linux-firewall-active"}, renderFirewallActive)
+	register("bash-firewall-default-deny",
+		[]string{"linux-firewall-default-deny"}, renderFirewallDefaultDeny)
 	register("bash-sysctl-aslr",
 		[]string{"linux-aslr-enabled"}, renderSysctlASLR)
 	register("bash-sysctl-source-routing",
@@ -89,6 +97,92 @@ func renderSSHDPasswordAuth(_ core.Finding) (remediate.Snippet, error) {
 		Content:   `sudo sed -ri 's/^#?\s*PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config && sudo sshd -t && sudo systemctl reload sshd`,
 		VerifyCmd: "sshd -T 2>/dev/null | grep -i passwordauthentication",
 		Notes:     "Confirm key-based access works first. Once disabled, password fallback is gone — emergency console / out-of-band access becomes the recovery path.",
+	}, nil
+}
+
+func renderSSHDMaxAuthTries(_ core.Finding) (remediate.Snippet, error) {
+	return remediate.Snippet{
+		Risk: remediate.RiskReview, Idempotent: true,
+		Content: `# Idempotent: replace existing MaxAuthTries line OR append.
+if sudo grep -qiE '^[[:space:]]*MaxAuthTries[[:space:]]' /etc/ssh/sshd_config; then
+  sudo sed -ri 's|^[[:space:]]*MaxAuthTries[[:space:]].*|MaxAuthTries 4|i' /etc/ssh/sshd_config
+else
+  printf 'MaxAuthTries 4\n' | sudo tee -a /etc/ssh/sshd_config >/dev/null
+fi
+sudo sshd -t && sudo systemctl reload sshd`,
+		VerifyCmd: "sshd -T 2>/dev/null | grep -i maxauthtries",
+		Notes:     "sshd -t validates the edit BEFORE reload — broken sshd_config doesn't lock you out. CIS recommends MaxAuthTries 4.",
+	}, nil
+}
+
+func renderSSHDLoginGraceTime(_ core.Finding) (remediate.Snippet, error) {
+	return remediate.Snippet{
+		Risk: remediate.RiskReview, Idempotent: true,
+		Content: `# Idempotent: replace existing LoginGraceTime line OR append.
+if sudo grep -qiE '^[[:space:]]*LoginGraceTime[[:space:]]' /etc/ssh/sshd_config; then
+  sudo sed -ri 's|^[[:space:]]*LoginGraceTime[[:space:]].*|LoginGraceTime 60|i' /etc/ssh/sshd_config
+else
+  printf 'LoginGraceTime 60\n' | sudo tee -a /etc/ssh/sshd_config >/dev/null
+fi
+sudo sshd -t && sudo systemctl reload sshd`,
+		VerifyCmd: "sshd -T 2>/dev/null | grep -i logingracetime",
+		Notes:     "CIS recommends LoginGraceTime ≤ 60 seconds — limits the window a half-open auth attempt can hold a slot.",
+	}, nil
+}
+
+func renderSSHDProtocol(_ core.Finding) (remediate.Snippet, error) {
+	return remediate.Snippet{
+		Risk: remediate.RiskReview, Idempotent: true,
+		Content: `# Idempotent: replace existing Protocol line OR append.
+# Modern OpenSSH (≥ 7.4) dropped Protocol 1 entirely so this is belt-and-braces,
+# but auditors still grep for the explicit directive.
+if sudo grep -qiE '^[[:space:]]*Protocol[[:space:]]' /etc/ssh/sshd_config; then
+  sudo sed -ri 's|^[[:space:]]*Protocol[[:space:]].*|Protocol 2|i' /etc/ssh/sshd_config
+else
+  printf 'Protocol 2\n' | sudo tee -a /etc/ssh/sshd_config >/dev/null
+fi
+sudo sshd -t && sudo systemctl reload sshd`,
+		VerifyCmd: "sshd -T 2>/dev/null | grep -i protocol",
+		Notes:     "Modern OpenSSH ignores this directive (Protocol 1 was removed in 7.4) — kept for auditor evidence.",
+	}, nil
+}
+
+func renderFirewallDefaultDeny(_ core.Finding) (remediate.Snippet, error) {
+	return remediate.Snippet{
+		Risk: remediate.RiskReview, Idempotent: true,
+		Content: `# Distro-aware default-deny for the INPUT chain.
+# WARNING: build the inbound allow-list FIRST (at minimum SSH).
+. /etc/os-release
+case "${ID:-unknown}" in
+  ubuntu|debian)
+    sudo ufw allow 22/tcp
+    sudo ufw default deny incoming
+    sudo ufw --force enable
+    ;;
+  rhel|centos|rocky|almalinux|fedora|amzn)
+    sudo systemctl enable --now firewalld
+    sudo firewall-cmd --permanent --add-service=ssh
+    sudo firewall-cmd --permanent --set-target=DROP --zone=public
+    sudo firewall-cmd --reload
+    ;;
+  alpine)
+    sudo apk add --no-cache nftables
+    sudo tee /etc/nftables.nft >/dev/null <<'EOF'
+table inet filter {
+  chain input {
+    type filter hook input priority 0; policy drop;
+    iif lo accept
+    ct state established,related accept
+    tcp dport 22 accept
+  }
+}
+EOF
+    sudo rc-update add nftables boot
+    sudo service nftables restart
+    ;;
+esac`,
+		VerifyCmd: "sudo ufw status verbose 2>/dev/null | grep -i default; sudo firewall-cmd --get-default-zone 2>/dev/null; sudo nft list ruleset 2>/dev/null | head",
+		Notes:     "Test in a screen/tmux session first — a misconfigured allow-list locks you out. SSH (port 22) is allowed before the deny flips.",
 	}, nil
 }
 
