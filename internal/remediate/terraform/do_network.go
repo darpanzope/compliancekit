@@ -1,0 +1,187 @@
+package terraform
+
+import (
+	"fmt"
+
+	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/internal/remediate"
+)
+
+// v0.19 phase 7 — Terraform strategies for the 10 networking-depth
+// checks (firewall dedup + ICMP + outbound, VPC peering, reserved IP,
+// LB TLS + cookie + proxy-protocol + cipher).
+
+func init() {
+	register("tf-do-fw-inbound-duplicates",
+		[]string{"do-fw-inbound-rules-duplicated"}, renderTFFWInboundDupes)
+	register("tf-do-fw-outbound-unrestricted",
+		[]string{"do-fw-outbound-unrestricted"}, renderTFFWOutbound)
+	register("tf-do-fw-icmp-from-any",
+		[]string{"do-fw-icmp-from-any"}, renderTFFWICMP)
+	register("tf-do-fw-empty-tag-source",
+		[]string{"do-fw-empty-tag-source"}, renderTFFWEmptyTag)
+	register("tf-do-vpc-peering-cross-region",
+		[]string{"do-vpc-peering-cross-region"}, renderTFVPCPeering)
+	register("tf-do-reserved-ip-no-region",
+		[]string{"do-reserved-ip-no-region"}, renderTFReservedIP)
+	register("tf-do-lb-tls-passthrough",
+		[]string{"do-lb-tls-passthrough-misconfigured"}, renderTFLBTLSPassthrough)
+	register("tf-do-lb-sticky-cookie-httponly",
+		[]string{"do-lb-sticky-cookie-no-httponly"}, renderTFLBStickyCookie)
+	register("tf-do-lb-proxy-protocol",
+		[]string{"do-lb-proxy-protocol-mismatch"}, renderTFLBProxyProtocol)
+	register("tf-do-lb-ssl-cipher-floor",
+		[]string{"do-lb-ssl-cipher-floor"}, renderTFLBSSLCipher)
+}
+
+func renderTFFWInboundDupes(f core.Finding) (remediate.Snippet, error) {
+	name := tfNameOrFallback(f, "FIREWALL")
+	body := fmt.Sprintf(`# De-duplicate the firewall's inbound_rule blocks. Terraform doesn't
+# merge identical inline blocks; pull current state with 'terraform
+# state show' + manually trim duplicates from the .tf source.
+
+resource "digitalocean_firewall" %q {
+  name = %q
+  inbound_rule {
+    protocol         = "tcp"
+    port_range       = "443"
+    source_addresses = ["0.0.0.0/0"]
+  }
+  # ... drop dup blocks ...
+}
+`, tfIdent(name), name)
+	return remediate.Snippet{
+		Risk: remediate.RiskReview, Idempotent: true, Content: body,
+		VerifyCmd: fmt.Sprintf("doctl compute firewall get %s --format InboundRules", name),
+	}, nil
+}
+
+func renderTFFWOutbound(f core.Finding) (remediate.Snippet, error) {
+	name := tfNameOrFallback(f, "FIREWALL")
+	body := fmt.Sprintf(`resource "digitalocean_firewall" %q {
+  name = %q
+  # ... existing inbound_rule blocks ...
+  outbound_rule {
+    protocol              = "tcp"
+    port_range            = "443"
+    destination_addresses = ["0.0.0.0/0"]
+  }
+  outbound_rule {
+    protocol              = "udp"
+    port_range            = "53"
+    destination_addresses = ["1.1.1.1/32", "8.8.8.8/32"]
+  }
+  outbound_rule {
+    protocol              = "tcp"
+    port_range            = "5432"
+    destination_addresses = ["10.10.0.0/16"]   # private DB subnet
+  }
+}
+`, tfIdent(name), name)
+	return remediate.Snippet{
+		Risk: remediate.RiskReview, Idempotent: true, Content: body,
+		Notes: "Adjust destinations to your workload. Anything not enumerated is dropped.",
+	}, nil
+}
+
+func renderTFFWICMP(f core.Finding) (remediate.Snippet, error) {
+	name := tfNameOrFallback(f, "FIREWALL")
+	body := fmt.Sprintf(`resource "digitalocean_firewall" %q {
+  name = %q
+  # Replace any 0.0.0.0/0 ICMP rule with a tight monitoring CIDR:
+  inbound_rule {
+    protocol         = "icmp"
+    source_addresses = ["10.0.0.0/8"]   # internal monitoring
+  }
+}
+`, tfIdent(name), name)
+	return remediate.Snippet{
+		Risk: remediate.RiskSafe, Idempotent: true, Content: body,
+	}, nil
+}
+
+func renderTFFWEmptyTag(_ core.Finding) (remediate.Snippet, error) {
+	return renderTFManualOnly(
+		"firewall tag-source resolution is a runtime concept; TF can't verify droplet-count under a tag",
+		"https://cloud.digitalocean.com/networking/firewalls",
+		"Run `doctl compute droplet list --tag-name <tag>` per tag")
+}
+
+func renderTFVPCPeering(_ core.Finding) (remediate.Snippet, error) {
+	return renderTFManualOnly(
+		"DO does not support cross-region VPC peering; the existing peering should be deleted",
+		"https://cloud.digitalocean.com/networking/vpc",
+		"`doctl vpcs peerings delete <id>`; use a VPN tunnel for cross-region connectivity")
+}
+
+func renderTFReservedIP(f core.Finding) (remediate.Snippet, error) {
+	name := tfNameOrFallback(f, "RESERVED_IP")
+	body := fmt.Sprintf(`resource "digitalocean_reserved_ip" %q {
+  region     = "nyc3"
+  droplet_id = digitalocean_droplet.web.id
+}
+`, tfIdent(name))
+	return remediate.Snippet{
+		Risk: remediate.RiskReview, Idempotent: true, Content: body,
+		Notes: "Recreate with explicit region; reserved IPs are region-pinned.",
+	}, nil
+}
+
+func renderTFLBTLSPassthrough(f core.Finding) (remediate.Snippet, error) {
+	name := tfNameOrFallback(f, "LB")
+	body := fmt.Sprintf(`resource "digitalocean_loadbalancer" %q {
+  name   = %q
+  region = "nyc3"
+
+  # Option A: terminate TLS at the LB (default + recommended).
+  forwarding_rule {
+    entry_port       = 443
+    entry_protocol   = "https"
+    target_port      = 80
+    target_protocol  = "http"
+    certificate_name = digitalocean_certificate.app.name
+  }
+
+  # Option B: passthrough — backend MUST speak TLS on the entry port.
+  # forwarding_rule {
+  #   entry_port       = 443
+  #   entry_protocol   = "https"
+  #   target_port      = 443
+  #   target_protocol  = "https"
+  #   tls_passthrough  = true
+  # }
+}
+`, tfIdent(name), name)
+	return remediate.Snippet{
+		Risk: remediate.RiskReview, Idempotent: true, Content: body,
+		Notes: "Pick A or B based on backend capabilities. Most app stacks pick A — easier cert management.",
+	}, nil
+}
+
+func renderTFLBStickyCookie(_ core.Finding) (remediate.Snippet, error) {
+	return renderTFManualOnly(
+		"DO LB sticky-cookie flags are not configurable; verify via curl or move stickiness to the app",
+		"https://docs.digitalocean.com/products/networking/load-balancers/",
+		"Terminate stickiness at the app layer with cookies under your control")
+}
+
+func renderTFLBProxyProtocol(f core.Finding) (remediate.Snippet, error) {
+	name := tfNameOrFallback(f, "LB")
+	body := fmt.Sprintf(`resource "digitalocean_loadbalancer" %q {
+  name           = %q
+  region         = "nyc3"
+  enable_proxy_protocol = true   # backend must decode (nginx: real_ip_header proxy_protocol)
+}
+`, tfIdent(name), name)
+	return remediate.Snippet{
+		Risk: remediate.RiskReview, Idempotent: true, Content: body,
+		Notes: "Backend nginx config: `real_ip_header proxy_protocol; set_real_ip_from <LB CIDR>;` in the server block.",
+	}, nil
+}
+
+func renderTFLBSSLCipher(_ core.Finding) (remediate.Snippet, error) {
+	return renderTFManualOnly(
+		"DO LB cipher/protocol selection is platform-managed",
+		"https://www.ssllabs.com/ssltest/",
+		"Run testssl.sh / SSL Labs against the LB host and capture the report")
+}
