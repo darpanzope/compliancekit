@@ -11,6 +11,8 @@ import (
 const (
 	auditdActiveCmd = "systemctl is-active auditd 2>/dev/null || true"
 	journaldConfCmd = "cat /etc/systemd/journald.conf 2>/dev/null || true"
+	// v0.20 phase 7 — `auditctl -l` dumps the loaded rule set.
+	auditctlRulesCmd = "sudo -n auditctl -l 2>/dev/null || auditctl -l 2>/dev/null || true"
 )
 
 // gatherAudit probes auditd and journald state. Returns a sub-map
@@ -45,7 +47,30 @@ func gatherAudit(ctx context.Context, client *ssh.Client) (map[string]any, error
 	}
 	out["journald_storage"] = parseJournaldStorage(jrnOut)
 
+	// v0.20 phase 7 — auditctl -l (loaded rules) for the audit-rule
+	// presence checks. Errors are non-fatal: empty result means
+	// either auditd isn't running or no rules loaded — per-rule
+	// checks emit Skip in that case.
+	if rules, _, rerr := RunCommand(ctx, client, auditctlRulesCmd); rerr == nil {
+		out["audit_rules"] = ParseAuditRules(rules)
+	}
+
 	return out, nil
+}
+
+// ParseAuditRules splits auditctl -l output into a trimmed slice of
+// non-empty rule lines. Comment lines (#) are dropped. Exported so
+// tests + downstream collectors share the parser.
+func ParseAuditRules(body string) []string {
+	out := []string{}
+	for _, line := range strings.Split(body, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		out = append(out, line)
+	}
+	return out
 }
 
 // parseJournaldStorage returns the value of the "Storage=" directive
