@@ -6,7 +6,7 @@
   Source of truth: internal/checks/**/*.go (the core.Check vars).
 -->
 
-This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **298 checks** across the providers below.
+This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **378 checks** across the providers below.
 
 Each check below has:
 
@@ -23,21 +23,21 @@ To inspect a single check from the CLI: `compliancekit checks show <id>`.
 | Provider | Checks |
 |---|---:|
 | `aws` | 30 |
-| `digitalocean` | 74 |
+| `digitalocean` | 144 |
 | `gcp` | 25 |
 | `hetzner` | 15 |
-| `kubernetes` | 139 |
+| `kubernetes` | 149 |
 | `linux` | 15 |
-| **total** | **298** |
+| **total** | **378** |
 
 ## By severity
 
 | Severity | Checks |
 |---|---:|
-| `critical` | 17 |
-| `high` | 71 |
-| `medium` | 107 |
-| `low` | 103 |
+| `critical` | 18 |
+| `high` | 99 |
+| `medium` | 135 |
+| `low` | 126 |
 
 ## aws
 
@@ -759,6 +759,98 @@ _Tags:_ `backup`, `recovery`, `s3`
 
 ## digitalocean
 
+### `do-account-api-token-rotation-cadence`
+
+**API tokens must be rotated on a documented cadence (≤90d)** &middot; severity `high` &middot; service `account` &middot; resource `digitalocean.account`
+
+DO API tokens are long-lived bearer credentials. The DO public API does not expose token creation dates, scopes, or last-use time — the dashboard is the only audit surface. SOC2 CC6.3 + ISO A.5.16 + CIS 5.4 each require documented rotation intervals (typically ≤90 days) and revocation of unused tokens. This finding records the control gap so the auditor knows to gather rotation logs.
+
+_Remediation:_
+
+> Cloud Panel → API → Tokens. Sort by 'Last Used'; revoke any token unused for >30 days, and any token older than 90 days regardless of last-use. Issue replacements via the same page; update consumers; capture the before/after roster as audit evidence.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `5.4` | Restrict Administrator Privileges to Dedicated Administrator Accounts |
+| `cis-v8` | `6.7` | Centralize Access Control |
+| `iso27001` | `A.5.16` | Identity management |
+| `iso27001` | `A.8.5` | Secure authentication |
+| `soc2` | `CC6.3` | Authorization, Modification, and Removal |
+
+_Tags:_ `account`, `credentials`, `manual-verify`
+
+---
+
+### `do-account-audit-log-retention`
+
+**Account audit logs must be retained ≥90 days** &middot; severity `high` &middot; service `account` &middot; resource `digitalocean.account`
+
+Audit logs document every team-member action against control-plane resources. DigitalOcean's audit log is available only via the dashboard (no public API endpoint at the time of writing) and the default retention is ≤30 days on most tiers. SOC2 CC7.2, ISO A.8.15, and CIS 8.1 each require ≥90 days of log retention with tamper-evident storage. This finding records the control gap.
+
+_Remediation:_
+
+> Cloud Panel → Settings → Audit Logs. Confirm logs are enabled and retention is ≥90 days. If retention is below policy, enable the audit-log-export integration (Splunk / Datadog / S3) to extend retention beyond the in-platform default. Capture configuration as audit evidence.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `8.1` | Establish and Maintain an Audit Log Management Process |
+| `cis-v8` | `8.10` | Retain Audit Logs |
+| `iso27001` | `A.8.15` | Logging |
+| `soc2` | `CC7.2` | System Component Monitoring |
+
+_Tags:_ `account`, `audit-trail`, `manual-verify`
+
+---
+
+### `do-account-billing-alert-thresholds`
+
+**Monthly billing alerts must be configured at documented thresholds** &middot; severity `medium` &middot; service `account` &middot; resource `digitalocean.account`
+
+DigitalOcean's billing-alerts surface is dashboard-only; no public API exposes the configured monthly threshold or recipient roster. An unaccompanied invoice doubling — typical of a runaway autoscaler or unauthorized resource provisioning — is a financial AND security signal. SOC2 A1.2 requires capacity alerts that catch budget anomalies before billing close.
+
+_Remediation:_
+
+> Cloud Panel → Settings → Billing → Alerts. Set monthly alert at 80% and 100% of expected spend; route to finance + engineering distribution lists, not a single inbox. Document the threshold and recipients in the runbook.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `12.1` | Ensure Network Infrastructure is Up-to-Date |
+| `iso27001` | `A.5.30` | ICT readiness for business continuity |
+| `soc2` | `A1.2` | Backup and Recovery Infrastructure |
+
+_Tags:_ `account`, `billing`, `manual-verify`
+
+---
+
+### `do-account-droplet-quota-headroom`
+
+**Droplet usage must leave >20% headroom against the account limit** &middot; severity `medium` &middot; service `account` &middot; resource `digitalocean.account`
+
+DO sets a per-account droplet_limit; bumping against it means new droplets fail to provision — autoscalers stall, recovery flows can't spin replacements, blue/green deploys break. Production accounts should stay below 80% utilization so a sudden burst (incident response, traffic spike) has runway.
+
+_Remediation:_
+
+> Two paths: (1) request a quota bump — 'doctl account ratelimit' shows your support contact and the cloud panel has a quota increase form. (2) Prune orphan droplets via 'doctl compute droplet list --format ID,Name,Status,Created' and delete anything stale.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `12.1` | Ensure Network Infrastructure is Up-to-Date |
+| `iso27001` | `A.8.6` | Capacity management |
+| `soc2` | `A1.2` | Backup and Recovery Infrastructure |
+| `soc2` | `CC7.3` | Security Incident Evaluation |
+
+_Tags:_ `account`, `capacity`
+
+---
+
 ### `do-account-email-verified`
 
 **DigitalOcean account email must be verified** &middot; severity `medium` &middot; service `account` &middot; resource `digitalocean.account`
@@ -781,6 +873,101 @@ _Maps to:_
 | `soc2` | `CC6.7` | Transmission, Movement, and Disposal of Information |
 
 _Tags:_ `account`, `identity`
+
+---
+
+### `do-account-mfa-required`
+
+**Account must require two-factor authentication for all members** &middot; severity `critical` &middot; service `account` &middot; resource `digitalocean.account`
+
+Mandatory 2FA across every team member is table stakes for any audit framework (SOC2 CC6.1, ISO A.5.16, CIS 6.5). DigitalOcean enforces this via the team settings UI but does not expose enforcement state in the public API — every audit therefore requires manual evidence: a screenshot of the team Security page showing the toggle on plus a roster of members with 2FA enabled. This finding records the control gap so the auditor knows to gather that evidence.
+
+_Remediation:_
+
+> Cloud Panel → Settings → Security → 'Require two-factor authentication'. Toggle on. Confirm every team member has 2FA enrolled (Members tab → 2FA column). Record screenshot evidence alongside this report.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `6.5` | Require MFA for Administrative Access |
+| `iso27001` | `A.5.16` | Identity management |
+| `iso27001` | `A.5.17` | Authentication information |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `account`, `identity`, `manual-verify`
+
+---
+
+### `do-account-monitoring-alert-coverage`
+
+**Account should have enabled alerts for CPU, memory, disk, and load** &middot; severity `medium` &middot; service `monitoring` &middot; resource `digitalocean.account`
+
+Beyond 'at least one alert exists', SOC2 CC7.2 and ISO A.8.16 expect coverage across the four primary droplet vitals: CPU, memory, disk, and load. A monitoring posture missing any of these leaves blind spots that page operators too late.
+
+_Remediation:_
+
+> Create the missing alert types. Example for CPU: 'doctl monitoring alert create --type v1/insights/droplet/cpu --description "high cpu" --compare GreaterThan --value 80 --window 5m --emails ops@example.com'. Repeat for memory, disk, and load with thresholds appropriate to your workloads.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `8.11` | Conduct Audit Log Reviews |
+| `iso27001` | `A.8.16` | Monitoring activities |
+| `soc2` | `CC7.2` | System Component Monitoring |
+| `soc2` | `CC7.3` | Security Incident Evaluation |
+
+_Tags:_ `alerting`, `monitoring`
+
+---
+
+### `do-account-owner-delegation-policy`
+
+**Owner-delegation policy must be documented (bus-factor ≥2)** &middot; severity `high` &middot; service `account` &middot; resource `digitalocean.account`
+
+DigitalOcean does not expose team-owner change history or delegation procedures via API. A single owner = bus-factor 1 across billing, member-management, and account-deletion — the highest-blast-radius operations on the platform. SOC2 CC1.4 and ISO A.5.2 require segregation-of-duties + at least one documented delegate.
+
+_Remediation:_
+
+> Cloud Panel → Settings → Team → Members. Confirm ≥2 members carry the 'Owner' role (or that an explicit succession policy is recorded with co-administrator credentials). Document the delegation procedure in the security runbook and review quarterly.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `6.7` | Centralize Access Control |
+| `cis-v8` | `6.8` | Define and Maintain Role-Based Access Control |
+| `iso27001` | `A.5.15` | Access control |
+| `iso27001` | `A.5.2` | Information security roles and responsibilities |
+| `soc2` | `CC1.4` | Commitment to Competence |
+| `soc2` | `CC6.3` | Authorization, Modification, and Removal |
+
+_Tags:_ `account`, `bus-factor`, `manual-verify`
+
+---
+
+### `do-account-reserved-ip-quota-headroom`
+
+**Reserved-IP usage must leave >20% headroom** &middot; severity `low` &middot; service `account` &middot; resource `digitalocean.account`
+
+Reserved IPs are the basis for static-IP services and failover patterns. Hitting reserved_ip_limit during an incident means the failover script can't allocate the replacement IP. The 80% headroom rule applies.
+
+_Remediation:_
+
+> Request a quota bump, OR free orphan reserved IPs ('doctl compute reserved-ip list --format IP,DropletID' — empty DropletID means assigned to nothing).
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `12.1` | Ensure Network Infrastructure is Up-to-Date |
+| `iso27001` | `A.8.6` | Capacity management |
+| `soc2` | `A1.2` | Backup and Recovery Infrastructure |
+| `soc2` | `CC7.3` | Security Incident Evaluation |
+
+_Tags:_ `account`, `capacity`, `networking`
 
 ---
 
@@ -808,6 +995,29 @@ _Tags:_ `account`, `platform-health`
 
 ---
 
+### `do-account-status-message-clean`
+
+**Account.status_message must be empty** &middot; severity `high` &middot; service `account` &middot; resource `digitalocean.account`
+
+DO sets status_message when the account is flagged for billing arrears, ToS review, or platform-team intervention. Any non-empty value is a signal the account is restricted; continuous-compliance evidence loses meaning while the flag is in place.
+
+_Remediation:_
+
+> Open the cloud panel banner DO shows when status_message is non-empty; resolve the root cause (failed payment method, ToS dispute, support ticket). Don't dismiss the banner without reading it.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `11.1` | Establish and Maintain a Data Recovery Process |
+| `iso27001` | `A.5.30` | ICT readiness for business continuity |
+| `soc2` | `A1.2` | Backup and Recovery Infrastructure |
+| `soc2` | `CC2.1` | Obtains or Generates Relevant Quality Information |
+
+_Tags:_ `account`, `platform-health`
+
+---
+
 ### `do-account-uses-named-team`
 
 **Production DigitalOcean accounts should use a named team** &middot; severity `low` &middot; service `account` &middot; resource `digitalocean.account`
@@ -830,6 +1040,163 @@ _Maps to:_
 | `soc2` | `CC6.3` | Authorization, Modification, and Removal |
 
 _Tags:_ `account`, `bus-factor`
+
+---
+
+### `do-account-volume-quota-headroom`
+
+**Block-storage volume usage must leave >20% headroom** &middot; severity `medium` &middot; service `account` &middot; resource `digitalocean.account`
+
+DO sets a per-account volume_limit. A volume exhaustion event is a hard-stop for any droplet that needs persistent storage attached on boot or after autoscaling. The same 80% headroom rule applies; account-level limits are easier to raise proactively than under incident pressure.
+
+_Remediation:_
+
+> Request a quota bump from the cloud panel, OR prune orphan volumes ('doctl compute volume list --format Name,DropletIDs,Size'). Volumes with empty DropletIDs are paying for storage attached to nothing.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `12.1` | Ensure Network Infrastructure is Up-to-Date |
+| `iso27001` | `A.8.6` | Capacity management |
+| `soc2` | `A1.2` | Backup and Recovery Infrastructure |
+| `soc2` | `CC7.3` | Security Incident Evaluation |
+
+_Tags:_ `account`, `capacity`, `storage`
+
+---
+
+### `do-app-build-secret-scan`
+
+**App Platform builds must scan for committed secrets** &middot; severity `high` &middot; service `apps` &middot; resource `digitalocean.app`
+
+DO App Platform does not run secret-scanning as part of the build pipeline. A secret committed to the source repo becomes part of every deployed image, and is recoverable from the build cache for the lifetime of the cache. SOC2 CC6.7 requires credential hygiene; verify a pre-commit or CI step (gitleaks, trufflehog) runs against every PR.
+
+_Remediation:_
+
+> Add a CI step on the source repo BEFORE the DO build trigger: run 'gitleaks detect' or 'trufflehog filesystem .' and fail the CI on findings. Block deploy-on-push to apps whose CI lacks this gate.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `16.4` | Establish and Manage an Inventory of Third-Party Software Components |
+| `iso27001` | `A.8.5` | Secure authentication |
+| `soc2` | `CC6.7` | Transmission, Movement, and Disposal of Information |
+
+_Tags:_ `apps`, `manual-verify`, `secret-scan`
+
+---
+
+### `do-app-cdn-attachment`
+
+**Public-facing apps should consider DO Spaces CDN for static asset delivery** &middot; severity `low` &middot; service `apps` &middot; resource `digitalocean.app`
+
+App Platform serves static assets directly from the app container, charging full bandwidth + CPU. Offloading to a Spaces+CDN attachment cuts cost + latency. The App spec doesn't carry CDN integration state, so this is manual.
+
+_Remediation:_
+
+> Move static assets to a Spaces bucket; enable the CDN attachment on the bucket (do-cdn-no-custom-domain check covers the CDN side). Update the app to reference the CDN endpoint for asset URLs.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `12.1` | Ensure Network Infrastructure is Up-to-Date |
+| `iso27001` | `A.5.30` | ICT readiness for business continuity |
+| `soc2` | `A1.1` | Capacity Management |
+
+_Tags:_ `apps`, `cdn`, `manual-verify`, `performance`
+
+---
+
+### `do-app-database-not-production-marked`
+
+**App Platform databases must be marked production** &middot; severity `medium` &middot; service `apps` &middot; resource `digitalocean.app`
+
+App Platform databases default to dev_database = true (shared/free tier). production: true upgrades to a dedicated managed cluster with HA + automated backups. Production workloads on dev databases lose data on any control-plane event.
+
+_Remediation:_
+
+> In the app spec, set 'databases: [{name: ..., engine: PG, production: true, cluster_name: <managed-db-cluster>}]'. Plan a cutover: dev DBs are not backed up, so manual dump+restore to the new cluster is required.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `11.2` | Perform Automated Backups |
+| `iso27001` | `A.8.13` | Information backup |
+| `soc2` | `A1.2` | Backup and Recovery Infrastructure |
+| `soc2` | `CC9.1` | Identifies and Mitigates Business Disruptions |
+
+_Tags:_ `apps`, `database`, `production`
+
+---
+
+### `do-app-deploy-on-push-no-branch-protection`
+
+**Deploy-on-push services must target protected branches** &middot; severity `high` &middot; service `apps` &middot; resource `digitalocean.app`
+
+Deploy-on-push means a git push to the source branch triggers a production deployment. Without branch protection (required reviews, status checks) on the source side, any git collaborator can ship to production without review. The App spec carries the branch name but the GitHub/GitLab branch-protection state is on the source side, not DO's API.
+
+_Remediation:_
+
+> GitHub: Settings → Branches → add a protection rule on the deploy branch (require ≥1 review, require status checks). GitLab: Settings → Repository → Protected Branches. Document the deploy branch + protection rules in the runbook.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `16.1` | Establish and Maintain a Secure Application Development Process |
+| `cis-v8` | `4.1` | Establish and Maintain a Secure Configuration Process |
+| `iso27001` | `A.8.32` | Change management |
+| `soc2` | `CC8.1` | Change Management Process |
+
+_Tags:_ `apps`, `deploy-on-push`, `manual-verify`
+
+---
+
+### `do-app-domain-cert-rotation`
+
+**Custom-domain certs must auto-renew (Let's Encrypt or uploaded with auto-rotation)** &middot; severity `medium` &middot; service `apps` &middot; resource `digitalocean.app`
+
+App Platform Let's Encrypt certs auto-renew. Uploaded certs do not — they expire silently and break HTTPS for the custom domain. The DO API does not expose 'is this cert DO-managed or uploaded' on a custom domain at runtime; the operator must confirm via the dashboard or by issuing every cert through Let's Encrypt at create time.
+
+_Remediation:_
+
+> Either: (1) ensure every custom domain uses Let's Encrypt — declare the domain in the app spec without a cert_id, which triggers DO-managed Let's Encrypt. (2) For uploaded certs, set a renewal calendar reminder ≥30d before expiry.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `3.10` | Encrypt Sensitive Data in Transit |
+| `iso27001` | `A.8.24` | Use of cryptography |
+| `soc2` | `CC6.7` | Transmission, Movement, and Disposal of Information |
+
+_Tags:_ `apps`, `cert-rotation`, `manual-verify`, `tls`
+
+---
+
+### `do-app-domain-tls-below-1-3`
+
+**App Platform custom domains should enforce TLS 1.3** &middot; severity `medium` &middot; service `apps` &middot; resource `digitalocean.app`
+
+Existing do-app-domain-weak-tls flags TLS < 1.2. v0.19 phase 5 raises the floor to 1.3 for production-grade domains. TLS 1.2 remains supported but 1.3 is the current state of the art (forward-secrecy by default, fewer cipher choices, mandatory AEAD).
+
+_Remediation:_
+
+> Update the App spec domain block: 'domains: [{domain: ..., minimum_tls_version: "1.3"}]'. Verify clients don't break — TLS 1.3 is universally supported across browsers + tools released after 2020.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `3.10` | Encrypt Sensitive Data in Transit |
+| `iso27001` | `A.8.24` | Use of cryptography |
+| `soc2` | `CC6.7` | Transmission, Movement, and Disposal of Information |
+
+_Tags:_ `apps`, `domain`, `tls`
 
 ---
 
@@ -946,6 +1313,249 @@ _Maps to:_
 | `soc2` | `CC6.7` | Transmission, Movement, and Disposal of Information |
 
 _Tags:_ `app-platform`, `secrets`
+
+---
+
+### `do-app-services-no-healthcheck`
+
+**Every App Platform service must declare a HealthCheck** &middot; severity `high` &middot; service `apps` &middot; resource `digitalocean.app`
+
+Without a HealthCheck declaration App Platform falls back to TCP-port liveness — a hung process that still holds the socket is treated as healthy. SOC2 A1.2 and ISO A.8.16 expect explicit liveness probes on production services.
+
+_Remediation:_
+
+> Add a http_path-based HealthCheck per service in the app spec: 'health_check: {http_path: /healthz}'. Pair with a liveness endpoint that exercises critical dependencies (database connection, downstream API).
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `8.11` | Conduct Audit Log Reviews |
+| `iso27001` | `A.8.16` | Monitoring activities |
+| `soc2` | `A1.2` | Backup and Recovery Infrastructure |
+
+_Tags:_ `apps`, `healthcheck`
+
+---
+
+### `do-app-services-no-log-destinations`
+
+**App Platform services should forward logs to a long-retention sink** &middot; severity `medium` &middot; service `apps` &middot; resource `digitalocean.app`
+
+App Platform's built-in log viewer retains ~7 days of logs — insufficient for audit (SOC2 CC7.2 expects ≥90d). The app spec's 'log_destinations:' block forwards to Papertrail, Datadog, Logtail, or a generic OpenSearch endpoint.
+
+_Remediation:_
+
+> Add a log_destinations block per service: 'log_destinations: [{name: prod, datadog: {api_key: $DD_KEY, endpoint: ...}}]'. Pair with a sink that meets the retention SLA.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `8.5` | Collect Detailed Audit Logs |
+| `iso27001` | `A.8.15` | Logging |
+| `soc2` | `CC7.2` | System Component Monitoring |
+
+_Tags:_ `apps`, `logging`, `retention`
+
+---
+
+### `do-app-services-no-service-alerts`
+
+**App Platform services should each declare their own alerts** &middot; severity `medium` &middot; service `apps` &middot; resource `digitalocean.app`
+
+App-level alerts (covered by do-app-no-alerts) catch deploy + domain events. Service-level alerts catch per-service behavior: CPU > X, restart count > Y, request latency > Z. SOC2 CC7.2 expects per-component monitoring; a single app-level alert isn't sufficient for multi-service apps.
+
+_Remediation:_
+
+> Add 'alerts:' to each service spec with at minimum DEPLOYMENT_FAILED + CPU_UTILIZATION + MEM_UTILIZATION rules.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `8.11` | Conduct Audit Log Reviews |
+| `iso27001` | `A.8.16` | Monitoring activities |
+| `soc2` | `CC7.2` | System Component Monitoring |
+
+_Tags:_ `alerts`, `apps`, `per-service`
+
+---
+
+### `do-app-tier-below-production`
+
+**Apps tagged production should run on professional tier or above** &middot; severity `medium` &middot; service `apps` &middot; resource `digitalocean.app`
+
+Basic-tier App Platform shares droplet pools and lacks the autoscaling + per-tenant isolation production typically needs. SOC2 A1.1 + ISO A.8.14 expect production capacity planning; the tier slug is the simplest proxy.
+
+_Remediation:_
+
+> Bump to a professional tier: 'doctl apps update <id> --spec spec.yaml' with 'tier_slug: professional-xs' (or higher). Migration is online; expect a redeploy.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `11.2` | Perform Automated Backups |
+| `iso27001` | `A.8.14` | Redundancy of information processing facilities |
+| `soc2` | `A1.1` | Capacity Management |
+
+_Tags:_ `apps`, `capacity`, `tier`
+
+---
+
+### `do-billing-cdn-traffic-cost`
+
+**CDN traffic cost must be tracked monthly** &middot; severity `low` &middot; service `billing` &middot; resource `digitalocean.account`
+
+DO Spaces CDN bills egress separately from origin storage. A misconfigured cache (TTL=0, no Cache-Control headers) multiplies origin hits + CDN cost.
+
+_Remediation:_
+
+> Monthly: review CDN bandwidth in the billing breakout. If unexpected: audit cache headers + TTL on the CDN config.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `12.1` | Ensure Network Infrastructure is Up-to-Date |
+| `iso27001` | `A.5.30` | ICT readiness for business continuity |
+| `soc2` | `A1.1` | Capacity Management |
+
+_Tags:_ `billing`, `cdn`, `manual-verify`
+
+---
+
+### `do-billing-cost-breakout-documented`
+
+**Per-project cost breakout must be exportable monthly** &middot; severity `low` &middot; service `billing` &middot; resource `digitalocean.account`
+
+DO exposes invoices via API but not per-project cost breakout; finance teams typically need that for chargeback.
+
+_Remediation:_
+
+> Monthly: pull the invoice CSV from the dashboard, sort by project tag, archive in finance shared drive.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `12.1` | Ensure Network Infrastructure is Up-to-Date |
+| `iso27001` | `A.5.30` | ICT readiness for business continuity |
+| `soc2` | `A1.2` | Backup and Recovery Infrastructure |
+
+_Tags:_ `billing`, `manual-verify`
+
+---
+
+### `do-billing-database-pause-audit`
+
+**Paused managed databases are still billed; audit retention** &middot; severity `medium` &middot; service `billing` &middot; resource `digitalocean.account`
+
+DO managed databases bill in 'offline' (paused) state at standard rate. Pause-and-forget is a common waste pattern.
+
+_Remediation:_
+
+> Quarterly: list `doctl databases list`; for any in offline state, decide resume vs delete.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `12.1` | Ensure Network Infrastructure is Up-to-Date |
+| `iso27001` | `A.5.30` | ICT readiness for business continuity |
+| `soc2` | `A1.1` | Capacity Management |
+
+_Tags:_ `billing`, `manual-verify`
+
+---
+
+### `do-billing-monthly-alert-review`
+
+**Monthly billing alert thresholds + recipients reviewed** &middot; severity `medium` &middot; service `billing` &middot; resource `digitalocean.account`
+
+Billing alert thresholds + recipient roster need quarterly review — costs grow, headcount changes, alerts go stale. DO doesn't expose the alert config via API.
+
+_Remediation:_
+
+> Quarterly: open the billing dashboard, confirm thresholds still match the budget, confirm distros still resolve.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `12.1` | Ensure Network Infrastructure is Up-to-Date |
+| `iso27001` | `A.5.30` | ICT readiness for business continuity |
+| `soc2` | `A1.2` | Backup and Recovery Infrastructure |
+
+_Tags:_ `billing`, `manual-verify`
+
+---
+
+### `do-billing-payment-method-valid`
+
+**Primary payment method must not be near expiry** &middot; severity `high` &middot; service `billing` &middot; resource `digitalocean.account`
+
+An expired card pauses the account; account status drops to warning. DO doesn't expose card-expiry via API.
+
+_Remediation:_
+
+> Quarterly: confirm the card on file has ≥3 months until expiry. Add a backup method.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `12.1` | Ensure Network Infrastructure is Up-to-Date |
+| `iso27001` | `A.5.30` | ICT readiness for business continuity |
+| `soc2` | `A1.2` | Backup and Recovery Infrastructure |
+
+_Tags:_ `billing`, `manual-verify`
+
+---
+
+### `do-billing-reserved-commitments-reviewed`
+
+**DO Reserved (1y/3y) commitments reviewed against utilization** &middot; severity `low` &middot; service `billing` &middot; resource `digitalocean.account`
+
+DO reserved pricing is opt-in; without periodic review you either miss savings or over-commit on workloads that have moved.
+
+_Remediation:_
+
+> Quarterly: compare reserved-instance attribution vs actual droplet usage. Cancel under-utilized reservations.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `12.1` | Ensure Network Infrastructure is Up-to-Date |
+| `iso27001` | `A.5.30` | ICT readiness for business continuity |
+| `soc2` | `A1.1` | Capacity Management |
+
+_Tags:_ `billing`, `manual-verify`
+
+---
+
+### `do-billing-snapshot-retention-policy`
+
+**Snapshot retention policy must be documented + enforced** &middot; severity `low` &middot; service `billing` &middot; resource `digitalocean.account`
+
+DO snapshots accumulate forever at $0.05/GB/month. Without a documented retention SLA, the snapshot bill grows unbounded.
+
+_Remediation:_
+
+> Document retention (e.g. 90d for ad-hoc, 1y for release baselines). Implement via cron: `doctl compute snapshot list --format ID,Created` + age-based delete.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `11.2` | Perform Automated Backups |
+| `iso27001` | `A.5.34` | Privacy and protection of PII |
+| `soc2` | `A1.1` | Capacity Management |
+| `soc2` | `CC9.1` | Identifies and Mitigates Business Disruptions |
+
+_Tags:_ `billing`, `manual-verify`, `snapshots`
 
 ---
 
@@ -1223,6 +1833,28 @@ _Tags:_ `database`, `encryption-in-transit`, `tls`
 
 ---
 
+### `do-domain-caa-no-iodef`
+
+**CAA records should declare an iodef= contact** &middot; severity `low` &middot; service `domains` &middot; resource `digitalocean.domain`
+
+RFC 8659 'iodef' tag in a CAA record gives CAs a mailto:/URL to use when they reject an issuance request. Without iodef, CA-side rejections (e.g. domain validation failures from rogue Let's Encrypt requests) are invisible to the operator. The tag adds zero attack surface; missing it is hygiene.
+
+_Remediation:_
+
+> Add a CAA record: '0 iodef "mailto:secops@example.com"' alongside the existing 'issue "letsencrypt.org"' records.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `7.3` | Perform Automated Operating System Patch Management |
+| `iso27001` | `A.8.16` | Monitoring activities |
+| `soc2` | `CC7.2` | System Component Monitoring |
+
+_Tags:_ `caa`, `domains`, `reporting`, `tls`
+
+---
+
 ### `do-domain-caa-wildcard`
 
 **CAA records should name specific CAs, not allow any** &middot; severity `low` &middot; service `domains` &middot; resource `digitalocean.domain`
@@ -1243,6 +1875,161 @@ _Maps to:_
 | `soc2` | `CC6.7` | Transmission, Movement, and Disposal of Information |
 
 _Tags:_ `ca-hygiene`, `dns`, `tls`
+
+---
+
+### `do-domain-dkim-no-selector`
+
+**DKIM selector record(s) must be present** &middot; severity `high` &middot; service `domains` &middot; resource `digitalocean.domain`
+
+DKIM signs outgoing mail with a public key published at <selector>._domainkey.<domain>. Without at least one DKIM selector, DMARC 'pass' relies on SPF alignment alone — and any mail forwarded through an intermediary breaks the SPF chain. DKIM survives forwarding; SPF generally does not.
+
+_Remediation:_
+
+> Issue a key pair (typically RSA-2048) and publish the public key as a TXT record at '<selector>._domainkey'. Common selectors: 'google' (Google Workspace), 'k1' (Mailgun), 'pm' (Postmark), '<custom>' if rolling your own MTA. Rotate selectors annually with overlapping validity.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `9.4` | Restrict Unnecessary or Unauthorized Browser and Email Client Extensions |
+| `iso27001` | `A.8.20` | Networks security |
+| `soc2` | `CC6.7` | Transmission, Movement, and Disposal of Information |
+
+_Tags:_ `dkim`, `domains`, `email-auth`
+
+---
+
+### `do-domain-dmarc-no-rua`
+
+**DMARC rua= (aggregate reporting) must be configured** &middot; severity `medium` &middot; service `domains` &middot; resource `digitalocean.domain`
+
+Without rua= a domain receives no aggregate DMARC reports — every receiver evaluates the policy in silence. Aggregate reports are the only feedback loop for catching misconfigured senders BEFORE enforcement starts dropping legitimate mail.
+
+_Remediation:_
+
+> Append 'rua=mailto:dmarc-reports@yourdomain.com' to the _dmarc record. Common consumers: dmarcian, Postmark DMARC, Valimail, in-house parser into ELK.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `9.4` | Restrict Unnecessary or Unauthorized Browser and Email Client Extensions |
+| `iso27001` | `A.8.20` | Networks security |
+| `soc2` | `CC7.2` | System Component Monitoring |
+
+_Tags:_ `dmarc`, `domains`, `reporting`
+
+---
+
+### `do-domain-dmarc-no-ruf`
+
+**DMARC ruf= (forensic reporting) should be configured** &middot; severity `low` &middot; service `domains` &middot; resource `digitalocean.domain`
+
+ruf= asks receivers to forward forensic copies of failing messages. Coverage is patchy (Gmail does not honor ruf), but where it works it provides per-incident detail aggregate reports lack. Severity is low — ruf is best-effort, not a hard requirement.
+
+_Remediation:_
+
+> Append 'ruf=mailto:dmarc-forensics@yourdomain.com' to the _dmarc record. Use a dedicated mailbox; forensic reports can include PII from message bodies.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `9.4` | Restrict Unnecessary or Unauthorized Browser and Email Client Extensions |
+| `iso27001` | `A.8.20` | Networks security |
+| `soc2` | `CC7.2` | System Component Monitoring |
+
+_Tags:_ `best-effort`, `dmarc`, `domains`, `reporting`
+
+---
+
+### `do-domain-dmarc-pct-not-full`
+
+**DMARC pct= should be 100 once monitoring is complete** &middot; severity `low` &middot; service `domains` &middot; resource `digitalocean.domain`
+
+DMARC 'pct=' controls the percentage of messages subjected to the policy. During rollout, operators may stage pct=10 → pct=50 → pct=100. A production domain that's been on enforcement >30 days should be at pct=100 (or omit pct, which defaults to 100). Staying at lower pct indefinitely is a half-finished rollout.
+
+_Remediation:_
+
+> Raise pct stepwise as monitoring confirms no legitimate senders are caught. Target: pct=100 or omit the tag entirely.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `9.4` | Restrict Unnecessary or Unauthorized Browser and Email Client Extensions |
+| `iso27001` | `A.8.20` | Networks security |
+| `soc2` | `CC6.7` | Transmission, Movement, and Disposal of Information |
+
+_Tags:_ `dmarc`, `domains`, `rollout`
+
+---
+
+### `do-domain-dmarc-policy-not-strict`
+
+**DMARC policy must be quarantine or reject** &middot; severity `high` &middot; service `domains` &middot; resource `digitalocean.domain`
+
+A DMARC record with 'p=none' is a monitoring posture — receivers report failures but do nothing with them. Production domains should advance to 'p=quarantine' (mail to junk) or 'p=reject' (drop) once monitoring shows legitimate senders are DKIM/SPF-aligned. SOC2 CC6.7 + ISO A.8.20 + DMARC.org all recommend an enforcement policy.
+
+_Remediation:_
+
+> Update the _dmarc TXT record. Phase: start with 'p=quarantine; pct=10', monitor aggregate reports for 2 weeks, raise pct in 25% steps. Final state: 'p=reject; pct=100'.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `9.4` | Restrict Unnecessary or Unauthorized Browser and Email Client Extensions |
+| `iso27001` | `A.8.20` | Networks security |
+| `soc2` | `CC6.7` | Transmission, Movement, and Disposal of Information |
+| `soc2` | `CC7.2` | System Component Monitoring |
+
+_Tags:_ `dmarc`, `domains`, `email-auth`
+
+---
+
+### `do-domain-dmarc-subdomain-policy`
+
+**DMARC sp= (subdomain policy) must be set** &middot; severity `medium` &middot; service `domains` &middot; resource `digitalocean.domain`
+
+Without an explicit 'sp=' tag, subdomains inherit the parent's 'p=' — but only when 'sp=' is unset. Some receivers interpret missing sp= as 'unenforced'. Set sp= explicitly to 'quarantine' or 'reject' (typically the same as p=) so subdomain spoofing is caught regardless of receiver interpretation.
+
+_Remediation:_
+
+> Append 'sp=reject;' to the _dmarc TXT record (or 'sp=quarantine' if you're not at p=reject yet).
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `9.4` | Restrict Unnecessary or Unauthorized Browser and Email Client Extensions |
+| `iso27001` | `A.8.20` | Networks security |
+| `soc2` | `CC6.7` | Transmission, Movement, and Disposal of Information |
+
+_Tags:_ `dmarc`, `domains`, `subdomain`
+
+---
+
+### `do-domain-dnssec-via-registrar`
+
+**DNSSEC must be enabled at the registrar (DO does not manage DS records)** &middot; severity `high` &middot; service `domains` &middot; resource `digitalocean.domain`
+
+DigitalOcean managed DNS does NOT serve signed zones — DS records and zone signing happen at the registrar level. This is a hard limitation, not a misconfiguration. SOC2 CC6.7 and ISO A.8.20 require DNSSEC where the operating environment supports it; for DO this means verifying DS records at the registrar AND keeping the chain-of-trust intact when DO's nameservers change. This finding records the gap so the auditor can capture registrar-side evidence.
+
+_Remediation:_
+
+> At the registrar (Namecheap / Gandi / Cloudflare etc.): enable DNSSEC for the domain, generate / accept the DS record. Verify chain-of-trust via 'dig +dnssec example.com' (must see AD flag) or https://dnssec-analyzer.verisignlabs.com. Capture a screenshot of the registrar DNSSEC status for the audit pack.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `9.4` | Restrict Unnecessary or Unauthorized Browser and Email Client Extensions |
+| `iso27001` | `A.8.20` | Networks security |
+| `soc2` | `CC6.7` | Transmission, Movement, and Disposal of Information |
+
+_Tags:_ `dnssec`, `domains`, `manual-verify`, `unsupported`
 
 ---
 
@@ -1313,6 +2100,72 @@ _Maps to:_
 | `soc2` | `CC6.7` | Transmission, Movement, and Disposal of Information |
 
 _Tags:_ `dns`, `email-auth`, `spoofing`
+
+---
+
+### `do-domain-spf-not-strict-fail`
+
+**SPF must end in -all (hard fail), not ~all or ?all** &middot; severity `high` &middot; service `domains` &middot; resource `digitalocean.domain`
+
+The terminating qualifier in SPF determines what happens to messages NOT matched by any prior mechanism. '-all' is hard fail (drop); '~all' is soft fail (mark as suspicious); '?all' is neutral. Production domains should use '-all' once SPF coverage is verified — anything weaker undermines downstream DMARC enforcement.
+
+_Remediation:_
+
+> Change the trailing qualifier in the root TXT record from '~all'/'?all'/'+all' to '-all'. Verify with the DMARC aggregate reports first to confirm no legitimate senders will be hard-failed.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `9.4` | Restrict Unnecessary or Unauthorized Browser and Email Client Extensions |
+| `iso27001` | `A.8.20` | Networks security |
+| `soc2` | `CC6.7` | Transmission, Movement, and Disposal of Information |
+
+_Tags:_ `domains`, `email-auth`, `spf`
+
+---
+
+### `do-domain-spf-uses-redirect`
+
+**SPF should not use redirect= for primary policy** &middot; severity `low` &middot; service `domains` &middot; resource `digitalocean.domain`
+
+redirect= delegates the entire SPF decision to another domain. This silently inherits whatever that domain publishes — a change at the redirect target changes your SPF posture without your knowledge. Per RFC 7208 §6.1 redirect= is discouraged; prefer 'include:<domain>' which adds rules without giving up the terminating all qualifier.
+
+_Remediation:_
+
+> Replace 'redirect=<other>.com' with 'include:<other>.com -all'. The include mechanism layers the other domain's allowed senders into your policy without surrendering control of the terminator.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `9.4` | Restrict Unnecessary or Unauthorized Browser and Email Client Extensions |
+| `iso27001` | `A.8.20` | Networks security |
+| `soc2` | `CC6.7` | Transmission, Movement, and Disposal of Information |
+
+_Tags:_ `best-practice`, `domains`, `spf`
+
+---
+
+### `do-droplet-aged-no-rightsizing`
+
+**Droplets >180 days old should be reviewed for right-sizing** &middot; severity `low` &middot; service `droplets` &middot; resource `digitalocean.droplet`
+
+Droplet sizes commonly outgrow or undergrow the workload over 6 months. DO doesn't auto-rightsize. A periodic review of long-running droplets vs their CPU/memory utilization history catches both under- and over-provisioning before they either fail SLO or burn budget.
+
+_Remediation:_
+
+> Review the monitoring dashboard for sustained CPU + memory utilization over 30 days. If sustained < 30%, resize down: `doctl compute droplet-action resize <id> --size s-1vcpu-2gb`. If > 80%, resize up.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `12.1` | Ensure Network Infrastructure is Up-to-Date |
+| `iso27001` | `A.5.30` | ICT readiness for business continuity |
+| `soc2` | `A1.1` | Capacity Management |
+
+_Tags:_ `cost`, `droplets`, `rightsizing`
 
 ---
 
@@ -1507,6 +2360,28 @@ _Tags:_ `droplet`, `hygiene`
 
 ---
 
+### `do-droplet-stopped-too-long`
+
+**Stopped droplets accumulate cost without serving traffic** &middot; severity `low` &middot; service `droplets` &middot; resource `digitalocean.droplet`
+
+DO bills droplets in 'off' state at standard rate. A droplet powered off > 30 days is either staging-leftover or a forgotten experiment. Either way: not generating value.
+
+_Remediation:_
+
+> Audit: `doctl compute droplet list --format ID,Name,Status,Created`. For genuinely orphaned droplets, snapshot then destroy: `doctl compute droplet-action snapshot <id> --snapshot-name backup` then `doctl compute droplet delete <id> --force`.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `1.1` | Establish and Maintain Detailed Enterprise Asset Inventory |
+| `iso27001` | `A.5.30` | ICT readiness for business continuity |
+| `soc2` | `A1.1` | Capacity Management |
+
+_Tags:_ `cost`, `droplets`, `hygiene`
+
+---
+
 ### `do-firewall-any-port-from-any`
 
 **Firewalls must not allow any-port from the public internet** &middot; severity `critical` &middot; service `firewalls` &middot; resource `digitalocean.firewall`
@@ -1652,6 +2527,73 @@ _Tags:_ `exposure`, `network`, `ssh`
 
 ---
 
+### `do-functions-access-key-rotation`
+
+**Functions access keys must be rotated on a documented cadence** &middot; severity `high` &middot; service `functions` &middot; resource `digitalocean.functions_namespace`
+
+Functions access keys are long-lived bearer credentials that authorize invocation of every function in the namespace. godo does not expose key creation timestamps; rotation cadence must be tracked manually. SOC2 CC6.3 + ISO A.5.16 + CIS 5.4 each require ≤90d rotation on long-lived credentials.
+
+_Remediation:_
+
+> Run quarterly: `doctl serverless namespace list-keys <ns>`, revoke any key older than 90 days, issue replacements, rotate consumers. Document the procedure + last-rotation in the runbook.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `5.4` | Restrict Administrator Privileges to Dedicated Administrator Accounts |
+| `iso27001` | `A.5.16` | Identity management |
+| `iso27001` | `A.8.5` | Secure authentication |
+| `soc2` | `CC6.3` | Authorization, Modification, and Removal |
+
+_Tags:_ `credentials`, `functions`, `manual-verify`
+
+---
+
+### `do-functions-cold-start-mitigation`
+
+**Latency-sensitive functions must mitigate cold starts** &middot; severity `low` &middot; service `functions` &middot; resource `digitalocean.functions_namespace`
+
+DO Functions cold-start latency can reach multi-second on first invocation after idle. Latency-sensitive paths (synchronous webhook handlers, customer-facing APIs) need a scheduled keepalive trigger or a different runtime entirely. Hygiene check; the right mitigation depends on the workload.
+
+_Remediation:_
+
+> Add a SCHEDULED trigger at 30s-1m cadence that invokes each cold-sensitive function: `doctl serverless trigger create --type SCHEDULED --cron '* * * * *' <fn>`. Cost is low; impact on p99 latency is meaningful.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `11.2` | Perform Automated Backups |
+| `iso27001` | `A.5.30` | ICT readiness for business continuity |
+| `soc2` | `A1.1` | Capacity Management |
+
+_Tags:_ `cold-start`, `functions`, `manual-verify`
+
+---
+
+### `do-functions-disabled-trigger-ratio`
+
+**Disabled-trigger ratio must be 0 (no orphan triggers)** &middot; severity `low` &middot; service `functions` &middot; resource `digitalocean.functions_namespace`
+
+Disabled triggers indicate either an in-progress migration left half-finished or a once-used schedule abandoned. Either way they accumulate as cognitive cost on every audit. Existing do-functions-disabled-triggers covers "all"; this check counts the ratio so partial drift is visible.
+
+_Remediation:_
+
+> List + decide: `doctl serverless trigger list <ns>`. Either re-enable or delete with `doctl serverless trigger delete`.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `1.1` | Establish and Maintain Detailed Enterprise Asset Inventory |
+| `iso27001` | `A.5.9` | Inventory of information and other associated assets |
+| `soc2` | `CC8.1` | Change Management Process |
+
+_Tags:_ `functions`, `hygiene`, `triggers`
+
+---
+
 ### `do-functions-disabled-triggers`
 
 **Functions namespaces should not have disabled triggers** &middot; severity `low` &middot; service `functions` &middot; resource `digitalocean.functions_namespace`
@@ -1671,6 +2613,51 @@ _Maps to:_
 | `soc2` | `CC9.1` | Identifies and Mitigates Business Disruptions |
 
 _Tags:_ `functions`, `hygiene`
+
+---
+
+### `do-functions-env-vars-plain`
+
+**Functions env vars containing secrets must use --encrypted** &middot; severity `high` &middot; service `functions` &middot; resource `digitalocean.functions_namespace`
+
+DO Functions support encrypted-at-rest env vars via `doctl serverless functions deploy --encrypted`. Without the flag, env vars are stored in plaintext alongside the function package. The DO API does not differentiate encrypted vs plain in the namespace listing.
+
+_Remediation:_
+
+> Re-deploy with `doctl serverless deploy --env-file .env --encrypted`. Audit existing deploys via the dashboard's per-function env-var inspector.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `3.11` | Encrypt Sensitive Data at Rest |
+| `iso27001` | `A.8.24` | Use of cryptography |
+| `iso27001` | `A.8.5` | Secure authentication |
+| `soc2` | `CC6.7` | Transmission, Movement, and Disposal of Information |
+
+_Tags:_ `functions`, `manual-verify`, `secrets`
+
+---
+
+### `do-functions-log-export`
+
+**Functions logs must be exported to a long-retention sink** &middot; severity `high` &middot; service `functions` &middot; resource `digitalocean.functions_namespace`
+
+DO Functions logs are accessible via `doctl serverless activations logs --last` with a short retention window. SOC2 CC7.2 + ISO A.8.15 expect ≥90d retention of invocation logs. No native log-forwarding configuration exists; operators ship logs from inside the function (HTTP to Datadog / Logtail / Splunk).
+
+_Remediation:_
+
+> Wrap each function with a try/finally that POSTs the invocation record to a log sink. OR pull via doctl on a cron and ship to S3/Spaces (`doctl serverless activations list -o json | curl ...`). Document retention SLA.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `8.5` | Collect Detailed Audit Logs |
+| `iso27001` | `A.8.15` | Logging |
+| `soc2` | `CC7.2` | System Component Monitoring |
+
+_Tags:_ `functions`, `logging`, `manual-verify`
 
 ---
 
@@ -1696,6 +2683,75 @@ _Tags:_ `functions`, `hygiene`
 
 ---
 
+### `do-functions-namespace-no-access-key`
+
+**Functions namespaces must have at least one access key registered** &middot; severity `high` &middot; service `functions` &middot; resource `digitalocean.functions_namespace`
+
+A namespace without an access key has no way to invoke functions outside the DO control panel. Either the namespace is unused (consider deletion) or the operator is invoking with their personal session token (poor audit trail). Either way: not a production posture.
+
+_Remediation:_
+
+> Create a scoped key: `doctl serverless functions invoke --access-key` flow requires a registered key. Issue via `doctl serverless namespace add-key` (or the dashboard).
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `5.1` | Establish and Maintain an Inventory of Accounts |
+| `cis-v8` | `5.4` | Restrict Administrator Privileges to Dedicated Administrator Accounts |
+| `iso27001` | `A.5.15` | Access control |
+| `iso27001` | `A.5.16` | Identity management |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC6.3` | Authorization, Modification, and Removal |
+
+_Tags:_ `credentials`, `functions`
+
+---
+
+### `do-functions-namespace-no-environment-tag`
+
+**Functions namespaces should carry an environment label** &middot; severity `low` &middot; service `functions` &middot; resource `digitalocean.functions_namespace`
+
+Without an environment label in the namespace name (prefix or suffix), production + non-prod namespaces are indistinguishable to billing reports + on-call dashboards. DO Functions namespaces don't carry separate tag fields; convention has to live in the label.
+
+_Remediation:_
+
+> Name new namespaces with explicit prefix: `functions-prod`, `functions-staging`. Existing namespaces need recreate to rename — plan a migration window.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `1.1` | Establish and Maintain Detailed Enterprise Asset Inventory |
+| `iso27001` | `A.5.9` | Inventory of information and other associated assets |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `functions`, `manual-verify`, `naming`
+
+---
+
+### `do-functions-namespace-no-region`
+
+**Functions namespaces must declare an explicit region** &middot; severity `medium` &middot; service `functions` &middot; resource `digitalocean.functions_namespace`
+
+An unset region means functions deploy wherever DO defaults — typically NYC1 — which may not match data-residency requirements. SOC2 CC6.1 + ISO A.5.31 expect regional placement to be a deliberate decision recorded against the workload.
+
+_Remediation:_
+
+> Recreate the namespace with --region: `doctl serverless namespaces create --label <l> --region nyc1`. Migrate existing functions via `doctl serverless deploy`.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `3.5` | Securely Dispose of Data |
+| `iso27001` | `A.5.31` | Legal, statutory, regulatory, and contractual requirements |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `functions`, `region`, `residency`
+
+---
+
 ### `do-functions-no-access-keys`
 
 **Functions namespaces should have at least one access key** &middot; severity `low` &middot; service `functions` &middot; resource `digitalocean.functions_namespace`
@@ -1716,6 +2772,139 @@ _Maps to:_
 | `soc2` | `CC6.3` | Authorization, Modification, and Removal |
 
 _Tags:_ `credential-hygiene`, `functions`
+
+---
+
+### `do-functions-runtime-eol`
+
+**Functions runtimes must not be EOL (Node 14/16, Python 3.8, etc.)** &middot; severity `high` &middot; service `functions` &middot; resource `digitalocean.functions_namespace`
+
+DO Functions support a fixed list of runtimes; older versions move to EOL and stop receiving CVE patches. Per-function runtime is NOT in the public namespace API — operators must check via project.yml or the dashboard.
+
+_Remediation:_
+
+> Inspect: `doctl serverless functions list <pkg>/<fn>` shows the runtime per function. Update project.yml runtime: "nodejs:20" (or python:3.11), then `doctl serverless deploy`.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `7.3` | Perform Automated Operating System Patch Management |
+| `cis-v8` | `7.4` | Perform Automated Application Patch Management |
+| `iso27001` | `A.8.8` | Management of technical vulnerabilities |
+| `soc2` | `CC7.1` | Detection and Monitoring of Vulnerabilities |
+
+_Tags:_ `functions`, `manual-verify`, `patching`, `runtime`
+
+---
+
+### `do-functions-source-secret-scan`
+
+**Function source must pass secret scanning before deploy** &middot; severity `high` &middot; service `functions` &middot; resource `digitalocean.functions_namespace`
+
+`doctl serverless deploy` packages local source verbatim — no secret-scan gate. Any AWS key / DO token committed to the function repo ships to production. SOC2 CC6.7 + CIS 16.4 each require pre-deploy credential hygiene.
+
+_Remediation:_
+
+> Add a pre-deploy step in CI: `gitleaks detect` or `trufflehog filesystem .` against the function source tree. Block deploy on any non-zero exit.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `16.4` | Establish and Manage an Inventory of Third-Party Software Components |
+| `iso27001` | `A.8.5` | Secure authentication |
+| `soc2` | `CC6.7` | Transmission, Movement, and Disposal of Information |
+
+_Tags:_ `functions`, `manual-verify`, `secret-scan`
+
+---
+
+### `do-fw-empty-tag-source`
+
+**Firewall tag sources should resolve to ≥1 droplet** &middot; severity `low` &middot; service `firewalls` &middot; resource `digitalocean.firewall`
+
+A rule sourcing 'tag:bastion' resolves at runtime to all droplets carrying that tag. If 0 droplets do, the rule silently allows nothing — usually a typo. godo doesn't surface tag resolution at firewall-list time; verify manually.
+
+_Remediation:_
+
+> List the rules: `doctl compute firewall get <id>`. For each tag source, run `doctl compute droplet list --tag-name <tag>` and confirm ≥1 droplet.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `4.1` | Establish and Maintain a Secure Configuration Process |
+| `iso27001` | `A.5.9` | Inventory of information and other associated assets |
+| `soc2` | `CC8.1` | Change Management Process |
+
+_Tags:_ `firewalls`, `manual-verify`, `tags`
+
+---
+
+### `do-fw-icmp-from-any`
+
+**ICMP from 0.0.0.0/0 leaks host enumeration** &middot; severity `low` &middot; service `firewalls` &middot; resource `digitalocean.firewall`
+
+Allowing ICMP (ping) from the internet lets attackers enumerate live droplets at zero cost. Restrict to known monitoring sources or block entirely.
+
+_Remediation:_
+
+> Remove the wide ICMP rule + replace with a tight one: `doctl compute firewall add-rules <id> --inbound-rules "protocol:icmp,address:10.0.0.0/8"`.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `4.1` | Establish and Maintain a Secure Configuration Process |
+| `iso27001` | `A.8.20` | Networks security |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `enumeration`, `firewalls`, `icmp`
+
+---
+
+### `do-fw-inbound-rules-duplicated`
+
+**Firewall must not have duplicate inbound rules** &middot; severity `low` &middot; service `firewalls` &middot; resource `digitalocean.firewall`
+
+Duplicate rules add no security but inflate the rule set. DO firewalls cap at 50 rules per firewall — duplicates eat headroom. Common cause: scripted rule additions without a presence check.
+
+_Remediation:_
+
+> Audit + dedupe: `doctl compute firewall get <id>` shows the full rule list. Remove duplicates with `doctl compute firewall remove-rules`.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `4.1` | Establish and Maintain a Secure Configuration Process |
+| `iso27001` | `A.5.9` | Inventory of information and other associated assets |
+| `soc2` | `CC8.1` | Change Management Process |
+
+_Tags:_ `firewalls`, `hygiene`
+
+---
+
+### `do-fw-outbound-unrestricted`
+
+**Firewalls should restrict outbound traffic** &middot; severity `medium` &middot; service `firewalls` &middot; resource `digitalocean.firewall`
+
+Empty outbound_rules means default-allow-all egress. Modern compromise patterns rely on outbound exfiltration; restricting egress (allow-list to known sinks) limits blast radius. SOC2 CC6.6, ISO A.8.20, CIS 13.4 expect egress controls.
+
+_Remediation:_
+
+> Define outbound rules in the firewall spec; allow only the destinations the workload needs (DB IPs, API endpoints, package mirrors). Anything else gets dropped.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `13.4` | Perform Traffic Filtering Between Network Segments |
+| `iso27001` | `A.8.20` | Networks security |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `egress`, `firewalls`
 
 ---
 
@@ -1856,6 +3045,28 @@ _Tags:_ `hygiene`, `lb`
 
 ---
 
+### `do-lb-proxy-protocol-mismatch`
+
+**PROXY-protocol must match backend support** &middot; severity `medium` &middot; service `load_balancers` &middot; resource `digitalocean.load_balancer`
+
+When the LB sends PROXY-protocol headers but the backend (nginx, etc.) doesn't decode them, every request fails parsing. The DO API exposes the LB's proxy_protocol setting, but not the backend's — verify alignment manually.
+
+_Remediation:_
+
+> If LB has proxy_protocol=true, backend nginx needs 'real_ip_header proxy_protocol' + 'set_real_ip_from <LB CIDR>'. If LB has proxy_protocol=false, backends see the LB's IP — X-Forwarded-For carries the client IP.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `8.5` | Collect Detailed Audit Logs |
+| `iso27001` | `A.8.15` | Logging |
+| `soc2` | `CC7.2` | System Component Monitoring |
+
+_Tags:_ `load_balancers`, `manual-verify`, `proxy-protocol`
+
+---
+
 ### `do-lb-redirect-http-to-https`
 
 **Load balancers serving HTTP must redirect to HTTPS** &middot; severity `high` &middot; service `load_balancers` &middot; resource `digitalocean.load_balancer`
@@ -1878,6 +3089,74 @@ _Maps to:_
 | `soc2` | `CC6.7` | Transmission, Movement, and Disposal of Information |
 
 _Tags:_ `encryption-in-transit`, `lb`, `tls`
+
+---
+
+### `do-lb-ssl-cipher-floor`
+
+**LB-terminated TLS must drop legacy ciphers** &middot; severity `medium` &middot; service `load_balancers` &middot; resource `digitalocean.load_balancer`
+
+DO LBs run a managed TLS terminator. Cipher / protocol selection is platform-side, not customer-configurable. PCI DSS 4.2 + SOC2 CC6.7 expect documented protocol/cipher floors. Validate the LB's current capabilities via testssl.sh or sslyze and record in the audit pack.
+
+_Remediation:_
+
+> Run `testssl.sh https://<lb-host>` and capture the protocol + cipher report. If unacceptable ciphers appear (SSLv3, RC4, 3DES, NULL, EXPORT), open a DO support ticket. Document in the audit pack.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `3.10` | Encrypt Sensitive Data in Transit |
+| `iso27001` | `A.8.24` | Use of cryptography |
+| `soc2` | `CC6.7` | Transmission, Movement, and Disposal of Information |
+
+_Tags:_ `ciphers`, `load_balancers`, `manual-verify`, `tls`
+
+---
+
+### `do-lb-sticky-cookie-no-httponly`
+
+**Sticky-session cookies must be HTTPOnly** &middot; severity `medium` &middot; service `load_balancers` &middot; resource `digitalocean.load_balancer`
+
+DO LB sticky sessions issue a cookie back to clients. The DO API doesn't surface the cookie's flags (HttpOnly, Secure, SameSite) — operators must verify via curl against the LB. Per OWASP, the affinity cookie should be HttpOnly + Secure + SameSite=Lax.
+
+_Remediation:_
+
+> DO LB cookie flags are not configurable; if the defaults don't meet your policy, terminate stickiness at the application + use a non-LB cookie under your control.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `3.3` | Configure Data Access Control Lists |
+| `iso27001` | `A.8.5` | Secure authentication |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `load_balancers`, `manual-verify`, `sticky`
+
+---
+
+### `do-lb-tls-passthrough-misconfigured`
+
+**TLS passthrough must pair with an HTTPS-aware backend** &middot; severity `high` &middot; service `load_balancers` &middot; resource `digitalocean.load_balancer`
+
+tls_passthrough=true means the LB does not terminate TLS — the backend must speak TLS on the entry port. If the backend speaks plain HTTP, every connection will fail. Symptom: 502 / handshake errors at the LB.
+
+_Remediation:_
+
+> Either: (1) flip tls_passthrough=false + add a managed cert at the LB, OR (2) configure backend droplets to speak TLS on the entry port (typically 443).
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `3.10` | Encrypt Sensitive Data in Transit |
+| `iso27001` | `A.8.20` | Networks security |
+| `iso27001` | `A.8.24` | Use of cryptography |
+| `soc2` | `A1.2` | Backup and Recovery Infrastructure |
+| `soc2` | `CC6.7` | Transmission, Movement, and Disposal of Information |
+
+_Tags:_ `configuration`, `load_balancers`, `tls`
 
 ---
 
@@ -1970,6 +3249,28 @@ _Tags:_ `projects`
 
 ---
 
+### `do-project-no-purpose`
+
+**Projects must declare a non-default purpose** &middot; severity `low` &middot; service `projects` &middot; resource `digitalocean.project`
+
+DO projects carry a 'purpose' field used by billing breakouts. Default purpose ('Service or API') is the catch-all new projects ship with — empty or default purpose makes per-project cost attribution noise.
+
+_Remediation:_
+
+> `doctl projects update <id> --purpose='Production Web Application'`. Conventional purposes: Web Application, Operational, Trying out DigitalOcean, Class project / educational purposes.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `1.1` | Establish and Maintain Detailed Enterprise Asset Inventory |
+| `iso27001` | `A.5.9` | Inventory of information and other associated assets |
+| `soc2` | `CC8.1` | Change Management Process |
+
+_Tags:_ `billing`, `projects`, `tagging`
+
+---
+
 ### `do-registry-empty`
 
 **Container registries should host at least one repository** &middot; severity `low` &middot; service `registry` &middot; resource `digitalocean.registry`
@@ -2058,6 +3359,28 @@ _Tags:_ `projects`, `reserved-ip`
 
 ---
 
+### `do-reserved-ip-no-region`
+
+**Reserved IPs must declare a region** &middot; severity `low` &middot; service `networking` &middot; resource `digitalocean.reserved_ip`
+
+Reserved IPs are region-locked; the API should always return a region. A missing region usually indicates a stale data-collection error or an in-migration reserved IP. Either way: not a valid steady state.
+
+_Remediation:_
+
+> Inspect: `doctl compute reserved-ip get <ip>`. If the region is genuinely missing, delete + recreate via `doctl compute reserved-ip create --region nyc3`.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `1.1` | Establish and Maintain Detailed Enterprise Asset Inventory |
+| `iso27001` | `A.5.9` | Inventory of information and other associated assets |
+| `soc2` | `CC8.1` | Change Management Process |
+
+_Tags:_ `networking`, `reserved-ip`
+
+---
+
 ### `do-reserved-ip-orphan`
 
 **Reserved IPs should be attached to a droplet** &middot; severity `low` &middot; service `reserved_ips` &middot; resource `digitalocean.reserved_ip`
@@ -2125,6 +3448,31 @@ _Tags:_ `cost`, `hygiene`, `snapshot`
 
 ---
 
+### `do-spaces-bucket-audit-pairing`
+
+**Audit-relevant buckets must have encryption AND logging both on** &middot; severity `high` &middot; service `spaces` &middot; resource `digitalocean.spaces_bucket`
+
+Two checks already exist for encryption + logging in isolation; this composite check fails when EITHER is off, matching how auditors evaluate the pair. ISO A.5.34 + A.8.15 each require encryption + audit logs as a pair; a bucket with one but not the other doesn't carry an audit narrative.
+
+_Remediation:_
+
+> Enable both: 'aws s3api put-bucket-encryption ...' + 'aws s3api put-bucket-logging ...' against the Spaces endpoint. Logging target should be a dedicated bucket (see do-spaces-bucket-logging-self-target).
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `3.11` | Encrypt Sensitive Data at Rest |
+| `cis-v8` | `8.2` | Collect Audit Logs |
+| `iso27001` | `A.5.34` | Privacy and protection of PII |
+| `iso27001` | `A.8.15` | Logging |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC7.2` | System Component Monitoring |
+
+_Tags:_ `audit`, `encryption`, `logging`, `spaces`
+
+---
+
 ### `do-spaces-bucket-cors-wildcard`
 
 **Spaces buckets must not use wildcard CORS origins** &middot; severity `medium` &middot; service `spaces` &middot; resource `digitalocean.spaces_bucket`
@@ -2145,6 +3493,122 @@ _Maps to:_
 | `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `cors`, `exposure`, `spaces`
+
+---
+
+### `do-spaces-bucket-encryption-key-rotation-documented`
+
+**Spaces encryption uses platform-managed keys — verify rotation cadence** &middot; severity `medium` &middot; service `spaces` &middot; resource `digitalocean.spaces_bucket`
+
+DO Spaces server-side encryption is SSE-S3-equivalent: DigitalOcean manages the keys. Customer-managed keys (SSE-C, SSE-KMS-equivalent) are not exposed. SOC2 CC6.7 + ISO A.8.24 each ask for documented rotation cadence on encryption keys; since the keys are out of scope, the audit obligation falls on DigitalOcean's published SOC 2 Type 2 report. This finding records the gap so the auditor knows to reference DO's report rather than expecting a customer-side rotation log.
+
+_Remediation:_
+
+> Obtain DigitalOcean's current SOC 2 Type 2 report from the security portal (https://www.digitalocean.com/trust). Cite section addressing CC6.7 encryption-key management in your audit narrative. No customer-side action.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `3.11` | Encrypt Sensitive Data at Rest |
+| `iso27001` | `A.8.24` | Use of cryptography |
+| `soc2` | `CC6.7` | Transmission, Movement, and Disposal of Information |
+
+_Tags:_ `encryption`, `key-rotation`, `manual-verify`, `spaces`
+
+---
+
+### `do-spaces-bucket-lifecycle-no-expiration`
+
+**Lifecycle configuration must include an expiration rule** &middot; severity `medium` &middot; service `spaces` &middot; resource `digitalocean.spaces_bucket`
+
+A bucket with lifecycle enabled but zero expiration rules is paying full Spaces storage for objects nobody is pruning. The single most common lifecycle misconfiguration: the rule only sets a transition or MPU abort, not an actual TTL on objects. SOC2 CC9.1 + CIS 3.5 expect documented retention; this finding asserts the lifecycle config implements one.
+
+_Remediation:_
+
+> Add an Expiration block: in the dashboard's bucket settings or via the S3 API. Example AWS-CLI shape: 'aws s3api put-bucket-lifecycle-configuration --bucket NAME --lifecycle-configuration file://lifecycle.json --endpoint-url https://REGION.digitaloceanspaces.com'.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `3.5` | Securely Dispose of Data |
+| `iso27001` | `A.5.13` | Labelling of information |
+| `iso27001` | `A.5.34` | Privacy and protection of PII |
+| `soc2` | `CC9.1` | Identifies and Mitigates Business Disruptions |
+
+_Tags:_ `cost`, `lifecycle`, `retention`, `spaces`
+
+---
+
+### `do-spaces-bucket-lifecycle-no-mpu-cleanup`
+
+**Lifecycle configuration must abort incomplete multipart uploads** &middot; severity `medium` &middot; service `spaces` &middot; resource `digitalocean.spaces_bucket`
+
+Multipart uploads that never call CompleteMultipartUpload leave orphaned parts billed at full Spaces storage rate, sometimes invisibly for years. A lifecycle rule with AbortIncompleteMultipartUpload (DaysAfterInitiation = 7 is the conventional value) reaps these on a schedule. The cost impact is often material; the audit impact is that orphaned parts are not enumerated by GetObject so they're invisible to standard inventory scans.
+
+_Remediation:_
+
+> Add an AbortIncompleteMultipartUpload rule to the existing lifecycle config: 'DaysAfterInitiation: 7' is the conventional default. The S3 API accepts this alongside existing Expiration rules in one PutBucketLifecycleConfiguration call.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `3.5` | Securely Dispose of Data |
+| `iso27001` | `A.5.13` | Labelling of information |
+| `soc2` | `A1.2` | Backup and Recovery Infrastructure |
+| `soc2` | `CC9.1` | Identifies and Mitigates Business Disruptions |
+
+_Tags:_ `cost`, `lifecycle`, `multipart`, `spaces`
+
+---
+
+### `do-spaces-bucket-logging-self-target`
+
+**Server-access log target must be a different bucket** &middot; severity `high` &middot; service `spaces` &middot; resource `digitalocean.spaces_bucket`
+
+Targeting server-access logs at the bucket they describe creates a feedback loop: every access-log write is itself a new access logged in the same bucket, ballooning the dataset and making any retention policy meaningless. SOC2 CC7.3 and ISO A.8.15 expect log records to be tamper-segregated; co-mingling target + source defeats that.
+
+_Remediation:_
+
+> Designate a dedicated 'access-logs' bucket with a restrictive lifecycle (90d expiration, no public access, separate access key with logs:Write-only). Update the source bucket's logging config to target the dedicated bucket.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `8.2` | Collect Audit Logs |
+| `cis-v8` | `8.5` | Collect Detailed Audit Logs |
+| `iso27001` | `A.8.15` | Logging |
+| `soc2` | `CC7.2` | System Component Monitoring |
+| `soc2` | `CC7.3` | Security Incident Evaluation |
+
+_Tags:_ `logging`, `segregation`, `spaces`
+
+---
+
+### `do-spaces-bucket-mfa-delete-via-team-iam`
+
+**DO Spaces does not support MFA-Delete — verify via team IAM controls** &middot; severity `medium` &middot; service `spaces` &middot; resource `digitalocean.spaces_bucket`
+
+S3 MFA-Delete requires an MFA token to call DeleteObject or PutBucketVersioning. DO Spaces does not implement this. The compensating control is team-level: require 2FA on the team (do-account-mfa-required) AND restrict the Spaces access key permissions so delete operations require a separate least-privilege key whose use is logged. CIS 3.3 and SOC2 CC6.3 each expect deletion to be a privileged operation.
+
+_Remediation:_
+
+> Three layers: (1) ensure team 2FA is enforced; (2) issue a separate Spaces access key for any role that needs delete; (3) restrict that key to specific buckets via the bucket policy. See do-spaces-key-fullaccess for the existing scope-of-key check.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `3.3` | Configure Data Access Control Lists |
+| `cis-v8` | `6.5` | Require MFA for Administrative Access |
+| `iso27001` | `A.5.15` | Access control |
+| `iso27001` | `A.5.18` | Access rights |
+| `soc2` | `CC6.3` | Authorization, Modification, and Removal |
+
+_Tags:_ `manual-verify`, `mfa-delete`, `spaces`, `unsupported`
 
 ---
 
@@ -2239,6 +3703,52 @@ _Tags:_ `backup`, `recovery`, `spaces`
 
 ---
 
+### `do-spaces-bucket-object-lock-via-app-layer`
+
+**DO Spaces does not support S3 Object Lock — verify app-layer immutability** &middot; severity `high` &middot; service `spaces` &middot; resource `digitalocean.spaces_bucket`
+
+S3 Object Lock provides WORM (write-once-read-many) semantics required by SEC 17a-4, FINRA, CFTC, HIPAA, and some PCI scenarios. DO Spaces does not implement Object Lock — any compliance regime requiring WORM must be satisfied via application-layer immutability (content-addressed storage, hash-locked manifests, off-platform replication to an object-lock-capable target). This finding flags the gap so the auditor can record the compensating control.
+
+_Remediation:_
+
+> If WORM is a regulatory requirement: replicate audit-relevant writes off-Spaces to an S3 Object Lock target (AWS S3, Backblaze B2 with Object Lock, MinIO with WORM mode) and document the application-layer hash-chain. Otherwise, waive via waivers.yaml citing the absence of WORM regulatory requirements.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `3.5` | Securely Dispose of Data |
+| `iso27001` | `A.5.13` | Labelling of information |
+| `iso27001` | `A.5.34` | Privacy and protection of PII |
+| `soc2` | `CC9.1` | Identifies and Mitigates Business Disruptions |
+
+_Tags:_ `manual-verify`, `object-lock`, `spaces`, `unsupported`
+
+---
+
+### `do-spaces-bucket-policy-required`
+
+**Production Spaces buckets must declare an explicit bucket policy** &middot; severity `medium` &middot; service `spaces` &middot; resource `digitalocean.spaces_bucket`
+
+Spaces buckets default to no bucket policy — access is governed solely by access keys and ACLs. SOC2 CC6.1 and ISO A.5.15 expect documented authorization rules; the bucket policy is the only structured surface where a Spaces bucket can record an explicit-deny posture (e.g. Deny on Principal:* for s3:GetObject) that survives misconfigured ACLs.
+
+_Remediation:_
+
+> Author a policy that explicitly denies the actions you never want — public reads, ACL changes, multipart abort. Apply via 'aws s3api put-bucket-policy --bucket NAME --policy file://policy.json --endpoint-url https://REGION.digitaloceanspaces.com'. DO docs: https://docs.digitalocean.com/products/spaces/how-to/manage-access/.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `3.3` | Configure Data Access Control Lists |
+| `iso27001` | `A.5.15` | Access control |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+| `soc2` | `CC6.3` | Authorization, Modification, and Removal |
+
+_Tags:_ `access-control`, `policy`, `spaces`
+
+---
+
 ### `do-spaces-bucket-public-acl`
 
 **Spaces buckets must not grant public ACLs** &middot; severity `critical` &middot; service `spaces` &middot; resource `digitalocean.spaces_bucket`
@@ -2261,6 +3771,53 @@ _Maps to:_
 | `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `data-exposure`, `public-access`, `spaces`
+
+---
+
+### `do-spaces-bucket-replication-via-external-sync`
+
+**DO Spaces does not support cross-region replication — verify external sync** &middot; severity `high` &middot; service `spaces` &middot; resource `digitalocean.spaces_bucket`
+
+S3 Cross-Region Replication (CRR) is the standard availability + durability control for object stores: a single-region outage doesn't lose objects, RPO ≈ minutes. DO Spaces does not implement CRR. SOC2 A1.2 + ISO A.5.30 each require a documented availability strategy; this finding flags the gap so the auditor can confirm an out-of-band sync (rclone cron, custom job) is in place.
+
+_Remediation:_
+
+> Run a periodic 'rclone sync' between the source Spaces region and a target (different Spaces region OR a different provider). Capture the cron schedule + last-success timestamp in the runbook. If a multi-region availability SLA isn't a business requirement, waive via waivers.yaml.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `11.2` | Perform Automated Backups |
+| `iso27001` | `A.5.30` | ICT readiness for business continuity |
+| `iso27001` | `A.8.13` | Information backup |
+| `soc2` | `A1.2` | Backup and Recovery Infrastructure |
+| `soc2` | `CC9.1` | Identifies and Mitigates Business Disruptions |
+
+_Tags:_ `manual-verify`, `replication`, `spaces`, `unsupported`
+
+---
+
+### `do-spaces-bucket-versioning-requires-lifecycle`
+
+**Versioned buckets must declare a lifecycle policy** &middot; severity `medium` &middot; service `spaces` &middot; resource `digitalocean.spaces_bucket`
+
+Versioning without lifecycle is a cost-leak pattern: every overwrite + every delete creates a non-current version that's billed at full storage rate, forever. SOC2 A1.2 + CIS 3.5 expect retention and capacity controls together; this finding asserts the cost dimension of the controls pair is in place.
+
+_Remediation:_
+
+> Add a lifecycle rule with NoncurrentVersionExpiration (commonly 30-90 days). Apply via the S3 API or dashboard. Pair with the do-spaces-bucket-lifecycle-no-expiration check to ensure the rule covers current versions too.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `3.5` | Securely Dispose of Data |
+| `iso27001` | `A.5.34` | Privacy and protection of PII |
+| `soc2` | `A1.2` | Backup and Recovery Infrastructure |
+| `soc2` | `CC9.1` | Identifies and Mitigates Business Disruptions |
+
+_Tags:_ `cost`, `lifecycle`, `spaces`, `versioning`
 
 ---
 
@@ -2453,6 +4010,28 @@ _Maps to:_
 | `soc2` | `CC6.6` | Logical Access Security Boundaries |
 
 _Tags:_ `hygiene`, `network`
+
+---
+
+### `do-vpc-peering-cross-region`
+
+**VPC peering spans must be intra-region (DO does not support cross-region peering)** &middot; severity `high` &middot; service `networking` &middot; resource `digitalocean.vpc_peering`
+
+DO does not support VPC peering across regions. Any peering registered with VPCs in different regions is a stale or impossible config — DO API will reject the bind, but the peering record may persist. Validate.
+
+_Remediation:_
+
+> Drop the cross-region peering: `doctl vpcs peerings delete <id>`. For cross-region connectivity use a VPN tunnel between droplets in each VPC.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `12.1` | Ensure Network Infrastructure is Up-to-Date |
+| `iso27001` | `A.8.20` | Networks security |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `networking`, `peering`, `vpc`
 
 ---
 
@@ -3684,6 +5263,51 @@ _Tags:_ `doks`, `k8s`, `upgrade`
 
 ---
 
+### `k8s-doks-cert-manager-installed`
+
+**cert-manager (or equivalent) must manage workload TLS certificates** &middot; severity `high` &middot; service `doks` &middot; resource `digitalocean.doks.cluster`
+
+DOKS does not bundle cert-manager. Without it (or an equivalent like external-dns-issued certs or a service mesh's mTLS plane), workload TLS is operator-driven — manual rotation, manual issuance, easy to miss. SOC2 CC6.7 + ISO A.8.24 expect automated certificate lifecycle.
+
+_Remediation:_
+
+> Install cert-manager via Helm: `helm repo add jetstack https://charts.jetstack.io && helm install cert-manager jetstack/cert-manager -n cert-manager --create-namespace --set installCRDs=true`. Then create a ClusterIssuer for Let's Encrypt + DNS01 backed by the DO webhook (cert-manager-webhook-digitalocean).
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `3.10` | Encrypt Sensitive Data in Transit |
+| `iso27001` | `A.8.24` | Use of cryptography |
+| `soc2` | `CC6.7` | Transmission, Movement, and Disposal of Information |
+
+_Tags:_ `addon`, `doks`, `k8s`, `manual-verify`, `tls`
+
+---
+
+### `k8s-doks-cluster-autoscaler-eligible`
+
+**Production clusters should run cluster-autoscaler (or use DO's built-in)** &middot; severity `medium` &middot; service `doks` &middot; resource `digitalocean.doks.cluster`
+
+DOKS provides per-node-pool autoscaling natively (captured by k8s-doks-nodepool-no-autoscale). For clusters with many node pools or cross-pool scaling needs, the upstream cluster-autoscaler with the DO provider gives finer control. Either is acceptable; what's NOT acceptable is static node counts on a production cluster.
+
+_Remediation:_
+
+> Default: enable per-pool autoscaling (`doctl kubernetes cluster node-pool update <c> <np> --auto-scale --min-nodes=2 --max-nodes=10`). Advanced: deploy upstream cluster-autoscaler with `--cloud-provider=digitalocean`.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `7.4` | Perform Automated Application Patch Management |
+| `iso27001` | `A.8.14` | Redundancy of information processing facilities |
+| `soc2` | `A1.1` | Capacity Management |
+| `soc2` | `CC7.4` | Incident Response |
+
+_Tags:_ `addon`, `autoscaling`, `doks`, `k8s`, `manual-verify`
+
+---
+
 ### `k8s-doks-cluster-running`
 
 **DOKS clusters should be in running state** &middot; severity `high` &middot; service `doks` &middot; resource `digitalocean.doks.cluster`
@@ -3704,6 +5328,29 @@ _Maps to:_
 | `soc2` | `CC7.3` | Security Incident Evaluation |
 
 _Tags:_ `doks`, `k8s`, `reliability`
+
+---
+
+### `k8s-doks-control-plane-logging-exported`
+
+**DOKS control-plane logs must be exported (API audit, scheduler, controller-manager)** &middot; severity `high` &middot; service `doks` &middot; resource `digitalocean.doks.cluster`
+
+DigitalOcean exposes control-plane logs only via the `doctl kubernetes cluster logs` follow command; there is no native log-export configuration in the DO API. Production clusters must forward those logs to a long-retention sink (Datadog, Loki, ELK) — SOC2 CC7.2 + ISO A.8.15 + CIS 8.5 all require ≥90 day audit-log retention with tamper-evident storage.
+
+_Remediation:_
+
+> Two paths: (1) deploy a vector / fluent-bit DaemonSet to forward node logs + scrape /var/log/kube-apiserver-audit; (2) install the DO Datadog add-on if you're already a Datadog customer (covers control-plane + workload logs in one). Document the sink + retention SLA in the runbook.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `8.1` | Establish and Maintain an Audit Log Management Process |
+| `cis-v8` | `8.5` | Collect Detailed Audit Logs |
+| `iso27001` | `A.8.15` | Logging |
+| `soc2` | `CC7.2` | System Component Monitoring |
+
+_Tags:_ `audit-trail`, `doks`, `k8s`, `manual-verify`
 
 ---
 
@@ -3749,6 +5396,51 @@ _Maps to:_
 | `soc2` | `CC7.3` | Security Incident Evaluation |
 
 _Tags:_ `doks`, `k8s`, `upgrade`
+
+---
+
+### `k8s-doks-maintenance-window-loud-hours`
+
+**Maintenance window should fall outside business hours** &middot; severity `low` &middot; service `doks` &middot; resource `digitalocean.doks.cluster`
+
+DOKS auto-upgrades + node-image refreshes run in the maintenance window. A window between 09:00-17:00 UTC catches most western business hours; production clusters should pick a quieter zone (typically 03:00-05:00 in the cluster's primary customer timezone). This is a hygiene check, not a hard fail.
+
+_Remediation:_
+
+> `doctl kubernetes cluster update <c> --maintenance-window=sunday=04:00`. Pick a day + hour that matches your traffic low. Pair with `do-account-monitoring-alert-coverage` so a maintenance-induced regression pages someone.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `7.4` | Perform Automated Application Patch Management |
+| `iso27001` | `A.8.14` | Redundancy of information processing facilities |
+| `soc2` | `A1.1` | Capacity Management |
+| `soc2` | `CC7.4` | Incident Response |
+
+_Tags:_ `doks`, `k8s`, `maintenance`, `ops-hygiene`
+
+---
+
+### `k8s-doks-metrics-server-installed`
+
+**metrics-server must be installed (HPA + kubectl top dependency)** &middot; severity `medium` &middot; service `doks` &middot; resource `digitalocean.doks.cluster`
+
+DOKS ships metrics-server in the default add-on set but operators can opt out, and clusters older than 2023 may have been provisioned without it. Without metrics-server, HorizontalPodAutoscaler and `kubectl top` both fail silently. This check is manual-verify because there's no DO API for add-on state — operators run kubectl against the cluster.
+
+_Remediation:_
+
+> Confirm: `kubectl -n kube-system get deployment metrics-server`. Install if missing: `kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml`.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `8.11` | Conduct Audit Log Reviews |
+| `iso27001` | `A.8.16` | Monitoring activities |
+| `soc2` | `CC7.2` | System Component Monitoring |
+
+_Tags:_ `addon`, `doks`, `k8s`, `manual-verify`
 
 ---
 
@@ -3798,6 +5490,94 @@ _Tags:_ `doks`, `ha`, `k8s`, `nodepool`
 
 ---
 
+### `k8s-doks-nodepool-no-environment-tag`
+
+**DOKS node pools should declare an environment tag** &middot; severity `low` &middot; service `doks` &middot; resource `digitalocean.doks.nodepool`
+
+Tagging a node pool with the environment (prod / staging / dev) lets billing reports + monitoring alerts route on tag without re-deriving from the cluster name. CIS Controls v8 1.1 expects inventory classification at the asset level.
+
+_Remediation:_
+
+> Add a tag at create: `doctl kubernetes cluster node-pool create <c> --tag=env:production`. Existing pools cannot be retagged via doctl; recreate or use the TF resource.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `1.1` | Establish and Maintain Detailed Enterprise Asset Inventory |
+| `iso27001` | `A.5.9` | Inventory of information and other associated assets |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `doks`, `k8s`, `nodepool`, `tagging`
+
+---
+
+### `k8s-doks-nodepool-no-taints`
+
+**Non-default node pools should declare workload-isolation taints** &middot; severity `low` &middot; service `doks` &middot; resource `digitalocean.doks.nodepool`
+
+Multi-tenant DOKS clusters typically segregate workloads by node pool (e.g. 'gpu', 'memory-optimised', 'ingress'). Without taints, the scheduler treats every pool as fair game and security-relevant isolation (egress proxies, secrets vaults) shares hosts with general workloads. Default pools can stay untainted; named pools should declare at least one.
+
+_Remediation:_
+
+> `doctl kubernetes cluster node-pool update <c> <np> --taint dedicated=gpu:NoSchedule`. Then set tolerations on the workloads that should target the pool.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `3.3` | Configure Data Access Control Lists |
+| `iso27001` | `A.5.18` | Access rights |
+| `soc2` | `CC6.1` | Logical and Physical Access Controls |
+
+_Tags:_ `doks`, `isolation`, `k8s`, `nodepool`
+
+---
+
+### `k8s-doks-nodepool-size-retired`
+
+**DOKS node pools must not use retired droplet sizes** &middot; severity `medium` &middot; service `doks` &middot; resource `digitalocean.doks.nodepool`
+
+DO periodically retires droplet sizes from the DOKS catalog. Pools on retired sizes cannot accept new nodes (autoscaling and replacement on failure both fail), and any pool with autoscaling = on + a retired size is one bad reboot away from being undersized.
+
+_Remediation:_
+
+> Recreate the pool on a supported size: `doctl kubernetes cluster node-pool create <c> --name <new> --size s-2vcpu-4gb` then `delete` the old pool. Drain workloads first.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `7.3` | Perform Automated Operating System Patch Management |
+| `iso27001` | `A.8.14` | Redundancy of information processing facilities |
+| `soc2` | `A1.1` | Capacity Management |
+
+_Tags:_ `doks`, `k8s`, `nodepool`, `sizing`
+
+---
+
+### `k8s-doks-pod-security-standards-baseline`
+
+**Pod Security Admission must enforce ≥ baseline on production namespaces** &middot; severity `high` &middot; service `doks` &middot; resource `digitalocean.doks.cluster`
+
+PodSecurityPolicy is removed; Pod Security Admission (PSA) labels namespaces with enforce / audit / warn policies at baseline or restricted level. DOKS clusters default PSA to OFF in non-system namespaces. SOC2 CC6.6 + ISO A.8.18 + CIS K8s 5.2 each require pod-level security defaults; this finding flags the gap so the operator confirms enforcement is on.
+
+_Remediation:_
+
+> Label production namespaces: `kubectl label ns <ns> pod-security.kubernetes.io/enforce=baseline pod-security.kubernetes.io/warn=restricted pod-security.kubernetes.io/audit=restricted`. Roll out `warn=` first to find offending workloads, then flip enforce.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `4.6` | Securely Manage Enterprise Assets and Software |
+| `iso27001` | `A.8.18` | Use of privileged utility programs |
+| `soc2` | `CC6.6` | Logical Access Security Boundaries |
+
+_Tags:_ `doks`, `k8s`, `manual-verify`, `psa`
+
+---
+
 ### `k8s-doks-registry-integration`
 
 **DOKS clusters should integrate with DO Container Registry** &middot; severity `low` &middot; service `doks` &middot; resource `digitalocean.doks.cluster`
@@ -3839,6 +5619,29 @@ _Maps to:_
 | `soc2` | `A1.1` | Capacity Management |
 
 _Tags:_ `doks`, `k8s`, `upgrade`
+
+---
+
+### `k8s-doks-version-deprecated`
+
+**DOKS cluster version must not be on the DO deprecation list** &middot; severity `high` &middot; service `doks` &middot; resource `digitalocean.doks.cluster`
+
+DigitalOcean unsupports DOKS minor versions roughly 14 months after release. Once unsupported, the cluster stops receiving control-plane patches and node-image refreshes — CVE exposure climbs unbounded. Pin a supported minor; let auto-upgrade keep it inside the supported window.
+
+_Remediation:_
+
+> Upgrade in maintenance window: `doctl kubernetes cluster upgrade <cluster-id> --version=1.30.x-do.x`. Stage in non-prod first; verify no PSA / admission-webhook breakage.
+
+_Maps to:_
+
+| Framework | Control | Title |
+|---|---|---|
+| `cis-v8` | `7.3` | Perform Automated Operating System Patch Management |
+| `cis-v8` | `7.4` | Perform Automated Application Patch Management |
+| `iso27001` | `A.8.8` | Management of technical vulnerabilities |
+| `soc2` | `CC7.1` | Detection and Monitoring of Vulnerabilities |
+
+_Tags:_ `doks`, `k8s`, `patching`, `version`
 
 ---
 
