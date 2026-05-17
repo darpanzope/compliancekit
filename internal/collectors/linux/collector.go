@@ -144,6 +144,15 @@ func (c *Collector) gatherOne(ctx context.Context, host Host) core.Resource {
 		attrs["filesystem_error"] = err.Error()
 	}
 
+	// v0.20 phase 3 — mounts feed the filesystem-hardening checks
+	// (separate-partition + mount-option enforcement on /tmp, /var,
+	// /home, /dev/shm, etc.).
+	if mounts, err := gatherMounts(ctx, client); err == nil {
+		attrs["mounts"] = mounts
+	} else {
+		attrs["mounts_error"] = err.Error()
+	}
+
 	if users, err := gatherUsers(ctx, client); err == nil {
 		attrs["users"] = users
 	} else {
