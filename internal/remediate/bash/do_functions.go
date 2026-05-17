@@ -146,3 +146,12 @@ func renderBashFnEnvTag(_ core.Finding) (remediate.Snippet, error) {
 		"https://docs.digitalocean.com/products/functions/",
 		"Create new namespaces with explicit prefix (functions-prod, functions-staging)")
 }
+
+// v0.19 phase 9 — legacy backfill for v0.9-vintage Functions checks.
+var legacyFunctionsBashEntries = map[string]legacyBashEntry{
+	"do-functions-disabled-triggers": {risk: remediate.RiskManual, body: "doctl serverless trigger list NS --format Name,Enabled\n# Enable / delete as needed."},
+	"do-functions-namespace-empty":   {risk: remediate.RiskReview, body: "doctl serverless namespaces delete NS_UUID --force"},
+	"do-functions-no-access-keys":    {risk: remediate.RiskReview, body: "doctl serverless namespace add-key NS --label ci-key"},
+}
+
+func init() { registerLegacyBash(legacyFunctionsBashEntries) }

@@ -231,3 +231,25 @@ func tfNameOrFallback(f core.Finding, fallback string) string { //nolint:unparam
 	}
 	return fallback
 }
+
+// v0.19 phase 9 — legacy backfill for v0.9-vintage Spaces checks.
+var legacySpacesTFEntries = map[string]legacyTFEntry{
+	"do-spaces-bucket-cors-wildcard": {risk: remediate.RiskReview,
+		content: "resource \"digitalocean_spaces_bucket\" \"app\" {\n  cors_rule {\n    allowed_methods = [\"GET\"]\n    allowed_origins = [\"https://app.example.com\"]\n    max_age_seconds = 3600\n  }\n}\n"},
+	"do-spaces-bucket-no-encryption": {risk: remediate.RiskSafe,
+		content: "# Spaces SSE applied via aws s3api put-bucket-encryption against the Spaces endpoint.\n# The DO TF provider does not expose it; see doctl strategy."},
+	"do-spaces-bucket-no-lifecycle": {risk: remediate.RiskReview,
+		content: "resource \"digitalocean_spaces_bucket\" \"app\" {\n  lifecycle_rule {\n    id      = \"expire-365d\"\n    enabled = true\n    expiration { days = 365 }\n    abort_incomplete_multipart_upload_days = 7\n  }\n}\n"},
+	"do-spaces-bucket-no-logging": {risk: remediate.RiskReview,
+		content: "resource \"digitalocean_spaces_bucket\" \"app\" {\n  logging {\n    target_bucket = digitalocean_spaces_bucket.access_logs.name\n    target_prefix = \"app/\"\n  }\n}\n"},
+	"do-spaces-bucket-no-versioning": {risk: remediate.RiskSafe,
+		content: "resource \"digitalocean_spaces_bucket\" \"app\" {\n  versioning { enabled = true }\n}\n"},
+	"do-spaces-bucket-public-acl": {risk: remediate.RiskReview,
+		content: "resource \"digitalocean_spaces_bucket\" \"app\" {\n  acl = \"private\"\n}\n"},
+	"do-spaces-key-fullaccess": {risk: remediate.RiskReview,
+		content: "# Issue scoped key + delete the full-access one via doctl:\n# doctl spaces-key create scoped --grant bucket=BUCKET,permission=read\n# doctl spaces-key delete FULL_ACCESS_KEY_ID --force"},
+	"do-spaces-key-too-old": {risk: remediate.RiskReview,
+		content: "# Rotate via doctl; key creation is not a TF resource.\n# doctl spaces-key create rotated --grant bucket=BUCKET,permission=readwrite"},
+}
+
+func init() { registerLegacyTF(legacySpacesTFEntries) }

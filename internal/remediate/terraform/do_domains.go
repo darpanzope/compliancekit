@@ -132,3 +132,15 @@ func renderTFDNSSECRegistrar(_ core.Finding) (remediate.Snippet, error) {
 		"https://dnssec-analyzer.verisignlabs.com",
 		"At the registrar (Namecheap / Gandi / Cloudflare etc.): enable DNSSEC, accept the DS record, then verify with 'dig +dnssec' (look for AD flag)")
 }
+
+// v0.19 phase 9 — legacy backfill for v0.9-vintage domain checks.
+var legacyDomainTFEntries = map[string]legacyTFEntry{
+	"do-domain-caa-wildcard": {risk: remediate.RiskReview,
+		content: "# Replace wildcard CAA with explicit issuer records.\nresource \"digitalocean_record\" \"caa_letsencrypt\" {\n  domain = \"example.com\"\n  type   = \"CAA\"\n  name   = \"@\"\n  flags  = 0\n  tag    = \"issue\"\n  value  = \"letsencrypt.org\"\n}\n"},
+	"do-domain-no-dmarc": {risk: remediate.RiskReview,
+		content: "resource \"digitalocean_record\" \"dmarc\" {\n  domain = \"example.com\"\n  type   = \"TXT\"\n  name   = \"_dmarc\"\n  value  = \"v=DMARC1; p=quarantine; rua=mailto:dmarc@example.com\"\n}\n"},
+	"do-domain-no-spf": {risk: remediate.RiskReview,
+		content: "resource \"digitalocean_record\" \"spf\" {\n  domain = \"example.com\"\n  type   = \"TXT\"\n  name   = \"@\"\n  value  = \"v=spf1 include:_spf.google.com -all\"\n}\n"},
+}
+
+func init() { registerLegacyTF(legacyDomainTFEntries) }

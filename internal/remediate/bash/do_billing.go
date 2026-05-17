@@ -100,3 +100,20 @@ doctl compute snapshot list -o json \
 		Risk: remediate.RiskReview, Idempotent: false, Content: body,
 	}, nil
 }
+
+// v0.19 phase 9 — legacy backfill for billing-adjacent checks.
+var legacyBillingBashEntries = map[string]legacyBashEntry{
+	"do-monitoring-disabled-alert":      {risk: remediate.RiskSafe, body: "doctl monitoring alert update ALERT_ID --enabled"},
+	"do-monitoring-no-alerts":           {risk: remediate.RiskSafe, body: "doctl monitoring alert create --type v1/insights/droplet/cpu --description \"CPU > 80%\" --compare GreaterThan --value 80 --window 5m --emails ops@example.com"},
+	"do-project-default-no-description": {risk: remediate.RiskSafe, body: "doctl projects update PROJECT_ID --description \"Production web app\""},
+	"do-project-no-environment":         {risk: remediate.RiskSafe, body: "doctl projects update PROJECT_ID --environment Production"},
+	"do-registry-empty":                 {risk: remediate.RiskReview, body: "doctl registry delete REGISTRY_NAME --force"},
+	"do-registry-no-recent-gc":          {risk: remediate.RiskSafe, body: "doctl registry garbage-collection start --include-untagged-manifests REGISTRY_NAME"},
+	"do-registry-starter-tier":          {risk: remediate.RiskReview, body: "doctl registry subscription update --tier-slug basic"},
+	"do-snapshot-orphan-source":         {risk: remediate.RiskReview, body: "doctl compute snapshot delete SNAPSHOT_ID --force"},
+	"do-snapshot-too-old":               {risk: remediate.RiskReview, body: "doctl compute snapshot delete SNAPSHOT_ID --force"},
+	"do-image-public":                   {risk: remediate.RiskReview, body: "doctl compute image update IMAGE_ID --public=false"},
+	"do-image-too-old":                  {risk: remediate.RiskReview, body: "doctl compute image delete IMAGE_ID"},
+}
+
+func init() { registerLegacyBash(legacyBillingBashEntries) }

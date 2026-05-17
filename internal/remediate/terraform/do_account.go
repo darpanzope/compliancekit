@@ -235,3 +235,15 @@ func renderTFManualOnly(reason, dashboardURL, action string) (remediate.Snippet,
 		Refs:  []string{dashboardURL},
 	}, nil
 }
+
+// v0.19 phase 9 — legacy backfill for v0.9-vintage account checks.
+var legacyAccountTFEntries = map[string]legacyTFEntry{
+	"do-account-email-verified": {risk: remediate.RiskManual,
+		content: "# Email verification is a per-account interactive control; no TF resource.\n# Re-send via cloud panel: https://cloud.digitalocean.com"},
+	"do-account-status-active": {risk: remediate.RiskManual,
+		content: "# Account status is read-only via API; resolve underlying billing/ToS issue in dashboard."},
+	"do-account-uses-named-team": {risk: remediate.RiskManual,
+		content: "# Team creation is dashboard-only (Settings → Team), then add collaborators."},
+}
+
+func init() { registerLegacyTF(legacyAccountTFEntries) }

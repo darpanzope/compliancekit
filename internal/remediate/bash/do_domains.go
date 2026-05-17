@@ -153,3 +153,13 @@ func renderBashDNSSECRegistrar(_ core.Finding) (remediate.Snippet, error) {
 		"https://dnssec-analyzer.verisignlabs.com",
 		"At the registrar: enable DNSSEC, accept the DS record, then 'dig +dnssec <domain>' to confirm the AD flag is set")
 }
+
+// v0.19 phase 9 — legacy backfill for v0.9-vintage domain checks.
+var legacyDomainBashEntries = map[string]legacyBashEntry{
+	"do-domain-caa-wildcard": {risk: remediate.RiskReview, body: "domain=DOMAIN\ndoctl compute domain records list \"$domain\" --format ID,Type,Data | grep CAA\n# Manual: remove wildcard ID + add explicit."},
+	"do-domain-no-caa":       {risk: remediate.RiskSafe, body: "doctl compute domain records create DOMAIN --record-type CAA --record-name @ --record-data '0 issue \"letsencrypt.org\"'"},
+	"do-domain-no-dmarc":     {risk: remediate.RiskReview, body: "doctl compute domain records create DOMAIN --record-type TXT --record-name _dmarc --record-data \"v=DMARC1; p=quarantine; rua=mailto:dmarc@DOMAIN\""},
+	"do-domain-no-spf":       {risk: remediate.RiskReview, body: "doctl compute domain records create DOMAIN --record-type TXT --record-name @ --record-data \"v=spf1 include:_spf.google.com -all\""},
+}
+
+func init() { registerLegacyBash(legacyDomainBashEntries) }

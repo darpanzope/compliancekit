@@ -215,3 +215,17 @@ resource "digitalocean_cdn" "static_assets" {
 		Refs:  []string{"https://docs.digitalocean.com/products/spaces/how-to/enable-cdn/"},
 	}, nil
 }
+
+// v0.19 phase 9 — legacy backfill for v0.9-vintage App Platform checks.
+var legacyAppTFEntries = map[string]legacyTFEntry{
+	"do-app-domain-weak-tls": {risk: remediate.RiskReview,
+		content: "resource \"digitalocean_app\" \"main\" {\n  spec {\n    domain {\n      name                = \"app.example.com\"\n      minimum_tls_version = \"1.2\"\n    }\n  }\n}\n"},
+	"do-app-no-alerts": {risk: remediate.RiskReview,
+		content: "resource \"digitalocean_app\" \"main\" {\n  spec {\n    alert { rule = \"DEPLOYMENT_FAILED\" }\n    alert { rule = \"DOMAIN_FAILED\" }\n  }\n}\n"},
+	"do-app-no-custom-domain": {risk: remediate.RiskReview,
+		content: "resource \"digitalocean_app\" \"main\" {\n  spec {\n    domain { name = \"app.example.com\"; type = \"PRIMARY\" }\n  }\n}\n"},
+	"do-app-plain-env-vars": {risk: remediate.RiskReview,
+		content: "resource \"digitalocean_app\" \"main\" {\n  spec {\n    env {\n      key   = \"API_KEY\"\n      value = var.api_key\n      type  = \"SECRET\"\n    }\n  }\n}\n"},
+}
+
+func init() { registerLegacyTF(legacyAppTFEntries) }

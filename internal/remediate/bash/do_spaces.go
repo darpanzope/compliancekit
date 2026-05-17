@@ -177,3 +177,17 @@ func renderBashSpacesKeyRotation(_ core.Finding) (remediate.Snippet, error) {
 		"https://www.digitalocean.com/trust",
 		"Cite DO SOC 2 Type 2 (CC6.7) — encryption keys are platform-managed")
 }
+
+// v0.19 phase 9 — legacy backfill for v0.9-vintage Spaces checks.
+var legacySpacesBashEntries = map[string]legacyBashEntry{
+	"do-spaces-bucket-cors-wildcard": {risk: remediate.RiskReview, body: "aws s3api put-bucket-cors --bucket BUCKET --endpoint-url https://nyc3.digitaloceanspaces.com --cors-configuration file://cors.json"},
+	"do-spaces-bucket-no-encryption": {risk: remediate.RiskSafe, body: "aws s3api put-bucket-encryption --bucket BUCKET --endpoint-url https://nyc3.digitaloceanspaces.com --server-side-encryption-configuration '{\"Rules\":[{\"ApplyServerSideEncryptionByDefault\":{\"SSEAlgorithm\":\"AES256\"}}]}'"},
+	"do-spaces-bucket-no-lifecycle":  {risk: remediate.RiskReview, body: "aws s3api put-bucket-lifecycle-configuration --bucket BUCKET --endpoint-url https://nyc3.digitaloceanspaces.com --lifecycle-configuration file://lifecycle.json"},
+	"do-spaces-bucket-no-logging":    {risk: remediate.RiskReview, body: "aws s3api put-bucket-logging --bucket BUCKET --endpoint-url https://nyc3.digitaloceanspaces.com --bucket-logging-status '{\"LoggingEnabled\":{\"TargetBucket\":\"BUCKET-access-logs\",\"TargetPrefix\":\"BUCKET/\"}}'"},
+	"do-spaces-bucket-no-versioning": {risk: remediate.RiskSafe, body: "aws s3api put-bucket-versioning --bucket BUCKET --endpoint-url https://nyc3.digitaloceanspaces.com --versioning-configuration Status=Enabled"},
+	"do-spaces-bucket-public-acl":    {risk: remediate.RiskReview, body: "aws s3api put-bucket-acl --bucket BUCKET --endpoint-url https://nyc3.digitaloceanspaces.com --acl private"},
+	"do-spaces-key-fullaccess":       {risk: remediate.RiskReview, body: "doctl spaces-key create scoped --grant bucket=BUCKET,permission=read\ndoctl spaces-key delete FULL_ACCESS_KEY_ID --force"},
+	"do-spaces-key-too-old":          {risk: remediate.RiskReview, body: "doctl spaces-key create rotated --grant bucket=BUCKET,permission=readwrite\ndoctl spaces-key delete OLD_KEY_ID --force"},
+}
+
+func init() { registerLegacyBash(legacySpacesBashEntries) }

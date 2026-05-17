@@ -185,3 +185,42 @@ func renderTFLBSSLCipher(_ core.Finding) (remediate.Snippet, error) {
 		"https://www.ssllabs.com/ssltest/",
 		"Run testssl.sh / SSL Labs against the LB host and capture the report")
 }
+
+// v0.19 phase 9 — legacy backfill for v0.9-vintage networking checks
+// (firewalls, load balancers, VPCs, reserved IPs).
+var legacyNetworkTFEntries = map[string]legacyTFEntry{
+	"do-firewall-any-port-from-any": {risk: remediate.RiskReview,
+		content: "# Drop wildcard rule from the firewall:\nresource \"digitalocean_firewall\" \"web\" {\n  inbound_rule { protocol = \"tcp\"; port_range = \"443\"; source_addresses = [\"0.0.0.0/0\"] }\n}\n"},
+	"do-firewall-broad-port-range": {risk: remediate.RiskReview,
+		content: "resource \"digitalocean_firewall\" \"web\" {\n  inbound_rule { protocol = \"tcp\"; port_range = \"80\";  source_addresses = [\"0.0.0.0/0\"] }\n  inbound_rule { protocol = \"tcp\"; port_range = \"443\"; source_addresses = [\"0.0.0.0/0\"] }\n}\n"},
+	"do-firewall-orphan": {risk: remediate.RiskReview,
+		content: "# Remove the resource block + `terraform apply`."},
+	"do-firewall-outbound-any-to-any": {risk: remediate.RiskReview,
+		content: "resource \"digitalocean_firewall\" \"web\" {\n  outbound_rule { protocol = \"tcp\"; port_range = \"443\"; destination_addresses = [\"0.0.0.0/0\"] }\n  outbound_rule { protocol = \"udp\"; port_range = \"53\";  destination_addresses = [\"1.1.1.1/32\", \"8.8.8.8/32\"] }\n}\n"},
+	"do-firewall-rdp-from-any": {risk: remediate.RiskReview,
+		content: "resource \"digitalocean_firewall\" \"web\" {\n  inbound_rule { protocol = \"tcp\"; port_range = \"3389\"; source_addresses = [\"10.0.0.0/8\"] }\n}\n"},
+	"do-firewall-ssh-from-any": {risk: remediate.RiskReview,
+		content: "resource \"digitalocean_firewall\" \"web\" {\n  inbound_rule { protocol = \"tcp\"; port_range = \"22\"; source_tags = [\"bastion\"] }\n}\n"},
+	"do-lb-health-check-cleartext": {risk: remediate.RiskReview,
+		content: "resource \"digitalocean_loadbalancer\" \"web\" {\n  healthcheck { protocol = \"https\"; port = 443; path = \"/healthz\" }\n}\n"},
+	"do-lb-no-https-listener": {risk: remediate.RiskReview,
+		content: "resource \"digitalocean_loadbalancer\" \"web\" {\n  forwarding_rule {\n    entry_port = 443; entry_protocol = \"https\"\n    target_port = 80; target_protocol = \"http\"\n    certificate_name = digitalocean_certificate.app.name\n  }\n}\n"},
+	"do-lb-no-vpc": {risk: remediate.RiskReview,
+		content: "resource \"digitalocean_loadbalancer\" \"web\" {\n  vpc_uuid = digitalocean_vpc.prod.id\n}\n"},
+	"do-lb-orphan": {risk: remediate.RiskReview,
+		content: "# Remove the resource block + `terraform apply`."},
+	"do-lb-redirect-http-to-https": {risk: remediate.RiskSafe,
+		content: "resource \"digitalocean_loadbalancer\" \"web\" {\n  redirect_http_to_https = true\n}\n"},
+	"do-reserved-ip-no-project": {risk: remediate.RiskSafe,
+		content: "resource \"digitalocean_project_resources\" \"prod\" {\n  project   = digitalocean_project.prod.id\n  resources = [\"do:reserved_ip:${digitalocean_reserved_ip.failover.ip_address}\"]\n}\n"},
+	"do-reserved-ip-orphan": {risk: remediate.RiskReview,
+		content: "resource \"digitalocean_reserved_ip\" \"failover\" {\n  droplet_id = digitalocean_droplet.web.id\n  region     = \"nyc3\"\n}\n"},
+	"do-vpc-default-not-in-use": {risk: remediate.RiskReview,
+		content: "resource \"digitalocean_vpc\" \"prod\" {\n  name     = \"prod\"\n  region   = \"nyc3\"\n  ip_range = \"10.20.0.0/16\"\n}\n# Migrate workloads off the default VPC."},
+	"do-vpc-orphan": {risk: remediate.RiskReview,
+		content: "# Drop the resource + apply. DO won't delete a VPC with attached resources; move workloads first."},
+	"do-vpc-peering-not-active": {risk: remediate.RiskManual,
+		content: "# Peering activation is interactive; inspect via `doctl vpcs peerings get PEERING_ID`."},
+}
+
+func init() { registerLegacyTF(legacyNetworkTFEntries) }

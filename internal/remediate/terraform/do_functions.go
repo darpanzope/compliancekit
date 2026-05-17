@@ -133,3 +133,15 @@ func renderTFFnEnvTag(_ core.Finding) (remediate.Snippet, error) {
 		"https://docs.digitalocean.com/products/functions/",
 		"Recreate namespaces with explicit prefix (functions-prod / functions-staging)")
 }
+
+// v0.19 phase 9 — legacy backfill for v0.9-vintage Functions checks.
+var legacyFunctionsTFEntries = map[string]legacyTFEntry{
+	"do-functions-disabled-triggers": {risk: remediate.RiskManual,
+		content: "# Functions triggers are not surfaced by the TF provider.\n# Use doctl: `doctl serverless trigger enable <ns> <name>` or delete."},
+	"do-functions-namespace-empty": {risk: remediate.RiskReview,
+		content: "# Delete via doctl: `doctl serverless namespaces delete NS_UUID --force`"},
+	"do-functions-no-access-keys": {risk: remediate.RiskReview,
+		content: "# Add via doctl: `doctl serverless namespace add-key NS --label ci-key`"},
+}
+
+func init() { registerLegacyTF(legacyFunctionsTFEntries) }

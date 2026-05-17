@@ -110,3 +110,20 @@ doctl compute snapshot list -o json \
 		Notes: "Date arithmetic differs between GNU + BSD; the fallback handles both. Confirm before running in production.",
 	}, nil
 }
+
+// v0.19 phase 9 — legacy backfill for billing-adjacent checks.
+var legacyBillingDoctlEntries = map[string]legacyDoctlEntry{
+	"do-monitoring-disabled-alert":      {risk: remediate.RiskSafe, content: "doctl monitoring alert update ALERT_ID --enabled"},
+	"do-monitoring-no-alerts":           {risk: remediate.RiskSafe, content: "doctl monitoring alert create --type v1/insights/droplet/cpu --description \"CPU > 80%\" --compare GreaterThan --value 80 --window 5m --emails ops@example.com"},
+	"do-project-default-no-description": {risk: remediate.RiskSafe, content: "doctl projects update PROJECT_ID --description \"Production web app\""},
+	"do-project-no-environment":         {risk: remediate.RiskSafe, content: "doctl projects update PROJECT_ID --environment Production"},
+	"do-registry-empty":                 {risk: remediate.RiskReview, content: "doctl registry delete REGISTRY_NAME --force"},
+	"do-registry-no-recent-gc":          {risk: remediate.RiskSafe, content: "doctl registry garbage-collection start --include-untagged-manifests REGISTRY_NAME"},
+	"do-registry-starter-tier":          {risk: remediate.RiskReview, content: "doctl registry subscription update --tier-slug basic"},
+	"do-snapshot-orphan-source":         {risk: remediate.RiskReview, content: "doctl compute snapshot delete SNAPSHOT_ID --force"},
+	"do-snapshot-too-old":               {risk: remediate.RiskReview, content: "doctl compute snapshot delete SNAPSHOT_ID --force"},
+	"do-image-public":                   {risk: remediate.RiskReview, content: "doctl compute image update IMAGE_ID --public=false"},
+	"do-image-too-old":                  {risk: remediate.RiskReview, content: "doctl compute image delete IMAGE_ID"},
+}
+
+func init() { registerLegacyDoctl(legacyBillingDoctlEntries) }

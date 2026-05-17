@@ -34,14 +34,15 @@ import (
 //	Phase 0 (baseline)             — 68 TF, 68 doctl, 74 bash
 //	Phases 1-8 (new check surface) — unchanged (every new check ships
 //	                                  with all three formats)
-//	Phase 9 (parity backfill)       — 0 / 0 / 0
+//	Phase 9 (parity backfill)       — 0 / 0 / 0  ← shipped here
 //
-// When the ceiling reaches 0 the test becomes a strict equality gate:
-// every DO check has TF + doctl + bash.
+// At 0 the test is a strict equality gate: every DigitalOcean check
+// has bespoke TF + doctl + bash strategies. Any new check that lands
+// without all three flips the gate red.
 const (
-	maxMissingTerraformDO = 68
-	maxMissingDoctlDO     = 68
-	maxMissingBashDO      = 74
+	maxMissingTerraformDO = 0
+	maxMissingDoctlDO     = 0
+	maxMissingBashDO      = 0
 )
 
 func TestParity_DigitalOcean(t *testing.T) {

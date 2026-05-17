@@ -179,3 +179,12 @@ fi
 		Refs:  []string{dashboardURL},
 	}, nil
 }
+
+// v0.19 phase 9 — legacy backfill for v0.9-vintage account checks.
+var legacyAccountBashEntries = map[string]legacyBashEntry{
+	"do-account-email-verified":  {risk: remediate.RiskManual, body: "doctl account get --format Email,EmailVerified\n# Re-send verification from cloud panel."},
+	"do-account-status-active":   {risk: remediate.RiskManual, body: "doctl account get --format Status,StatusMessage"},
+	"do-account-uses-named-team": {risk: remediate.RiskManual, body: "echo 'create a team via cloud panel → Settings → Team' >&2"},
+}
+
+func init() { registerLegacyBash(legacyAccountBashEntries) }

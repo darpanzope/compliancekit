@@ -142,3 +142,25 @@ func renderBashLBSSLCipher(_ core.Finding) (remediate.Snippet, error) {
 		"https://www.ssllabs.com/ssltest/",
 		"Run `testssl.sh <lb-host>` and capture protocol + cipher report")
 }
+
+// v0.19 phase 9 — legacy backfill for v0.9-vintage networking checks.
+var legacyNetworkBashEntries = map[string]legacyBashEntry{
+	"do-firewall-any-port-from-any":   {risk: remediate.RiskReview, body: "doctl compute firewall remove-rules FW_ID --inbound-rules \"protocol:tcp,ports:all,address:0.0.0.0/0\""},
+	"do-firewall-broad-port-range":    {risk: remediate.RiskManual, body: "doctl compute firewall get FW_ID --format InboundRules"},
+	"do-firewall-orphan":              {risk: remediate.RiskReview, body: "doctl compute firewall delete FW_ID --force"},
+	"do-firewall-outbound-any-to-any": {risk: remediate.RiskReview, body: "doctl compute firewall remove-rules FW_ID --outbound-rules \"protocol:tcp,ports:all,address:0.0.0.0/0\""},
+	"do-firewall-rdp-from-any":        {risk: remediate.RiskReview, body: "doctl compute firewall remove-rules FW_ID --inbound-rules \"protocol:tcp,ports:3389,address:0.0.0.0/0\""},
+	"do-firewall-ssh-from-any":        {risk: remediate.RiskReview, body: "doctl compute firewall remove-rules FW_ID --inbound-rules \"protocol:tcp,ports:22,address:0.0.0.0/0\"\ndoctl compute firewall add-rules    FW_ID --inbound-rules \"protocol:tcp,ports:22,address:YOUR.IP/32\""},
+	"do-lb-health-check-cleartext":    {risk: remediate.RiskReview, body: "echo 'Set healthcheck protocol https via TF or spec replacement' >&2"},
+	"do-lb-no-https-listener":         {risk: remediate.RiskReview, body: "echo 'Add HTTPS forwarding rule via TF or spec replacement' >&2"},
+	"do-lb-no-vpc":                    {risk: remediate.RiskReview, body: "echo 'LB VPC is set at create; recreate in VPC' >&2"},
+	"do-lb-orphan":                    {risk: remediate.RiskReview, body: "doctl compute load-balancer delete LB_ID --force"},
+	"do-lb-redirect-http-to-https":    {risk: remediate.RiskReview, body: "echo 'Enable redirect_http_to_https via TF (doctl flag surface limited)' >&2"},
+	"do-reserved-ip-no-project":       {risk: remediate.RiskSafe, body: "doctl projects resources assign PROJECT_ID --resource do:reserved_ip:1.2.3.4"},
+	"do-reserved-ip-orphan":           {risk: remediate.RiskReview, body: "doctl compute reserved-ip delete RESERVED_IP --force"},
+	"do-vpc-default-not-in-use":       {risk: remediate.RiskReview, body: "doctl vpcs create --name custom-prod --region nyc3 --ip-range 10.20.0.0/16\n# Then migrate workloads off the default VPC."},
+	"do-vpc-orphan":                   {risk: remediate.RiskReview, body: "doctl vpcs delete VPC_UUID --force"},
+	"do-vpc-peering-not-active":       {risk: remediate.RiskManual, body: "doctl vpcs peerings get PEERING_ID"},
+}
+
+func init() { registerLegacyBash(legacyNetworkBashEntries) }

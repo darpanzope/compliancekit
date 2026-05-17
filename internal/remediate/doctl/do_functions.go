@@ -143,3 +143,15 @@ func renderDoctlFnEnvTag(_ core.Finding) (remediate.Snippet, error) {
 		"https://docs.digitalocean.com/products/functions/",
 		"Create new namespaces with explicit prefix (functions-prod, functions-staging)")
 }
+
+// v0.19 phase 9 — legacy backfill for v0.9-vintage Functions checks.
+var legacyFunctionsDoctlEntries = map[string]legacyDoctlEntry{
+	"do-functions-disabled-triggers": {risk: remediate.RiskManual,
+		content: "doctl serverless trigger list NS\n# Re-enable or delete each disabled trigger."},
+	"do-functions-namespace-empty": {risk: remediate.RiskReview,
+		content: "doctl serverless namespaces delete NS_UUID --force"},
+	"do-functions-no-access-keys": {risk: remediate.RiskReview,
+		content: "doctl serverless namespace add-key NS --label ci-key"},
+}
+
+func init() { registerLegacyDoctl(legacyFunctionsDoctlEntries) }

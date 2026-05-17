@@ -110,3 +110,32 @@ func renderTFCDNCost(_ core.Finding) (remediate.Snippet, error) {
 		"https://cloud.digitalocean.com/spaces",
 		"Review CDN bandwidth in the billing breakout; audit Cache-Control + TTL if unexpected")
 }
+
+// v0.19 phase 9 — legacy backfill for v0.9-vintage monitoring,
+// project, registry, snapshot, image checks (all bill-adjacent).
+var legacyBillingTFEntries = map[string]legacyTFEntry{
+	"do-monitoring-disabled-alert": {risk: remediate.RiskSafe,
+		content: "resource \"digitalocean_monitor_alert\" \"high_cpu\" {\n  enabled = true\n}\n"},
+	"do-monitoring-no-alerts": {risk: remediate.RiskSafe,
+		content: "resource \"digitalocean_monitor_alert\" \"high_cpu\" {\n  type        = \"v1/insights/droplet/cpu\"\n  compare     = \"GreaterThan\"\n  value       = 80\n  window      = \"5m\"\n  description = \"CPU > 80%\"\n  alerts { email = [\"ops@example.com\"] }\n}\n"},
+	"do-project-default-no-description": {risk: remediate.RiskSafe,
+		content: "resource \"digitalocean_project\" \"prod\" {\n  description = \"Production web app\"\n}\n"},
+	"do-project-no-environment": {risk: remediate.RiskSafe,
+		content: "resource \"digitalocean_project\" \"prod\" {\n  environment = \"Production\"\n}\n"},
+	"do-registry-empty": {risk: remediate.RiskReview,
+		content: "# Remove the digitalocean_container_registry block + apply, OR push images."},
+	"do-registry-no-recent-gc": {risk: remediate.RiskSafe,
+		content: "# GC is operational; schedule via CI:\n# doctl registry garbage-collection start --include-untagged-manifests REGISTRY"},
+	"do-registry-starter-tier": {risk: remediate.RiskReview,
+		content: "resource \"digitalocean_container_registry\" \"app\" {\n  name                   = \"app\"\n  subscription_tier_slug = \"basic\"\n}\n"},
+	"do-snapshot-orphan-source": {risk: remediate.RiskReview,
+		content: "# Snapshots aren't TF-managed; use doctl:\n# doctl compute snapshot delete SNAPSHOT_ID --force"},
+	"do-snapshot-too-old": {risk: remediate.RiskReview,
+		content: "# doctl compute snapshot delete SNAPSHOT_ID --force"},
+	"do-image-public": {risk: remediate.RiskReview,
+		content: "# Images aren't fully TF-managed; use doctl:\n# doctl compute image update IMAGE_ID --public=false"},
+	"do-image-too-old": {risk: remediate.RiskReview,
+		content: "# Take fresh snapshot + delete old image via doctl."},
+}
+
+func init() { registerLegacyTF(legacyBillingTFEntries) }

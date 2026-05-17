@@ -139,3 +139,14 @@ aws s3 sync ./static/ s3://app-static-assets/ --endpoint-url https://nyc3.digita
 		Risk: remediate.RiskReview, Idempotent: false, Content: body,
 	}, nil
 }
+
+// v0.19 phase 9 — legacy backfill for v0.9-vintage App Platform checks.
+var legacyAppBashEntries = map[string]legacyBashEntry{
+	"do-app-domain-weak-tls":  {risk: remediate.RiskReview, body: "app=APP_ID\ndoctl apps spec get \"$app\" > spec.yaml\nyq eval -i '.domains[] |= (.minimum_tls_version = \"1.2\")' spec.yaml\ndoctl apps update \"$app\" --spec spec.yaml"},
+	"do-app-no-alerts":        {risk: remediate.RiskReview, body: "app=APP_ID\ndoctl apps spec get \"$app\" > spec.yaml\nyq eval -i '.alerts = [{\"rule\":\"DEPLOYMENT_FAILED\"},{\"rule\":\"DOMAIN_FAILED\"}]' spec.yaml\ndoctl apps update \"$app\" --spec spec.yaml"},
+	"do-app-no-custom-domain": {risk: remediate.RiskReview, body: "app=APP_ID\ndoctl apps spec get \"$app\" > spec.yaml\nyq eval -i '.domains += [{\"name\":\"app.example.com\",\"type\":\"PRIMARY\"}]' spec.yaml\ndoctl apps update \"$app\" --spec spec.yaml"},
+	"do-app-no-vpc":           {risk: remediate.RiskReview, body: "echo 'Apps cannot move VPC in-place; recreate with doctl apps create --spec spec.yaml (vpc set)' >&2"},
+	"do-app-plain-env-vars":   {risk: remediate.RiskReview, body: "app=APP_ID\ndoctl apps spec get \"$app\" > spec.yaml\n# Flip type: SECRET on each sensitive env then:\ndoctl apps update \"$app\" --spec spec.yaml"},
+}
+
+func init() { registerLegacyBash(legacyAppBashEntries) }

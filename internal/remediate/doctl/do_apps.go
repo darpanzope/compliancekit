@@ -169,3 +169,17 @@ doctl compute cdn create --origin app-static-assets.nyc3.digitaloceanspaces.com 
 		Notes: "Update app static asset URLs to point at the CDN endpoint.",
 	}, nil
 }
+
+// v0.19 phase 9 — legacy backfill for v0.9-vintage App Platform checks.
+var legacyAppDoctlEntries = map[string]legacyDoctlEntry{
+	"do-app-domain-weak-tls": {risk: remediate.RiskReview,
+		content: "doctl apps spec get APP_ID > spec.yaml\n# edit minimum_tls_version, then\ndoctl apps update APP_ID --spec spec.yaml"},
+	"do-app-no-custom-domain": {risk: remediate.RiskReview,
+		content: "doctl apps spec get APP_ID > spec.yaml\n# add domains entry, then\ndoctl apps update APP_ID --spec spec.yaml"},
+	"do-app-no-vpc": {risk: remediate.RiskReview,
+		content: "# Apps must be recreated to move into a VPC.\ndoctl apps create --spec spec.yaml  # with vpc set"},
+	"do-app-plain-env-vars": {risk: remediate.RiskReview,
+		content: "doctl apps spec get APP_ID > spec.yaml\n# flip type: SECRET on sensitive envs\ndoctl apps update APP_ID --spec spec.yaml"},
+}
+
+func init() { registerLegacyDoctl(legacyAppDoctlEntries) }

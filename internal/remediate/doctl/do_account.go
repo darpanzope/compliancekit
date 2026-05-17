@@ -183,3 +183,16 @@ func renderDoctlManualOnly(label, dashboardURL, action string) (remediate.Snippe
 		Refs:  []string{dashboardURL},
 	}, nil
 }
+
+// v0.19 phase 9 — legacy backfill for v0.9-vintage account checks.
+var legacyAccountDoctlEntries = map[string]legacyDoctlEntry{
+	"do-account-email-verified": {risk: remediate.RiskManual,
+		content: "# Email verification is interactive; re-send from cloud panel.\ndoctl account get --format Email,EmailVerified",
+		verify:  "doctl account get --format EmailVerified"},
+	"do-account-status-active": {risk: remediate.RiskManual,
+		content: "doctl account get --format Status,StatusMessage"},
+	"do-account-uses-named-team": {risk: remediate.RiskManual,
+		content: "# Create team via cloud panel → Settings → Team. doctl has no team-create primitive."},
+}
+
+func init() { registerLegacyDoctl(legacyAccountDoctlEntries) }
