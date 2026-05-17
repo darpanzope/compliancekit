@@ -220,12 +220,12 @@ Full per-check reference (auto-generated, IDs / severities / framework mappings 
 | AWS | v0.7 ✅ | 30 | IAM (8) + S3 (5) + EC2 (5) + RDS (4) + CloudTrail (3) + KMS (2) + Config (2) + GuardDuty (1) |
 | GCP | v0.8 ✅ | 25 | IAM (6) + Compute (5) + GCS (4) + Cloud SQL (3) + Logging (2) + KMS (2) + BigQuery (3) |
 | Hetzner Cloud | v0.10 ✅ | 15 | servers (5) + firewalls (3) + networks (2) + load balancers (2) + volumes (2) + floating IPs (1) |
-| Kubernetes + EKS / GKE / DOKS-deep | v0.11 ✅ (+10 DOKS at v0.19) | 149 | generic K8s (95) — pods/controllers/RBAC/network/storage/namespaces/admission/nodes — plus EKS (12) + GKE (13) + DOKS (19, with v0.19 add-on depth: version EOL, taints, env tags, retired sizes, maintenance window, control-plane logging, metrics-server, cert-manager, autoscaler, PSA baseline) |
+| Kubernetes + EKS / GKE / DOKS-deep | v0.21 ✅ | 241 | full CIS K8s Benchmark + NSA/CISA Kubernetes Hardening Guide v1.2 surface. v0.11 baseline (149) + v0.21 deepening (+92) across pod-security extra (12), reliability (12), supply-chain (10), RBAC depth (10), network depth (10), admission + policy engine (8), CIS control-plane manual-verify (15), DOKS/EKS/GKE deepening (15). Every K8s check ships bespoke kubectl (parity-gated at strict 0; Helm + Terraform per-check where natural-fit). |
 | Cloudflare, GitHub, Google Workspace, Vercel, Linode, Vultr | v1.7 | — | tail clouds |
 
 ### Frameworks
 
-Every check maps across **eight shipping frameworks** (v0.12+ baseline plus the v0.20 CIS Linux Server Benchmark catalog) — 638 controls total. Operators can scope controls out of audit via `tailoring:` in `compliancekit.yaml`; the evidence pack carries every scope-out with its written justification.
+Every check maps across **nine shipping frameworks** (v0.12+ baseline plus the v0.20 CIS Linux Server Benchmark and v0.21 NSA/CISA Kubernetes Hardening Guide catalogs) — 668 controls total. Operators can scope controls out of audit via `tailoring:` in `compliancekit.yaml`; the evidence pack carries every scope-out with its written justification.
 
 | Framework | Version | Coverage | Category |
 |---|---|---:|---|
@@ -233,6 +233,7 @@ Every check maps across **eight shipping frameworks** (v0.12+ baseline plus the 
 | ISO/IEC 27001 Annex A | 2022 | 93 (full Annex A: org, people, physical, technological) | compliance |
 | CIS Controls v8 | v8 | 153 safeguards × IG1/IG2/IG3 taxonomy | compliance |
 | CIS Linux Server Benchmark | v8 | 90 sections × Level 1 / Level 2 (initial-setup, services, network, logging-auditing, access-auth, system-maintenance) | compliance |
+| NSA / CISA Kubernetes Hardening Guide | v1.2 (Aug 2022) | 30 controls × 5 chapters (pod-security, network, auth, logging, upgrading) | compliance |
 | NIST SP 800-53 | r5 | 131 (cloud + Linux subset across 14 families) | compliance |
 | HIPAA Security Rule | 45 CFR §§164.308/310/312 | 50 implementation specs × required/addressable | compliance |
 | PCI DSS | v4.0 | 61 sub-requirements × 12 themes | compliance |

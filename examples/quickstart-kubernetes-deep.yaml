@@ -1,0 +1,123 @@
+# compliancekit — Kubernetes deep-scan quickstart (v0.21+)
+#
+# Exercises the full 241-check Kubernetes surface against any
+# kubeconfig — generic K8s + EKS / GKE / DOKS deepening. Every K8s
+# check ships bespoke kubectl remediation (parity-gated at strict 0);
+# the v0.21 CIS Kubernetes Benchmark control-plane manual-verify
+# checks emit StatusError + audit hints the SOC team can paste into
+# their kubectl session.
+#
+# Run:
+#   export KUBECONFIG=$HOME/.kube/config   # any context the binary can reach
+#   compliancekit scan --config examples/quickstart-kubernetes-deep.yaml
+#
+# Output:
+#   evidence/<period>/                full evidence pack
+#   findings.json                     machine-readable scan output
+#   remediations/{runbook,scripts}/   per-format remediation artifacts
+#   poam.csv                          POA&M action list
+#
+# Manual-verify findings (StatusError) are expected and intentional —
+# CIS Kubernetes Benchmark §1 (Control Plane Components) flags live on
+# control-plane static pod manifests / kubelet config that the K8s
+# API does not expose. The auditor SSHs the control-plane node + greps
+# the manifest, OR confirms the vendor-fixed flag in EKS / GKE / DOKS
+# docs + waives via waivers.yaml (ADR-013).
+
+providers:
+  kubernetes:
+    enabled: true
+    # Per-context fanout; one context = one cluster. Configure each
+    # context via standard kubeconfig (kubectl config use-context).
+    contexts: []                # empty = scan every context in $KUBECONFIG
+    exclude_namespaces:
+      - kube-system             # cluster-managed; usually waive-only
+      - kube-public
+      - kube-node-lease
+
+scan:
+  parallel_checks: 16
+  fail_on: high                 # any High / Critical finding exits non-zero
+
+frameworks:
+  enabled:
+    - soc2
+    - iso27001
+    - cis-v8                    # CIS Controls v8 (organizational)
+    - nsa-cisa-k8s              # NEW in v0.21 — K8s Hardening Guide v1.2
+    - nist-800-53
+    - hipaa
+    - pci-dss
+    # - mitre-attack            # threat-model overlay; enable when wanted
+
+waivers:
+  file: waivers.yaml
+  #
+  # Example waivers.yaml entries for common K8s manual-verify findings:
+  #
+  # waivers:
+  #   - check_id:    k8s-cp-apiserver-anonymous-auth
+  #     resource_id: k8s.cluster.eks-prod
+  #     reason:      "EKS sets --anonymous-auth=false by default per AWS docs; confirmed in cluster's audit log."
+  #     approver:    secops@acme.com
+  #     expires:     2026-11-15
+  #
+  #   - check_id:    k8s-cp-etcd-client-cert-auth
+  #     resource_id: k8s.cluster.*
+  #     reason:      "Managed K8s — vendor-controlled etcd. Not operator-modifiable."
+  #     approver:    secops@acme.com
+  #     expires:     2026-11-15
+
+evidence:
+  enabled: true
+  output: evidence/
+  formats:
+    - json
+    - html
+    - sarif
+    - ocsf
+  include_pass: true
+  include_skip: true
+
+remediate:
+  enabled: true
+  output: remediations/
+  formats:
+    - kubectl                   # primary K8s format
+    - bash                      # POSIX one-liners for cloud-CLI work
+  emit_runbook: true
+  emit_poam: true
+
+notify:
+  slack:
+    webhook_url: $SLACK_WEBHOOK
+    severity_floor: high
+    only_new: true
+
+baseline:
+  enabled: true
+  path: baselines/k8s-prod.json
+
+# -----------------------------------------------------------------------------
+# What this scan covers:
+#
+#   Pod security (v0.11 + v0.21)        — 30 checks
+#   Reliability + lifecycle (v0.21)      — 12 checks
+#   RBAC depth (v0.11 + v0.21)           — ~40 checks
+#   Network + Ingress + NetworkPolicy    — ~25 checks
+#   Supply chain (v0.21)                 — 10 checks
+#   Admission webhooks + policy engine   — 11 checks
+#   CIS control-plane manual-verify      — 15 checks
+#   Storage / Secrets / SA               — ~30 checks
+#   Nodes                                 — 10 checks
+#   Jobs / CronJobs / DaemonSets         — ~10 checks
+#   ResourceQuota / LimitRange / NS      — ~10 checks
+#   EKS deepening                         — 17 checks (12 v0.11 + 5 v0.21)
+#   GKE deepening                         — 18 checks (13 v0.11 + 5 v0.21)
+#   DOKS deepening                        — 24 checks (19 v0.11 + 5 v0.21)
+#
+#   Total                                — 241 K8s + DOKS/EKS/GKE checks
+#
+# Typical wall-clock against a 50-pod cluster: 30-60 seconds.
+# Add --providers=kubernetes to skip cloud-side collectors.
+# -----------------------------------------------------------------------------

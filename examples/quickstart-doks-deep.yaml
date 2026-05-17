@@ -1,0 +1,111 @@
+# compliancekit — DOKS deep-scan quickstart (v0.21+)
+#
+# Pairs the DigitalOcean control-plane scan (v0.19, 144 checks) with
+# the K8s + DOKS deepening (v0.21, 241 K8s checks including 24 DOKS-
+# specific) so a single scan covers both the cloud-side DOKS cluster
+# spec AND the cluster's in-K8s posture.
+#
+# Run:
+#   export DO_API_TOKEN=dop_v1_...     # for the DO control-plane collector
+#   export KUBECONFIG=$HOME/.kube/config   # for the K8s/DOKS collector
+#   compliancekit scan --config examples/quickstart-doks-deep.yaml
+#
+# DOKS-specific check surface:
+#   • v0.21 DOKS deepening (managed_extra.go, 5 checks):
+#     - public endpoint disabled
+#     - VPC firewall restricted
+#     - audit log shipping configured
+#     - image pull from DOCR
+#     - nodepool auto-upgrade explicit
+#   • v0.11 + v0.19 DOKS baseline (19 checks):
+#     - cluster running / HA / version not deprecated
+#     - nodepool autoscale / min nodes / size not retired
+#     - maintenance window + loud hours + surge upgrade
+#     - VPC attached + registry integration
+#     - cert-manager / metrics-server / cluster-autoscaler installed
+#     - Pod Security Standards baseline
+#     - control plane logging exported
+#     - environment tag on nodepools
+#     - taints discipline
+
+providers:
+  digitalocean:
+    enabled: true
+    # DOKS cluster lifecycle + node-pool config comes from the DO API
+    # collector. The K8s collector below probes the actual cluster
+    # state via kubeconfig.
+  kubernetes:
+    enabled: true
+    contexts: []                # scan every context in $KUBECONFIG
+    exclude_namespaces:
+      - kube-system
+      - kube-public
+      - kube-node-lease
+
+scan:
+  parallel_checks: 16
+  fail_on: high
+
+frameworks:
+  enabled:
+    - soc2
+    - iso27001
+    - cis-v8
+    - nsa-cisa-k8s              # v0.21
+    - cis-linux-server          # v0.20 — DOKS nodes are Ubuntu
+    - nist-800-53
+
+waivers:
+  file: waivers.yaml
+  #
+  # waivers:
+  #   - check_id:    do-droplet-public-ipv4
+  #     resource_id: digitalocean.droplet.<doks-node-id>
+  #     reason:      "DOKS worker nodes ship with public IPv4 by design (NAT egress); restrict at firewall."
+  #     approver:    secops@acme.com
+  #     expires:     2026-11-15
+  #
+  #   - check_id:    k8s-doks-public-endpoint-disabled
+  #     resource_id: k8s.cluster.<doks-cluster-name>
+  #     reason:      "Operator bastion required for private endpoint; in-progress (track-#42)."
+  #     approver:    secops@acme.com
+  #     expires:     2026-08-15
+
+evidence:
+  enabled: true
+  output: evidence/
+  formats:
+    - json
+    - html
+    - sarif
+    - ocsf
+  include_pass: true
+  include_skip: true
+
+remediate:
+  enabled: true
+  output: remediations/
+  formats:
+    - kubectl                   # for K8s/DOKS checks
+    - doctl                     # for DO cloud-side
+    - terraform                 # for IaC migration
+    - bash                      # operator-team copy-paste
+
+notify:
+  slack:
+    webhook_url: $SLACK_WEBHOOK
+    severity_floor: high
+    only_new: true
+  pagerduty:
+    routing_key: $PAGERDUTY_ROUTING_KEY
+    severity_floor: critical
+
+baseline:
+  enabled: true
+  path: baselines/doks-prod.json
+
+# -----------------------------------------------------------------------------
+# Combined scan covers ~390 checks across DO + DOKS + K8s. Typical
+# wall-clock for a small DOKS cluster (5-10 nodes, 30-50 pods):
+# 60-90 seconds.
+# -----------------------------------------------------------------------------
