@@ -20,9 +20,25 @@ const StatusError Status
 const StatusFail Status
 const StatusPass Status
 const StatusSkip Status
+func DefaultRegistry() *Registry
+func Lookup(id string) (CheckFunc, bool)
+func LookupCheck(id string) (Check, bool)
+func NewRegistry() *Registry
 func NewResourceGraph() *ResourceGraph
 func ParseSeverity(s string) (Severity, error)
 func ParseStatus(s string) (Status, error)
+func Register(check Check, fn CheckFunc)
+func RegisteredChecks() []Check
+func RegisteredCount() int
+func RegisteredIDs() []string
+func Unregister(id string) bool
+method (*Registry) Check(id string) (Check, bool)
+method (*Registry) Checks() []Check
+method (*Registry) Count() int
+method (*Registry) Get(id string) (CheckFunc, bool)
+method (*Registry) IDs() []string
+method (*Registry) Register(check Check, fn CheckFunc)
+method (*Registry) Unregister(id string) bool
 method (*ResourceGraph) Add(r Resource)
 method (*ResourceGraph) All() []Resource
 method (*ResourceGraph) ByID(id string) (Resource, bool)
@@ -43,9 +59,12 @@ method (Resource) Ref() ResourceRef
 method (Severity) MarshalJSON() ([]byte, error)
 method (Severity) String() string
 method (Status) IsActionable() bool
+type Check struct
+type CheckFunc func(ctx context.Context, graph *ResourceGraph) ([]Finding, error)
 type EvidencePtr struct
 type Finding struct
 type Package struct
+type Registry struct
 type Resource struct
 type ResourceGraph struct
 type ResourceRef struct
