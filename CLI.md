@@ -142,7 +142,7 @@ Flags:
 | `--config <path>` | — | v0.12+. Path to `compliancekit.yaml`; loads the `tailoring:` block so the pack carries operator-declared scope-outs |
 | `--env <name>` | — | v0.12+. Load `compliancekit.<env>.yaml` overlay alongside `--config` |
 
-Frameworks shipped through v0.12: SOC 2 (TSC), ISO/IEC 27001:2022 Annex A, CIS Controls v8, NIST SP 800-53 r5, HIPAA Security Rule, PCI DSS v4.0, MITRE ATT&CK Enterprise. 548 controls total across the 7 catalogs. Frameworks are picked up automatically from `internal/frameworks/<id>.yaml`; new ones can be added without code changes.
+Frameworks shipped at v1.0: SOC 2 (TSC), ISO/IEC 27001:2022 Annex A, CIS Controls v8, CIS Linux Server Benchmark v8 (added v0.20), NSA/CISA Kubernetes Hardening Guide v1.2 (added v0.21), NIST SP 800-53 r5, HIPAA Security Rule, PCI DSS v4.0, MITRE ATT&CK Enterprise. **668 controls total across 9 catalogs.** Frameworks are picked up automatically from `internal/frameworks/<id>.yaml`; new ones can be added without code changes.
 
 When `--config` is passed, the pack additionally writes a `tailoring.json` to the root and adds `framework_name`, `control_family`, `control_tags`, `tailored`, and `tailoring_justification` columns to `control-mapping.csv` so auditors see every operator-declared scope-out with its written reason.
 
