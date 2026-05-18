@@ -49,10 +49,15 @@ func TestPool_HappyPath(t *testing.T) {
 	p.Start(ctx)
 	defer p.Stop()
 
-	// Wait for both to complete or context to expire.
+	// Wait for both rows to actually transition to 'completed' in
+	// the DB. Polling `ran` is unsafe: the runner increments it at
+	// the START of work, but handleJob's row update happens AFTER
+	// the runner returns. Canceling in between leaves the row in
+	// 'running' or 'failed' depending on the race.
 	deadline := time.Now().Add(2 * time.Second)
 	for time.Now().Before(deadline) {
-		if ran.Load() == 2 {
+		if getScanStatus(t, st, "scan-A") == "completed" &&
+			getScanStatus(t, st, "scan-B") == "completed" {
 			break
 		}
 		time.Sleep(20 * time.Millisecond)
