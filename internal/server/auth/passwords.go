@@ -21,8 +21,11 @@ import (
 // bcryptCost is the per-password compute cost. 12 is a 2026-safe
 // default — ~250ms per HashPassword on commodity hardware, which is
 // the right ballpark for a login form (user-perceived snappy + slow
-// enough to throttle brute-force).
-const bcryptCost = 12
+// enough to throttle brute-force). var instead of const so tests can
+// override (the race detector + cost-12 blows past `make test`'s
+// 60s timeout when every TestUsers_*/Sessions_* test bcrypts a
+// password).
+var bcryptCost = 12
 
 // minPasswordLength is enforced at SetPassword time. compliancekit
 // doesn't ship a SaaS password rotator; we trust the operator to
