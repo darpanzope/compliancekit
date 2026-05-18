@@ -62,6 +62,16 @@ jobs:
       - name: Test
         run: go test -race -timeout=60s ./...
 
+      # v1.0 external-embedder contract test. Compiles under
+      # -tags=external and uses ONLY the exported surface of
+      # pkg/compliancekit (package compliancekit_test), proving the
+      # promoted API is sufficient for downstream consumers to
+      # actually build a working integration. Catches accidental
+      # contract narrowing (e.g. an unexported method an embedder
+      # was relying on) that the api.txt diff alone can miss.
+      - name: External embed test
+        run: go test -tags=external -timeout=60s ./pkg/compliancekit/...
+
       # Fails when the committed docs/checks.md drifts from the live
       # check registry. Forces a new or renamed check to ship with a
       # regenerated catalogue in the same PR.

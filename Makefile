@@ -1,4 +1,4 @@
-.PHONY: build run test lint fmt tidy clean setup check docs docs-check api api-check help
+.PHONY: build run test test-external lint fmt tidy clean setup check docs docs-check api api-check help
 .DEFAULT_GOAL := help
 
 # Tools installed via `go install` land in $GOPATH/bin which is often
@@ -27,6 +27,9 @@ run: ## run via go run; pass args via ARGS=
 
 test: ## unit tests with race detector
 	go test -race -timeout=60s ./...
+
+test-external: ## v1.0 contract test under the perspective of an external embedder
+	go test -tags=external -timeout=60s ./pkg/compliancekit/...
 
 test-integration: ## bring up docker harness, run integration tests, tear down
 	docker compose -f test/compose.yaml up -d
@@ -68,7 +71,7 @@ api: ## regenerate pkg/compliancekit/api.txt from the public surface
 api-check: ## fail if pkg/compliancekit/api.txt is stale (v1.0 SemVer gate)
 	go run ./cmd/genapi -check
 
-check: lint test build docs-check api-check ## pre-push gate: lint + test + build + docs + api freshness
+check: lint test test-external build docs-check api-check ## pre-push gate: lint + tests + build + docs + api freshness
 
 help: ## show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
