@@ -6,14 +6,26 @@ import (
 	"fmt"
 	"io"
 	"strings"
-	"text/tabwriter"
 
 	"github.com/spf13/cobra"
 
 	"github.com/darpanzope/compliancekit/internal/frameworks"
 	"github.com/darpanzope/compliancekit/internal/policy"
+	"github.com/darpanzope/compliancekit/internal/ui"
 	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
+
+// padRightLabel right-pads a label string with spaces. Mirrors the
+// internal/ui padding helper but lives here so the cli package
+// doesn't need to import a single helper through ui — the ui
+// package's padRight is unexported by design (a single source of
+// truth for table renderers).
+func padRightLabel(s string, n int) string {
+	if len(s) >= n {
+		return s
+	}
+	return s + strings.Repeat(" ", n-len(s))
+}
 
 // newChecksCmd builds the `compliancekit checks` parent command.
 // Subcommands: `list` (catalog query) and `show` (per-check detail).
@@ -62,7 +74,7 @@ func newChecksListCmd() *cobra.Command {
   --format=json      JSON array of full Check metadata
   --format=csv       header + one row per check`,
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			return runChecksList(cmd.OutOrStdout(), opts)
+			return runChecksList(cmd.OutOrStdout(), stylerFor(cmd), opts)
 		},
 	}
 	cmd.Flags().StringVar(&opts.framework, "framework", "", "filter by framework ID (soc2, cis-v8)")
@@ -72,7 +84,7 @@ func newChecksListCmd() *cobra.Command {
 	return cmd
 }
 
-func runChecksList(w io.Writer, opts checksListOptions) error {
+func runChecksList(w io.Writer, st *ui.Styler, opts checksListOptions) error {
 	checks := compliancekit.RegisteredChecks()
 
 	if opts.framework != "" {
@@ -91,7 +103,7 @@ func runChecksList(w io.Writer, opts checksListOptions) error {
 
 	switch opts.format {
 	case "", "table":
-		return renderChecksTable(w, checks)
+		return renderChecksTable(w, st, checks)
 	case "json":
 		return renderChecksJSON(w, checks)
 	case "csv":
@@ -134,9 +146,10 @@ func filterChecksBySeverity(checks []compliancekit.Check, threshold complianceki
 	return out
 }
 
-func renderChecksTable(w io.Writer, checks []compliancekit.Check) error {
-	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(tw, "ID\tSEVERITY\tPROVIDER\tSOURCE\tTITLE")
+func renderChecksTable(w io.Writer, st *ui.Styler, checks []compliancekit.Check) error {
+	tbl := ui.NewTable("ID", "SEVERITY", "PROVIDER", "SOURCE", "TITLE")
+	tbl.MaxWidth(4, 60) // truncate long titles so long-checkout terminals don't wrap
+
 	regoCount := 0
 	for _, c := range checks {
 		src := "go"
@@ -144,15 +157,15 @@ func renderChecksTable(w io.Writer, checks []compliancekit.Check) error {
 			src = "rego"
 			regoCount++
 		}
-		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\n", c.ID, c.Severity, c.Provider, src, c.Title)
+		tbl.AddRow(c.ID, st.InSeverity(strings.ToUpper(c.Severity.String()), c.Severity), c.Provider, src, c.Title)
 	}
-	if err := tw.Flush(); err != nil {
+	if _, err := io.WriteString(w, tbl.Render(st)); err != nil {
 		return err
 	}
 	if regoCount > 0 {
-		fmt.Fprintf(w, "\n%d check(s) — %d Go, %d Rego\n", len(checks), len(checks)-regoCount, regoCount)
+		fmt.Fprintf(w, "\n%s check(s) — %d Go, %d Rego\n", st.Accent(fmt.Sprintf("%d", len(checks))), len(checks)-regoCount, regoCount)
 	} else {
-		fmt.Fprintf(w, "\n%d check(s)\n", len(checks))
+		fmt.Fprintf(w, "\n%s check(s)\n", st.Accent(fmt.Sprintf("%d", len(checks))))
 	}
 	return nil
 }
@@ -197,57 +210,62 @@ func newChecksShowCmd() *cobra.Command {
 		Short: "Show full metadata for one check",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runChecksShow(cmd.OutOrStdout(), args[0])
+			return runChecksShow(cmd.OutOrStdout(), stylerFor(cmd), args[0])
 		},
 	}
 	return cmd
 }
 
-func runChecksShow(w io.Writer, id string) error {
+func runChecksShow(w io.Writer, st *ui.Styler, id string) error {
 	check, ok := compliancekit.LookupCheck(id)
 	if !ok {
 		return fmt.Errorf("check %q not registered", id)
 	}
 
-	fmt.Fprintf(w, "ID:          %s\n", check.ID)
-	fmt.Fprintf(w, "Title:       %s\n", check.Title)
-	fmt.Fprintf(w, "Severity:    %s\n", check.Severity)
-	fmt.Fprintf(w, "Provider:    %s\n", check.Provider)
+	label := func(name string) string { return st.Muted(padRightLabel(name, 12)) }
+	fmt.Fprintf(w, "%s%s\n", label("ID:"), st.Accent(check.ID))
+	fmt.Fprintf(w, "%s%s\n", label("Title:"), check.Title)
+	fmt.Fprintf(w, "%s%s\n", label("Severity:"), st.SeverityChip(check.Severity))
+	fmt.Fprintf(w, "%s%s\n", label("Provider:"), check.Provider)
 	if check.Service != "" {
-		fmt.Fprintf(w, "Service:     %s\n", check.Service)
+		fmt.Fprintf(w, "%s%s\n", label("Service:"), check.Service)
 	}
 	if check.ResourceType != "" {
-		fmt.Fprintf(w, "Resource:    %s\n", check.ResourceType)
+		fmt.Fprintf(w, "%s%s\n", label("Resource:"), check.ResourceType)
 	}
 
+	section := func(name string) { fmt.Fprintln(w, "\n"+st.Bold(name)) }
+
 	if check.Description != "" {
-		fmt.Fprintln(w, "\nDescription:")
+		section("Description:")
 		fmt.Fprintln(w, indentBlock(check.Description))
 	}
 	if check.Rationale != "" {
-		fmt.Fprintln(w, "\nRationale:")
+		section("Rationale:")
 		fmt.Fprintln(w, indentBlock(check.Rationale))
 	}
 	if check.Remediation != "" {
-		fmt.Fprintln(w, "\nRemediation:")
+		section("Remediation:")
 		fmt.Fprintln(w, indentBlock(check.Remediation))
 	}
 
 	resolved := frameworks.ResolveCheckControls(check.Frameworks)
 	if len(resolved) > 0 {
-		fmt.Fprintln(w, "\nFramework mappings:")
+		section("Framework mappings:")
+		fwTbl := ui.NewTable("FRAMEWORK", "CONTROL", "NAME")
 		for _, rc := range resolved {
-			fmt.Fprintf(w, "  %-12s %-12s %s\n", rc.Framework.ID, rc.Control.ID, rc.Control.Name)
+			fwTbl.AddRow(rc.Framework.ID, rc.Control.ID, rc.Control.Name)
 		}
+		fmt.Fprint(w, fwTbl.Render(st))
 	}
 
 	if len(check.Tags) > 0 {
-		fmt.Fprintf(w, "\nTags: %s\n", strings.Join(check.Tags, ", "))
+		fmt.Fprintf(w, "\n%s%s\n", st.Bold("Tags: "), strings.Join(check.Tags, ", "))
 	}
 	if len(check.References) > 0 {
-		fmt.Fprintln(w, "\nReferences:")
+		section("References:")
 		for _, r := range check.References {
-			fmt.Fprintf(w, "  %s\n", r)
+			fmt.Fprintf(w, "  %s %s\n", st.Muted(st.Glyph("arrow")), r)
 		}
 	}
 
@@ -257,13 +275,13 @@ func runChecksShow(w io.Writer, id string) error {
 	// — their CheckFunc lives in compiled binary — so the section
 	// is conditional on Check.Policy being set.
 	if check.Policy != "" {
-		fmt.Fprintf(w, "\nSource: Rego (%s)\n", check.Policy)
+		fmt.Fprintf(w, "\n%s%s\n", st.Bold("Source: "), st.Muted("Rego ("+check.Policy+")"))
 		if m := policy.Lookup(check.ID); m != nil && m.Body != "" {
-			fmt.Fprintln(w, "\nPolicy body:")
+			section("Policy body:")
 			fmt.Fprintln(w, indentBlock(m.Body))
 		}
 	} else {
-		fmt.Fprintln(w, "\nSource: Go (internal/checks/...)")
+		fmt.Fprintf(w, "\n%s%s\n", st.Bold("Source: "), st.Muted("Go (internal/checks/...)"))
 	}
 
 	return nil

@@ -23,7 +23,7 @@ import (
 
 func TestChecksList_TableShowsAllChecks(t *testing.T) {
 	var buf bytes.Buffer
-	if err := runChecksList(&buf, checksListOptions{format: "table"}); err != nil {
+	if err := runChecksList(&buf, plainStyler(), checksListOptions{format: "table"}); err != nil {
 		t.Fatalf("runChecksList: %v", err)
 	}
 	out := buf.String()
@@ -44,7 +44,7 @@ func TestChecksList_TableShowsAllChecks(t *testing.T) {
 
 func TestChecksList_JSONIsParseable(t *testing.T) {
 	var buf bytes.Buffer
-	if err := runChecksList(&buf, checksListOptions{format: "json"}); err != nil {
+	if err := runChecksList(&buf, plainStyler(), checksListOptions{format: "json"}); err != nil {
 		t.Fatalf("runChecksList json: %v", err)
 	}
 	var arr []compliancekit.Check
@@ -58,7 +58,7 @@ func TestChecksList_JSONIsParseable(t *testing.T) {
 
 func TestChecksList_CSVHasHeaderAndRows(t *testing.T) {
 	var buf bytes.Buffer
-	if err := runChecksList(&buf, checksListOptions{format: "csv"}); err != nil {
+	if err := runChecksList(&buf, plainStyler(), checksListOptions{format: "csv"}); err != nil {
 		t.Fatalf("runChecksList csv: %v", err)
 	}
 	r := csv.NewReader(&buf)
@@ -80,7 +80,7 @@ func TestChecksList_CSVHasHeaderAndRows(t *testing.T) {
 
 func TestChecksList_UnknownFormatFails(t *testing.T) {
 	var buf bytes.Buffer
-	err := runChecksList(&buf, checksListOptions{format: "toml"})
+	err := runChecksList(&buf, plainStyler(), checksListOptions{format: "toml"})
 	if err == nil {
 		t.Error("expected error for unknown --format")
 	}
@@ -88,7 +88,7 @@ func TestChecksList_UnknownFormatFails(t *testing.T) {
 
 func TestChecksList_FilterByFramework(t *testing.T) {
 	var buf bytes.Buffer
-	if err := runChecksList(&buf, checksListOptions{framework: "soc2"}); err != nil {
+	if err := runChecksList(&buf, plainStyler(), checksListOptions{framework: "soc2"}); err != nil {
 		t.Fatalf("runChecksList: %v", err)
 	}
 	// Should still include checks that map to soc2 -- our DO and Linux
@@ -101,7 +101,7 @@ func TestChecksList_FilterByFramework(t *testing.T) {
 
 func TestChecksList_FilterByProvider(t *testing.T) {
 	var buf bytes.Buffer
-	if err := runChecksList(&buf, checksListOptions{provider: "linux"}); err != nil {
+	if err := runChecksList(&buf, plainStyler(), checksListOptions{provider: "linux"}); err != nil {
 		t.Fatalf("runChecksList: %v", err)
 	}
 	out := buf.String()
@@ -115,7 +115,7 @@ func TestChecksList_FilterByProvider(t *testing.T) {
 
 func TestChecksList_FilterBySeverity(t *testing.T) {
 	var buf bytes.Buffer
-	if err := runChecksList(&buf, checksListOptions{severity: "high"}); err != nil {
+	if err := runChecksList(&buf, plainStyler(), checksListOptions{severity: "high"}); err != nil {
 		t.Fatalf("runChecksList: %v", err)
 	}
 	out := buf.String()
@@ -131,7 +131,7 @@ func TestChecksList_FilterBySeverity(t *testing.T) {
 
 func TestChecksList_FilterBySeverity_InvalidErrors(t *testing.T) {
 	var buf bytes.Buffer
-	err := runChecksList(&buf, checksListOptions{severity: "ohno"})
+	err := runChecksList(&buf, plainStyler(), checksListOptions{severity: "ohno"})
 	if err == nil {
 		t.Error("expected error for invalid severity")
 	}
@@ -139,7 +139,7 @@ func TestChecksList_FilterBySeverity_InvalidErrors(t *testing.T) {
 
 func TestChecksShow_RealCheck(t *testing.T) {
 	var buf bytes.Buffer
-	if err := runChecksShow(&buf, "do-droplet-no-firewall"); err != nil {
+	if err := runChecksShow(&buf, plainStyler(), "do-droplet-no-firewall"); err != nil {
 		t.Fatalf("runChecksShow: %v", err)
 	}
 	out := buf.String()
@@ -161,7 +161,7 @@ func TestChecksShow_RealCheck(t *testing.T) {
 
 func TestChecksShow_NotFound(t *testing.T) {
 	var buf bytes.Buffer
-	err := runChecksShow(&buf, "no-such-check")
+	err := runChecksShow(&buf, plainStyler(), "no-such-check")
 	if err == nil {
 		t.Error("expected error for unknown check id")
 	}
