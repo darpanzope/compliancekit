@@ -9,3 +9,15 @@
 # v1.0 baseline lands incrementally across the phase commits — the
 # initial Phase 0 commit ships the gate and an empty contract;
 # subsequent phases promote one type family at a time.
+
+const SeverityCritical
+const SeverityHigh
+const SeverityInfo
+const SeverityLow
+const SeverityMedium
+const SeverityUnknown Severity
+func ParseSeverity(s string) (Severity, error)
+method (*Severity) UnmarshalJSON(b []byte) error
+method (Severity) MarshalJSON() ([]byte, error)
+method (Severity) String() string
+type Severity int
