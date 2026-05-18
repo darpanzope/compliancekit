@@ -1,0 +1,1571 @@
+<!doctype html>
+<html lang="en" data-theme="dark" data-theme-pref="system">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>compliancekit scan report</title>
+
+<script>
+
+
+(function () {
+  try {
+    var pref = localStorage.getItem("compliancekit-theme") || "system";
+    var resolved = pref === "system"
+      ? (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
+      : pref;
+    var root = document.documentElement;
+    root.setAttribute("data-theme", resolved);
+    root.setAttribute("data-theme-pref", pref);
+  } catch (e) {   }
+})();
+</script>
+
+<style>
+ 
+:root,
+[data-theme="dark"] {
+  --bg: #0f1115;
+  --panel: #1a1d23;
+  --panel-2: #232830;
+  --border: #2f3641;
+  --text: #e7e9ee;
+  --muted: #8a93a3;
+  --accent: #5b8def;
+
+  --sev-critical: #ff5252;
+  --sev-high:     #ff8a3d;
+  --sev-medium:   #ffce47;
+  --sev-low:      #74c2ff;
+  --sev-info:     #8a93a3;
+
+  --status-pass:  #6bdf8e;
+  --status-fail:  #ff5252;
+  --status-skip:  #8a93a3;
+  --status-error: #ff8a3d;
+
+  --shadow:       0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+[data-theme="light"] {
+  --bg: #fcfcfd;
+  --panel: #ffffff;
+  --panel-2: #f3f4f7;
+  --border: #e2e5ea;
+  --text: #1d2128;
+  --muted: #5b6371;
+  --accent: #2563eb;
+
+  --sev-critical: #b91c1c;
+  --sev-high:     #c2410c;
+  --sev-medium:   #a16207;
+  --sev-low:      #1e40af;
+  --sev-info:     #5b6371;
+
+  --status-pass:  #15803d;
+  --status-fail:  #b91c1c;
+  --status-skip:  #5b6371;
+  --status-error: #c2410c;
+
+  --shadow:       0 1px 2px rgba(15, 17, 21, 0.08);
+}
+
+ 
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  padding: 0 24px 64px;
+}
+
+ 
+header.report-head {
+  padding: 32px 0 16px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 24px;
+}
+header.report-head .head-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+header.report-head h1 {
+  margin: 0;
+  font-size: 22px;
+  letter-spacing: -0.01em;
+}
+header.report-head .meta {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+ 
+.theme-toggle {
+  display: inline-flex;
+  gap: 2px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 2px;
+  flex-shrink: 0;
+}
+.theme-toggle button {
+  background: transparent;
+  color: var(--muted);
+  border: 0;
+  border-radius: 999px;
+  width: 28px;
+  height: 28px;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+.theme-toggle button:hover { color: var(--text); }
+.theme-toggle button[aria-pressed="true"] {
+  background: var(--panel);
+  color: var(--text);
+  box-shadow: var(--shadow);
+}
+.theme-toggle button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.theme-toggle .icon { width: 16px; height: 16px; }
+
+ 
+ 
+.icon {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  vertical-align: -0.125em;
+  fill: currentColor;
+  flex-shrink: 0;
+}
+
+.counts {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.counts li {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 14px;
+  display: flex;
+  flex-direction: column;
+  min-width: 80px;
+}
+.counts .label {
+  font-size: 11px;
+  text-transform: uppercase;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+}
+.counts .value {
+  font-size: 20px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.counts li.critical .value { color: var(--sev-critical); }
+.counts li.high     .value { color: var(--sev-high); }
+.counts li.medium   .value { color: var(--sev-medium); }
+.counts li.low      .value { color: var(--sev-low); }
+.counts li.info     .value { color: var(--sev-info); }
+
+ 
+.card .delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 999px;
+  margin-left: 6px;
+  font-variant-numeric: tabular-nums;
+}
+.card .delta.up    { color: var(--status-pass); background: rgba(107, 223, 142, .12); }
+.card .delta.down  { color: var(--sev-high);    background: rgba(255, 138, 61, .12); }
+.card .delta.flat  { color: var(--muted);       background: var(--panel-2); }
+.card .spark {
+  display: block;
+  width: 100%;
+  max-width: 80px;
+  height: 16px;
+  margin-top: 6px;
+}
+
+ 
+article.finding.is-new {
+  border-color: var(--sev-high);
+  box-shadow: -2px 0 0 var(--sev-high);
+}
+article.finding .new-badge {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(255, 138, 61, .15);
+  color: var(--sev-high);
+  font-weight: 600;
+}
+
+ 
+.summary-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+  margin: 0 0 24px;
+}
+.card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  min-height: 200px;
+}
+.card-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  margin: 0 0 8px;
+}
+.card-body {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+}
+.card svg[data-chart] {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 200px;
+}
+.card-legend {
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--muted);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}
+.card-legend span { display: inline-flex; align-items: center; gap: 4px; }
+.card-legend .dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.card-legend .dot.sev-critical { background: var(--sev-critical); }
+.card-legend .dot.sev-high     { background: var(--sev-high); }
+.card-legend .dot.sev-medium   { background: var(--sev-medium); }
+.card-legend .dot.sev-low      { background: var(--sev-low); }
+.card-legend .dot.sev-info     { background: var(--sev-info); }
+
+ 
+nav.controls {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 24px;
+  padding: 12px 16px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+nav.controls .controls-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+nav.controls input[type=search] {
+  flex: 1;
+  min-width: 200px;
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 14px;
+  font-family: inherit;
+}
+nav.controls input[type=search]:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+nav.controls .clear-filters {
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 5px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  font-family: inherit;
+}
+nav.controls .clear-filters:hover { color: var(--text); border-color: var(--accent); }
+nav.controls .chip-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+nav.controls .chip-group-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  min-width: 70px;
+  flex-shrink: 0;
+}
+nav.controls .chip {
+  background: var(--panel-2);
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: background-color 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+nav.controls .chip:hover { color: var(--text); border-color: var(--accent); }
+nav.controls .chip[aria-pressed="true"] {
+  background: var(--panel);
+  color: var(--text);
+  border-color: currentColor;
+}
+nav.controls .chip[data-color] { color: var(--muted); }
+nav.controls .chip[data-color][aria-pressed="true"] { color: var(--chip-color); border-color: var(--chip-color); }
+nav.controls .chip .count {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.7;
+}
+
+ 
+.layout {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+.layout > main { min-width: 0; }
+
+ 
+aside.sidebar {
+  position: sticky;
+  top: 16px;
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 13px;
+}
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 8px 8px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 8px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+.sidebar-toggle {
+  display: none;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.sidebar-group {
+  margin-bottom: 8px;
+}
+.sidebar-group > summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 4px;
+  font-weight: 600;
+  color: var(--text);
+  border-radius: 4px;
+}
+.sidebar-group > summary::-webkit-details-marker { display: none; }
+.sidebar-group > summary::before {
+  content: "▸";
+  display: inline-block;
+  font-size: 10px;
+  color: var(--muted);
+  transition: transform 100ms ease;
+}
+.sidebar-group[open] > summary::before { transform: rotate(90deg); }
+.sidebar-group > summary:hover { background: var(--panel-2); }
+.sidebar-group .count {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+  font-weight: 400;
+  color: var(--muted);
+  font-size: 11px;
+}
+.sidebar-subgroup {
+  margin: 4px 0 0 12px;
+}
+.sidebar-subgroup > summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px;
+  color: var(--muted);
+  font-size: 12px;
+  border-radius: 4px;
+}
+.sidebar-subgroup > summary::-webkit-details-marker { display: none; }
+.sidebar-subgroup > summary::before {
+  content: "▸";
+  display: inline-block;
+  font-size: 9px;
+}
+.sidebar-subgroup[open] > summary::before { transform: rotate(90deg); }
+.sidebar-subgroup > summary:hover { color: var(--text); }
+.sidebar-subgroup ul {
+  list-style: none;
+  margin: 2px 0 4px 16px;
+  padding: 0;
+}
+.sidebar-subgroup li a {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  text-decoration: none;
+  color: var(--muted);
+  padding: 3px 6px;
+  border-radius: 3px;
+  font-size: 12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.sidebar-subgroup li a:hover {
+  color: var(--text);
+  background: var(--panel-2);
+}
+.sidebar-subgroup li a .name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sidebar-subgroup li a .badge {
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  background: var(--panel-2);
+  color: var(--muted);
+  padding: 1px 6px;
+  border-radius: 999px;
+}
+.sidebar-subgroup li a.has-actionable .badge {
+  background: rgba(255, 82, 82, 0.15);
+  color: var(--sev-critical);
+}
+
+@media (max-width: 800px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  aside.sidebar {
+    position: relative;
+    top: 0;
+    max-height: none;
+  }
+  .sidebar-toggle { display: inline-flex; align-items: center; gap: 6px; }
+  .sidebar-body { display: none; }
+  aside.sidebar.open .sidebar-body { display: block; }
+}
+
+ 
+section.severity-section {
+  margin-bottom: 32px;
+}
+section.severity-section h2 {
+  font-size: 16px;
+  margin: 0 0 12px;
+  padding: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+section.severity-section h2 .sev-icon { width: 18px; height: 18px; }
+section.severity-section.critical h2 { color: var(--sev-critical); }
+section.severity-section.high     h2 { color: var(--sev-high); }
+section.severity-section.medium   h2 { color: var(--sev-medium); }
+section.severity-section.low      h2 { color: var(--sev-low); }
+section.severity-section.info     h2 { color: var(--sev-info); }
+
+article.finding {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+article.finding header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 12px;
+  margin-bottom: 6px;
+}
+article.finding .check-id {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+  font-weight: 600;
+}
+article.finding .resource {
+  color: var(--muted);
+  font-size: 13px;
+}
+article.finding .resource .name {
+  color: var(--text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+article.finding .status-badge {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+article.finding .status-badge .icon { width: 11px; height: 11px; }
+article.finding[data-status="fail"]  .status-badge { color: var(--status-fail); }
+article.finding[data-status="error"] .status-badge { color: var(--status-error); }
+article.finding[data-status="pass"]  .status-badge { color: var(--status-pass); }
+article.finding[data-status="skip"]  .status-badge { color: var(--status-skip); }
+article.finding .message {
+  margin: 4px 0 0;
+}
+article.finding details {
+  margin-top: 12px;
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
+article.finding details summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 13px;
+  user-select: none;
+}
+article.finding details summary:hover { color: var(--text); }
+article.finding .field-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  margin: 10px 0 4px;
+}
+article.finding .remediation,
+article.finding .description {
+  font-size: 13px;
+  background: var(--panel-2);
+  border-radius: 4px;
+  padding: 8px 12px;
+  white-space: pre-wrap;
+}
+article.finding ul.frameworks {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+ 
+article.finding .snippets {
+  margin-top: 8px;
+}
+article.finding .snippets .tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 4px;
+}
+article.finding .snippets .tab {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-bottom: none;
+  padding: 4px 10px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  color: var(--muted);
+  border-radius: 3px 3px 0 0;
+}
+article.finding .snippets .tab.active {
+  background: var(--panel);
+  color: var(--text);
+  border-bottom: 1px solid var(--panel);
+  margin-bottom: -1px;
+}
+article.finding .snippets .panel {
+  display: none;
+  background: var(--panel-2);
+  border-radius: 0 4px 4px 4px;
+  padding: 10px 12px;
+}
+article.finding .snippets .panel.active { display: block; }
+article.finding .snippets .panel .risk {
+  display: inline-block;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 2px 7px;
+  border-radius: 3px;
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+article.finding .snippets .risk.safe   { background: rgba(76, 175, 80, .15);  color: #4caf50; }
+article.finding .snippets .risk.review { background: rgba(255, 165, 0, .15);  color: #ffa500; }
+article.finding .snippets .risk.manual { background: rgba(244, 67, 54, .15);  color: #f44336; }
+article.finding .snippets pre {
+  margin: 0;
+  white-space: pre-wrap;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  color: var(--text);
+}
+article.finding .snippets .notes,
+article.finding .snippets .verify {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 6px;
+}
+article.finding .snippets .verify code {
+  background: var(--panel);
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+article.finding ul.frameworks li {
+  font-size: 13px;
+  padding: 4px 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--muted);
+}
+article.finding ul.frameworks li strong {
+  color: var(--text);
+  font-weight: 600;
+  margin-right: 8px;
+}
+
+ 
+.empty {
+  text-align: center;
+  color: var(--muted);
+  padding: 64px 0;
+}
+.empty p { margin: 4px 0; }
+
+.all-clear {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 28px 32px;
+  margin: 0 0 24px;
+  background: var(--panel);
+  border: 1px solid var(--status-pass);
+  border-left-width: 4px;
+  border-radius: 8px;
+  position: relative;
+  overflow: hidden;
+}
+.all-clear::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 0% 50%, rgba(107, 223, 142, .10), transparent 60%);
+  pointer-events: none;
+}
+.all-clear .all-clear-icon {
+  flex-shrink: 0;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--status-pass);
+  color: var(--panel);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+.all-clear .all-clear-icon .icon { width: 32px; height: 32px; }
+.all-clear .all-clear-body { position: relative; }
+.all-clear .all-clear-headline {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0 0 4px;
+  color: var(--text);
+  letter-spacing: -0.01em;
+}
+.all-clear .all-clear-sub {
+  font-size: 13px;
+  color: var(--muted);
+  margin: 0;
+}
+.all-clear .all-clear-sub strong {
+  color: var(--text);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+ 
+footer.report-foot {
+  margin-top: 48px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 12px;
+  text-align: center;
+}
+
+ 
+@media (max-width: 600px) {
+  body { padding: 0 14px 48px; }
+  header.report-head .head-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .summary-cards {
+    grid-template-columns: 1fr;
+  }
+  .counts { gap: 8px; }
+  .counts li {
+    flex: 1 1 calc(50% - 8px);
+    min-width: 0;
+  }
+  nav.controls .chip-group {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+  }
+  nav.controls .chip-group-label {
+    min-width: 0;
+  }
+}
+@media (max-width: 400px) {
+  body { padding: 0 10px 40px; }
+  header.report-head { padding: 16px 0 12px; }
+  header.report-head h1 { font-size: 18px; }
+  .counts li { flex: 1 1 100%; }
+  article.finding { padding: 12px; }
+  article.finding header { gap: 4px 8px; }
+  article.finding .check-id { font-size: 12px; }
+  article.finding .resource { font-size: 12px; }
+  nav.controls .chip { font-size: 11px; padding: 3px 8px; }
+  .card-title { font-size: 10px; }
+  .card { padding: 12px; min-height: 160px; }
+}
+
+ 
+@media print {
+  :root, [data-theme="dark"], [data-theme="light"] {
+    --bg: #ffffff;
+    --panel: #ffffff;
+    --panel-2: #f5f5f5;
+    --border: #cccccc;
+    --text: #111111;
+    --muted: #555555;
+    --accent: #2563eb;
+    --shadow: none;
+  }
+  html, body {
+    background: #ffffff;
+    color: #111111;
+    color-scheme: light;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  body { padding: 0 10mm 10mm; font-size: 11pt; }
+   
+  .theme-toggle,
+  nav.controls,
+  aside.sidebar,
+  .sidebar-toggle,
+  .card .spark {
+    display: none !important;
+  }
+   
+  .layout {
+    display: block;
+  }
+   
+  header.report-head,
+  .card,
+  article.finding,
+  nav.controls {
+    border: 1px solid #ccc;
+    box-shadow: none;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  .summary-cards { grid-template-columns: repeat(2, 1fr); page-break-after: avoid; }
+   
+  details {
+    display: block;
+  }
+  details > summary {
+    display: none;
+  }
+   
+  a { color: #111; text-decoration: none; }
+   
+  footer.report-foot { font-size: 9pt; color: #666; }
+   
+}
+</style>
+</head>
+<body><svg xmlns="http://www.w3.org/2000/svg" style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true" focusable="false">
+  <defs>
+    <!-- ─── Severity glyphs ───────────────────────────────────────
+         Each glyph uses currentColor so the consumer drives the hue
+         (severity classes in CSS map currentColor to the right
+         palette var). 24x24 viewBox; designed legible at 12-32px. -->
+    <symbol id="i-sev-critical" viewBox="0 0 24 24">
+      <path fill="currentColor" d="M12 2 1 22h22L12 2zm0 5.6 7.7 13.6H4.3L12 7.6z"/>
+      <path fill="currentColor" d="M11 11h2v5h-2zm0 6h2v2h-2z"/>
+    </symbol>
+    <symbol id="i-sev-high" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="10" fill="currentColor"/>
+      <path fill="var(--panel)" d="M11 6h2v8h-2zm0 10h2v2h-2z"/>
+    </symbol>
+    <symbol id="i-sev-medium" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/>
+      <path fill="currentColor" d="M11 7h2v7h-2zm0 9h2v2h-2z"/>
+    </symbol>
+    <symbol id="i-sev-low" viewBox="0 0 24 24">
+      <path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" d="M6 10l6 6 6-6"/>
+    </symbol>
+    <symbol id="i-sev-info" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/>
+      <path fill="currentColor" d="M11 11h2v6h-2zm0-4h2v2h-2z"/>
+    </symbol>
+
+    <!-- ─── Status glyphs ─────────────────────────────────────────
+         Pass / fail / skip / error / waived. Stroked so they read
+         well even at 12px. -->
+    <symbol id="i-status-pass" viewBox="0 0 24 24">
+      <path fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" d="M5 12l4.5 4.5L19 7"/>
+    </symbol>
+    <symbol id="i-status-fail" viewBox="0 0 24 24">
+      <path fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" d="M6 6l12 12M18 6L6 18"/>
+    </symbol>
+    <symbol id="i-status-skip" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/>
+      <path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" d="M7 12h10"/>
+    </symbol>
+    <symbol id="i-status-error" viewBox="0 0 24 24">
+      <path fill="currentColor" d="M12 2 1 22h22L12 2z"/>
+      <path fill="var(--panel)" d="M11 10h2v6h-2zm0 7h2v2h-2z"/>
+    </symbol>
+    <symbol id="i-status-waived" viewBox="0 0 24 24">
+      <path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 2l9 4-1 7c-.6 4-3.6 7-8 9-4.4-2-7.4-5-8-9L4 6l8-4z"/>
+    </symbol>
+
+    <!-- ─── Theme toggle ─────────────────────────────────────────── -->
+    <symbol id="i-theme-light" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="4" fill="currentColor"/>
+      <g stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/>
+      </g>
+    </symbol>
+    <symbol id="i-theme-dark" viewBox="0 0 24 24">
+      <path fill="currentColor" d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>
+    </symbol>
+    <symbol id="i-theme-system" viewBox="0 0 24 24">
+      <rect x="2.5" y="4" width="19" height="13" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/>
+      <path stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M8 21h8M12 17v4"/>
+    </symbol>
+
+    <!-- ─── Provider logos ────────────────────────────────────────
+         Monochrome simplifications, recognizable at 16-24px, no
+         brand-colored fills (kept neutral so the theme toggle keeps
+         working). Specific shapes chosen to evoke each ecosystem
+         without infringing on any trademark. -->
+    <symbol id="i-prov-aws" viewBox="0 0 24 24">
+      <path fill="currentColor" d="M5.4 13.2c0 .4.1.7.2 1 .1.2.2.5.3.7l.1.2v.1l-.1.3-.6.4h-.2l-.2-.1-.4-.5-.3-.6c-.8.9-1.7 1.3-2.6 1.3-.7 0-1.3-.2-1.7-.6-.4-.4-.6-1-.6-1.7s.3-1.3.8-1.7c.6-.5 1.3-.7 2.2-.7h1.1v-.5c0-.4-.1-.7-.3-1-.2-.2-.5-.3-.9-.3-.5 0-1 .1-1.8.3h-.3l-.2-.1V9.4l.1-.2.4-.2c.4-.2.8-.3 1.3-.4l1.1-.1c.8 0 1.4.2 1.8.6.4.4.6 1 .6 1.7v2.4zm-3.7 1.4c.3 0 .6-.1 1-.2.4-.1.7-.4.9-.7l.2-.3v-.4l-.4-.1H2.9c-.4 0-.7.1-.9.2s-.3.4-.3.7c0 .3.1.5.2.7.2.1.4.1.7.1zm7.4 1 .3-.1.1-.2 2.1-7c0-.1.1-.2.1-.2l-.1-.2-.2-.1H10.8l-.3.1-.1.2-1.5 6.1L7.4 8l-.1-.2-.3-.1h-.5l-.3.1-.1.2L4.6 14l-.1.2-.1.2.1.2.3.1h.7l.3-.1.1-.2 1.5-6 1.4 6 .2.2.3.1z"/>
+      <path fill="currentColor" d="M19 16c-.4 0-.9-.1-1.3-.2l-1-.4-.2-.2v-.5c0-.2.1-.2.2-.2h.4l.3.1c.3.1.6.2.9.3l1 .1c.5 0 1-.1 1.2-.3.3-.2.5-.5.5-.8s-.1-.5-.3-.6c-.2-.2-.5-.3-.9-.4l-1.1-.4c-.6-.2-1-.4-1.3-.8-.3-.3-.4-.7-.4-1.1s.1-.6.2-.9c.2-.2.4-.5.6-.6.3-.2.5-.3.9-.4.3-.1.7-.1 1-.1h.6c.2 0 .4.1.6.1l.5.2.4.2.2.2.1.3v.3c0 .2 0 .3-.2.3l-.4-.1c-.5-.2-1.1-.4-1.7-.4-.5 0-.9.1-1.2.2-.3.2-.4.4-.4.7s.1.5.3.7c.2.2.5.3 1 .5l1 .4c.5.2.9.4 1.1.7.2.3.4.6.4 1 0 .3-.1.6-.2.9-.1.2-.3.5-.6.7-.2.2-.5.3-.9.4-.3.1-.7.2-1 .2z"/>
+    </symbol>
+    <symbol id="i-prov-gcp" viewBox="0 0 24 24">
+      <path fill="currentColor" d="M16.6 9.6 19 13.5l-.5.5h-2.7c1.2-.7 2-2 2-3.5 0-.3 0-.6-.1-.9zM12 4c2.6 0 4.9 1.7 5.8 4-.4-.1-.8-.2-1.2-.2H15c-.5-1.8-2.2-3-4-3-2.2 0-4 1.7-4 3.9 0 .4.1.7.2 1.1-2 .3-3.5 2-3.5 4 0 2.3 1.8 4.1 4.1 4.1H17c2.2 0 4-1.7 4-3.9 0-1.1-.4-2-1.1-2.7v-.2L17.4 8c.9 1 1.4 2.4 1.4 3.8 0 3-2.4 5.4-5.4 5.4H7.4C4.4 17.2 2 14.8 2 11.8c0-2.7 2-5 4.6-5.4C7.4 4.9 9.6 4 12 4z"/>
+    </symbol>
+    <symbol id="i-prov-azure" viewBox="0 0 24 24">
+      <path fill="currentColor" d="M14 4 6 20h6l1.5-4 4 4h4L14 4zm-1 4.5 4.7 11h-3l-3.2-3.5L11 19H7l6-10.5z"/>
+    </symbol>
+    <symbol id="i-prov-do" viewBox="0 0 24 24">
+      <path fill="currentColor" d="M12 2C6.5 2 2 6.5 2 12v8h8c5.5 0 10-4.5 10-10S17.5 2 12 2zm0 16H6v-6h6v6zm-2-8H6.5v-3.5H10V10zm3.5 0H10V6.5h3.5V10z"/>
+    </symbol>
+    <symbol id="i-prov-hetzner" viewBox="0 0 24 24">
+      <path fill="currentColor" d="M4 4v16h3.5v-6.5h9V20H20V4h-3.5v6.5h-9V4H4z"/>
+    </symbol>
+    <symbol id="i-prov-k8s" viewBox="0 0 24 24">
+      <path fill="currentColor" d="M12 1.5 2 6v10l10 6.5L22 16V6L12 1.5zm0 2.7 7.5 3.3-.5 7.4-7 4.4-7-4.4L4.5 7.5 12 4.2zm0 3.6L7.6 10l.6 4.4L12 16.7l3.8-2.3L16.4 10 12 7.8z"/>
+    </symbol>
+    <symbol id="i-prov-linux" viewBox="0 0 24 24">
+      <path fill="currentColor" d="M12 2c-2 0-3.5 1.8-3.5 4.5 0 1.3.3 2.5.8 3.3-1.3 1.8-3 4-3 6.4 0 2 1.5 3.8 5.7 3.8s5.7-1.8 5.7-3.8c0-2.4-1.7-4.6-3-6.4.5-.8.8-2 .8-3.3C15.5 3.8 14 2 12 2zm-1.5 4a1 1 0 1 1 0 2 1 1 0 0 1 0-2zm3 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/>
+    </symbol>
+    <symbol id="i-prov-github" viewBox="0 0 24 24">
+      <path fill="currentColor" d="M12 .3a12 12 0 0 0-3.8 23.4c.6.1.8-.3.8-.6v-2.2c-3.3.7-4-1.6-4-1.6-.6-1.4-1.4-1.8-1.4-1.8-1.1-.7.1-.7.1-.7 1.2.1 1.9 1.2 1.9 1.2 1.1 1.9 2.9 1.4 3.6 1 .1-.8.4-1.4.8-1.7-2.7-.3-5.5-1.3-5.5-6 0-1.3.5-2.4 1.2-3.2-.1-.3-.5-1.5.1-3.2 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0c2.3-1.5 3.3-1.2 3.3-1.2.7 1.7.2 2.9.1 3.2.8.8 1.2 1.9 1.2 3.2 0 4.6-2.8 5.7-5.5 6 .4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6A12 12 0 0 0 12 .3z"/>
+    </symbol>
+    <symbol id="i-prov-generic" viewBox="0 0 24 24">
+      <rect x="3" y="6" width="18" height="12" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/>
+      <path stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M3 10h18M7 14h4"/>
+    </symbol>
+  </defs>
+</svg>
+<header class="report-head">
+  <div class="head-row">
+    <h1>compliancekit scan report</h1>
+    <div class="theme-toggle" role="group" aria-label="Color theme">
+      <button type="button" data-theme-set="light"  aria-pressed="false" title="Light theme"  aria-label="Light theme"><svg class="icon" aria-hidden="true"><use href="#i-theme-light"/></svg></button>
+      <button type="button" data-theme-set="dark"   aria-pressed="false" title="Dark theme"   aria-label="Dark theme"><svg class="icon" aria-hidden="true"><use href="#i-theme-dark"/></svg></button>
+      <button type="button" data-theme-set="system" aria-pressed="false" title="Match system" aria-label="Match system theme"><svg class="icon" aria-hidden="true"><use href="#i-theme-system"/></svg></button>
+    </div>
+  </div>
+  <div class="meta">Generated 2026-05-18T12:00:00Z &middot; 2 findings (0 actionable)</div>
+  <ul class="counts">
+    <li class="score" style="min-width:140px"><span class="label">Hardening score</span><span class="value">100<span style="font-size:13px;color:var(--muted);font-weight:400">/100 &middot; 100% coverage</span></span></li>
+    <li class="critical"><span class="label">Critical</span><span class="value">0</span></li>
+    <li class="high"><span class="label">High</span><span class="value">0</span></li>
+    <li class="medium"><span class="label">Medium</span><span class="value">0</span></li>
+    <li class="low"><span class="label">Low</span><span class="value">0</span></li>
+    <li class="info"><span class="label">Info</span><span class="value">0</span></li>
+  </ul>
+</header>
+
+<section class="summary-cards" aria-label="Scan summary">
+  <div class="card card-score">
+    <p class="card-title">Hardening score</p>
+    <div class="card-body">
+      <svg data-chart="gauge" data-value="100" data-max="100" aria-label="Hardening score 100 of 100"></svg>
+    </div>
+    <div class="card-legend"><span>100% coverage</span></div>
+  </div>
+  <div class="card card-donut">
+    <p class="card-title">Severity breakdown</p>
+    <div class="card-body">
+      <svg data-chart="donut" data-segments="[{&#34;key&#34;:&#34;critical&#34;,&#34;label&#34;:&#34;Critical&#34;,&#34;value&#34;:0},{&#34;key&#34;:&#34;high&#34;,&#34;label&#34;:&#34;High&#34;,&#34;value&#34;:0},{&#34;key&#34;:&#34;medium&#34;,&#34;label&#34;:&#34;Medium&#34;,&#34;value&#34;:0},{&#34;key&#34;:&#34;low&#34;,&#34;label&#34;:&#34;Low&#34;,&#34;value&#34;:0},{&#34;key&#34;:&#34;info&#34;,&#34;label&#34;:&#34;Info&#34;,&#34;value&#34;:0}]" aria-label="Actionable findings by severity"></svg>
+    </div>
+    <div class="card-legend">
+      <span><i class="dot sev-critical"></i> Critical 0</span>
+      <span><i class="dot sev-high"></i> High 0</span>
+      <span><i class="dot sev-medium"></i> Medium 0</span>
+      <span><i class="dot sev-low"></i> Low 0</span>
+      <span><i class="dot sev-info"></i> Info 0</span>
+    </div>
+  </div>
+  <div class="card card-frameworks">
+    <p class="card-title">Framework coverage</p>
+    <div class="card-body">
+      <svg data-chart="hbar" data-items="[]" aria-label="Per-framework pass rate"></svg>
+    </div>
+  </div>
+</section>
+
+<nav class="controls" id="filters">
+  <div class="controls-row">
+    <input type="search" id="search" placeholder="Filter findings by text...">
+    <button type="button" class="clear-filters" id="clear-filters" title="Clear all filters">Clear</button>
+  </div>
+  <div class="chip-group" data-chip-group="severity">
+    <span class="chip-group-label">Severity</span>
+    <button type="button" class="chip" data-filter-key="severity" data-filter-val="critical" aria-pressed="false" data-color="--sev-critical" style="--chip-color: var(ZgotmplZ);">Critical <span class="count">1</span></button>
+    <button type="button" class="chip" data-filter-key="severity" data-filter-val="high" aria-pressed="false" data-color="--sev-high" style="--chip-color: var(ZgotmplZ);">High <span class="count">1</span></button>
+  </div>
+  <div class="chip-group" data-chip-group="status">
+    <span class="chip-group-label">Status</span>
+    <button type="button" class="chip" data-filter-key="status" data-filter-val="pass" aria-pressed="false" data-color="--status-pass" style="--chip-color: var(ZgotmplZ);">Pass <span class="count">2</span></button>
+  </div>
+  <div class="chip-group" data-chip-group="provider">
+    <span class="chip-group-label">Provider</span>
+    <button type="button" class="chip" data-filter-key="provider" data-filter-val="linux" aria-pressed="false">linux <span class="count">2</span></button>
+  </div>
+</nav>
+
+<div class="layout">
+
+<aside class="sidebar" id="resource-sidebar">
+  <div class="sidebar-header">
+    <span>Resources</span>
+    <button type="button" class="sidebar-toggle" aria-expanded="false" aria-controls="sidebar-body">Toggle</button>
+  </div>
+  <div class="sidebar-body" id="sidebar-body">
+  <details class="sidebar-group" data-provider="linux" open>
+    <summary>
+      <svg class="icon" aria-hidden="true"><use href="#i-prov-linux"/></svg>
+      <span>linux</span>
+      <span class="count">0/2</span>
+    </summary>
+    <details class="sidebar-subgroup" data-type="linux.host">
+      <summary>
+        <span>host</span>
+        <span class="count">0/2</span>
+      </summary>
+      <ul>
+        <li><a href="#r-host-01" data-resource-id="host-01">
+          <span class="name" title="host-01">host-01</span>
+          <span class="badge">0/2</span>
+        </a></li>
+      </ul>
+    </details>
+  </details>
+  </div>
+</aside>
+
+<main id="findings">
+<div class="all-clear" role="status" aria-label="All checks passed">
+  <div class="all-clear-icon" aria-hidden="true"><svg class="icon"><use href="#i-status-pass"/></svg></div>
+  <div class="all-clear-body">
+    <p class="all-clear-headline">All clear</p>
+    <p class="all-clear-sub"><strong>2</strong> of <strong>2</strong> checks pass &middot; zero actionable findings &middot; hardening score <strong>100/100</strong></p>
+  </div>
+</div>
+<section class="severity-section critical" data-sev="critical">
+  <h2><svg class="icon sev-icon" aria-hidden="true"><use href="#i-sev-critical"/></svg> Critical (1)</h2>
+  <article class="finding" data-sev="critical" data-status="pass" data-provider="linux" data-fws="" data-resource-id="host-01" data-resource-anchor="r-host-01">
+    <header>
+      <span class="check-id">linux-ssh-rootlogin</span>
+      <span class="resource">on <span class="name">host-01</span> <small>(linux.host)</small></span>
+      <span class="status-badge"><svg class="icon" aria-hidden="true"><use href="#i-status-pass"/></svg> pass</span>
+      
+    </header>
+    <p class="message">PermitRootLogin is no</p>
+    
+  </article>
+</section>
+<section class="severity-section high" data-sev="high">
+  <h2><svg class="icon sev-icon" aria-hidden="true"><use href="#i-sev-high"/></svg> High (1)</h2>
+  <article class="finding" data-sev="high" data-status="pass" data-provider="linux" data-fws="" data-resource-id="host-01" data-resource-anchor="r-host-01">
+    <header>
+      <span class="check-id">linux-passwd-permissions</span>
+      <span class="resource">on <span class="name">host-01</span> <small>(linux.host)</small></span>
+      <span class="status-badge"><svg class="icon" aria-hidden="true"><use href="#i-status-pass"/></svg> pass</span>
+      
+    </header>
+    <p class="message">permissions on /etc/passwd are 0644</p>
+    
+  </article>
+</section>
+</main>
+</div>
+
+<footer class="report-foot">
+  Rendered by compliancekit. <a href="https://github.com/darpanzope/compliancekit" style="color: var(--muted);">github.com/darpanzope/compliancekit</a>
+</footer>
+
+<script>
+(function () {
+  
+  
+  
+  
+  
+  
+  
+  var root = document.documentElement;
+  var THEME_KEY = "compliancekit-theme";
+  function currentPref() {
+    return root.getAttribute("data-theme-pref") || "system";
+  }
+  function resolve(pref) {
+    return pref === "system"
+      ? (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
+      : pref;
+  }
+  function applyState() {
+    var pref = currentPref();
+    root.setAttribute("data-theme", resolve(pref));
+    document.querySelectorAll(".theme-toggle button[data-theme-set]").forEach(function (b) {
+      b.setAttribute("aria-pressed", b.getAttribute("data-theme-set") === pref ? "true" : "false");
+    });
+  }
+  applyState();
+  document.querySelectorAll(".theme-toggle button[data-theme-set]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var pref = b.getAttribute("data-theme-set");
+      try { localStorage.setItem(THEME_KEY, pref); } catch (e) {   }
+      root.setAttribute("data-theme-pref", pref);
+      applyState();
+    });
+  });
+  if (window.matchMedia) {
+    var mq = window.matchMedia("(prefers-color-scheme: dark)");
+    var onChange = function () { if (currentPref() === "system") applyState(); };
+    if (mq.addEventListener) { mq.addEventListener("change", onChange); }
+    else if (mq.addListener) { mq.addListener(onChange); } 
+  }
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+
+  var FILTER_KEYS = ["severity", "status", "provider", "framework"];
+  var FILTER_ATTR = {
+    severity: "data-sev",
+    status: "data-status",
+    provider: "data-provider",
+    framework: "data-fws" 
+  };
+
+  function selectedByGroup() {
+    var sel = {};
+    FILTER_KEYS.forEach(function (k) { sel[k] = []; });
+    document.querySelectorAll('.chip[aria-pressed="true"]').forEach(function (c) {
+      var k = c.getAttribute("data-filter-key");
+      var v = c.getAttribute("data-filter-val");
+      if (sel[k]) sel[k].push(v);
+    });
+    return sel;
+  }
+
+  function matchesGroup(article, key, selected) {
+    if (selected.length === 0) return true; 
+    var raw = article.getAttribute(FILTER_ATTR[key]) || "";
+    if (key === "framework") {
+      var tokens = raw.split(",");
+      for (var i = 0; i < selected.length; i++) {
+        if (tokens.indexOf(selected[i]) >= 0) return true;
+      }
+      return false;
+    }
+    return selected.indexOf(raw) >= 0;
+  }
+
+  function applyFilters() {
+    var sel = selectedByGroup();
+    var q = (document.getElementById("search") || { value: "" }).value.toLowerCase().trim();
+    document.querySelectorAll("article.finding").forEach(function (a) {
+      var ok = true;
+      for (var i = 0; i < FILTER_KEYS.length && ok; i++) {
+        ok = matchesGroup(a, FILTER_KEYS[i], sel[FILTER_KEYS[i]]);
+      }
+      if (ok && q) ok = a.textContent.toLowerCase().indexOf(q) >= 0;
+      a.hidden = !ok;
+    });
+    
+    document.querySelectorAll("section.severity-section").forEach(function (s) {
+      var any = false;
+      s.querySelectorAll("article.finding").forEach(function (a) { if (!a.hidden) any = true; });
+      s.hidden = !any;
+    });
+    writeFragment(sel, q);
+  }
+
+  function writeFragment(sel, q) {
+    var parts = [];
+    FILTER_KEYS.forEach(function (k) {
+      if (sel[k].length) parts.push(k + "=" + sel[k].slice().sort().join(","));
+    });
+    if (q) parts.push("q=" + encodeURIComponent(q));
+    var frag = parts.join("&");
+    
+    if (frag) {
+      history.replaceState(null, "", "#" + frag);
+    } else if (window.location.hash) {
+      history.replaceState(null, "", window.location.pathname + window.location.search);
+    }
+  }
+
+  function readFragment() {
+    var raw = window.location.hash.replace(/^#/, "");
+    if (!raw) return { sel: {}, q: "" };
+    var sel = {};
+    var q = "";
+    raw.split("&").forEach(function (kv) {
+      var eq = kv.indexOf("=");
+      if (eq < 0) return;
+      var k = kv.slice(0, eq);
+      var v = kv.slice(eq + 1);
+      if (k === "q") { q = decodeURIComponent(v); return; }
+      if (FILTER_KEYS.indexOf(k) >= 0) sel[k] = v.split(",").filter(Boolean);
+    });
+    return { sel: sel, q: q };
+  }
+
+  
+  document.querySelectorAll(".chip[data-filter-key]").forEach(function (c) {
+    c.addEventListener("click", function () {
+      c.setAttribute("aria-pressed", c.getAttribute("aria-pressed") === "true" ? "false" : "true");
+      applyFilters();
+    });
+  });
+  
+  var search = document.getElementById("search");
+  if (search) {
+    search.addEventListener("input", applyFilters);
+  }
+  
+  var clearBtn = document.getElementById("clear-filters");
+  if (clearBtn) {
+    clearBtn.addEventListener("click", function () {
+      document.querySelectorAll('.chip[aria-pressed="true"]').forEach(function (c) {
+        c.setAttribute("aria-pressed", "false");
+      });
+      if (search) search.value = "";
+      applyFilters();
+    });
+  }
+
+  
+  (function hydrate() {
+    var state = readFragment();
+    Object.keys(state.sel).forEach(function (key) {
+      state.sel[key].forEach(function (val) {
+        var sel = '.chip[data-filter-key="' + key + '"][data-filter-val="' + val + '"]';
+        var c = document.querySelector(sel);
+        if (c) c.setAttribute("aria-pressed", "true");
+      });
+    });
+    if (state.q && search) search.value = state.q;
+    if (Object.keys(state.sel).length || state.q) applyFilters();
+  })();
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  (function sidebar() {
+    var seen = {};
+    document.querySelectorAll("article.finding").forEach(function (a) {
+      var idRaw = a.querySelector(".name");
+      
+      
+      var anchor = a.getAttribute("data-resource-anchor");
+      if (!anchor) return;
+      if (seen[anchor]) return;
+      seen[anchor] = true;
+      a.id = anchor;
+      
+      void idRaw;
+    });
+
+    document.querySelectorAll("aside.sidebar a[data-resource-id]").forEach(function (link) {
+      link.addEventListener("click", function (e) {
+        var target = document.getElementById(link.getAttribute("href").replace(/^#/, ""));
+        if (!target) return;
+        if (target.hidden) {
+          
+          var rid = link.getAttribute("data-resource-id");
+          var visible = null;
+          document.querySelectorAll('article.finding[data-resource-id="' + rid.replace(/"/g, '\\"') + '"]').forEach(function (a) {
+            if (!visible && !a.hidden) visible = a;
+          });
+          if (!visible) { e.preventDefault(); return; }
+          e.preventDefault();
+          visible.scrollIntoView({ behavior: "smooth", block: "start" });
+          return;
+        }
+        
+      });
+    });
+
+    var toggle = document.querySelector(".sidebar-toggle");
+    var aside = document.getElementById("resource-sidebar");
+    if (toggle && aside) {
+      toggle.addEventListener("click", function () {
+        var open = aside.classList.toggle("open");
+        toggle.setAttribute("aria-expanded", open ? "true" : "false");
+      });
+    }
+  })();
+
+  
+  
+  
+  
+  (function printHelpers() {
+    var prior = null;
+    window.addEventListener("beforeprint", function () {
+      prior = [];
+      document.querySelectorAll("details").forEach(function (d) {
+        prior.push({ el: d, open: d.open });
+        d.open = true;
+      });
+    });
+    window.addEventListener("afterprint", function () {
+      if (!prior) return;
+      prior.forEach(function (p) { p.el.open = p.open; });
+      prior = null;
+    });
+  })();
+
+  
+  
+  
+  document.addEventListener('click', function(e) {
+    var btn = e.target.closest('[data-snippet-tab]');
+    if (!btn) return;
+    var tabID = btn.getAttribute('data-snippet-tab');
+    var container = btn.closest('.snippets');
+    if (!container) return;
+    container.querySelectorAll('[data-snippet-tab]').forEach(function(b) {
+      b.classList.toggle('active', b.getAttribute('data-snippet-tab') === tabID);
+    });
+    container.querySelectorAll('[data-snippet-panel]').forEach(function(p) {
+      p.classList.toggle('active', p.getAttribute('data-snippet-panel') === tabID);
+    });
+  });
+})();
+</script>
+
+
+<script>
+/* compliancekit HTML report — vanilla-JS SVG chart primitives.
+ *
+ * Three drawers: gauge (radial 180°), donut (severity breakdown),
+ * hbar (horizontal-bar framework coverage). Each reads its data from
+ * data-* attributes on the host <svg> element, reads palette colors
+ * live from CSS variables on :root (so a theme flip re-paints
+ * correctly), and re-renders on every theme-toggle click + OS
+ * prefers-color-scheme change.
+ *
+ * No external CDN, no module bundler. Single inline <script>.
+ * Sparkline drawer for phase 6 will land in this same file.
+ */
+(function () {
+  function cssVar(name) {
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  }
+
+  function polar(cx, cy, r, deg) {
+    var a = (deg - 90) * Math.PI / 180;
+    return { x: cx + r * Math.cos(a), y: cy + r * Math.sin(a) };
+  }
+
+  // Donut-segment / ring-arc path. startDeg < endDeg, both in [0..360].
+  // inner is the inner radius; outer is r. Path is a closed wedge.
+  function ringArc(cx, cy, r, inner, startDeg, endDeg) {
+    if (endDeg - startDeg >= 359.999) {
+      // Full ring — split into two halves so the arc never collapses.
+      return ringArc(cx, cy, r, inner, 0, 180) + ' ' + ringArc(cx, cy, r, inner, 180, 360);
+    }
+    var s = polar(cx, cy, r, startDeg);
+    var e = polar(cx, cy, r, endDeg);
+    var si = polar(cx, cy, inner, startDeg);
+    var ei = polar(cx, cy, inner, endDeg);
+    var large = (endDeg - startDeg) > 180 ? 1 : 0;
+    return [
+      'M', s.x, s.y,
+      'A', r, r, 0, large, 1, e.x, e.y,
+      'L', ei.x, ei.y,
+      'A', inner, inner, 0, large, 0, si.x, si.y,
+      'Z'
+    ].join(' ');
+  }
+
+  function drawGauge(el) {
+    var value = parseFloat(el.getAttribute('data-value')) || 0;
+    var max = parseFloat(el.getAttribute('data-max')) || 100;
+    var pct = Math.max(0, Math.min(1, value / max));
+    var W = 200, H = 130, cx = W / 2, cy = 110, r = 88, thick = 16;
+    var startDeg = -90, endDeg = 90;
+    var fillEnd = startDeg + (endDeg - startDeg) * pct;
+    // Translate from -90..90 (gauge) to 270..90 (full-circle) so
+    // ringArc's [0..360] domain works. Equivalent angles.
+    var bgPath = ringArc(cx, cy, r, r - thick, 270, 360 + 90);
+    var fillPath = ringArc(cx, cy, r, r - thick, 270, 270 + (endDeg - startDeg) * pct);
+    var color = pct >= 0.85 ? cssVar('--status-pass')
+              : pct >= 0.50 ? cssVar('--sev-medium')
+              :               cssVar('--sev-high');
+    el.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+    el.innerHTML =
+      '<path d="' + bgPath + '" fill="' + cssVar('--panel-2') + '"/>' +
+      '<path d="' + fillPath + '" fill="' + color + '"/>' +
+      '<text x="' + cx + '" y="' + (cy - 14) + '" text-anchor="middle" font-size="38" font-weight="600" fill="' + cssVar('--text') + '" font-variant-numeric="tabular-nums">' + Math.round(value) + '</text>' +
+      '<text x="' + cx + '" y="' + (cy + 8) + '" text-anchor="middle" font-size="11" fill="' + cssVar('--muted') + '" letter-spacing="0.06em">/ ' + max + '</text>';
+    // Suppress fillEnd-unused warning from older linters.
+    void fillEnd;
+  }
+
+  function drawDonut(el) {
+    var segments;
+    try { segments = JSON.parse(el.getAttribute('data-segments') || '[]'); } catch (e) { segments = []; }
+    var W = 200, H = 180, cx = W / 2, cy = H / 2, r = 78, thick = 22;
+    var total = segments.reduce(function (a, s) { return a + (s.value || 0); }, 0);
+    var html = '';
+    if (total === 0) {
+      html += '<circle cx="' + cx + '" cy="' + cy + '" r="' + (r - thick / 2) + '" fill="none" stroke="' + cssVar('--panel-2') + '" stroke-width="' + thick + '"/>';
+      html += '<text x="' + cx + '" y="' + (cy + 6) + '" text-anchor="middle" font-size="20" fill="' + cssVar('--muted') + '">0</text>';
+    } else {
+      var pos = 0;
+      for (var i = 0; i < segments.length; i++) {
+        var s = segments[i];
+        if (!s.value) continue;
+        var pct = s.value / total;
+        var startDeg = pos * 360;
+        var endDeg = (pos + pct) * 360;
+        var color = cssVar('--sev-' + s.key) || cssVar('--muted');
+        html += '<path d="' + ringArc(cx, cy, r, r - thick, startDeg, endDeg) + '" fill="' + color + '"/>';
+        pos += pct;
+      }
+      html += '<text x="' + cx + '" y="' + (cy - 4) + '" text-anchor="middle" font-size="32" font-weight="600" fill="' + cssVar('--text') + '" font-variant-numeric="tabular-nums">' + total + '</text>';
+      html += '<text x="' + cx + '" y="' + (cy + 18) + '" text-anchor="middle" font-size="11" fill="' + cssVar('--muted') + '" letter-spacing="0.06em">actionable</text>';
+    }
+    el.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+    el.innerHTML = html;
+  }
+
+  function drawHBar(el) {
+    var items;
+    try { items = JSON.parse(el.getAttribute('data-items') || '[]'); } catch (e) { items = []; }
+    var W = 280, rowH = 28, top = 8;
+    var H = items.length * rowH + top * 2 || 60;
+    var labelW = 92, valueW = 40, barX = labelW + 8, barW = W - labelW - valueW - 16;
+    var html = '';
+    if (items.length === 0) {
+      html = '<text x="' + (W / 2) + '" y="32" text-anchor="middle" font-size="12" fill="' + cssVar('--muted') + '">No framework mappings</text>';
+    } else {
+      items.forEach(function (it, i) {
+        var y = top + i * rowH;
+        var total = (it.pass || 0) + (it.fail || 0);
+        var pct = total > 0 ? (it.pass / total) : 0;
+        html += '<text x="0" y="' + (y + rowH / 2 + 4) + '" font-size="12" fill="' + cssVar('--text') + '">' + it.label + '</text>';
+        html += '<rect x="' + barX + '" y="' + (y + rowH / 2 - 6) + '" width="' + barW + '" height="10" rx="5" fill="' + cssVar('--panel-2') + '"/>';
+        html += '<rect x="' + barX + '" y="' + (y + rowH / 2 - 6) + '" width="' + (pct * barW) + '" height="10" rx="5" fill="' + cssVar('--status-pass') + '"/>';
+        html += '<text x="' + (W - 4) + '" y="' + (y + rowH / 2 + 4) + '" font-size="12" text-anchor="end" font-variant-numeric="tabular-nums" fill="' + cssVar('--muted') + '">' + Math.round(pct * 100) + '%</text>';
+      });
+    }
+    el.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+    el.setAttribute('height', H);
+    el.innerHTML = html;
+  }
+
+  function drawSparkline(el) {
+    var pts;
+    try { pts = JSON.parse(el.getAttribute('data-points') || '[]'); } catch (e) { pts = []; }
+    var W = 60, H = 16;
+    el.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+    if (pts.length === 0) {
+      el.innerHTML = '';
+      return;
+    }
+    if (pts.length === 1) {
+      el.innerHTML = '<circle cx="' + (W / 2) + '" cy="' + (H / 2) + '" r="2" fill="' + cssVar('--muted') + '"/>';
+      return;
+    }
+    var min = Math.min.apply(null, pts);
+    var max = Math.max.apply(null, pts);
+    var range = max - min || 1;
+    var stepX = pts.length > 1 ? W / (pts.length - 1) : 0;
+    var pad = 2;
+    var d = '';
+    for (var i = 0; i < pts.length; i++) {
+      var x = i * stepX;
+      var y = H - ((pts[i] - min) / range) * (H - 2 * pad) - pad;
+      d += (i === 0 ? 'M' : ' L') + x.toFixed(2) + ' ' + y.toFixed(2);
+    }
+    var lastX = (pts.length - 1) * stepX;
+    var lastY = H - ((pts[pts.length - 1] - min) / range) * (H - 2 * pad) - pad;
+    // direction: data-direction="lower-better" flips the up/down color
+    // mapping (e.g. for actionable counts, less is better).
+    var lowerBetter = el.getAttribute('data-direction') === 'lower-better';
+    var delta = pts[pts.length - 1] - pts[0];
+    var goodColor = cssVar('--status-pass');
+    var badColor = cssVar('--sev-high');
+    var color = (lowerBetter ? delta <= 0 : delta >= 0) ? goodColor : badColor;
+    el.innerHTML =
+      '<path d="' + d + '" fill="none" stroke="' + color + '" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>' +
+      '<circle cx="' + lastX.toFixed(2) + '" cy="' + lastY.toFixed(2) + '" r="1.8" fill="' + color + '"/>';
+  }
+
+  var drawers = { gauge: drawGauge, donut: drawDonut, hbar: drawHBar, sparkline: drawSparkline };
+
+  function renderAll() {
+    document.querySelectorAll('[data-chart]').forEach(function (el) {
+      var fn = drawers[el.getAttribute('data-chart')];
+      if (fn) { try { fn(el); } catch (e) { /* swallow per-chart errors */ } }
+    });
+  }
+
+  // Initial paint after the DOM is ready (we're at the bottom of
+  // <body>, so DOM is already parsed; just call directly).
+  renderAll();
+
+  // Theme-flip re-paint. The theme script in this same <script> block
+  // wires the toggle buttons; we just need to re-run after a flip so
+  // the cssVar() reads pick up the new palette. requestAnimationFrame
+  // lets the data-theme attribute update before we read computed style.
+  document.querySelectorAll('.theme-toggle button[data-theme-set]').forEach(function (b) {
+    b.addEventListener('click', function () { requestAnimationFrame(renderAll); });
+  });
+  if (window.matchMedia) {
+    var mq = window.matchMedia('(prefers-color-scheme: dark)');
+    var onChange = function () { requestAnimationFrame(renderAll); };
+    if (mq.addEventListener) { mq.addEventListener('change', onChange); }
+    else if (mq.addListener) { mq.addListener(onChange); }
+  }
+})();
+
+</script>
+
+</body>
+</html>

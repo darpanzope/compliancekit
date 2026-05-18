@@ -96,27 +96,37 @@ Exit codes: see [Exit codes](#exit-codes) below.
 
 ---
 
-### `compliancekit report`
+### `compliancekit render`
 
-Convert an existing findings file to a different format. Useful when you scan once and render many ways.
+Re-render an existing `findings.json` against any registered reporter format. Useful for refreshing an HTML/Markdown report after upgrading compliancekit, iterating on the v1.2 HTML template without re-scanning, or producing a fresh SARIF/OCSF artifact from a saved scan. Defaults to HTML.
 
 ```
-compliancekit report [flags]
+compliancekit render [flags]
 ```
 
 Flags:
 
-| Flag | Description |
-|---|---|
-| `--in <path>` | input `findings.json` (required) |
-| `--out <path>` | output destination |
-| `--format <fmt>` | output format (required): `html`, `markdown`, `sarif`, `json-ocsf` |
+| Flag | Description | Default |
+|---|---|---|
+| `--in <path>` | input `findings.json` (or `-` for stdin) | `findings.json` |
+| `--format <fmt>` | reporter format: `html`, `json`, `markdown`, `sarif`, `ocsf` | `html` |
+| `--out <path>` | output destination | stdout |
+| `--baseline <path>` | baseline.json file OR directory of historical baselines (HTML only — drives the drift card + score/actionable-count sparklines + per-finding "new" badges) | (empty) |
 
-Example:
+Examples:
 
 ```
 compliancekit scan digitalocean --out-dir=./out
-compliancekit report --in=./out/findings.json --format=html --out=./report.html
+compliancekit render --in=./out/findings.json --out=./report.html
+
+# Render markdown to stdout (great for pasting into a PR comment)
+compliancekit render --in=./out/findings.json --format=markdown
+
+# Trend visualisation: drift card + sparklines vs a saved baseline
+compliancekit render --in=./out/findings.json --baseline=./.compliancekit/baseline.json --out=./trend.html
+
+# Up to 7-point trend from a directory of historical baselines
+compliancekit render --in=./out/findings.json --baseline=./.compliancekit/history/ --out=./trend.html
 ```
 
 ---

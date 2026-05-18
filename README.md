@@ -197,8 +197,17 @@ Hardening score: 67/100 (coverage 100%)
 findings at or above high severity present
 ```
 
-Open `out/findings.html` in your browser — search/filter, dark mode,
-drill into any finding by ID, severity, or resource.
+Open `out/findings.html` in your browser. As of v1.2 you get:
+
+- **Summary cards** at the top — score gauge, severity donut, framework-coverage bars (pure inline SVG; no chart library).
+- **Filter chips** — multi-select across severity / status / provider / framework, with the active selection encoded in the URL fragment so a slice (e.g. `findings.html#severity=critical,high&provider=aws`) is a one-link Slack share.
+- **Sticky resource sidebar** — every resource grouped provider → type, click to scroll, mobile-friendly collapse.
+- **Dark / light / system toggle** — top-right, persisted to localStorage, tracks OS preference when set to system.
+- **Baseline drift** — pass `--baseline=path` to add a "Drift vs baseline" card, score + actionable-count sparklines, and a "New" badge on every finding absent from the baseline.
+- **Print-friendly** — `@media print` drops sticky chrome, expands every `<details>`, forces a light palette; Chrome's *Save as PDF* produces a clean A4 layout.
+- **Single-file invariant preserved** — every CSS / JS / SVG is inlined; `curl -O findings.html` + open works offline.
+
+To re-render a saved findings.json against a new compliancekit binary without re-scanning, use `compliancekit render --in=findings.json --out=report.html` (or with `--baseline=...` for the trend view).
 
 **5. Generate the auditor-ready evidence pack (optional):**
 

@@ -53,6 +53,11 @@ var htmlChartJS = func() template.JS {
 	return template.JS(b) //nolint:gosec // chart.js is build-time embedded
 }()
 
+// nowFn is the clock source for the Generated timestamp. Tests
+// override this to deterministic times so the golden snapshot
+// fixtures are byte-stable. v1.2 phase 9.
+var nowFn = func() time.Time { return time.Now().UTC() }
+
 // HTMLReporter renders findings as a single self-contained HTML
 // document with dark-mode styling, severity filter pills, and a
 // free-text search box. All CSS and JS live inline so the output is
@@ -296,7 +301,7 @@ func buildHTMLView(findings []compliancekit.Finding) htmlView {
 	s := score.Compute(findings)
 
 	return htmlView{
-		Generated:       time.Now().UTC().Format(time.RFC3339),
+		Generated:       nowFn().Format(time.RFC3339),
 		TotalCount:      len(findings),
 		ActionableCount: actionable,
 		PassCount:       pass,
