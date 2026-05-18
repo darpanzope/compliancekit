@@ -31,8 +31,15 @@ type migration struct {
 // in place (we don't roll back) so the operator can inspect.
 //
 // Concurrent calls are serialized via SQLite's writer lock; on
-// Postgres (phase 2) we'll add an explicit advisory lock.
+// Postgres we take a session-scoped advisory lock so two daemon
+// processes pointed at the same DB can't race the migration apply.
 func (s *Store) MigrateUp(ctx context.Context) error {
+	if s.driver == DriverPostgres {
+		if err := s.acquirePgAdvisoryLock(ctx); err != nil {
+			return err
+		}
+		defer func() { _ = s.releasePgAdvisoryLock(ctx) }()
+	}
 	if err := s.ensureMigrationsTable(ctx); err != nil {
 		return err
 	}
@@ -53,6 +60,22 @@ func (s *Store) MigrateUp(ctx context.Context) error {
 		}
 	}
 	return nil
+}
+
+// acquirePgAdvisoryLock blocks until the migration lock is held;
+// pg_advisory_lock(key) is the standard "only one daemon at a time"
+// pattern for Postgres migrations.
+func (s *Store) acquirePgAdvisoryLock(ctx context.Context) error {
+	_, err := s.db.ExecContext(ctx, `SELECT pg_advisory_lock($1)`, pgAdvisoryLockKey)
+	if err != nil {
+		return fmt.Errorf("acquire pg migration lock: %w", err)
+	}
+	return nil
+}
+
+func (s *Store) releasePgAdvisoryLock(ctx context.Context) error {
+	_, err := s.db.ExecContext(ctx, `SELECT pg_advisory_unlock($1)`, pgAdvisoryLockKey)
+	return err
 }
 
 // Version returns the highest migration version applied. Exposed for
@@ -101,10 +124,13 @@ func (s *Store) applyMigration(ctx context.Context, m migration) error {
 		return err
 	}
 	now := nowFn().Format("2006-01-02T15:04:05Z07:00")
-	_, err = tx.ExecContext(ctx,
-		`INSERT INTO schema_migrations (version, name, applied_at) VALUES (?, ?, ?)`,
-		m.version, m.name, now)
-	if err != nil {
+	// The only %s substitutions here are this package's own
+	// placeholder() return values ("?" or "$N"); no user input flows
+	// in. Parameter bindings still travel via tx.ExecContext.
+	q := fmt.Sprintf( //nolint:gosec // fixed-template placeholder dialect switch
+		`INSERT INTO schema_migrations (version, name, applied_at) VALUES (%s, %s, %s)`,
+		s.placeholder(1), s.placeholder(2), s.placeholder(3))
+	if _, err := tx.ExecContext(ctx, q, m.version, m.name, now); err != nil {
 		return err
 	}
 	return tx.Commit()

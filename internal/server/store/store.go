@@ -52,6 +52,20 @@ func (s *Store) DB() *sql.DB { return s.db }
 // Driver reports the active backend.
 func (s *Store) Driver() Driver { return s.driver }
 
+// placeholder returns the parameter placeholder for the active
+// driver. SQLite uses "?"; Postgres uses "$N". Repository code
+// composes prepared statements via this helper so the same Go
+// query string works for both backends:
+//
+//	q := "INSERT INTO foo (a,b,c) VALUES (" +
+//	     s.placeholder(1) + "," + s.placeholder(2) + "," + s.placeholder(3) + ")"
+func (s *Store) placeholder(n int) string {
+	if s.driver == DriverPostgres {
+		return fmt.Sprintf("$%d", n)
+	}
+	return "?"
+}
+
 // Close releases the underlying connection pool.
 func (s *Store) Close() error { return s.db.Close() }
 
