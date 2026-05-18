@@ -17,11 +17,26 @@ import (
 // FormatHTML is the lowercase identifier used in config / CLI.
 const FormatHTML = "html"
 
-//go:embed assets/template.html
+//go:embed assets/template.html assets/icons/sprite.svg
 var htmlAssets embed.FS
 
 // htmlTemplate is parsed once at init; subsequent Render calls execute it.
 var htmlTemplate = template.Must(template.ParseFS(htmlAssets, "assets/template.html"))
+
+// htmlIconSprite is the raw <svg><defs><symbol>...</symbol></defs></svg>
+// sheet inlined into the top of <body> at every render. Read once
+// at init so Render is allocation-light. v1.2 phase 2.
+var htmlIconSprite = func() template.HTML {
+	b, err := htmlAssets.ReadFile("assets/icons/sprite.svg")
+	if err != nil {
+		// embed.FS errors at runtime would mean the binary was built
+		// without the sprite. Compile-time go:embed guarantees the
+		// file is present, so this branch is unreachable in practice;
+		// returning empty keeps the report usable rather than panicking.
+		return ""
+	}
+	return template.HTML(b) //nolint:gosec // sprite is build-time embedded
+}()
 
 // HTMLReporter renders findings as a single self-contained HTML
 // document with dark-mode styling, severity filter pills, and a
@@ -65,6 +80,7 @@ type htmlView struct {
 	Coverage        int            // v0.6 parallel metric: % of finding weight evaluable
 	Counts          map[string]int // by lowercase severity name
 	Sections        []htmlSection
+	IconSprite      template.HTML // v1.2 phase 2 — inlined <symbol> sheet
 }
 
 // htmlSection groups findings by severity for rendering.
@@ -140,6 +156,7 @@ func buildHTMLView(findings []compliancekit.Finding) htmlView {
 		Coverage:        s.Coverage,
 		Counts:          counts,
 		Sections:        sections,
+		IconSprite:      htmlIconSprite,
 	}
 }
 

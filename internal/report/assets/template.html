@@ -151,6 +151,21 @@ header.report-head .meta {
   outline: 2px solid var(--accent);
   outline-offset: 1px;
 }
+.theme-toggle .icon { width: 16px; height: 16px; }
+
+/* ─── Inline-SVG icon helpers ──────────────────────────────────── */
+/* Generic .icon class for any <svg><use href="#i-..."></svg>. Sizes
+   default to 1em so they scale with surrounding type; consumers can
+   override width/height (see .theme-toggle .icon above, or the chip
+   icons in section headers). currentColor flows from the parent. */
+.icon {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  vertical-align: -0.125em;
+  fill: currentColor;
+  flex-shrink: 0;
+}
 
 .counts {
   display: flex;
@@ -253,7 +268,11 @@ section.severity-section h2 {
   padding: 0;
   text-transform: uppercase;
   letter-spacing: 0.06em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
+section.severity-section h2 .sev-icon { width: 18px; height: 18px; }
 section.severity-section.critical h2 { color: var(--sev-critical); }
 section.severity-section.high     h2 { color: var(--sev-high); }
 section.severity-section.medium   h2 { color: var(--sev-medium); }
@@ -294,7 +313,11 @@ article.finding .status-badge {
   padding: 2px 8px;
   border-radius: 999px;
   border: 1px solid currentColor;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
+article.finding .status-badge .icon { width: 11px; height: 11px; }
 article.finding[data-status="fail"]  .status-badge { color: var(--status-fail); }
 article.finding[data-status="error"] .status-badge { color: var(--status-error); }
 article.finding[data-status="pass"]  .status-badge { color: var(--status-pass); }
@@ -444,6 +467,12 @@ footer.report-foot {
 </head>
 <body>
 
+{{- /* Phase 2 — inline icon sprite. A single <svg><defs><symbol>...
+       block, embedded at build time and inlined here so every later
+       <svg><use href="#i-..."> in the document resolves without any
+       network or filesystem hop. Single-file invariant preserved. */ -}}
+{{.IconSprite}}
+
 {{- /* Named blocks below mark structural sections so contributors can
        override individual pieces (head, summary-cards, controls,
        sidebar, findings, footer) without touching the whole template.
@@ -454,9 +483,9 @@ footer.report-foot {
   <div class="head-row">
     <h1>compliancekit scan report</h1>
     <div class="theme-toggle" role="group" aria-label="Color theme">
-      <button type="button" data-theme-set="light"  aria-pressed="false" title="Light theme"   aria-label="Light theme">☀</button>
-      <button type="button" data-theme-set="dark"   aria-pressed="false" title="Dark theme"    aria-label="Dark theme">☾</button>
-      <button type="button" data-theme-set="system" aria-pressed="false" title="Match system"  aria-label="Match system theme">⌬</button>
+      <button type="button" data-theme-set="light"  aria-pressed="false" title="Light theme"  aria-label="Light theme"><svg class="icon" aria-hidden="true"><use href="#i-theme-light"/></svg></button>
+      <button type="button" data-theme-set="dark"   aria-pressed="false" title="Dark theme"   aria-label="Dark theme"><svg class="icon" aria-hidden="true"><use href="#i-theme-dark"/></svg></button>
+      <button type="button" data-theme-set="system" aria-pressed="false" title="Match system" aria-label="Match system theme"><svg class="icon" aria-hidden="true"><use href="#i-theme-system"/></svg></button>
     </div>
   </div>
   <div class="meta">Generated {{.Generated}} &middot; {{.TotalCount}} findings ({{.ActionableCount}} actionable)</div>
@@ -505,13 +534,13 @@ footer.report-foot {
 {{- range .Sections }}
 {{- if .Findings }}
 <section class="severity-section {{.SeverityClass}}" data-sev="{{.SeverityClass}}">
-  <h2>{{.SeverityName}} ({{len .Findings}})</h2>
+  <h2><svg class="icon sev-icon" aria-hidden="true"><use href="#i-sev-{{.SeverityClass}}"/></svg> {{.SeverityName}} ({{len .Findings}})</h2>
   {{- range .Findings }}
   <article class="finding" data-sev="{{.SeverityClass}}" data-status="{{.Status}}">
     <header>
       <span class="check-id">{{.CheckID}}</span>
       <span class="resource">on <span class="name">{{.ResourceName}}</span>{{if .ResourceType}} <small>({{.ResourceType}})</small>{{end}}</span>
-      <span class="status-badge">{{.Status}}</span>
+      <span class="status-badge"><svg class="icon" aria-hidden="true"><use href="#i-status-{{.Status}}"/></svg> {{.Status}}</span>
     </header>
     {{if .Message}}<p class="message">{{.Message}}</p>{{end}}
     {{if or .Description .Remediation .Frameworks .Snippets}}
