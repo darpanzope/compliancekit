@@ -58,5 +58,7 @@ Run 'compliancekit doctor' first to validate your config and connectivity.`,
 	cmd.AddCommand(newNotifyCmd())
 	cmd.AddCommand(newWaiversCmd())
 
+	styleHelp(cmd)
+
 	return cmd
 }
