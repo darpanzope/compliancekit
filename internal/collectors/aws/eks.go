@@ -9,7 +9,7 @@ import (
 	ekstypes "github.com/aws/aws-sdk-go-v2/service/eks/types"
 
 	"github.com/darpanzope/compliancekit/internal/collectors/cloudcommon"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // EKSClusterType is the resource type for EKS clusters. v0.11 phase 8
@@ -28,7 +28,7 @@ type eksClient interface {
 }
 
 // collectEKS enumerates EKS clusters and node groups per region.
-func (c *Collector) collectEKS(ctx context.Context, regions []string, out []core.Resource) []core.Resource {
+func (c *Collector) collectEKS(ctx context.Context, regions []string, out []compliancekit.Resource) []compliancekit.Resource {
 	for _, region := range regions {
 		cfg := c.cfg
 		cfg.Region = region
@@ -42,7 +42,7 @@ func (c *Collector) collectEKS(ctx context.Context, regions []string, out []core
 	return out
 }
 
-func (c *Collector) collectEKSInRegion(ctx context.Context, client eksClient, region string, out []core.Resource) ([]core.Resource, error) {
+func (c *Collector) collectEKSInRegion(ctx context.Context, client eksClient, region string, out []compliancekit.Resource) ([]compliancekit.Resource, error) {
 	listResp, err := client.ListClusters(ctx, &eks.ListClustersInput{})
 	if err != nil {
 		return nil, fmt.Errorf("list clusters: %w", err)
@@ -76,7 +76,7 @@ func (c *Collector) collectEKSInRegion(ctx context.Context, client eksClient, re
 	return out, nil
 }
 
-func (c *Collector) eksClusterResource(region string, cl *ekstypes.Cluster) core.Resource {
+func (c *Collector) eksClusterResource(region string, cl *ekstypes.Cluster) compliancekit.Resource {
 	name := awssdk.ToString(cl.Name)
 	publicAccess := false
 	publicCIDRs := []string{}
@@ -125,7 +125,7 @@ func (c *Collector) eksClusterResource(region string, cl *ekstypes.Cluster) core
 		"role_arn":            awssdk.ToString(cl.RoleArn),
 		"platform_version":    awssdk.ToString(cl.PlatformVersion),
 	}
-	r := core.Resource{
+	r := compliancekit.Resource{
 		ID:         fmt.Sprintf("%s.%s.%s", EKSClusterType, region, name),
 		Type:       EKSClusterType,
 		Name:       name,
@@ -137,7 +137,7 @@ func (c *Collector) eksClusterResource(region string, cl *ekstypes.Cluster) core
 	return r
 }
 
-func (c *Collector) eksNodegroupResource(region, clusterName string, ng *ekstypes.Nodegroup) core.Resource {
+func (c *Collector) eksNodegroupResource(region, clusterName string, ng *ekstypes.Nodegroup) compliancekit.Resource {
 	name := awssdk.ToString(ng.NodegroupName)
 	amiType := string(ng.AmiType)
 	imdsHopLimit := int32(-1)
@@ -167,7 +167,7 @@ func (c *Collector) eksNodegroupResource(region, clusterName string, ng *ekstype
 		"public_ips":          publicIPs,
 		"remote_access_ssh":   remoteAccess,
 	}
-	r := core.Resource{
+	r := compliancekit.Resource{
 		ID:         fmt.Sprintf("%s.%s.%s.%s", EKSNodegroupType, region, clusterName, name),
 		Type:       EKSNodegroupType,
 		Name:       name,

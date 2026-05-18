@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	k8scol "github.com/darpanzope/compliancekit/internal/collectors/k8s"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.21 phase 8 — DOKS / EKS / GKE deepening. 15 manual-verify
@@ -21,7 +21,7 @@ import (
 
 type mkSpec struct {
 	id, title, vendor string
-	severity          core.Severity
+	severity          compliancekit.Severity
 	soc2, iso, cis    []string
 	tags              []string
 	descSuffix        string
@@ -34,7 +34,7 @@ var managedExtraSpecs = []mkSpec{
 	// ----- DOKS -----
 	{
 		id: "k8s-doks-public-endpoint-disabled", title: "DOKS cluster should disable the public apiserver endpoint", vendor: "doks",
-		severity: core.SeverityHigh, soc2: []string{"CC6.1"}, iso: []string{"A.8.20"}, cis: []string{"5.6.5"},
+		severity: compliancekit.SeverityHigh, soc2: []string{"CC6.1"}, iso: []string{"A.8.20"}, cis: []string{"5.6.5"},
 		tags: []string{"k8s", "doks", "endpoint", "manual-verify"},
 		descSuffix: "Private endpoint forces all apiserver calls through the DO VPC. " +
 			"Without it the apiserver is reachable from the internet (NLB-fronted).",
@@ -46,7 +46,7 @@ var managedExtraSpecs = []mkSpec{
 	},
 	{
 		id: "k8s-doks-vpc-firewall-restricted", title: "DOKS VPC firewall should restrict apiserver inbound to operator CIDRs", vendor: "doks",
-		severity: core.SeverityHigh, soc2: []string{"CC6.6"}, iso: []string{"A.8.22"}, cis: []string{"5.6.5"},
+		severity: compliancekit.SeverityHigh, soc2: []string{"CC6.6"}, iso: []string{"A.8.22"}, cis: []string{"5.6.5"},
 		tags: []string{"k8s", "doks", "firewall", "manual-verify"},
 		descSuffix: "Even with private endpoint enabled, the cluster's underlying VPC " +
 			"firewall must restrict source IPs to operator + CI ranges. CIS recommends " +
@@ -58,7 +58,7 @@ var managedExtraSpecs = []mkSpec{
 	},
 	{
 		id: "k8s-doks-audit-log-shipping-configured", title: "DOKS audit logs should ship to DO Logging or external SIEM", vendor: "doks",
-		severity: core.SeverityMedium, soc2: []string{"CC7.2"}, iso: []string{"A.8.15"}, cis: []string{"5.5.1"},
+		severity: compliancekit.SeverityMedium, soc2: []string{"CC7.2"}, iso: []string{"A.8.15"}, cis: []string{"5.5.1"},
 		tags: []string{"k8s", "doks", "audit", "manual-verify"},
 		descSuffix: "DOKS exposes the apiserver audit log via DO Logging. Without log " +
 			"shipping the operator has no off-cluster trail of API access.",
@@ -69,7 +69,7 @@ var managedExtraSpecs = []mkSpec{
 	},
 	{
 		id: "k8s-doks-image-pull-from-do-registry", title: "DOKS pods should pull from DO Container Registry not arbitrary public", vendor: "doks",
-		severity: core.SeverityLow, soc2: []string{"CC6.7"}, iso: []string{"A.8.32"}, cis: []string{"5.5.1"},
+		severity: compliancekit.SeverityLow, soc2: []string{"CC6.7"}, iso: []string{"A.8.32"}, cis: []string{"5.5.1"},
 		tags: []string{"k8s", "doks", "registry", "manual-verify"},
 		descSuffix: "DOCR is the DO-native registry with built-in IAM integration. " +
 			"Workloads pulling from arbitrary public registries miss the integrated " +
@@ -82,7 +82,7 @@ var managedExtraSpecs = []mkSpec{
 	},
 	{
 		id: "k8s-doks-nodepool-auto-upgrade-explicit", title: "DOKS node pools should enable auto-upgrade", vendor: "doks",
-		severity: core.SeverityMedium, soc2: []string{"CC7.1"}, iso: []string{"A.8.8"}, cis: []string{"5.5.1"},
+		severity: compliancekit.SeverityMedium, soc2: []string{"CC7.1"}, iso: []string{"A.8.8"}, cis: []string{"5.5.1"},
 		tags: []string{"k8s", "doks", "patching", "manual-verify"},
 		descSuffix: "DOKS auto-upgrade lifts node-pool images to the latest patch " +
 			"during the maintenance window without operator intervention. Without it, " +
@@ -94,7 +94,7 @@ var managedExtraSpecs = []mkSpec{
 	// ----- EKS -----
 	{
 		id: "k8s-eks-endpoint-fully-private", title: "EKS cluster endpoint should be private-only", vendor: "eks",
-		severity: core.SeverityHigh, soc2: []string{"CC6.1"}, iso: []string{"A.8.20"}, cis: []string{"5.4.2"},
+		severity: compliancekit.SeverityHigh, soc2: []string{"CC6.1"}, iso: []string{"A.8.20"}, cis: []string{"5.4.2"},
 		tags: []string{"k8s", "eks", "endpoint", "manual-verify"},
 		descSuffix: "EKS clusters default to public + private endpoint. Best practice " +
 			"for production: private-only or public restricted to operator CIDR ranges.",
@@ -105,7 +105,7 @@ var managedExtraSpecs = []mkSpec{
 	},
 	{
 		id: "k8s-eks-control-plane-logs-comprehensive", title: "EKS should enable all 5 control-plane log types", vendor: "eks",
-		severity: core.SeverityHigh, soc2: []string{"CC7.2"}, iso: []string{"A.8.15"}, cis: []string{"5.5.1"},
+		severity: compliancekit.SeverityHigh, soc2: []string{"CC7.2"}, iso: []string{"A.8.15"}, cis: []string{"5.5.1"},
 		tags: []string{"k8s", "eks", "logging", "manual-verify"},
 		descSuffix: "EKS supports 5 log types: api, audit, authenticator, controllerManager, " +
 			"scheduler. CIS + SOC 2 evidence needs at least api + audit + authenticator. " +
@@ -116,7 +116,7 @@ var managedExtraSpecs = []mkSpec{
 	},
 	{
 		id: "k8s-eks-secrets-kms-cmk", title: "EKS secrets must be envelope-encrypted with KMS", vendor: "eks",
-		severity: core.SeverityHigh, soc2: []string{"CC6.1", "CC6.7"}, iso: []string{"A.8.24"}, cis: []string{"5.3.1"},
+		severity: compliancekit.SeverityHigh, soc2: []string{"CC6.1", "CC6.7"}, iso: []string{"A.8.24"}, cis: []string{"5.3.1"},
 		tags: []string{"k8s", "eks", "encryption", "manual-verify"},
 		descSuffix: "EKS Secrets Encryption uses a customer-managed KMS key to wrap " +
 			"the etcd-side encryption keys. Without it, secrets at-rest in etcd use " +
@@ -128,7 +128,7 @@ var managedExtraSpecs = []mkSpec{
 	},
 	{
 		id: "k8s-eks-irsa-workload-scoped", title: "EKS workloads should use IRSA (IAM Roles for Service Accounts) not node IAM", vendor: "eks",
-		severity: core.SeverityMedium, soc2: []string{"CC6.1"}, iso: []string{"A.5.15"}, cis: []string{"5.5.1"},
+		severity: compliancekit.SeverityMedium, soc2: []string{"CC6.1"}, iso: []string{"A.5.15"}, cis: []string{"5.5.1"},
 		tags: []string{"k8s", "eks", "iam", "irsa", "manual-verify"},
 		descSuffix: "IRSA scopes AWS IAM credentials per-pod via the cluster's OIDC " +
 			"provider. Without it, every pod inherits the node IAM role — broad " +
@@ -142,7 +142,7 @@ var managedExtraSpecs = []mkSpec{
 	},
 	{
 		id: "k8s-eks-node-imdsv2-required", title: "EKS node IMDS should require IMDSv2 + hop-limit 1", vendor: "eks",
-		severity: core.SeverityHigh, soc2: []string{"CC6.1"}, iso: []string{"A.8.20"}, cis: []string{"5.4.1"},
+		severity: compliancekit.SeverityHigh, soc2: []string{"CC6.1"}, iso: []string{"A.8.20"}, cis: []string{"5.4.1"},
 		tags: []string{"k8s", "eks", "imds", "manual-verify"},
 		descSuffix: "IMDSv2 with hop-limit-1 prevents in-cluster pods from " +
 			"reaching the EC2 instance metadata service (169.254.169.254) — " +
@@ -156,7 +156,7 @@ var managedExtraSpecs = []mkSpec{
 	// ----- GKE -----
 	{
 		id: "k8s-gke-private-nodes-and-endpoint", title: "GKE cluster should be private (no public node IPs, private endpoint)", vendor: "gke",
-		severity: core.SeverityHigh, soc2: []string{"CC6.1"}, iso: []string{"A.8.20"}, cis: []string{"5.6.5"},
+		severity: compliancekit.SeverityHigh, soc2: []string{"CC6.1"}, iso: []string{"A.8.20"}, cis: []string{"5.6.5"},
 		tags: []string{"k8s", "gke", "endpoint", "manual-verify"},
 		descSuffix: "Private GKE cluster removes public IPs from nodes + makes the " +
 			"apiserver private-endpoint-only. The standard production posture for " +
@@ -168,7 +168,7 @@ var managedExtraSpecs = []mkSpec{
 	},
 	{
 		id: "k8s-gke-shielded-nodes-secure-boot", title: "GKE node pools should enable Shielded Nodes", vendor: "gke",
-		severity: core.SeverityHigh, soc2: []string{"CC6.1"}, iso: []string{"A.8.20"}, cis: []string{"5.1.4"},
+		severity: compliancekit.SeverityHigh, soc2: []string{"CC6.1"}, iso: []string{"A.8.20"}, cis: []string{"5.1.4"},
 		tags: []string{"k8s", "gke", "shielded-nodes", "manual-verify"},
 		descSuffix: "Shielded Nodes enable Secure Boot + integrity monitoring + " +
 			"vTPM on GKE nodes. Blocks kernel-mode rootkits + boot-time tampering. " +
@@ -179,7 +179,7 @@ var managedExtraSpecs = []mkSpec{
 	},
 	{
 		id: "k8s-gke-workload-identity-cluster-wide", title: "GKE should enable Workload Identity for GCP IAM scoping", vendor: "gke",
-		severity: core.SeverityHigh, soc2: []string{"CC6.1"}, iso: []string{"A.5.15"}, cis: []string{"5.5.1"},
+		severity: compliancekit.SeverityHigh, soc2: []string{"CC6.1"}, iso: []string{"A.5.15"}, cis: []string{"5.5.1"},
 		tags: []string{"k8s", "gke", "workload-identity", "manual-verify"},
 		descSuffix: "Workload Identity binds Kubernetes ServiceAccount → GCP " +
 			"ServiceAccount via the cluster's OIDC, scoping cloud IAM per-pod. " +
@@ -190,7 +190,7 @@ var managedExtraSpecs = []mkSpec{
 	},
 	{
 		id: "k8s-gke-binary-authorization-enforce", title: "GKE should enable Binary Authorization for image signature enforcement", vendor: "gke",
-		severity: core.SeverityMedium, soc2: []string{"CC6.7"}, iso: []string{"A.8.32"}, cis: []string{"5.5.1"},
+		severity: compliancekit.SeverityMedium, soc2: []string{"CC6.7"}, iso: []string{"A.8.32"}, cis: []string{"5.5.1"},
 		tags: []string{"k8s", "gke", "binary-auth", "supply-chain", "manual-verify"},
 		descSuffix: "Binary Authorization enforces image-signature policies at " +
 			"deploy time — only images signed by approved attestors can run. " +
@@ -202,7 +202,7 @@ var managedExtraSpecs = []mkSpec{
 	},
 	{
 		id: "k8s-gke-database-encryption-cmek", title: "GKE etcd secrets should use customer-managed KMS encryption (CMEK)", vendor: "gke",
-		severity: core.SeverityMedium, soc2: []string{"CC6.7"}, iso: []string{"A.8.24"}, cis: []string{"5.3.1"},
+		severity: compliancekit.SeverityMedium, soc2: []string{"CC6.7"}, iso: []string{"A.8.24"}, cis: []string{"5.3.1"},
 		tags: []string{"k8s", "gke", "encryption", "cmek", "manual-verify"},
 		descSuffix: "GKE Application-layer Secrets Encryption wraps etcd-stored " +
 			"Secrets with a customer-managed Cloud KMS key. CMEK = customer-managed " +
@@ -218,12 +218,12 @@ var managedExtraSpecs = []mkSpec{
 func init() {
 	for _, spec := range managedExtraSpecs {
 		spec := spec
-		core.Register(mkCheck(spec), mkCheckFunc(spec))
+		compliancekit.Register(mkCheck(spec), mkCheckFunc(spec))
 	}
 }
 
-func mkCheck(spec mkSpec) core.Check {
-	return core.Check{
+func mkCheck(spec mkSpec) compliancekit.Check {
+	return compliancekit.Check{
 		ID: spec.id, Title: spec.title, Severity: spec.severity,
 		Provider:     "kubernetes",
 		Service:      spec.vendor,
@@ -240,18 +240,18 @@ func mkCheck(spec mkSpec) core.Check {
 	}
 }
 
-func mkCheckFunc(spec mkSpec) core.CheckFunc {
-	return func(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-		findings := []core.Finding{}
+func mkCheckFunc(spec mkSpec) compliancekit.CheckFunc {
+	return func(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+		findings := []compliancekit.Finding{}
 		ctxs := g.ByType(k8scol.ClusterType)
 		if len(ctxs) == 0 {
 			return findings, nil
 		}
 		for _, c := range ctxs {
-			findings = append(findings, core.Finding{
+			findings = append(findings, compliancekit.Finding{
 				CheckID: spec.id, Severity: spec.severity,
 				Resource: c.Ref(), Tags: spec.tags,
-				Status: core.StatusError,
+				Status: compliancekit.StatusError,
 				Message: fmt.Sprintf("cluster %q (%s deepening): %s — hint: %s",
 					c.Name, spec.vendor, spec.title, spec.hint),
 			})

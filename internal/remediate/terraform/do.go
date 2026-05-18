@@ -3,9 +3,9 @@ package terraform
 import (
 	"fmt"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate"
 	"github.com/darpanzope/compliancekit/internal/remediate/render"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 func init() {
@@ -35,7 +35,7 @@ func init() {
 		renderDODomainCAA)
 }
 
-func renderDODatabaseTLS(f core.Finding) (remediate.Snippet, error) {
+func renderDODatabaseTLS(f compliancekit.Finding) (remediate.Snippet, error) {
 	name := f.Resource.Name
 	if name == "" {
 		name = f.Resource.ID
@@ -56,7 +56,7 @@ func renderDODatabaseTLS(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderDODatabaseVPC(f core.Finding) (remediate.Snippet, error) {
+func renderDODatabaseVPC(f compliancekit.Finding) (remediate.Snippet, error) {
 	name := f.Resource.Name
 	if name == "" {
 		name = f.Resource.ID
@@ -77,7 +77,7 @@ func renderDODatabaseVPC(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderDODatabaseMaintenance(f core.Finding) (remediate.Snippet, error) {
+func renderDODatabaseMaintenance(f compliancekit.Finding) (remediate.Snippet, error) {
 	name := f.Resource.Name
 	if name == "" {
 		name = f.Resource.ID
@@ -99,7 +99,7 @@ func renderDODatabaseMaintenance(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderDOSpacesPrivate(f core.Finding) (remediate.Snippet, error) {
+func renderDOSpacesPrivate(f compliancekit.Finding) (remediate.Snippet, error) {
 	name := f.Resource.Name
 	if name == "" {
 		name = f.Resource.ID
@@ -120,7 +120,7 @@ func renderDOSpacesPrivate(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderDODropletVPC(f core.Finding) (remediate.Snippet, error) {
+func renderDODropletVPC(f compliancekit.Finding) (remediate.Snippet, error) {
 	name := f.Resource.Name
 	if name == "" {
 		name = f.Resource.ID
@@ -140,7 +140,7 @@ func renderDODropletVPC(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderDOFirewallTighten(f core.Finding) (remediate.Snippet, error) {
+func renderDOFirewallTighten(f compliancekit.Finding) (remediate.Snippet, error) {
 	name := f.Resource.Name
 	if name == "" {
 		name = f.Resource.ID
@@ -163,7 +163,7 @@ func renderDOFirewallTighten(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderDOAppVPC(f core.Finding) (remediate.Snippet, error) {
+func renderDOAppVPC(f compliancekit.Finding) (remediate.Snippet, error) {
 	return remediate.Snippet{
 		Risk:       remediate.RiskManual,
 		Idempotent: false,
@@ -177,7 +177,7 @@ func renderDOAppVPC(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderDODomainCAA(f core.Finding) (remediate.Snippet, error) {
+func renderDODomainCAA(f compliancekit.Finding) (remediate.Snippet, error) {
 	domain := f.Resource.Name
 	if domain == "" {
 		domain = f.Resource.ID

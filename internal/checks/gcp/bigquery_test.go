@@ -5,11 +5,11 @@ import (
 	"testing"
 
 	gcpcol "github.com/darpanzope/compliancekit/internal/collectors/gcp"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
-func mkDataset(name string, attrs map[string]any) core.Resource {
-	return core.Resource{
+func mkDataset(name string, attrs map[string]any) compliancekit.Resource {
+	return compliancekit.Resource{
 		ID:         "gcp.bigquery.dataset." + name,
 		Type:       gcpcol.BigQueryDatasetType,
 		Name:       name,
@@ -22,33 +22,33 @@ func TestBQNoPublicDatasets(t *testing.T) {
 	cases := []struct {
 		name   string
 		access []map[string]any
-		want   core.Status
+		want   compliancekit.Status
 	}{
 		{
 			"private",
 			[]map[string]any{
 				{"role": "READER", "user_by_email": "x@y.com"},
 			},
-			core.StatusPass,
+			compliancekit.StatusPass,
 		},
 		{
 			"all-authenticated-special-group",
 			[]map[string]any{
 				{"role": "READER", "special_group": "allAuthenticatedUsers"},
 			},
-			core.StatusFail,
+			compliancekit.StatusFail,
 		},
 		{
 			"all-users-iam-member",
 			[]map[string]any{
 				{"role": "READER", "iam_member": "allUsers"},
 			},
-			core.StatusFail,
+			compliancekit.StatusFail,
 		},
 		{
 			"empty-access",
 			nil,
-			core.StatusPass,
+			compliancekit.StatusPass,
 		},
 	}
 	for _, c := range cases {
@@ -66,27 +66,27 @@ func TestBQNoAllAuthenticated(t *testing.T) {
 	cases := []struct {
 		name   string
 		access []map[string]any
-		want   core.Status
+		want   compliancekit.Status
 	}{
 		{
 			"all-users-still-passes-this-check",
 			[]map[string]any{{"iam_member": "allUsers"}},
-			core.StatusPass,
+			compliancekit.StatusPass,
 		},
 		{
 			"all-authenticated-special-group",
 			[]map[string]any{{"special_group": "allAuthenticatedUsers"}},
-			core.StatusFail,
+			compliancekit.StatusFail,
 		},
 		{
 			"all-authenticated-iam-member",
 			[]map[string]any{{"iam_member": "allAuthenticatedUsers"}},
-			core.StatusFail,
+			compliancekit.StatusFail,
 		},
 		{
 			"private",
 			[]map[string]any{{"user_by_email": "x@y.com"}},
-			core.StatusPass,
+			compliancekit.StatusPass,
 		},
 	}
 	for _, c := range cases {
@@ -107,9 +107,9 @@ func TestBQDefaultCMEK(t *testing.T) {
 	)
 	findings, _ := BQDefaultCMEK(context.Background(), g)
 	for _, f := range findings {
-		want := core.StatusPass
+		want := compliancekit.StatusPass
 		if f.Resource.Name == "off" {
-			want = core.StatusFail
+			want = compliancekit.StatusFail
 		}
 		if f.Status != want {
 			t.Errorf("%s: got %v: %s", f.Resource.Name, f.Status, f.Message)

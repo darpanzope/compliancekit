@@ -9,7 +9,7 @@ import (
 	kmstypes "github.com/aws/aws-sdk-go-v2/service/kms/types"
 
 	"github.com/darpanzope/compliancekit/internal/collectors/cloudcommon"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // KMSKeyType is the resource type for KMS keys.
@@ -23,7 +23,7 @@ type kmsClient interface {
 }
 
 // collectKMS enumerates KMS keys per region.
-func (c *Collector) collectKMS(ctx context.Context, regions []string, out []core.Resource) []core.Resource {
+func (c *Collector) collectKMS(ctx context.Context, regions []string, out []compliancekit.Resource) []compliancekit.Resource {
 	for _, region := range regions {
 		cfg := c.cfg
 		cfg.Region = region
@@ -37,7 +37,7 @@ func (c *Collector) collectKMS(ctx context.Context, regions []string, out []core
 	return out
 }
 
-func (c *Collector) collectKMSWithClient(ctx context.Context, client kmsClient, region string, out []core.Resource) ([]core.Resource, error) {
+func (c *Collector) collectKMSWithClient(ctx context.Context, client kmsClient, region string, out []compliancekit.Resource) ([]compliancekit.Resource, error) {
 	var marker *string
 	for {
 		page, err := client.ListKeys(ctx, &kms.ListKeysInput{Marker: marker})
@@ -56,9 +56,9 @@ func (c *Collector) collectKMSWithClient(ctx context.Context, client kmsClient, 
 	return out, nil
 }
 
-func (c *Collector) buildKMSResource(ctx context.Context, client kmsClient, entry kmstypes.KeyListEntry, region string) core.Resource {
+func (c *Collector) buildKMSResource(ctx context.Context, client kmsClient, entry kmstypes.KeyListEntry, region string) compliancekit.Resource {
 	keyID := awssdk.ToString(entry.KeyId)
-	r := core.Resource{
+	r := compliancekit.Resource{
 		ID:       fmt.Sprintf("aws.kms.key.%s.%s", region, keyID),
 		Type:     KMSKeyType,
 		Name:     keyID,

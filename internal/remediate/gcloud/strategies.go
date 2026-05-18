@@ -3,9 +3,9 @@ package gcloud
 import (
 	"fmt"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate"
 	"github.com/darpanzope/compliancekit/internal/remediate/render"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 func init() {
@@ -39,7 +39,7 @@ func init() {
 		[]string{"gcp-logging-sink-exists"}, renderLoggingSink)
 }
 
-func renderStoragePAP(f core.Finding) (remediate.Snippet, error) {
+func renderStoragePAP(f compliancekit.Finding) (remediate.Snippet, error) {
 	bucket := f.Resource.Name
 	if bucket == "" {
 		bucket = f.Resource.ID
@@ -53,7 +53,7 @@ func renderStoragePAP(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderStorageUBLA(f core.Finding) (remediate.Snippet, error) {
+func renderStorageUBLA(f compliancekit.Finding) (remediate.Snippet, error) {
 	bucket := f.Resource.Name
 	if bucket == "" {
 		bucket = f.Resource.ID
@@ -66,7 +66,7 @@ func renderStorageUBLA(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderStorageVersioning(f core.Finding) (remediate.Snippet, error) {
+func renderStorageVersioning(f compliancekit.Finding) (remediate.Snippet, error) {
 	bucket := f.Resource.Name
 	if bucket == "" {
 		bucket = f.Resource.ID
@@ -80,7 +80,7 @@ func renderStorageVersioning(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderSQLNoPublic(f core.Finding) (remediate.Snippet, error) {
+func renderSQLNoPublic(f compliancekit.Finding) (remediate.Snippet, error) {
 	name := f.Resource.Name
 	if name == "" {
 		name = f.Resource.ID
@@ -95,7 +95,7 @@ func renderSQLNoPublic(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderSQLDeletionProtection(f core.Finding) (remediate.Snippet, error) {
+func renderSQLDeletionProtection(f compliancekit.Finding) (remediate.Snippet, error) {
 	name := f.Resource.Name
 	if name == "" {
 		name = f.Resource.ID
@@ -108,7 +108,7 @@ func renderSQLDeletionProtection(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderSQLBackups(f core.Finding) (remediate.Snippet, error) {
+func renderSQLBackups(f compliancekit.Finding) (remediate.Snippet, error) {
 	name := f.Resource.Name
 	if name == "" {
 		name = f.Resource.ID
@@ -123,7 +123,7 @@ func renderSQLBackups(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderShieldedVM(f core.Finding) (remediate.Snippet, error) {
+func renderShieldedVM(f compliancekit.Finding) (remediate.Snippet, error) {
 	name := f.Resource.Name
 	if name == "" {
 		name = f.Resource.ID
@@ -142,7 +142,7 @@ func renderShieldedVM(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderOSLogin(_ core.Finding) (remediate.Snippet, error) {
+func renderOSLogin(_ compliancekit.Finding) (remediate.Snippet, error) {
 	cmd := "gcloud compute project-info add-metadata --metadata=enable-oslogin=TRUE"
 	return remediate.Snippet{
 		Risk: remediate.RiskReview, Idempotent: true, Content: cmd,
@@ -151,7 +151,7 @@ func renderOSLogin(_ core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderRevokeSSHAny(f core.Finding) (remediate.Snippet, error) {
+func renderRevokeSSHAny(f compliancekit.Finding) (remediate.Snippet, error) {
 	name := f.Resource.Name
 	if name == "" {
 		name = "allow-ssh-from-any"
@@ -167,7 +167,7 @@ gcloud compute firewall-rules update %s --source-ranges=10.0.0.0/8`,
 	}, nil
 }
 
-func renderKMSRotation(f core.Finding) (remediate.Snippet, error) {
+func renderKMSRotation(f compliancekit.Finding) (remediate.Snippet, error) {
 	name := f.Resource.Name
 	if name == "" {
 		name = "REPLACE_KEY"
@@ -183,7 +183,7 @@ gcloud kms keys update %s --location=LOCATION --keyring=KEYRING --rotation-perio
 	}, nil
 }
 
-func renderIAMPrimitiveManual(f core.Finding) (remediate.Snippet, error) {
+func renderIAMPrimitiveManual(f compliancekit.Finding) (remediate.Snippet, error) {
 	return remediate.Snippet{
 		Risk: remediate.RiskManual, Idempotent: false,
 		Content: "# Manual remediation — primitive role replacement requires usage analysis.\n",
@@ -193,7 +193,7 @@ func renderIAMPrimitiveManual(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderSAKeysManual(f core.Finding) (remediate.Snippet, error) {
+func renderSAKeysManual(f compliancekit.Finding) (remediate.Snippet, error) {
 	sa := f.Resource.Name
 	if sa == "" {
 		sa = "REPLACE_SA_EMAIL"
@@ -211,7 +211,7 @@ func renderSAKeysManual(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderLoggingSink(f core.Finding) (remediate.Snippet, error) {
+func renderLoggingSink(f compliancekit.Finding) (remediate.Snippet, error) {
 	cmd := `# Create an org-level export-everything sink to a BigQuery dataset (or GCS, or Pub/Sub).
 gcloud logging sinks create org-audit-sink bigquery.googleapis.com/projects/$PROJECT/datasets/audit_logs \
   --organization=$ORG_ID --log-filter='logName:"cloudaudit.googleapis.com"' --include-children`

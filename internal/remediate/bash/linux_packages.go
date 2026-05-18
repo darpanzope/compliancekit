@@ -1,8 +1,8 @@
 package bash
 
 import (
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.20 phase 9 — bash strategies for the 10 packages/MAC checks.
@@ -10,7 +10,7 @@ import (
 func init() {
 	register("bash-linux-mac-selinux-enforcing",
 		[]string{"linux-mac-selinux-enforcing"},
-		func(_ core.Finding) (remediate.Snippet, error) {
+		func(_ compliancekit.Finding) (remediate.Snippet, error) {
 			body := `# Live + persistent.
 sudo setenforce 1
 sudo sed -ri 's/^SELINUX=.*/SELINUX=enforcing/' /etc/selinux/config`
@@ -22,7 +22,7 @@ sudo sed -ri 's/^SELINUX=.*/SELINUX=enforcing/' /etc/selinux/config`
 
 	register("bash-linux-mac-apparmor-active",
 		[]string{"linux-mac-apparmor-active"},
-		func(_ core.Finding) (remediate.Snippet, error) {
+		func(_ compliancekit.Finding) (remediate.Snippet, error) {
 			body := `sudo apt-get install -y apparmor apparmor-utils
 sudo systemctl enable --now apparmor
 # Enforce every shipped profile:
@@ -46,7 +46,7 @@ sudo aa-enforce /etc/apparmor.d/*`
 	for id, hint := range manualPackagesHints {
 		id := id
 		hint := hint
-		register("bash-"+id, []string{id}, func(_ core.Finding) (remediate.Snippet, error) {
+		register("bash-"+id, []string{id}, func(_ compliancekit.Finding) (remediate.Snippet, error) {
 			return remediate.Snippet{
 				Risk: remediate.RiskManual, Idempotent: false,
 				Content: "# Manual-verify — inspect + record evidence in waivers.yaml.\n" + hint + "\n",

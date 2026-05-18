@@ -5,11 +5,11 @@ import (
 	"testing"
 
 	docol "github.com/darpanzope/compliancekit/internal/collectors/digitalocean"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
-func mkDB(name string, attrs map[string]any) core.Resource {
-	return core.Resource{
+func mkDB(name string, attrs map[string]any) compliancekit.Resource {
+	return compliancekit.Resource{
 		ID:         "digitalocean.database." + name,
 		Type:       docol.DatabaseType,
 		Name:       name,
@@ -25,9 +25,9 @@ func TestDBHasFirewallRules(t *testing.T) {
 	)
 	findings, _ := DBHasFirewallRules(context.Background(), g)
 	for _, f := range findings {
-		want := core.StatusPass
+		want := compliancekit.StatusPass
 		if f.Resource.Name == "open" {
-			want = core.StatusFail
+			want = compliancekit.StatusFail
 		}
 		if f.Status != want {
 			t.Errorf("%s: got %v", f.Resource.Name, f.Status)
@@ -49,9 +49,9 @@ func TestDBFirewallNoPublicCIDR(t *testing.T) {
 	)
 	findings, _ := DBFirewallNoPublicCIDR(context.Background(), g)
 	for _, f := range findings {
-		want := core.StatusPass
+		want := compliancekit.StatusPass
 		if f.Resource.Name == "public" || f.Resource.Name == "ipv6-public" {
-			want = core.StatusFail
+			want = compliancekit.StatusFail
 		}
 		if f.Status != want {
 			t.Errorf("%s: got %v", f.Resource.Name, f.Status)
@@ -66,9 +66,9 @@ func TestDBTLSEnabled(t *testing.T) {
 	)
 	findings, _ := DBTLSEnabled(context.Background(), g)
 	for _, f := range findings {
-		want := core.StatusPass
+		want := compliancekit.StatusPass
 		if f.Resource.Name == "no-tls" {
-			want = core.StatusFail
+			want = compliancekit.StatusFail
 		}
 		if f.Status != want {
 			t.Errorf("%s: got %v", f.Resource.Name, f.Status)
@@ -83,9 +83,9 @@ func TestDBInVPC(t *testing.T) {
 	)
 	findings, _ := DBInVPC(context.Background(), g)
 	for _, f := range findings {
-		want := core.StatusPass
+		want := compliancekit.StatusPass
 		if f.Resource.Name == "legacy" {
-			want = core.StatusFail
+			want = compliancekit.StatusFail
 		}
 		if f.Status != want {
 			t.Errorf("%s: got %v", f.Resource.Name, f.Status)
@@ -98,12 +98,12 @@ func TestDBEngineNotEOL(t *testing.T) {
 		name    string
 		engine  string
 		version string
-		want    core.Status
+		want    compliancekit.Status
 	}{
-		{"pg-current", "pg", "16", core.StatusPass},
-		{"pg-eol", "pg", "12", core.StatusFail},
-		{"mysql-eol", "mysql", "5.7", core.StatusFail},
-		{"mongodb-current", "mongodb", "7", core.StatusPass},
+		{"pg-current", "pg", "16", compliancekit.StatusPass},
+		{"pg-eol", "pg", "12", compliancekit.StatusFail},
+		{"mysql-eol", "mysql", "5.7", compliancekit.StatusFail},
+		{"mongodb-current", "mongodb", "7", compliancekit.StatusPass},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -123,9 +123,9 @@ func TestDBMaintenanceWindow(t *testing.T) {
 	)
 	findings, _ := DBMaintenanceWindow(context.Background(), g)
 	for _, f := range findings {
-		want := core.StatusPass
+		want := compliancekit.StatusPass
 		if f.Resource.Name == "unset" {
-			want = core.StatusFail
+			want = compliancekit.StatusFail
 		}
 		if f.Status != want {
 			t.Errorf("%s: got %v", f.Resource.Name, f.Status)
@@ -140,9 +140,9 @@ func TestDBMultiNode(t *testing.T) {
 	)
 	findings, _ := DBMultiNode(context.Background(), g)
 	for _, f := range findings {
-		want := core.StatusPass
+		want := compliancekit.StatusPass
 		if f.Resource.Name == "single" {
-			want = core.StatusFail
+			want = compliancekit.StatusFail
 		}
 		if f.Status != want {
 			t.Errorf("%s: got %v", f.Resource.Name, f.Status)
@@ -165,9 +165,9 @@ func TestDBOnlyDOTrustedSources(t *testing.T) {
 	)
 	findings, _ := DBOnlyDOTrustedSources(context.Background(), g)
 	for _, f := range findings {
-		want := core.StatusPass
+		want := compliancekit.StatusPass
 		if f.Resource.Name == "ip-only" {
-			want = core.StatusFail
+			want = compliancekit.StatusFail
 		}
 		if f.Status != want {
 			t.Errorf("%s: got %v: %s", f.Resource.Name, f.Status, f.Message)

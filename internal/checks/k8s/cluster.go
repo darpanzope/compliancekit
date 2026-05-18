@@ -6,15 +6,15 @@ import (
 	"strings"
 
 	k8scol "github.com/darpanzope/compliancekit/internal/collectors/k8s"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // ----- Namespace default workload -------------------------------
 
-var CheckNSDefaultWorkload = core.Check{
+var CheckNSDefaultWorkload = compliancekit.Check{
 	ID:           "k8s-namespace-default-workload",
 	Title:        "Workloads should not run in the default namespace",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "kubernetes",
 	Service:      "cluster",
 	ResourceType: k8scol.PodType,
@@ -36,21 +36,21 @@ var CheckNSDefaultWorkload = core.Check{
 	Scanner: "cluster.NSDefaultWorkload",
 }
 
-func NSDefaultWorkload(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func NSDefaultWorkload(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, p := range g.ByType(k8scol.PodType) {
 		ns, _ := p.Attributes["namespace"].(string)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckNSDefaultWorkload.ID,
 			Severity: CheckNSDefaultWorkload.Severity,
 			Resource: p.Ref(),
 			Tags:     CheckNSDefaultWorkload.Tags,
 		}
 		if ns == "default" {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("pod %q: scheduled in default namespace", podDesc(p))
 		} else {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("pod %q: namespace=%s", podDesc(p), ns)
 		}
 		findings = append(findings, f)
@@ -60,10 +60,10 @@ func NSDefaultWorkload(_ context.Context, g *core.ResourceGraph) ([]core.Finding
 
 // ----- Namespace ResourceQuota missing --------------------------
 
-var CheckNSResourceQuota = core.Check{
+var CheckNSResourceQuota = compliancekit.Check{
 	ID:           "k8s-namespace-resourcequota-missing",
 	Title:        "Namespaces should have at least one ResourceQuota",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "kubernetes",
 	Service:      "cluster",
 	ResourceType: k8scol.NamespaceType,
@@ -84,28 +84,28 @@ var CheckNSResourceQuota = core.Check{
 	Scanner: "cluster.NSResourceQuota",
 }
 
-func NSResourceQuota(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func NSResourceQuota(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	rqByNs := map[string]int{}
 	for _, rq := range g.ByType(k8scol.ResourceQuotaType) {
 		ns, _ := rq.Attributes["namespace"].(string)
 		rqByNs[ns]++
 	}
-	findings := []core.Finding{}
+	findings := []compliancekit.Finding{}
 	for _, ns := range g.ByType(k8scol.NamespaceType) {
 		if isSys, _ := ns.Attributes["is_system"].(bool); isSys {
 			continue
 		}
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckNSResourceQuota.ID,
 			Severity: CheckNSResourceQuota.Severity,
 			Resource: ns.Ref(),
 			Tags:     CheckNSResourceQuota.Tags,
 		}
 		if rqByNs[ns.Name] > 0 {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("namespace %q: %d ResourceQuota(s)", ns.Name, rqByNs[ns.Name])
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("namespace %q: no ResourceQuota", ns.Name)
 		}
 		findings = append(findings, f)
@@ -115,10 +115,10 @@ func NSResourceQuota(_ context.Context, g *core.ResourceGraph) ([]core.Finding, 
 
 // ----- Namespace LimitRange missing ------------------------------
 
-var CheckNSLimitRange = core.Check{
+var CheckNSLimitRange = compliancekit.Check{
 	ID:           "k8s-namespace-limitrange-missing",
 	Title:        "Namespaces should have at least one LimitRange",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "kubernetes",
 	Service:      "cluster",
 	ResourceType: k8scol.NamespaceType,
@@ -137,7 +137,7 @@ var CheckNSLimitRange = core.Check{
 	Scanner: "cluster.NSLimitRange",
 }
 
-func NSLimitRange(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func NSLimitRange(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	lrByNs := map[string]int{}
 	for _, lr := range g.ByType(k8scol.LimitRangeType) {
 		ns, _ := lr.Attributes["namespace"].(string)
@@ -145,22 +145,22 @@ func NSLimitRange(_ context.Context, g *core.ResourceGraph) ([]core.Finding, err
 			lrByNs[ns]++
 		}
 	}
-	findings := []core.Finding{}
+	findings := []compliancekit.Finding{}
 	for _, ns := range g.ByType(k8scol.NamespaceType) {
 		if isSys, _ := ns.Attributes["is_system"].(bool); isSys {
 			continue
 		}
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckNSLimitRange.ID,
 			Severity: CheckNSLimitRange.Severity,
 			Resource: ns.Ref(),
 			Tags:     CheckNSLimitRange.Tags,
 		}
 		if lrByNs[ns.Name] > 0 {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("namespace %q: LimitRange with container defaults", ns.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("namespace %q: no LimitRange with container defaults", ns.Name)
 		}
 		findings = append(findings, f)
@@ -170,10 +170,10 @@ func NSLimitRange(_ context.Context, g *core.ResourceGraph) ([]core.Finding, err
 
 // ----- Namespace PSA label ---------------------------------------
 
-var CheckNSPSALabel = core.Check{
+var CheckNSPSALabel = compliancekit.Check{
 	ID:           "k8s-namespace-psa-label",
 	Title:        "Namespaces should set pod-security.kubernetes.io enforce label",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "kubernetes",
 	Service:      "cluster",
 	ResourceType: k8scol.NamespaceType,
@@ -194,14 +194,14 @@ var CheckNSPSALabel = core.Check{
 	Scanner: "cluster.NSPSALabel",
 }
 
-func NSPSALabel(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func NSPSALabel(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, ns := range g.ByType(k8scol.NamespaceType) {
 		if isSys, _ := ns.Attributes["is_system"].(bool); isSys {
 			continue
 		}
 		enforce, _ := ns.Attributes["psa_enforce"].(string)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckNSPSALabel.ID,
 			Severity: CheckNSPSALabel.Severity,
 			Resource: ns.Ref(),
@@ -209,16 +209,16 @@ func NSPSALabel(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error
 		}
 		switch enforce {
 		case "baseline", "restricted":
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("namespace %q: PSA enforce=%s", ns.Name, enforce)
 		case "privileged":
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("namespace %q: PSA enforce=privileged (no Pod Security gate)", ns.Name)
 		case "":
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("namespace %q: no PSA enforce label", ns.Name)
 		default:
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("namespace %q: unknown PSA level %q", ns.Name, enforce)
 		}
 		findings = append(findings, f)
@@ -228,10 +228,10 @@ func NSPSALabel(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error
 
 // ----- Namespace stuck terminating -------------------------------
 
-var CheckNSStuck = core.Check{
+var CheckNSStuck = compliancekit.Check{
 	ID:           "k8s-namespace-stuck-terminating",
 	Title:        "Namespaces should not stay in Terminating phase",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "kubernetes",
 	Service:      "cluster",
 	ResourceType: k8scol.NamespaceType,
@@ -253,21 +253,21 @@ var CheckNSStuck = core.Check{
 	Scanner: "cluster.NSStuck",
 }
 
-func NSStuck(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func NSStuck(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, ns := range g.ByType(k8scol.NamespaceType) {
 		phase, _ := ns.Attributes["phase"].(string)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckNSStuck.ID,
 			Severity: CheckNSStuck.Severity,
 			Resource: ns.Ref(),
 			Tags:     CheckNSStuck.Tags,
 		}
 		if phase == "Terminating" {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("namespace %q: stuck in Terminating", ns.Name)
 		} else {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("namespace %q: phase=%s", ns.Name, phase)
 		}
 		findings = append(findings, f)
@@ -277,10 +277,10 @@ func NSStuck(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
 
 // ----- Policy engine presence ------------------------------------
 
-var CheckPolicyEnginePresence = core.Check{
+var CheckPolicyEnginePresence = compliancekit.Check{
 	ID:           "k8s-policy-engine-present",
 	Title:        "Cluster should have a policy engine installed",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "kubernetes",
 	Service:      "cluster",
 	ResourceType: k8scol.ClusterType,
@@ -309,7 +309,7 @@ var policyEngineWebhooks = []string{
 	"jspolicy", "validate.kyverno.svc",
 }
 
-func PolicyEnginePresence(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func PolicyEnginePresence(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	found := []string{}
 	for _, w := range g.ByType(k8scol.ValidatingWebhookConfigType) {
 		for _, name := range policyEngineWebhooks {
@@ -319,19 +319,19 @@ func PolicyEnginePresence(_ context.Context, g *core.ResourceGraph) ([]core.Find
 			}
 		}
 	}
-	findings := []core.Finding{}
+	findings := []compliancekit.Finding{}
 	for _, cluster := range g.ByType(k8scol.ClusterType) {
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckPolicyEnginePresence.ID,
 			Severity: CheckPolicyEnginePresence.Severity,
 			Resource: cluster.Ref(),
 			Tags:     CheckPolicyEnginePresence.Tags,
 		}
 		if len(found) > 0 {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("cluster %q: policy engine(s): %s", cluster.Name, strings.Join(found, ", "))
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("cluster %q: no known policy engine detected", cluster.Name)
 		}
 		findings = append(findings, f)
@@ -341,10 +341,10 @@ func PolicyEnginePresence(_ context.Context, g *core.ResourceGraph) ([]core.Find
 
 // ----- Validating webhook FailurePolicy -------------------------
 
-var CheckVWebhookFailurePolicy = core.Check{
+var CheckVWebhookFailurePolicy = compliancekit.Check{
 	ID:           "k8s-validating-webhook-failure-policy",
 	Title:        "Validating webhooks should set failurePolicy=Fail",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "kubernetes",
 	Service:      "admission",
 	ResourceType: k8scol.ValidatingWebhookConfigType,
@@ -366,10 +366,10 @@ var CheckVWebhookFailurePolicy = core.Check{
 	Scanner: "cluster.VWebhookFailurePolicy",
 }
 
-func VWebhookFailurePolicy(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func VWebhookFailurePolicy(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, w := range g.ByType(k8scol.ValidatingWebhookConfigType) {
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckVWebhookFailurePolicy.ID,
 			Severity: CheckVWebhookFailurePolicy.Severity,
 			Resource: w.Ref(),
@@ -377,10 +377,10 @@ func VWebhookFailurePolicy(_ context.Context, g *core.ResourceGraph) ([]core.Fin
 		}
 		ignore, _ := w.Attributes["has_ignore_policy"].(bool)
 		if ignore {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("validatingwebhook %q: some webhook has failurePolicy=Ignore", w.Name)
 		} else {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("validatingwebhook %q: all webhooks failurePolicy=Fail", w.Name)
 		}
 		findings = append(findings, f)
@@ -390,10 +390,10 @@ func VWebhookFailurePolicy(_ context.Context, g *core.ResourceGraph) ([]core.Fin
 
 // ----- Mutating webhook side effects ----------------------------
 
-var CheckMWebhookSideEffects = core.Check{
+var CheckMWebhookSideEffects = compliancekit.Check{
 	ID:           "k8s-mutating-webhook-side-effects",
 	Title:        "Mutating webhooks should declare sideEffects: None or NoneOnDryRun",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "kubernetes",
 	Service:      "admission",
 	ResourceType: k8scol.MutatingWebhookConfigType,
@@ -414,21 +414,21 @@ var CheckMWebhookSideEffects = core.Check{
 	Scanner: "cluster.MWebhookSideEffects",
 }
 
-func MWebhookSideEffects(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func MWebhookSideEffects(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, w := range g.ByType(k8scol.MutatingWebhookConfigType) {
 		side, _ := w.Attributes["has_side_effects"].(bool)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckMWebhookSideEffects.ID,
 			Severity: CheckMWebhookSideEffects.Severity,
 			Resource: w.Ref(),
 			Tags:     CheckMWebhookSideEffects.Tags,
 		}
 		if side {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("mutatingwebhook %q: some webhook declares external side effects", w.Name)
 		} else {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("mutatingwebhook %q: sideEffects=None across webhooks", w.Name)
 		}
 		findings = append(findings, f)
@@ -438,10 +438,10 @@ func MWebhookSideEffects(_ context.Context, g *core.ResourceGraph) ([]core.Findi
 
 // ----- Webhook namespaceSelector --------------------------------
 
-var CheckWebhookNamespaceSelector = core.Check{
+var CheckWebhookNamespaceSelector = compliancekit.Check{
 	ID:           "k8s-webhook-namespace-selector",
 	Title:        "Cluster-wide webhooks should exempt kube-system via namespaceSelector",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "kubernetes",
 	Service:      "admission",
 	ResourceType: k8scol.MutatingWebhookConfigType,
@@ -462,8 +462,8 @@ var CheckWebhookNamespaceSelector = core.Check{
 	Scanner: "cluster.WebhookNamespaceSelector",
 }
 
-func WebhookNamespaceSelector(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func WebhookNamespaceSelector(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	// Iterate both validating + mutating; for each, check the
 	// per-webhook has_ns_selector flag — if any webhook lacks it,
 	// fail the whole configuration.
@@ -481,17 +481,17 @@ func WebhookNamespaceSelector(_ context.Context, g *core.ResourceGraph) ([]core.
 					missing = append(missing, name)
 				}
 			}
-			f := core.Finding{
+			f := compliancekit.Finding{
 				CheckID:  CheckWebhookNamespaceSelector.ID,
 				Severity: CheckWebhookNamespaceSelector.Severity,
 				Resource: w.Ref(),
 				Tags:     CheckWebhookNamespaceSelector.Tags,
 			}
 			if len(missing) == 0 {
-				f.Status = core.StatusPass
+				f.Status = compliancekit.StatusPass
 				f.Message = fmt.Sprintf("webhook %q: all webhooks have namespaceSelector", w.Name)
 			} else {
-				f.Status = core.StatusFail
+				f.Status = compliancekit.StatusFail
 				f.Message = fmt.Sprintf("webhook %q: webhooks without namespaceSelector: %s", w.Name, strings.Join(missing, ", "))
 			}
 			findings = append(findings, f)
@@ -503,34 +503,34 @@ func WebhookNamespaceSelector(_ context.Context, g *core.ResourceGraph) ([]core.
 // ----- helpers + init --------------------------------------------
 
 func init() {
-	core.Register(CheckNSDefaultWorkload, NSDefaultWorkload)
-	core.Register(CheckNSResourceQuota, NSResourceQuota)
-	core.Register(CheckNSLimitRange, NSLimitRange)
-	core.Register(CheckNSPSALabel, NSPSALabel)
-	core.Register(CheckNSStuck, NSStuck)
-	core.Register(CheckPolicyEnginePresence, PolicyEnginePresence)
-	core.Register(CheckVWebhookFailurePolicy, VWebhookFailurePolicy)
-	core.Register(CheckMWebhookSideEffects, MWebhookSideEffects)
-	core.Register(CheckWebhookNamespaceSelector, WebhookNamespaceSelector)
+	compliancekit.Register(CheckNSDefaultWorkload, NSDefaultWorkload)
+	compliancekit.Register(CheckNSResourceQuota, NSResourceQuota)
+	compliancekit.Register(CheckNSLimitRange, NSLimitRange)
+	compliancekit.Register(CheckNSPSALabel, NSPSALabel)
+	compliancekit.Register(CheckNSStuck, NSStuck)
+	compliancekit.Register(CheckPolicyEnginePresence, PolicyEnginePresence)
+	compliancekit.Register(CheckVWebhookFailurePolicy, VWebhookFailurePolicy)
+	compliancekit.Register(CheckMWebhookSideEffects, MWebhookSideEffects)
+	compliancekit.Register(CheckWebhookNamespaceSelector, WebhookNamespaceSelector)
 	// v0.22 phase 4 — ResourceQuota + LimitRange registrations moved
 	// to cluster_quotas.go.
 }
 
-func rqAttrCheck(g *core.ResourceGraph, check core.Check, attr, passMsg, failMsg string) []core.Finding {
-	findings := []core.Finding{}
+func rqAttrCheck(g *compliancekit.ResourceGraph, check compliancekit.Check, attr, passMsg, failMsg string) []compliancekit.Finding {
+	findings := []compliancekit.Finding{}
 	for _, rq := range g.ByType(k8scol.ResourceQuotaType) {
 		ok, _ := rq.Attributes[attr].(bool)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  check.ID,
 			Severity: check.Severity,
 			Resource: rq.Ref(),
 			Tags:     check.Tags,
 		}
 		if ok {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("resourcequota %q: %s", workloadDesc(rq), passMsg)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("resourcequota %q: %s", workloadDesc(rq), failMsg)
 		}
 		findings = append(findings, f)

@@ -20,7 +20,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // Profile is one named filter. All selectors are AND-composed: a
@@ -70,8 +70,8 @@ type Profile struct {
 // by ID for deterministic output. Returns an error when the profile
 // selectors produce zero checks -- that almost always means a typo,
 // and a silent zero-check scan is worse than a loud error.
-func (p Profile) Filter(checks []core.Check) ([]core.Check, error) {
-	out := make([]core.Check, 0, len(checks))
+func (p Profile) Filter(checks []compliancekit.Check) ([]compliancekit.Check, error) {
+	out := make([]compliancekit.Check, 0, len(checks))
 	for _, c := range checks {
 		if p.matches(c) {
 			out = append(out, c)
@@ -87,7 +87,7 @@ func (p Profile) Filter(checks []core.Check) ([]core.Check, error) {
 // matches is the per-check selector. Order matters only for short-
 // circuiting (cheap checks first); the semantics is pure AND-of-
 // populated-selectors.
-func (p Profile) matches(c core.Check) bool {
+func (p Profile) matches(c compliancekit.Check) bool {
 	// Explicit allow-list short-circuits the include* selectors.
 	if len(p.IncludeIDs) > 0 {
 		if !containsCI(p.IncludeIDs, c.ID) {

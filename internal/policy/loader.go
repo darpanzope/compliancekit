@@ -14,7 +14,7 @@ import (
 
 	"github.com/open-policy-agent/opa/v1/rego"
 
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // LoadDir walks dir for *.rego files, parses each into a Module
@@ -147,7 +147,7 @@ func extractPackage(body string) (string, error) {
 }
 
 // extractMetadata evaluates the policy's `metadata` rule and lifts
-// the resulting object onto a core.Check struct. Every policy MUST
+// the resulting object onto a compliancekit.Check struct. Every policy MUST
 // declare a `metadata := { ... }` constant or `metadata = { ... }`
 // rule producing an object with at least `id`, `title`, `severity`,
 // `provider`, `description`. Missing required fields fail loading
@@ -157,7 +157,7 @@ func extractPackage(body string) (string, error) {
 //
 //	service, resource_type, rationale, remediation, tags[],
 //	references[], frameworks{<framework_id>: [...controls]}.
-func extractMetadata(ctx context.Context, path, body, pkg string) (core.Check, error) {
+func extractMetadata(ctx context.Context, path, body, pkg string) (compliancekit.Check, error) {
 	query := fmt.Sprintf("data.%s.metadata", pkg)
 	metaOpts := []func(*rego.Rego){
 		rego.Query(query),
@@ -167,25 +167,25 @@ func extractMetadata(ctx context.Context, path, body, pkg string) (core.Check, e
 	r := rego.New(metaOpts...)
 	rs, err := r.Eval(ctx)
 	if err != nil {
-		return core.Check{}, fmt.Errorf("evaluate metadata rule: %w", err)
+		return compliancekit.Check{}, fmt.Errorf("evaluate metadata rule: %w", err)
 	}
 	if len(rs) == 0 || len(rs[0].Expressions) == 0 || rs[0].Expressions[0].Value == nil {
-		return core.Check{}, errors.New("missing `metadata` rule (declare `metadata := {...}` at the top of the file)")
+		return compliancekit.Check{}, errors.New("missing `metadata` rule (declare `metadata := {...}` at the top of the file)")
 	}
 	raw, err := json.Marshal(rs[0].Expressions[0].Value)
 	if err != nil {
-		return core.Check{}, fmt.Errorf("marshal metadata: %w", err)
+		return compliancekit.Check{}, fmt.Errorf("marshal metadata: %w", err)
 	}
 	var meta metadataDoc
 	if err := json.Unmarshal(raw, &meta); err != nil {
-		return core.Check{}, fmt.Errorf("decode metadata: %w", err)
+		return compliancekit.Check{}, fmt.Errorf("decode metadata: %w", err)
 	}
 	return meta.toCheck()
 }
 
 // metadataDoc mirrors the Rego `metadata` object shape. Field names
 // are snake_case in Rego (the idiomatic style); we map them to the
-// PascalCase core.Check fields here.
+// PascalCase compliancekit.Check fields here.
 type metadataDoc struct {
 	ID           string              `json:"id"`
 	Title        string              `json:"title"`
@@ -201,30 +201,30 @@ type metadataDoc struct {
 	References   []string            `json:"references"`
 }
 
-func (m metadataDoc) toCheck() (core.Check, error) {
+func (m metadataDoc) toCheck() (compliancekit.Check, error) {
 	missing := func(field string) error {
 		return fmt.Errorf("metadata.%s is required", field)
 	}
 	if m.ID == "" {
-		return core.Check{}, missing("id")
+		return compliancekit.Check{}, missing("id")
 	}
 	if m.Title == "" {
-		return core.Check{}, missing("title")
+		return compliancekit.Check{}, missing("title")
 	}
 	if m.Description == "" {
-		return core.Check{}, missing("description")
+		return compliancekit.Check{}, missing("description")
 	}
 	if m.Severity == "" {
-		return core.Check{}, missing("severity")
+		return compliancekit.Check{}, missing("severity")
 	}
 	if m.Provider == "" {
-		return core.Check{}, missing("provider")
+		return compliancekit.Check{}, missing("provider")
 	}
-	sev, err := core.ParseSeverity(m.Severity)
+	sev, err := compliancekit.ParseSeverity(m.Severity)
 	if err != nil {
-		return core.Check{}, fmt.Errorf("metadata.severity: %w", err)
+		return compliancekit.Check{}, fmt.Errorf("metadata.severity: %w", err)
 	}
-	return core.Check{
+	return compliancekit.Check{
 		ID:           m.ID,
 		Title:        m.Title,
 		Severity:     sev,

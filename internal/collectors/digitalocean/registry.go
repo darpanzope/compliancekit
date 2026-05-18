@@ -8,7 +8,7 @@ import (
 
 	"github.com/digitalocean/godo"
 
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // RegistryType is the resource type for the DO Container Registry.
@@ -17,7 +17,7 @@ import (
 // exists.
 const RegistryType = "digitalocean.registry"
 
-func (c *Collector) collectRegistry(ctx context.Context) ([]core.Resource, error) {
+func (c *Collector) collectRegistry(ctx context.Context) ([]compliancekit.Resource, error) {
 	reg, resp, err := c.client.Registry.Get(ctx)
 	if err != nil {
 		// 404 just means no registry on this account; treat as
@@ -56,7 +56,7 @@ func (c *Collector) collectRegistry(ctx context.Context) ([]core.Resource, error
 		lastGC = nil
 	}
 
-	r := core.Resource{
+	r := compliancekit.Resource{
 		ID:       fmt.Sprintf("%s.%s", RegistryType, reg.Name),
 		Type:     RegistryType,
 		Name:     reg.Name,
@@ -71,5 +71,5 @@ func (c *Collector) collectRegistry(ctx context.Context) ([]core.Resource, error
 		},
 	}
 	c.stamp(&r, reg.Region)
-	return []core.Resource{r}, nil
+	return []compliancekit.Resource{r}, nil
 }

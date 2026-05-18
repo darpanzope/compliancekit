@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // stubIngester is a minimal Ingester for exercising the registry. It
@@ -97,7 +97,7 @@ func TestRegistry_ConcurrentSafe(t *testing.T) {
 
 func TestIngester_StubIngestCall(t *testing.T) {
 	want := Result{
-		Findings: []core.Finding{{CheckID: "stub.example", Severity: core.SeverityHigh}},
+		Findings: []compliancekit.Finding{{CheckID: "stub.example", Severity: compliancekit.SeverityHigh}},
 	}
 	s := &stubIngester{format: "stub", result: want}
 

@@ -6,11 +6,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // Compile-time assertion.
-var _ core.Reporter = (*MarkdownReporter)(nil)
+var _ compliancekit.Reporter = (*MarkdownReporter)(nil)
 
 func TestMarkdown_Format(t *testing.T) {
 	if got := NewMarkdown().Format(); got != "markdown" {
@@ -33,26 +33,26 @@ func TestMarkdown_RenderEmpty(t *testing.T) {
 }
 
 func TestMarkdown_RenderHighSeverityFirst(t *testing.T) {
-	findings := []core.Finding{
+	findings := []compliancekit.Finding{
 		{
 			CheckID:  "low-check",
-			Status:   core.StatusFail,
-			Severity: core.SeverityLow,
-			Resource: core.ResourceRef{Name: "host-1", Type: "linux.host"},
+			Status:   compliancekit.StatusFail,
+			Severity: compliancekit.SeverityLow,
+			Resource: compliancekit.ResourceRef{Name: "host-1", Type: "linux.host"},
 			Message:  "low-priority gap",
 		},
 		{
 			CheckID:  "critical-check",
-			Status:   core.StatusFail,
-			Severity: core.SeverityCritical,
-			Resource: core.ResourceRef{Name: "db-01", Type: "digitalocean.droplet"},
+			Status:   compliancekit.StatusFail,
+			Severity: compliancekit.SeverityCritical,
+			Resource: compliancekit.ResourceRef{Name: "db-01", Type: "digitalocean.droplet"},
 			Message:  "critical exposure",
 		},
 		{
 			CheckID:  "high-check",
-			Status:   core.StatusFail,
-			Severity: core.SeverityHigh,
-			Resource: core.ResourceRef{Name: "web-01", Type: "linux.host"},
+			Status:   compliancekit.StatusFail,
+			Severity: compliancekit.SeverityHigh,
+			Resource: compliancekit.ResourceRef{Name: "web-01", Type: "linux.host"},
 			Message:  "high-priority gap",
 		},
 	}
@@ -83,19 +83,19 @@ func TestMarkdown_RenderHighSeverityFirst(t *testing.T) {
 }
 
 func TestMarkdown_OmitsPassAndSkipFromBody(t *testing.T) {
-	findings := []core.Finding{
+	findings := []compliancekit.Finding{
 		{
 			CheckID:  "passing-check",
-			Status:   core.StatusPass,
-			Severity: core.SeverityHigh,
-			Resource: core.ResourceRef{Name: "ok-host", Type: "linux.host"},
+			Status:   compliancekit.StatusPass,
+			Severity: compliancekit.SeverityHigh,
+			Resource: compliancekit.ResourceRef{Name: "ok-host", Type: "linux.host"},
 			Message:  "passing finding -- should not appear in body",
 		},
 		{
 			CheckID:  "skipped-check",
-			Status:   core.StatusSkip,
-			Severity: core.SeverityHigh,
-			Resource: core.ResourceRef{Name: "skip-host"},
+			Status:   compliancekit.StatusSkip,
+			Severity: compliancekit.SeverityHigh,
+			Resource: compliancekit.ResourceRef{Name: "skip-host"},
 			Message:  "skipped finding -- should not appear in body",
 		},
 	}
@@ -120,9 +120,9 @@ func TestMarkdown_StableOrderWithinSeverity(t *testing.T) {
 	// Same severity, two findings differing in check ID. Output order
 	// must be alphabetical by check ID so successive runs produce
 	// identical Markdown.
-	findings := []core.Finding{
-		{CheckID: "zebra", Status: core.StatusFail, Severity: core.SeverityHigh, Resource: core.ResourceRef{Name: "h1"}},
-		{CheckID: "alpha", Status: core.StatusFail, Severity: core.SeverityHigh, Resource: core.ResourceRef{Name: "h1"}},
+	findings := []compliancekit.Finding{
+		{CheckID: "zebra", Status: compliancekit.StatusFail, Severity: compliancekit.SeverityHigh, Resource: compliancekit.ResourceRef{Name: "h1"}},
+		{CheckID: "alpha", Status: compliancekit.StatusFail, Severity: compliancekit.SeverityHigh, Resource: compliancekit.ResourceRef{Name: "h1"}},
 	}
 	var buf bytes.Buffer
 	_ = NewMarkdown().Render(context.Background(), findings, nil, &buf)

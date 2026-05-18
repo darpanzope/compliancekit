@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 func TestRegistryCoverage(t *testing.T) {
@@ -43,9 +43,9 @@ func TestRegistryCoverage(t *testing.T) {
 }
 
 func TestRenderPodSecurityOverlay(t *testing.T) {
-	f := core.Finding{
+	f := compliancekit.Finding{
 		CheckID:  "k8s-pod-run-as-non-root",
-		Resource: core.ResourceRef{Name: "checkout-api"},
+		Resource: compliancekit.ResourceRef{Name: "checkout-api"},
 	}
 	s, err := remediate.Default.Render(f, remediate.FormatHelm)
 	if err != nil {
@@ -67,9 +67,9 @@ func TestRenderPodSecurityOverlay(t *testing.T) {
 }
 
 func TestRenderPDBOverlay(t *testing.T) {
-	f := core.Finding{
+	f := compliancekit.Finding{
 		CheckID:  "k8s-deployment-pdb-missing",
-		Resource: core.ResourceRef{Name: "api-release"},
+		Resource: compliancekit.ResourceRef{Name: "api-release"},
 	}
 	s, err := remediate.Default.Render(f, remediate.FormatHelm)
 	if err != nil {

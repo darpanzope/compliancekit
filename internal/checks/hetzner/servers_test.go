@@ -6,19 +6,19 @@ import (
 	"time"
 
 	hetznercol "github.com/darpanzope/compliancekit/internal/collectors/hetzner"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
-func newGraphWith(resources ...core.Resource) *core.ResourceGraph {
-	g := core.NewResourceGraph()
+func newGraphWith(resources ...compliancekit.Resource) *compliancekit.ResourceGraph {
+	g := compliancekit.NewResourceGraph()
 	for _, r := range resources {
 		g.Add(r)
 	}
 	return g
 }
 
-func mkServer(name string, attrs map[string]any) core.Resource {
-	return core.Resource{
+func mkServer(name string, attrs map[string]any) compliancekit.Resource {
+	return compliancekit.Resource{
 		ID:         "hetzner.server." + name,
 		Type:       hetznercol.ServerType,
 		Name:       name,
@@ -34,9 +34,9 @@ func TestServerBackups(t *testing.T) {
 	)
 	findings, _ := ServerBackups(context.Background(), g)
 	for _, f := range findings {
-		want := core.StatusPass
+		want := compliancekit.StatusPass
 		if f.Resource.Name == "off" {
-			want = core.StatusFail
+			want = compliancekit.StatusFail
 		}
 		if f.Status != want {
 			t.Errorf("%s: got %v", f.Resource.Name, f.Status)
@@ -51,9 +51,9 @@ func TestServerRescueDisabled(t *testing.T) {
 	)
 	findings, _ := ServerRescueDisabled(context.Background(), g)
 	for _, f := range findings {
-		want := core.StatusPass
+		want := compliancekit.StatusPass
 		if f.Resource.Name == "rescue" {
-			want = core.StatusFail
+			want = compliancekit.StatusFail
 		}
 		if f.Status != want {
 			t.Errorf("%s: got %v", f.Resource.Name, f.Status)
@@ -70,14 +70,14 @@ func TestServerImageAge(t *testing.T) {
 	)
 	findings, _ := ServerImageAge(context.Background(), g)
 	for _, f := range findings {
-		var want core.Status
+		var want compliancekit.Status
 		switch f.Resource.Name {
 		case "fresh":
-			want = core.StatusPass
+			want = compliancekit.StatusPass
 		case "stale":
-			want = core.StatusFail
+			want = compliancekit.StatusFail
 		case "unknown":
-			want = core.StatusSkip
+			want = compliancekit.StatusSkip
 		}
 		if f.Status != want {
 			t.Errorf("%s: got %v", f.Resource.Name, f.Status)
@@ -89,11 +89,11 @@ func TestServerStatusRunning(t *testing.T) {
 	cases := []struct {
 		name   string
 		status string
-		want   core.Status
+		want   compliancekit.Status
 	}{
-		{"on", "running", core.StatusPass},
-		{"off", "off", core.StatusFail},
-		{"init", "initializing", core.StatusFail},
+		{"on", "running", compliancekit.StatusPass},
+		{"off", "off", compliancekit.StatusFail},
+		{"init", "initializing", compliancekit.StatusFail},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -113,9 +113,9 @@ func TestServerNotLocked(t *testing.T) {
 	)
 	findings, _ := ServerNotLocked(context.Background(), g)
 	for _, f := range findings {
-		want := core.StatusPass
+		want := compliancekit.StatusPass
 		if f.Resource.Name == "locked" {
-			want = core.StatusFail
+			want = compliancekit.StatusFail
 		}
 		if f.Status != want {
 			t.Errorf("%s: got %v", f.Resource.Name, f.Status)

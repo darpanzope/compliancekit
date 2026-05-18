@@ -5,15 +5,15 @@ import (
 	"fmt"
 
 	gcpcol "github.com/darpanzope/compliancekit/internal/collectors/gcp"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // CheckSQLNoPublicIP forbids public IPv4 on Cloud SQL instances.
 // CIS GCP Foundations 6.6.
-var CheckSQLNoPublicIP = core.Check{
+var CheckSQLNoPublicIP = compliancekit.Check{
 	ID:           "gcp-sql-no-public-ip",
 	Title:        "Cloud SQL instances must not have public IPv4",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "gcp",
 	Service:      "sql",
 	ResourceType: gcpcol.SQLInstanceType,
@@ -35,21 +35,21 @@ var CheckSQLNoPublicIP = core.Check{
 	Scanner: "sql.NoPublicIP",
 }
 
-func SQLNoPublicIP(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func SQLNoPublicIP(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, inst := range g.ByType(gcpcol.SQLInstanceType) {
 		ipv4, _ := inst.Attributes["ipv4_enabled"].(bool)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckSQLNoPublicIP.ID,
 			Severity: CheckSQLNoPublicIP.Severity,
 			Resource: inst.Ref(),
 			Tags:     CheckSQLNoPublicIP.Tags,
 		}
 		if ipv4 {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("instance %q: public IPv4 enabled", inst.Name)
 		} else {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("instance %q: no public IPv4", inst.Name)
 		}
 		findings = append(findings, f)
@@ -59,10 +59,10 @@ func SQLNoPublicIP(_ context.Context, g *core.ResourceGraph) ([]core.Finding, er
 
 // CheckSQLAutomatedBackups requires automated backups on Cloud SQL.
 // CIS GCP Foundations 6.7.
-var CheckSQLAutomatedBackups = core.Check{
+var CheckSQLAutomatedBackups = compliancekit.Check{
 	ID:           "gcp-sql-automated-backups",
 	Title:        "Cloud SQL instances must have automated backups enabled",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "gcp",
 	Service:      "sql",
 	ResourceType: gcpcol.SQLInstanceType,
@@ -82,21 +82,21 @@ var CheckSQLAutomatedBackups = core.Check{
 	Scanner: "sql.AutomatedBackups",
 }
 
-func SQLAutomatedBackups(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func SQLAutomatedBackups(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, inst := range g.ByType(gcpcol.SQLInstanceType) {
 		enabled, _ := inst.Attributes["backups_enabled"].(bool)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckSQLAutomatedBackups.ID,
 			Severity: CheckSQLAutomatedBackups.Severity,
 			Resource: inst.Ref(),
 			Tags:     CheckSQLAutomatedBackups.Tags,
 		}
 		if enabled {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("instance %q: automated backups enabled", inst.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("instance %q: automated backups disabled", inst.Name)
 		}
 		findings = append(findings, f)
@@ -107,10 +107,10 @@ func SQLAutomatedBackups(_ context.Context, g *core.ResourceGraph) ([]core.Findi
 // CheckSQLDeletionProtection requires deletion protection on Cloud
 // SQL instances. Last-line guard against `terraform destroy` /
 // console fat-fingers.
-var CheckSQLDeletionProtection = core.Check{
+var CheckSQLDeletionProtection = compliancekit.Check{
 	ID:           "gcp-sql-deletion-protection",
 	Title:        "Cloud SQL instances must have deletion protection enabled",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "gcp",
 	Service:      "sql",
 	ResourceType: gcpcol.SQLInstanceType,
@@ -131,21 +131,21 @@ var CheckSQLDeletionProtection = core.Check{
 	Scanner: "sql.DeletionProtection",
 }
 
-func SQLDeletionProtection(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func SQLDeletionProtection(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, inst := range g.ByType(gcpcol.SQLInstanceType) {
 		on, _ := inst.Attributes["deletion_protection_enabled"].(bool)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckSQLDeletionProtection.ID,
 			Severity: CheckSQLDeletionProtection.Severity,
 			Resource: inst.Ref(),
 			Tags:     CheckSQLDeletionProtection.Tags,
 		}
 		if on {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("instance %q: deletion protection enabled", inst.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("instance %q: deletion protection disabled", inst.Name)
 		}
 		findings = append(findings, f)
@@ -154,7 +154,7 @@ func SQLDeletionProtection(_ context.Context, g *core.ResourceGraph) ([]core.Fin
 }
 
 func init() {
-	core.Register(CheckSQLNoPublicIP, SQLNoPublicIP)
-	core.Register(CheckSQLAutomatedBackups, SQLAutomatedBackups)
-	core.Register(CheckSQLDeletionProtection, SQLDeletionProtection)
+	compliancekit.Register(CheckSQLNoPublicIP, SQLNoPublicIP)
+	compliancekit.Register(CheckSQLAutomatedBackups, SQLAutomatedBackups)
+	compliancekit.Register(CheckSQLDeletionProtection, SQLDeletionProtection)
 }

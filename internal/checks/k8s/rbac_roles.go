@@ -4,7 +4,7 @@ import (
 	"context"
 
 	k8scol "github.com/darpanzope/compliancekit/internal/collectors/k8s"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.22 phase 1 — verb-based dangerous-action RBAC checks split out
@@ -19,10 +19,10 @@ import (
 // ----- Verb-based dangerous-action checks -------------------------
 // Each is a thin wrapper around verbResourceCheck.
 
-var CheckRBACSecretsRead = core.Check{
+var CheckRBACSecretsRead = compliancekit.Check{
 	ID:           "k8s-rbac-secrets-readable",
 	Title:        "Roles should not grant read access to secrets broadly",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "kubernetes",
 	Service:      "rbac",
 	ResourceType: k8scol.ClusterRoleType,
@@ -44,15 +44,15 @@ var CheckRBACSecretsRead = core.Check{
 	Scanner: "rbac.SecretsRead",
 }
 
-func RBACSecretsRead(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func RBACSecretsRead(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	return verbResourceCheck(g, CheckRBACSecretsRead, []string{"get", "list", "watch"},
 		"", "secrets", false), nil
 }
 
-var CheckRBACSecretsWrite = core.Check{
+var CheckRBACSecretsWrite = compliancekit.Check{
 	ID:           "k8s-rbac-secrets-writable",
 	Title:        "Roles should not grant write access to secrets",
-	Severity:     core.SeverityCritical,
+	Severity:     compliancekit.SeverityCritical,
 	Provider:     "kubernetes",
 	Service:      "rbac",
 	ResourceType: k8scol.ClusterRoleType,
@@ -73,15 +73,15 @@ var CheckRBACSecretsWrite = core.Check{
 	Scanner: "rbac.SecretsWrite",
 }
 
-func RBACSecretsWrite(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func RBACSecretsWrite(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	return verbResourceCheck(g, CheckRBACSecretsWrite, []string{"create", "update", "patch", "delete"},
 		"", "secrets", false), nil
 }
 
-var CheckRBACPodsExec = core.Check{
+var CheckRBACPodsExec = compliancekit.Check{
 	ID:           "k8s-rbac-pods-exec",
 	Title:        "Roles should not grant pods/exec",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "kubernetes",
 	Service:      "rbac",
 	ResourceType: k8scol.ClusterRoleType,
@@ -102,15 +102,15 @@ var CheckRBACPodsExec = core.Check{
 	Scanner: "rbac.PodsExec",
 }
 
-func RBACPodsExec(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func RBACPodsExec(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	return verbResourceCheck(g, CheckRBACPodsExec, []string{"create", "*"},
 		"", "pods/exec", false), nil
 }
 
-var CheckRBACPodsPortforward = core.Check{
+var CheckRBACPodsPortforward = compliancekit.Check{
 	ID:           "k8s-rbac-pods-portforward",
 	Title:        "Roles should not grant pods/portforward",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "kubernetes",
 	Service:      "rbac",
 	ResourceType: k8scol.ClusterRoleType,
@@ -129,15 +129,15 @@ var CheckRBACPodsPortforward = core.Check{
 	Scanner: "rbac.PodsPortforward",
 }
 
-func RBACPodsPortforward(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func RBACPodsPortforward(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	return verbResourceCheck(g, CheckRBACPodsPortforward, []string{"create", "*"},
 		"", "pods/portforward", false), nil
 }
 
-var CheckRBACImpersonate = core.Check{
+var CheckRBACImpersonate = compliancekit.Check{
 	ID:           "k8s-rbac-impersonate",
 	Title:        "Roles should not grant the impersonate verb",
-	Severity:     core.SeverityCritical,
+	Severity:     compliancekit.SeverityCritical,
 	Provider:     "kubernetes",
 	Service:      "rbac",
 	ResourceType: k8scol.ClusterRoleType,
@@ -157,14 +157,14 @@ var CheckRBACImpersonate = core.Check{
 	Scanner: "rbac.Impersonate",
 }
 
-func RBACImpersonate(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func RBACImpersonate(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	return ruleVerbCheck(g, CheckRBACImpersonate, "impersonate"), nil
 }
 
-var CheckRBACEscalate = core.Check{
+var CheckRBACEscalate = compliancekit.Check{
 	ID:           "k8s-rbac-escalate",
 	Title:        "Roles should not grant the escalate verb on roles",
-	Severity:     core.SeverityCritical,
+	Severity:     compliancekit.SeverityCritical,
 	Provider:     "kubernetes",
 	Service:      "rbac",
 	ResourceType: k8scol.ClusterRoleType,
@@ -184,15 +184,15 @@ var CheckRBACEscalate = core.Check{
 	Scanner: "rbac.Escalate",
 }
 
-func RBACEscalate(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func RBACEscalate(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	return verbResourceCheck(g, CheckRBACEscalate, []string{"escalate"},
 		"rbac.authorization.k8s.io", "roles", true), nil
 }
 
-var CheckRBACBind = core.Check{
+var CheckRBACBind = compliancekit.Check{
 	ID:           "k8s-rbac-bind",
 	Title:        "Roles should not grant the bind verb on roles",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "kubernetes",
 	Service:      "rbac",
 	ResourceType: k8scol.ClusterRoleType,
@@ -212,15 +212,15 @@ var CheckRBACBind = core.Check{
 	Scanner: "rbac.Bind",
 }
 
-func RBACBind(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func RBACBind(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	return verbResourceCheck(g, CheckRBACBind, []string{"bind"},
 		"rbac.authorization.k8s.io", "roles", true), nil
 }
 
-var CheckRBACCreatePods = core.Check{
+var CheckRBACCreatePods = compliancekit.Check{
 	ID:           "k8s-rbac-create-pods",
 	Title:        "Roles should rarely grant create on pods",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "kubernetes",
 	Service:      "rbac",
 	ResourceType: k8scol.ClusterRoleType,
@@ -242,15 +242,15 @@ var CheckRBACCreatePods = core.Check{
 	Scanner: "rbac.CreatePods",
 }
 
-func RBACCreatePods(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func RBACCreatePods(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	return verbResourceCheck(g, CheckRBACCreatePods, []string{"create"},
 		"", "pods", false), nil
 }
 
-var CheckRBACCSRApprove = core.Check{
+var CheckRBACCSRApprove = compliancekit.Check{
 	ID:           "k8s-rbac-csr-approve",
 	Title:        "Roles should not grant approval on CertificateSigningRequests",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "kubernetes",
 	Service:      "rbac",
 	ResourceType: k8scol.ClusterRoleType,
@@ -270,15 +270,15 @@ var CheckRBACCSRApprove = core.Check{
 	Scanner: "rbac.CSRApprove",
 }
 
-func RBACCSRApprove(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func RBACCSRApprove(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	return verbResourceCheck(g, CheckRBACCSRApprove, []string{"update", "*"},
 		"certificates.k8s.io", "certificatesigningrequests/approval", true), nil
 }
 
-var CheckRBACTokenRequest = core.Check{
+var CheckRBACTokenRequest = compliancekit.Check{
 	ID:           "k8s-rbac-tokenrequest",
 	Title:        "Roles should not grant create on serviceaccounts/token broadly",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "kubernetes",
 	Service:      "rbac",
 	ResourceType: k8scol.ClusterRoleType,
@@ -299,20 +299,20 @@ var CheckRBACTokenRequest = core.Check{
 	Scanner: "rbac.TokenRequest",
 }
 
-func RBACTokenRequest(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func RBACTokenRequest(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	return verbResourceCheck(g, CheckRBACTokenRequest, []string{"create"},
 		"", "serviceaccounts/token", false), nil
 }
 
 func init() {
-	core.Register(CheckRBACSecretsRead, RBACSecretsRead)
-	core.Register(CheckRBACSecretsWrite, RBACSecretsWrite)
-	core.Register(CheckRBACPodsExec, RBACPodsExec)
-	core.Register(CheckRBACPodsPortforward, RBACPodsPortforward)
-	core.Register(CheckRBACImpersonate, RBACImpersonate)
-	core.Register(CheckRBACEscalate, RBACEscalate)
-	core.Register(CheckRBACBind, RBACBind)
-	core.Register(CheckRBACCreatePods, RBACCreatePods)
-	core.Register(CheckRBACCSRApprove, RBACCSRApprove)
-	core.Register(CheckRBACTokenRequest, RBACTokenRequest)
+	compliancekit.Register(CheckRBACSecretsRead, RBACSecretsRead)
+	compliancekit.Register(CheckRBACSecretsWrite, RBACSecretsWrite)
+	compliancekit.Register(CheckRBACPodsExec, RBACPodsExec)
+	compliancekit.Register(CheckRBACPodsPortforward, RBACPodsPortforward)
+	compliancekit.Register(CheckRBACImpersonate, RBACImpersonate)
+	compliancekit.Register(CheckRBACEscalate, RBACEscalate)
+	compliancekit.Register(CheckRBACBind, RBACBind)
+	compliancekit.Register(CheckRBACCreatePods, RBACCreatePods)
+	compliancekit.Register(CheckRBACCSRApprove, RBACCSRApprove)
+	compliancekit.Register(CheckRBACTokenRequest, RBACTokenRequest)
 }

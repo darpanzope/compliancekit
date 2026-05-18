@@ -7,11 +7,11 @@ import (
 	"github.com/digitalocean/godo"
 
 	docol "github.com/darpanzope/compliancekit/internal/collectors/digitalocean"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
-func mkFirewall(name string, attrs map[string]any, tags []string) core.Resource {
-	return core.Resource{
+func mkFirewall(name string, attrs map[string]any, tags []string) compliancekit.Resource {
+	return compliancekit.Resource{
 		ID:         "digitalocean.firewall." + name,
 		Type:       docol.FirewallType,
 		Name:       name,
@@ -41,12 +41,12 @@ func TestFirewallRDPFromAny(t *testing.T) {
 	cases := []struct {
 		name  string
 		rules []godo.InboundRule
-		want  core.Status
+		want  compliancekit.Status
 	}{
-		{"rdp-from-any", []godo.InboundRule{inbound("tcp", "3389", []string{"0.0.0.0/0"})}, core.StatusFail},
-		{"rdp-from-ipv6-any", []godo.InboundRule{inbound("tcp", "3389", []string{"::/0"})}, core.StatusFail},
-		{"rdp-from-bastion", []godo.InboundRule{inbound("tcp", "3389", []string{"203.0.113.0/24"})}, core.StatusPass},
-		{"no-rdp", []godo.InboundRule{inbound("tcp", "22", []string{"0.0.0.0/0"})}, core.StatusPass},
+		{"rdp-from-any", []godo.InboundRule{inbound("tcp", "3389", []string{"0.0.0.0/0"})}, compliancekit.StatusFail},
+		{"rdp-from-ipv6-any", []godo.InboundRule{inbound("tcp", "3389", []string{"::/0"})}, compliancekit.StatusFail},
+		{"rdp-from-bastion", []godo.InboundRule{inbound("tcp", "3389", []string{"203.0.113.0/24"})}, compliancekit.StatusPass},
+		{"no-rdp", []godo.InboundRule{inbound("tcp", "22", []string{"0.0.0.0/0"})}, compliancekit.StatusPass},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -63,11 +63,11 @@ func TestFirewallAnyFromAny(t *testing.T) {
 	cases := []struct {
 		name  string
 		rules []godo.InboundRule
-		want  core.Status
+		want  compliancekit.Status
 	}{
-		{"any-from-any", []godo.InboundRule{inbound("tcp", "all", []string{"0.0.0.0/0"})}, core.StatusFail},
-		{"any-from-restricted", []godo.InboundRule{inbound("tcp", "all", []string{"10.0.0.0/8"})}, core.StatusPass},
-		{"single-port-from-any", []godo.InboundRule{inbound("tcp", "443", []string{"0.0.0.0/0"})}, core.StatusPass},
+		{"any-from-any", []godo.InboundRule{inbound("tcp", "all", []string{"0.0.0.0/0"})}, compliancekit.StatusFail},
+		{"any-from-restricted", []godo.InboundRule{inbound("tcp", "all", []string{"10.0.0.0/8"})}, compliancekit.StatusPass},
+		{"single-port-from-any", []godo.InboundRule{inbound("tcp", "443", []string{"0.0.0.0/0"})}, compliancekit.StatusPass},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -105,11 +105,11 @@ func TestFirewallBroadPortRange(t *testing.T) {
 	cases := []struct {
 		name  string
 		rules []godo.InboundRule
-		want  core.Status
+		want  compliancekit.Status
 	}{
-		{"narrow-ok", []godo.InboundRule{inbound("tcp", "20-30", []string{"0.0.0.0/0"})}, core.StatusPass},
-		{"wide-from-public", []godo.InboundRule{inbound("tcp", "1024-65535", []string{"0.0.0.0/0"})}, core.StatusFail},
-		{"wide-from-private", []godo.InboundRule{inbound("tcp", "1024-65535", []string{"10.0.0.0/8"})}, core.StatusPass},
+		{"narrow-ok", []godo.InboundRule{inbound("tcp", "20-30", []string{"0.0.0.0/0"})}, compliancekit.StatusPass},
+		{"wide-from-public", []godo.InboundRule{inbound("tcp", "1024-65535", []string{"0.0.0.0/0"})}, compliancekit.StatusFail},
+		{"wide-from-private", []godo.InboundRule{inbound("tcp", "1024-65535", []string{"10.0.0.0/8"})}, compliancekit.StatusPass},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -126,11 +126,11 @@ func TestFirewallOutboundDenyAll(t *testing.T) {
 	cases := []struct {
 		name  string
 		rules []godo.OutboundRule
-		want  core.Status
+		want  compliancekit.Status
 	}{
-		{"any-to-any", []godo.OutboundRule{outbound("tcp", "all", []string{"0.0.0.0/0"})}, core.StatusFail},
-		{"narrow-egress", []godo.OutboundRule{outbound("tcp", "443", []string{"0.0.0.0/0"})}, core.StatusPass},
-		{"empty", []godo.OutboundRule{}, core.StatusPass},
+		{"any-to-any", []godo.OutboundRule{outbound("tcp", "all", []string{"0.0.0.0/0"})}, compliancekit.StatusFail},
+		{"narrow-egress", []godo.OutboundRule{outbound("tcp", "443", []string{"0.0.0.0/0"})}, compliancekit.StatusPass},
+		{"empty", []godo.OutboundRule{}, compliancekit.StatusPass},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -148,11 +148,11 @@ func TestFirewallOrphan(t *testing.T) {
 		name  string
 		attrs map[string]any
 		tags  []string
-		want  core.Status
+		want  compliancekit.Status
 	}{
-		{"has-droplets", map[string]any{"droplet_ids": []int{1, 2}}, nil, core.StatusPass},
-		{"has-tags", map[string]any{"droplet_ids": []int{}}, []string{"web"}, core.StatusPass},
-		{"orphan", map[string]any{"droplet_ids": []int{}}, nil, core.StatusFail},
+		{"has-droplets", map[string]any{"droplet_ids": []int{1, 2}}, nil, compliancekit.StatusPass},
+		{"has-tags", map[string]any{"droplet_ids": []int{}}, []string{"web"}, compliancekit.StatusPass},
+		{"orphan", map[string]any{"droplet_ids": []int{}}, nil, compliancekit.StatusFail},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {

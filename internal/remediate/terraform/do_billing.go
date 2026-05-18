@@ -3,8 +3,8 @@ package terraform
 import (
 	"fmt"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.19 phase 8 — Terraform strategies for billing + project hygiene.
@@ -32,7 +32,7 @@ func init() {
 		[]string{"do-billing-cdn-traffic-cost"}, renderTFCDNCost)
 }
 
-func renderTFDropletStopped(f core.Finding) (remediate.Snippet, error) {
+func renderTFDropletStopped(f compliancekit.Finding) (remediate.Snippet, error) {
 	name := tfNameOrFallback(f, "DROPLET")
 	body := fmt.Sprintf(`# Either remove the resource (preferred) or document why it stays.
 # Drop the block from your .tf source AND run:
@@ -47,7 +47,7 @@ func renderTFDropletStopped(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderTFProjectPurpose(f core.Finding) (remediate.Snippet, error) {
+func renderTFProjectPurpose(f compliancekit.Finding) (remediate.Snippet, error) {
 	name := tfNameOrFallback(f, "PROJECT")
 	body := fmt.Sprintf(`resource "digitalocean_project" %q {
   name        = %q
@@ -61,7 +61,7 @@ func renderTFProjectPurpose(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderTFDropletRightsize(f core.Finding) (remediate.Snippet, error) {
+func renderTFDropletRightsize(f compliancekit.Finding) (remediate.Snippet, error) {
 	name := tfNameOrFallback(f, "DROPLET")
 	body := fmt.Sprintf(`# Resize after reviewing monitoring data.
 resource "digitalocean_droplet" %q {
@@ -77,14 +77,14 @@ resource "digitalocean_droplet" %q {
 	}, nil
 }
 
-func renderTFBillingManual(_ core.Finding) (remediate.Snippet, error) {
+func renderTFBillingManual(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return renderTFManualOnly(
 		"billing controls are dashboard-only (no TF surface)",
 		"https://cloud.digitalocean.com/account/billing",
 		"Quarterly review on the billing dashboard; capture screenshots for the audit pack")
 }
 
-func renderTFSnapshotRetention(_ core.Finding) (remediate.Snippet, error) {
+func renderTFSnapshotRetention(_ compliancekit.Finding) (remediate.Snippet, error) {
 	body := `# Snapshot retention is enforced by a scheduled GitHub Action or cron;
 # Terraform doesn't natively model 'delete snapshots older than X days'.
 # Example workflow shape:
@@ -104,7 +104,7 @@ func renderTFSnapshotRetention(_ core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderTFCDNCost(_ core.Finding) (remediate.Snippet, error) {
+func renderTFCDNCost(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return renderTFManualOnly(
 		"CDN traffic cost",
 		"https://cloud.digitalocean.com/spaces",

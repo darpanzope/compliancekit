@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 func TestRegistryCoverage(t *testing.T) {
@@ -42,9 +42,9 @@ func TestRegistryCoverage(t *testing.T) {
 }
 
 func TestRenderS3PublicAccessBlock(t *testing.T) {
-	f := core.Finding{
+	f := compliancekit.Finding{
 		CheckID:  "aws-s3-public-access-block",
-		Resource: core.ResourceRef{Name: "prod-bucket"},
+		Resource: compliancekit.ResourceRef{Name: "prod-bucket"},
 	}
 	s, err := remediate.Default.Render(f, remediate.FormatAWSCLI)
 	if err != nil {
@@ -62,9 +62,9 @@ func TestRenderS3PublicAccessBlock(t *testing.T) {
 }
 
 func TestRenderEBSDefaultEncryptionUsesRegion(t *testing.T) {
-	f := core.Finding{
+	f := compliancekit.Finding{
 		CheckID:  "aws-ec2-ebs-encrypted",
-		Resource: core.ResourceRef{Region: "eu-west-1"},
+		Resource: compliancekit.ResourceRef{Region: "eu-west-1"},
 	}
 	s, err := remediate.Default.Render(f, remediate.FormatAWSCLI)
 	if err != nil {
@@ -85,7 +85,7 @@ func TestRenderManualSentinels(t *testing.T) {
 		"aws-rds-encrypted",
 	}
 	for _, id := range manualIDs {
-		f := core.Finding{CheckID: id, Resource: core.ResourceRef{Name: "example"}}
+		f := compliancekit.Finding{CheckID: id, Resource: compliancekit.ResourceRef{Name: "example"}}
 		s, err := remediate.Default.Render(f, remediate.FormatAWSCLI)
 		if err != nil {
 			t.Errorf("Render(%q): %v", id, err)
@@ -105,7 +105,7 @@ func TestRenderCloudTrailGrouped(t *testing.T) {
 	}
 	var first string
 	for i, id := range cases {
-		f := core.Finding{CheckID: id, Resource: core.ResourceRef{Name: "main-trail"}}
+		f := compliancekit.Finding{CheckID: id, Resource: compliancekit.ResourceRef{Name: "main-trail"}}
 		s, err := remediate.Default.Render(f, remediate.FormatAWSCLI)
 		if err != nil {
 			t.Fatalf("%q: %v", id, err)

@@ -9,8 +9,8 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/darpanzope/compliancekit/internal/baseline"
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/diff"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 type diffOptions struct {
@@ -150,7 +150,7 @@ func checkFailOnGate(spec string, r diff.DiffResult) error {
 		sevStr = strings.TrimPrefix(spec, "new-")
 	}
 
-	sev, err := core.ParseSeverity(sevStr)
+	sev, err := compliancekit.ParseSeverity(sevStr)
 	if err != nil {
 		return fmt.Errorf("invalid --fail-on %q: %w", spec, err)
 	}

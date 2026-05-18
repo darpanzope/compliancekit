@@ -5,15 +5,15 @@ import (
 	"fmt"
 
 	k8scol "github.com/darpanzope/compliancekit/internal/collectors/k8s"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // ----- Multiple default StorageClasses --------------------------
 
-var CheckSCDefaultMultiple = core.Check{
+var CheckSCDefaultMultiple = compliancekit.Check{
 	ID:           "k8s-storageclass-default-multiple",
 	Title:        "Only one StorageClass should be marked default",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "kubernetes",
 	Service:      "storage",
 	ResourceType: k8scol.StorageClassType,
@@ -35,16 +35,16 @@ var CheckSCDefaultMultiple = core.Check{
 	Scanner: "storage.SCDefaultMultiple",
 }
 
-func SCDefaultMultiple(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func SCDefaultMultiple(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	defaults := []string{}
 	for _, sc := range g.ByType(k8scol.StorageClassType) {
 		if d, _ := sc.Attributes["is_default"].(bool); d {
 			defaults = append(defaults, sc.Name)
 		}
 	}
-	findings := []core.Finding{}
+	findings := []compliancekit.Finding{}
 	for _, sc := range g.ByType(k8scol.StorageClassType) {
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckSCDefaultMultiple.ID,
 			Severity: CheckSCDefaultMultiple.Severity,
 			Resource: sc.Ref(),
@@ -53,13 +53,13 @@ func SCDefaultMultiple(_ context.Context, g *core.ResourceGraph) ([]core.Finding
 		isDefault, _ := sc.Attributes["is_default"].(bool)
 		switch {
 		case !isDefault:
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("storageclass %q: not default", sc.Name)
 		case len(defaults) == 1:
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("storageclass %q: sole default", sc.Name)
 		default:
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("storageclass %q: one of %d defaults", sc.Name, len(defaults))
 		}
 		findings = append(findings, f)
@@ -69,10 +69,10 @@ func SCDefaultMultiple(_ context.Context, g *core.ResourceGraph) ([]core.Finding
 
 // ----- StorageClass encryption ---------------------------------
 
-var CheckSCEncryption = core.Check{
+var CheckSCEncryption = compliancekit.Check{
 	ID:           "k8s-storageclass-encryption",
 	Title:        "StorageClasses should configure at-rest encryption",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "kubernetes",
 	Service:      "storage",
 	ResourceType: k8scol.StorageClassType,
@@ -95,21 +95,21 @@ var CheckSCEncryption = core.Check{
 	Scanner: "storage.SCEncryption",
 }
 
-func SCEncryption(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func SCEncryption(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, sc := range g.ByType(k8scol.StorageClassType) {
 		hasEnc, _ := sc.Attributes["has_encryption"].(bool)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckSCEncryption.ID,
 			Severity: CheckSCEncryption.Severity,
 			Resource: sc.Ref(),
 			Tags:     CheckSCEncryption.Tags,
 		}
 		if hasEnc {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("storageclass %q: encryption parameter set", sc.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("storageclass %q: no encryption parameter", sc.Name)
 		}
 		findings = append(findings, f)
@@ -119,10 +119,10 @@ func SCEncryption(_ context.Context, g *core.ResourceGraph) ([]core.Finding, err
 
 // ----- StorageClass reclaim policy ------------------------------
 
-var CheckSCReclaimPolicy = core.Check{
+var CheckSCReclaimPolicy = compliancekit.Check{
 	ID:           "k8s-storageclass-reclaim-policy",
 	Title:        "StorageClasses for data-bearing workloads should set reclaimPolicy: Retain",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "kubernetes",
 	Service:      "storage",
 	ResourceType: k8scol.StorageClassType,
@@ -144,8 +144,8 @@ var CheckSCReclaimPolicy = core.Check{
 	Scanner: "storage.SCReclaimPolicy",
 }
 
-func SCReclaimPolicy(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func SCReclaimPolicy(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, sc := range g.ByType(k8scol.StorageClassType) {
 		reclaim, _ := sc.Attributes["reclaim_policy"].(string)
 		// Empty means "Delete" per K8s default.
@@ -153,17 +153,17 @@ func SCReclaimPolicy(_ context.Context, g *core.ResourceGraph) ([]core.Finding, 
 		if actual == "" {
 			actual = "Delete"
 		}
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckSCReclaimPolicy.ID,
 			Severity: CheckSCReclaimPolicy.Severity,
 			Resource: sc.Ref(),
 			Tags:     CheckSCReclaimPolicy.Tags,
 		}
 		if actual == "Retain" {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("storageclass %q: reclaimPolicy=Retain", sc.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("storageclass %q: reclaimPolicy=%s (data-loss risk for stateful workloads)", sc.Name, actual)
 		}
 		findings = append(findings, f)
@@ -173,10 +173,10 @@ func SCReclaimPolicy(_ context.Context, g *core.ResourceGraph) ([]core.Finding, 
 
 // ----- PV retain not set ----------------------------------------
 
-var CheckPVRetain = core.Check{
+var CheckPVRetain = compliancekit.Check{
 	ID:           "k8s-pv-reclaim-retain",
 	Title:        "PersistentVolumes for stateful claims should set reclaimPolicy: Retain",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "kubernetes",
 	Service:      "storage",
 	ResourceType: k8scol.PersistentVolumeType,
@@ -196,21 +196,21 @@ var CheckPVRetain = core.Check{
 	Scanner: "storage.PVRetain",
 }
 
-func PVRetain(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func PVRetain(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, pv := range g.ByType(k8scol.PersistentVolumeType) {
 		reclaim, _ := pv.Attributes["reclaim_policy"].(string)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckPVRetain.ID,
 			Severity: CheckPVRetain.Severity,
 			Resource: pv.Ref(),
 			Tags:     CheckPVRetain.Tags,
 		}
 		if reclaim == "Retain" {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("pv %q: reclaim=Retain", pv.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("pv %q: reclaim=%s", pv.Name, reclaim)
 		}
 		findings = append(findings, f)
@@ -220,10 +220,10 @@ func PVRetain(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) 
 
 // ----- PV encrypted hint ----------------------------------------
 
-var CheckPVEncrypted = core.Check{
+var CheckPVEncrypted = compliancekit.Check{
 	ID:           "k8s-pv-encryption-hint",
 	Title:        "PersistentVolumes should carry an encryption hint",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "kubernetes",
 	Service:      "storage",
 	ResourceType: k8scol.PersistentVolumeType,
@@ -245,21 +245,21 @@ var CheckPVEncrypted = core.Check{
 	Scanner: "storage.PVEncrypted",
 }
 
-func PVEncrypted(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func PVEncrypted(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, pv := range g.ByType(k8scol.PersistentVolumeType) {
 		hint, _ := pv.Attributes["has_encryption_hint"].(bool)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckPVEncrypted.ID,
 			Severity: CheckPVEncrypted.Severity,
 			Resource: pv.Ref(),
 			Tags:     CheckPVEncrypted.Tags,
 		}
 		if hint {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("pv %q: encryption hint detected", pv.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("pv %q: no encryption hint", pv.Name)
 		}
 		findings = append(findings, f)
@@ -269,10 +269,10 @@ func PVEncrypted(_ context.Context, g *core.ResourceGraph) ([]core.Finding, erro
 
 // ----- PV orphan (released) ------------------------------------
 
-var CheckPVOrphan = core.Check{
+var CheckPVOrphan = compliancekit.Check{
 	ID:           "k8s-pv-orphan",
 	Title:        "Released PersistentVolumes should be cleaned up",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "kubernetes",
 	Service:      "storage",
 	ResourceType: k8scol.PersistentVolumeType,
@@ -293,11 +293,11 @@ var CheckPVOrphan = core.Check{
 	Scanner: "storage.PVOrphan",
 }
 
-func PVOrphan(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func PVOrphan(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, pv := range g.ByType(k8scol.PersistentVolumeType) {
 		phase, _ := pv.Attributes["phase"].(string)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckPVOrphan.ID,
 			Severity: CheckPVOrphan.Severity,
 			Resource: pv.Ref(),
@@ -305,13 +305,13 @@ func PVOrphan(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) 
 		}
 		switch phase {
 		case "Released":
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("pv %q: Released (orphan)", pv.Name)
 		case "Failed":
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("pv %q: Failed", pv.Name)
 		default:
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("pv %q: phase=%s", pv.Name, phase)
 		}
 		findings = append(findings, f)
@@ -321,10 +321,10 @@ func PVOrphan(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) 
 
 // ----- PVC not bound -------------------------------------------
 
-var CheckPVCNotBound = core.Check{
+var CheckPVCNotBound = compliancekit.Check{
 	ID:           "k8s-pvc-not-bound",
 	Title:        "PersistentVolumeClaims should be Bound",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "kubernetes",
 	Service:      "storage",
 	ResourceType: k8scol.PersistentVolumeClaimType,
@@ -344,21 +344,21 @@ var CheckPVCNotBound = core.Check{
 	Scanner: "storage.PVCNotBound",
 }
 
-func PVCNotBound(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func PVCNotBound(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, pvc := range g.ByType(k8scol.PersistentVolumeClaimType) {
 		phase, _ := pvc.Attributes["phase"].(string)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckPVCNotBound.ID,
 			Severity: CheckPVCNotBound.Severity,
 			Resource: pvc.Ref(),
 			Tags:     CheckPVCNotBound.Tags,
 		}
 		if phase == "Bound" {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("pvc %q: Bound", secretDesc(pvc))
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("pvc %q: phase=%s", secretDesc(pvc), phase)
 		}
 		findings = append(findings, f)
@@ -368,10 +368,10 @@ func PVCNotBound(_ context.Context, g *core.ResourceGraph) ([]core.Finding, erro
 
 // ----- PVC orphan (bound but not used) -------------------------
 
-var CheckPVCOrphan = core.Check{
+var CheckPVCOrphan = compliancekit.Check{
 	ID:           "k8s-pvc-orphan",
 	Title:        "Bound PersistentVolumeClaims should be mounted by at least one pod",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "kubernetes",
 	Service:      "storage",
 	ResourceType: k8scol.PersistentVolumeClaimType,
@@ -391,7 +391,7 @@ var CheckPVCOrphan = core.Check{
 	Scanner: "storage.PVCOrphan",
 }
 
-func PVCOrphan(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func PVCOrphan(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	// Pods reference PVCs via volumes; the workload collector does not
 	// yet capture that. Phase 6 will tighten this; for now use a
 	// namespace-coverage heuristic.
@@ -400,24 +400,24 @@ func PVCOrphan(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error)
 		ns, _ := p.Attributes["namespace"].(string)
 		usedNS[ns] = struct{}{}
 	}
-	findings := []core.Finding{}
+	findings := []compliancekit.Finding{}
 	for _, pvc := range g.ByType(k8scol.PersistentVolumeClaimType) {
 		phase, _ := pvc.Attributes["phase"].(string)
 		if phase != "Bound" {
 			continue
 		}
 		ns, _ := pvc.Attributes["namespace"].(string)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckPVCOrphan.ID,
 			Severity: CheckPVCOrphan.Severity,
 			Resource: pvc.Ref(),
 			Tags:     CheckPVCOrphan.Tags,
 		}
 		if _, used := usedNS[ns]; used {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("pvc %q: namespace has pods (per-PVC tracking lands Phase 6)", secretDesc(pvc))
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("pvc %q: bound but namespace has no pods", secretDesc(pvc))
 		}
 		findings = append(findings, f)
@@ -427,10 +427,10 @@ func PVCOrphan(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error)
 
 // ----- PVC access modes ----------------------------------------
 
-var CheckPVCRWX = core.Check{
+var CheckPVCRWX = compliancekit.Check{
 	ID:           "k8s-pvc-readwritemany",
 	Title:        "PVCs using ReadWriteMany should be documented",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "kubernetes",
 	Service:      "storage",
 	ResourceType: k8scol.PersistentVolumeClaimType,
@@ -451,8 +451,8 @@ var CheckPVCRWX = core.Check{
 	Scanner: "storage.PVCRWX",
 }
 
-func PVCRWX(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func PVCRWX(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, pvc := range g.ByType(k8scol.PersistentVolumeClaimType) {
 		modes, _ := pvc.Attributes["access_modes"].([]string)
 		hasRWX := false
@@ -462,17 +462,17 @@ func PVCRWX(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
 				break
 			}
 		}
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckPVCRWX.ID,
 			Severity: CheckPVCRWX.Severity,
 			Resource: pvc.Ref(),
 			Tags:     CheckPVCRWX.Tags,
 		}
 		if hasRWX {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("pvc %q: uses ReadWriteMany", secretDesc(pvc))
 		} else {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("pvc %q: access_modes=%v", secretDesc(pvc), modes)
 		}
 		findings = append(findings, f)
@@ -483,13 +483,13 @@ func PVCRWX(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
 // ----- init ----------------------------------------------------
 
 func init() {
-	core.Register(CheckSCDefaultMultiple, SCDefaultMultiple)
-	core.Register(CheckSCEncryption, SCEncryption)
-	core.Register(CheckSCReclaimPolicy, SCReclaimPolicy)
-	core.Register(CheckPVRetain, PVRetain)
-	core.Register(CheckPVEncrypted, PVEncrypted)
-	core.Register(CheckPVOrphan, PVOrphan)
-	core.Register(CheckPVCNotBound, PVCNotBound)
-	core.Register(CheckPVCOrphan, PVCOrphan)
-	core.Register(CheckPVCRWX, PVCRWX)
+	compliancekit.Register(CheckSCDefaultMultiple, SCDefaultMultiple)
+	compliancekit.Register(CheckSCEncryption, SCEncryption)
+	compliancekit.Register(CheckSCReclaimPolicy, SCReclaimPolicy)
+	compliancekit.Register(CheckPVRetain, PVRetain)
+	compliancekit.Register(CheckPVEncrypted, PVEncrypted)
+	compliancekit.Register(CheckPVOrphan, PVOrphan)
+	compliancekit.Register(CheckPVCNotBound, PVCNotBound)
+	compliancekit.Register(CheckPVCOrphan, PVCOrphan)
+	compliancekit.Register(CheckPVCRWX, PVCRWX)
 }

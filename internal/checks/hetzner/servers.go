@@ -1,8 +1,8 @@
 // Package hetzner holds Hetzner Cloud check implementations.
 //
-// Each check is a core.Check metadata value plus a core.CheckFunc
+// Each check is a compliancekit.Check metadata value plus a compliancekit.CheckFunc
 // that queries the ResourceGraph and emits Findings. Checks
-// register themselves into core.DefaultRegistry via the init
+// register themselves into compliancekit.DefaultRegistry via the init
 // function so the scan command picks them up automatically.
 package hetzner
 
@@ -12,7 +12,7 @@ import (
 	"time"
 
 	hetznercol "github.com/darpanzope/compliancekit/internal/collectors/hetzner"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 const (
@@ -23,10 +23,10 @@ const (
 // scheduled. Hetzner backups are taken once a day in the
 // configured window; an empty window means no automated backups
 // are running.
-var CheckServerBackups = core.Check{
+var CheckServerBackups = compliancekit.Check{
 	ID:           "hetzner-server-no-backups",
 	Title:        "Hetzner servers should have automated backups enabled",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "hetzner",
 	Service:      "servers",
 	ResourceType: hetznercol.ServerType,
@@ -47,21 +47,21 @@ var CheckServerBackups = core.Check{
 	Scanner: "servers.Backups",
 }
 
-func ServerBackups(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func ServerBackups(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, s := range g.ByType(hetznercol.ServerType) {
 		win, _ := s.Attributes["backup_window"].(string)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckServerBackups.ID,
 			Severity: CheckServerBackups.Severity,
 			Resource: s.Ref(),
 			Tags:     CheckServerBackups.Tags,
 		}
 		if win != "" {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("server %q: backups enabled (window %s)", s.Name, win)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("server %q: no backup window scheduled", s.Name)
 		}
 		findings = append(findings, f)
@@ -74,10 +74,10 @@ func ServerBackups(_ context.Context, g *core.ResourceGraph) ([]core.Finding, er
 // normal boot disk and exposes a temporary root shell — a
 // legitimate ops state for hours, but a permanent posture
 // problem.
-var CheckServerRescueDisabled = core.Check{
+var CheckServerRescueDisabled = compliancekit.Check{
 	ID:           "hetzner-server-rescue-enabled",
 	Title:        "Hetzner servers should not run with rescue mode enabled",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "hetzner",
 	Service:      "servers",
 	ResourceType: hetznercol.ServerType,
@@ -100,21 +100,21 @@ var CheckServerRescueDisabled = core.Check{
 	Scanner: "servers.RescueDisabled",
 }
 
-func ServerRescueDisabled(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func ServerRescueDisabled(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, s := range g.ByType(hetznercol.ServerType) {
 		on, _ := s.Attributes["rescue_enabled"].(bool)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckServerRescueDisabled.ID,
 			Severity: CheckServerRescueDisabled.Severity,
 			Resource: s.Ref(),
 			Tags:     CheckServerRescueDisabled.Tags,
 		}
 		if on {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("server %q: rescue mode enabled", s.Name)
 		} else {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("server %q: rescue mode disabled", s.Name)
 		}
 		findings = append(findings, f)
@@ -124,10 +124,10 @@ func ServerRescueDisabled(_ context.Context, g *core.ResourceGraph) ([]core.Find
 
 // CheckServerImageAge flags servers running from an image more
 // than 1 year old. Patch baseline + supply-chain freshness signal.
-var CheckServerImageAge = core.Check{
+var CheckServerImageAge = compliancekit.Check{
 	ID:           "hetzner-server-old-image",
 	Title:        "Hetzner servers should not run from images older than 1 year",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "hetzner",
 	Service:      "servers",
 	ResourceType: hetznercol.ServerType,
@@ -150,11 +150,11 @@ var CheckServerImageAge = core.Check{
 	Scanner: "servers.ImageAge",
 }
 
-func ServerImageAge(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func ServerImageAge(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	threshold := time.Now().UTC().Add(-serverImageMaxAgeDays * 24 * time.Hour)
 	for _, s := range g.ByType(hetznercol.ServerType) {
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckServerImageAge.ID,
 			Severity: CheckServerImageAge.Severity,
 			Resource: s.Ref(),
@@ -164,14 +164,14 @@ func ServerImageAge(_ context.Context, g *core.ResourceGraph) ([]core.Finding, e
 		imageName, _ := s.Attributes["image_name"].(string)
 		switch {
 		case !ok || t.IsZero():
-			f.Status = core.StatusSkip
+			f.Status = compliancekit.StatusSkip
 			f.Message = fmt.Sprintf("server %q: image creation time unavailable", s.Name)
 		case t.Before(threshold):
 			days := int(time.Since(t).Hours() / 24)
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("server %q: image %q is %d days old (> %d)", s.Name, imageName, days, serverImageMaxAgeDays)
 		default:
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("server %q: image %q current", s.Name, imageName)
 		}
 		findings = append(findings, f)
@@ -183,10 +183,10 @@ func ServerImageAge(_ context.Context, g *core.ResourceGraph) ([]core.Finding, e
 // A stopped server still bills (Hetzner pricing is per-hour-of-
 // allocation, not per-hour-of-running), so an "off" server is a
 // pay-for-nothing leak.
-var CheckServerStatusRunning = core.Check{
+var CheckServerStatusRunning = compliancekit.Check{
 	ID:           "hetzner-server-not-running",
 	Title:        "Hetzner servers should be in 'running' status",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "hetzner",
 	Service:      "servers",
 	ResourceType: hetznercol.ServerType,
@@ -208,21 +208,21 @@ var CheckServerStatusRunning = core.Check{
 	Scanner: "servers.StatusRunning",
 }
 
-func ServerStatusRunning(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func ServerStatusRunning(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, s := range g.ByType(hetznercol.ServerType) {
 		status, _ := s.Attributes["status"].(string)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckServerStatusRunning.ID,
 			Severity: CheckServerStatusRunning.Severity,
 			Resource: s.Ref(),
 			Tags:     CheckServerStatusRunning.Tags,
 		}
 		if status == "running" {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("server %q: running", s.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("server %q: status=%q", s.Name, status)
 		}
 		findings = append(findings, f)
@@ -235,10 +235,10 @@ func ServerStatusRunning(_ context.Context, g *core.ResourceGraph) ([]core.Findi
 // Locked = true is a legitimate operator choice for prod, BUT
 // dev / staging servers that stay locked indefinitely indicate
 // forgotten protection that blocks cleanup.
-var CheckServerNotLocked = core.Check{
+var CheckServerNotLocked = compliancekit.Check{
 	ID:           "hetzner-server-locked",
 	Title:        "Non-production Hetzner servers should not stay locked indefinitely",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "hetzner",
 	Service:      "servers",
 	ResourceType: hetznercol.ServerType,
@@ -262,21 +262,21 @@ var CheckServerNotLocked = core.Check{
 	Scanner: "servers.NotLocked",
 }
 
-func ServerNotLocked(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func ServerNotLocked(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, s := range g.ByType(hetznercol.ServerType) {
 		locked, _ := s.Attributes["locked"].(bool)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckServerNotLocked.ID,
 			Severity: CheckServerNotLocked.Severity,
 			Resource: s.Ref(),
 			Tags:     CheckServerNotLocked.Tags,
 		}
 		if locked {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("server %q: delete-protection enabled (review for prod intent)", s.Name)
 		} else {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("server %q: not delete-protected", s.Name)
 		}
 		findings = append(findings, f)
@@ -285,9 +285,9 @@ func ServerNotLocked(_ context.Context, g *core.ResourceGraph) ([]core.Finding, 
 }
 
 func init() {
-	core.Register(CheckServerBackups, ServerBackups)
-	core.Register(CheckServerRescueDisabled, ServerRescueDisabled)
-	core.Register(CheckServerImageAge, ServerImageAge)
-	core.Register(CheckServerStatusRunning, ServerStatusRunning)
-	core.Register(CheckServerNotLocked, ServerNotLocked)
+	compliancekit.Register(CheckServerBackups, ServerBackups)
+	compliancekit.Register(CheckServerRescueDisabled, ServerRescueDisabled)
+	compliancekit.Register(CheckServerImageAge, ServerImageAge)
+	compliancekit.Register(CheckServerStatusRunning, ServerStatusRunning)
+	compliancekit.Register(CheckServerNotLocked, ServerNotLocked)
 }

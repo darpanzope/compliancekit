@@ -4,11 +4,11 @@ import (
 	"testing"
 
 	k8scol "github.com/darpanzope/compliancekit/internal/collectors/k8s"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
-func mkClusterRole(name string, rules []any) core.Resource {
-	return core.Resource{
+func mkClusterRole(name string, rules []any) compliancekit.Resource {
+	return compliancekit.Resource{
 		ID:       "k8s.clusterrole.prod." + name,
 		Type:     k8scol.ClusterRoleType,
 		Name:     name,
@@ -19,8 +19,8 @@ func mkClusterRole(name string, rules []any) core.Resource {
 	}
 }
 
-func mkRole(ns, name string, rules []any) core.Resource {
-	return core.Resource{
+func mkRole(ns, name string, rules []any) compliancekit.Resource {
+	return compliancekit.Resource{
 		ID:       "k8s.role.prod." + ns + "." + name,
 		Type:     k8scol.RoleType,
 		Name:     name,
@@ -40,8 +40,8 @@ func mkRule(verbs, resources, apiGroups []string) map[string]any {
 	}
 }
 
-func mkClusterRoleBinding(name, roleName string, subjects []any) core.Resource {
-	return core.Resource{
+func mkClusterRoleBinding(name, roleName string, subjects []any) compliancekit.Resource {
+	return compliancekit.Resource{
 		ID:       "k8s.crb.prod." + name,
 		Type:     k8scol.ClusterRoleBindingType,
 		Name:     name,
@@ -54,8 +54,8 @@ func mkClusterRoleBinding(name, roleName string, subjects []any) core.Resource {
 	}
 }
 
-func mkRoleBinding(ns, name, roleKind, roleName string, subjects []any) core.Resource {
-	return core.Resource{
+func mkRoleBinding(ns, name, roleKind, roleName string, subjects []any) compliancekit.Resource {
+	return compliancekit.Resource{
 		ID:       "k8s.rb.prod." + ns + "." + name,
 		Type:     k8scol.RoleBindingType,
 		Name:     name,
@@ -86,16 +86,16 @@ func TestRBACWildcards(t *testing.T) {
 	r := runCheck(t, RBACWildcardResources, g)
 	a := runCheck(t, RBACWildcardAPIGroups, g)
 	full := runCheck(t, RBACFullWildcard, g)
-	if v["good"] != core.StatusPass || v["wild-verb"] != core.StatusFail {
+	if v["good"] != compliancekit.StatusPass || v["wild-verb"] != compliancekit.StatusFail {
 		t.Errorf("verbs: %v", v)
 	}
-	if r["wild-res"] != core.StatusFail {
+	if r["wild-res"] != compliancekit.StatusFail {
 		t.Errorf("resources: %v", r)
 	}
-	if a["wild-ag"] != core.StatusFail {
+	if a["wild-ag"] != compliancekit.StatusFail {
 		t.Errorf("apigroups: %v", a)
 	}
-	if full["full-wild"] != core.StatusFail {
+	if full["full-wild"] != compliancekit.StatusFail {
 		t.Errorf("full: %v", full)
 	}
 	// cluster-admin is exempt.
@@ -122,10 +122,10 @@ func TestRBACSecrets(t *testing.T) {
 	)
 	rd := runCheck(t, RBACSecretsRead, g)
 	wr := runCheck(t, RBACSecretsWrite, g)
-	if rd["reader"] != core.StatusFail || rd["neither"] != core.StatusPass {
+	if rd["reader"] != compliancekit.StatusFail || rd["neither"] != compliancekit.StatusPass {
 		t.Errorf("read: %v", rd)
 	}
-	if wr["writer"] != core.StatusFail || wr["reader"] != core.StatusPass {
+	if wr["writer"] != compliancekit.StatusFail || wr["reader"] != compliancekit.StatusPass {
 		t.Errorf("write: %v", wr)
 	}
 }
@@ -152,7 +152,7 @@ func TestRBACDangerousVerbs(t *testing.T) {
 	tk := runCheck(t, RBACTokenRequest, g)
 	cases := []struct {
 		name   string
-		got    map[string]core.Status
+		got    map[string]compliancekit.Status
 		failOn string
 	}{
 		{"exec", ex, "exec"}, {"portfwd", pf, "portfwd"}, {"impersonate", im, "imp"},
@@ -160,10 +160,10 @@ func TestRBACDangerousVerbs(t *testing.T) {
 		{"csr", cs, "csr"}, {"token", tk, "token"},
 	}
 	for _, c := range cases {
-		if c.got[c.failOn] != core.StatusFail {
+		if c.got[c.failOn] != compliancekit.StatusFail {
 			t.Errorf("%s: %s=%v (want fail)", c.name, c.failOn, c.got[c.failOn])
 		}
-		if c.got["clean"] != core.StatusPass {
+		if c.got["clean"] != compliancekit.StatusPass {
 			t.Errorf("%s: clean=%v (want pass)", c.name, c.got["clean"])
 		}
 	}
@@ -177,10 +177,10 @@ func TestRBACClusterAdminBinding(t *testing.T) {
 		mkClusterRoleBinding("not-admin", "view", []any{subj("User", "darpan", "")}),
 	)
 	got := runCheck(t, RBACClusterAdminBinding, g)
-	if got["system"] != core.StatusPass || got["kube-sys"] != core.StatusPass {
+	if got["system"] != compliancekit.StatusPass || got["kube-sys"] != compliancekit.StatusPass {
 		t.Errorf("system/kube-sys: %v / %v", got["system"], got["kube-sys"])
 	}
-	if got["rogue"] != core.StatusFail {
+	if got["rogue"] != compliancekit.StatusFail {
 		t.Errorf("rogue: %v", got["rogue"])
 	}
 	if _, ok := got["not-admin"]; ok {
@@ -195,10 +195,10 @@ func TestRBACAnonymousBind(t *testing.T) {
 		mkClusterRoleBinding("unauth", "view", []any{subj("Group", "system:unauthenticated", "")}),
 	)
 	got := runCheck(t, RBACAnonymousBind, g)
-	if got["good"] != core.StatusPass {
+	if got["good"] != compliancekit.StatusPass {
 		t.Errorf("good: %v", got["good"])
 	}
-	if got["anon"] != core.StatusFail || got["unauth"] != core.StatusFail {
+	if got["anon"] != compliancekit.StatusFail || got["unauth"] != compliancekit.StatusFail {
 		t.Errorf("anon/unauth: %v / %v", got["anon"], got["unauth"])
 	}
 }
@@ -209,7 +209,7 @@ func TestRBACEmptySubjects(t *testing.T) {
 		mkClusterRoleBinding("empty", "view", []any{}),
 	)
 	got := runCheck(t, RBACEmptySubjects, g)
-	if got["filled"] != core.StatusPass || got["empty"] != core.StatusFail {
+	if got["filled"] != compliancekit.StatusPass || got["empty"] != compliancekit.StatusFail {
 		t.Errorf("results: %v", got)
 	}
 }
@@ -224,10 +224,10 @@ func TestRBACStaleRoleRef(t *testing.T) {
 		mkRoleBinding("default", "stale-rb", "Role", "ghost", []any{}),
 	)
 	got := runCheck(t, RBACStaleRoleRef, g)
-	if got["good-crb"] != core.StatusPass || got["good-rb"] != core.StatusPass {
+	if got["good-crb"] != compliancekit.StatusPass || got["good-rb"] != compliancekit.StatusPass {
 		t.Errorf("good: %v", got)
 	}
-	if got["stale-crb"] != core.StatusFail || got["stale-rb"] != core.StatusFail {
+	if got["stale-crb"] != compliancekit.StatusFail || got["stale-rb"] != compliancekit.StatusFail {
 		t.Errorf("stale: %v", got)
 	}
 }
@@ -239,10 +239,10 @@ func TestRBACUserSubject(t *testing.T) {
 		mkClusterRoleBinding("user", "view", []any{subj("User", "darpan", "")}),
 	)
 	got := runCheck(t, RBACUserSubject, g)
-	if got["sa"] != core.StatusPass || got["group"] != core.StatusPass {
+	if got["sa"] != compliancekit.StatusPass || got["group"] != compliancekit.StatusPass {
 		t.Errorf("sa/group: %v / %v", got["sa"], got["group"])
 	}
-	if got["user"] != core.StatusFail {
+	if got["user"] != compliancekit.StatusFail {
 		t.Errorf("user: %v", got["user"])
 	}
 }

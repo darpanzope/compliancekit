@@ -14,8 +14,8 @@ import (
 	"io"
 	"time"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/score"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // FormatJSON is the lowercase identifier used in config files and the
@@ -34,13 +34,13 @@ type JSONReporter struct{}
 // NewJSON returns a JSON reporter. Stateless; reusable across scans.
 func NewJSON() *JSONReporter { return &JSONReporter{} }
 
-// Format implements core.Reporter.
+// Format implements compliancekit.Reporter.
 func (r *JSONReporter) Format() string { return FormatJSON }
 
-// Render implements core.Reporter. The graph parameter is currently
+// Render implements compliancekit.Reporter. The graph parameter is currently
 // unused by the JSON reporter but is part of the contract; v0.4's
 // evidence pack reporter relies on it.
-func (r *JSONReporter) Render(_ context.Context, findings []core.Finding, _ *core.ResourceGraph, w io.Writer) error {
+func (r *JSONReporter) Render(_ context.Context, findings []compliancekit.Finding, _ *compliancekit.ResourceGraph, w io.Writer) error {
 	envelope := jsonEnvelope{
 		Schema:    schemaVersion,
 		Generated: time.Now().UTC(),
@@ -55,7 +55,7 @@ func (r *JSONReporter) Render(_ context.Context, findings []core.Finding, _ *cor
 // New returns the Reporter for the given format identifier, or an error
 // when the format is unknown. The scan command uses this factory to
 // build the active reporter set from config.Output.Format.
-func New(format string) (core.Reporter, error) {
+func New(format string) (compliancekit.Reporter, error) {
 	switch format {
 	case FormatJSON:
 		return NewJSON(), nil
@@ -75,10 +75,10 @@ func New(format string) (core.Reporter, error) {
 // jsonEnvelope is the top-level shape of JSON output. Stable across
 // patch releases of compliancekit; breaking changes bump schemaVersion.
 type jsonEnvelope struct {
-	Schema    string         `json:"schema"`
-	Generated time.Time      `json:"generated_at"`
-	Summary   summary        `json:"summary"`
-	Findings  []core.Finding `json:"findings"`
+	Schema    string                  `json:"schema"`
+	Generated time.Time               `json:"generated_at"`
+	Summary   summary                 `json:"summary"`
+	Findings  []compliancekit.Finding `json:"findings"`
 }
 
 // summary aggregates findings counts and the v0.6 hardening score.
@@ -95,7 +95,7 @@ type summary struct {
 	Coverage   int            `json:"coverage"`
 }
 
-func computeSummary(findings []core.Finding) summary {
+func computeSummary(findings []compliancekit.Finding) summary {
 	s := summary{
 		Total:      len(findings),
 		ByStatus:   make(map[string]int),

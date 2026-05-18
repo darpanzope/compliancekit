@@ -31,8 +31,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // Ticket is the shared shape every provider accepts.
@@ -48,7 +48,7 @@ type Ticket struct {
 	Labels []string
 	// Severity is mapped to provider-specific priority (Jira
 	// priority field; Linear priority enum).
-	Severity core.Severity
+	Severity compliancekit.Severity
 	// CheckID and ResourceID are stored on the ticket for cross-
 	// reference back into compliancekit's evidence pack.
 	CheckID    string

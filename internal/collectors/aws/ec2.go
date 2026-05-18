@@ -9,7 +9,7 @@ import (
 	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 
 	"github.com/darpanzope/compliancekit/internal/collectors/cloudcommon"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // Per-region EC2 resource types.
@@ -43,7 +43,7 @@ type ec2DataClient interface {
 // region. The function therefore never returns an error today; the
 // signature keeps the (slice, error) shape for symmetry with
 // collectIAM / collectS3 so future per-cloud refactors stay uniform.
-func (c *Collector) collectEC2(ctx context.Context, regions []string, out []core.Resource) []core.Resource {
+func (c *Collector) collectEC2(ctx context.Context, regions []string, out []compliancekit.Resource) []compliancekit.Resource {
 	for _, region := range regions {
 		updated, err := c.collectEC2InRegion(ctx, region, out)
 		if err != nil {
@@ -55,7 +55,7 @@ func (c *Collector) collectEC2(ctx context.Context, regions []string, out []core
 	return out
 }
 
-func (c *Collector) collectEC2InRegion(ctx context.Context, region string, out []core.Resource) ([]core.Resource, error) {
+func (c *Collector) collectEC2InRegion(ctx context.Context, region string, out []compliancekit.Resource) ([]compliancekit.Resource, error) {
 	// Per-region SDK client. The Region field on Options is what the
 	// per-service endpoint resolver reads, so we clone the loaded
 	// config (cheap; Config is a struct value) with the region set.
@@ -64,7 +64,7 @@ func (c *Collector) collectEC2InRegion(ctx context.Context, region string, out [
 	return c.collectEC2WithClient(ctx, ec2.NewFromConfig(cfg), region, out)
 }
 
-func (c *Collector) collectEC2WithClient(ctx context.Context, client ec2DataClient, region string, out []core.Resource) ([]core.Resource, error) {
+func (c *Collector) collectEC2WithClient(ctx context.Context, client ec2DataClient, region string, out []compliancekit.Resource) ([]compliancekit.Resource, error) {
 	var err error
 	if out, err = c.collectEC2Instances(ctx, client, region, out); err != nil {
 		return nil, fmt.Errorf("aws ec2 %s: %w", region, err)
@@ -84,14 +84,14 @@ func (c *Collector) collectEC2WithClient(ctx context.Context, client ec2DataClie
 	return out, nil
 }
 
-func (c *Collector) collectEC2Instances(ctx context.Context, client ec2DataClient, region string, out []core.Resource) ([]core.Resource, error) {
+func (c *Collector) collectEC2Instances(ctx context.Context, client ec2DataClient, region string, out []compliancekit.Resource) ([]compliancekit.Resource, error) {
 	resp, err := client.DescribeInstances(ctx, &ec2.DescribeInstancesInput{})
 	if err != nil {
 		return nil, fmt.Errorf("describe instances: %w", err)
 	}
 	for _, res := range resp.Reservations {
 		for _, inst := range res.Instances {
-			r := core.Resource{
+			r := compliancekit.Resource{
 				ID:       fmt.Sprintf("aws.ec2.instance.%s", awssdk.ToString(inst.InstanceId)),
 				Type:     EC2InstanceType,
 				Name:     awssdk.ToString(inst.InstanceId),
@@ -123,13 +123,13 @@ func metadataOptionsRequireV2(opts *ec2types.InstanceMetadataOptionsResponse) bo
 	return opts.HttpTokens == ec2types.HttpTokensStateRequired
 }
 
-func (c *Collector) collectEC2SecurityGroups(ctx context.Context, client ec2DataClient, region string, out []core.Resource) ([]core.Resource, error) {
+func (c *Collector) collectEC2SecurityGroups(ctx context.Context, client ec2DataClient, region string, out []compliancekit.Resource) ([]compliancekit.Resource, error) {
 	resp, err := client.DescribeSecurityGroups(ctx, &ec2.DescribeSecurityGroupsInput{})
 	if err != nil {
 		return nil, fmt.Errorf("describe security groups: %w", err)
 	}
 	for _, sg := range resp.SecurityGroups {
-		r := core.Resource{
+		r := compliancekit.Resource{
 			ID:       fmt.Sprintf("aws.ec2.sg.%s", awssdk.ToString(sg.GroupId)),
 			Type:     EC2SGType,
 			Name:     awssdk.ToString(sg.GroupName),
@@ -195,13 +195,13 @@ func hasOpenIngress(perms []ec2types.IpPermission, cidr string) bool {
 	return false
 }
 
-func (c *Collector) collectEC2VPCs(ctx context.Context, client ec2DataClient, region string, out []core.Resource) ([]core.Resource, error) {
+func (c *Collector) collectEC2VPCs(ctx context.Context, client ec2DataClient, region string, out []compliancekit.Resource) ([]compliancekit.Resource, error) {
 	resp, err := client.DescribeVpcs(ctx, &ec2.DescribeVpcsInput{})
 	if err != nil {
 		return nil, fmt.Errorf("describe vpcs: %w", err)
 	}
 	for _, v := range resp.Vpcs {
-		r := core.Resource{
+		r := compliancekit.Resource{
 			ID:       fmt.Sprintf("aws.ec2.vpc.%s", awssdk.ToString(v.VpcId)),
 			Type:     EC2VPCType,
 			Name:     awssdk.ToString(v.VpcId),
@@ -222,13 +222,13 @@ func (c *Collector) collectEC2VPCs(ctx context.Context, client ec2DataClient, re
 	return out, nil
 }
 
-func (c *Collector) collectEC2Volumes(ctx context.Context, client ec2DataClient, region string, out []core.Resource) ([]core.Resource, error) {
+func (c *Collector) collectEC2Volumes(ctx context.Context, client ec2DataClient, region string, out []compliancekit.Resource) ([]compliancekit.Resource, error) {
 	resp, err := client.DescribeVolumes(ctx, &ec2.DescribeVolumesInput{})
 	if err != nil {
 		return nil, fmt.Errorf("describe volumes: %w", err)
 	}
 	for _, v := range resp.Volumes {
-		r := core.Resource{
+		r := compliancekit.Resource{
 			ID:       fmt.Sprintf("aws.ec2.volume.%s", awssdk.ToString(v.VolumeId)),
 			Type:     EC2VolumeType,
 			Name:     awssdk.ToString(v.VolumeId),
@@ -250,7 +250,7 @@ func (c *Collector) collectEC2Volumes(ctx context.Context, client ec2DataClient,
 	return out, nil
 }
 
-func (c *Collector) collectEC2AMIs(ctx context.Context, client ec2DataClient, region string, out []core.Resource) ([]core.Resource, error) {
+func (c *Collector) collectEC2AMIs(ctx context.Context, client ec2DataClient, region string, out []compliancekit.Resource) ([]compliancekit.Resource, error) {
 	// Only AMIs owned by this account; public AMIs from third parties
 	// are out of scope.
 	resp, err := client.DescribeImages(ctx, &ec2.DescribeImagesInput{
@@ -260,7 +260,7 @@ func (c *Collector) collectEC2AMIs(ctx context.Context, client ec2DataClient, re
 		return nil, fmt.Errorf("describe images: %w", err)
 	}
 	for _, img := range resp.Images {
-		r := core.Resource{
+		r := compliancekit.Resource{
 			ID:       fmt.Sprintf("aws.ec2.ami.%s", awssdk.ToString(img.ImageId)),
 			Type:     EC2AMIType,
 			Name:     awssdk.ToString(img.Name),
@@ -283,8 +283,8 @@ func (c *Collector) collectEC2AMIs(ctx context.Context, client ec2DataClient, re
 // regionErrorResource emits a placeholder when a per-region collect
 // fails outright. Lets the scan continue with findings from working
 // regions while still surfacing the failure in the evidence pack.
-func (c *Collector) regionErrorResource(region, service string, err error) core.Resource {
-	r := core.Resource{
+func (c *Collector) regionErrorResource(region, service string, err error) compliancekit.Resource {
+	r := compliancekit.Resource{
 		ID:       fmt.Sprintf("aws.%s.error.%s", service, region),
 		Type:     "aws.collect_error",
 		Name:     fmt.Sprintf("%s/%s", service, region),

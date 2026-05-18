@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	k8scol "github.com/darpanzope/compliancekit/internal/collectors/k8s"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // Pod Security check IDs are grouped together so operators can
@@ -19,10 +19,10 @@ import (
 
 // ----- 1. Privileged containers ---------------------------------
 
-var CheckPodPrivileged = core.Check{
+var CheckPodPrivileged = compliancekit.Check{
 	ID:           "k8s-pod-privileged",
 	Title:        "Pods should not run privileged containers",
-	Severity:     core.SeverityCritical,
+	Severity:     compliancekit.SeverityCritical,
 	Provider:     "kubernetes",
 	Service:      "pod-security",
 	ResourceType: k8scol.PodType,
@@ -44,8 +44,8 @@ var CheckPodPrivileged = core.Check{
 	Scanner: "pods.Privileged",
 }
 
-func PodPrivileged(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func PodPrivileged(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, p := range g.ByType(k8scol.PodType) {
 		bad := violatingContainers(p, func(c map[string]any) bool {
 			v, ok := c["privileged"].(bool)
@@ -60,10 +60,10 @@ func PodPrivileged(_ context.Context, g *core.ResourceGraph) ([]core.Finding, er
 
 // ----- 2. hostNetwork --------------------------------------------
 
-var CheckPodHostNetwork = core.Check{
+var CheckPodHostNetwork = compliancekit.Check{
 	ID:           "k8s-pod-host-network",
 	Title:        "Pods should not use the host network",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "kubernetes",
 	Service:      "pod-security",
 	ResourceType: k8scol.PodType,
@@ -83,7 +83,7 @@ var CheckPodHostNetwork = core.Check{
 	Scanner: "pods.HostNetwork",
 }
 
-func PodHostNetwork(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func PodHostNetwork(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	return podBooleanCheck(g, CheckPodHostNetwork, "host_network",
 		"uses host network namespace",
 		"does not use host network"), nil
@@ -91,10 +91,10 @@ func PodHostNetwork(_ context.Context, g *core.ResourceGraph) ([]core.Finding, e
 
 // ----- 3. hostPID -------------------------------------------------
 
-var CheckPodHostPID = core.Check{
+var CheckPodHostPID = compliancekit.Check{
 	ID:           "k8s-pod-host-pid",
 	Title:        "Pods should not share the host PID namespace",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "kubernetes",
 	Service:      "pod-security",
 	ResourceType: k8scol.PodType,
@@ -115,7 +115,7 @@ var CheckPodHostPID = core.Check{
 	Scanner: "pods.HostPID",
 }
 
-func PodHostPID(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func PodHostPID(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	return podBooleanCheck(g, CheckPodHostPID, "host_pid",
 		"uses host PID namespace",
 		"does not use host PID"), nil
@@ -123,10 +123,10 @@ func PodHostPID(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error
 
 // ----- 4. hostIPC -------------------------------------------------
 
-var CheckPodHostIPC = core.Check{
+var CheckPodHostIPC = compliancekit.Check{
 	ID:           "k8s-pod-host-ipc",
 	Title:        "Pods should not share the host IPC namespace",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "kubernetes",
 	Service:      "pod-security",
 	ResourceType: k8scol.PodType,
@@ -143,7 +143,7 @@ var CheckPodHostIPC = core.Check{
 	Scanner: "pods.HostIPC",
 }
 
-func PodHostIPC(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func PodHostIPC(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	return podBooleanCheck(g, CheckPodHostIPC, "host_ipc",
 		"uses host IPC namespace",
 		"does not use host IPC"), nil
@@ -151,10 +151,10 @@ func PodHostIPC(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error
 
 // ----- 5. Privilege escalation -----------------------------------
 
-var CheckPodAllowPrivilegeEscalation = core.Check{
+var CheckPodAllowPrivilegeEscalation = compliancekit.Check{
 	ID:           "k8s-pod-allow-privilege-escalation",
 	Title:        "Containers should not allow privilege escalation",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "kubernetes",
 	Service:      "pod-security",
 	ResourceType: k8scol.PodType,
@@ -175,8 +175,8 @@ var CheckPodAllowPrivilegeEscalation = core.Check{
 	Scanner: "pods.AllowPrivilegeEscalation",
 }
 
-func PodAllowPrivilegeEscalation(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func PodAllowPrivilegeEscalation(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, p := range g.ByType(k8scol.PodType) {
 		bad := violatingContainers(p, func(c map[string]any) bool {
 			v, ok := c["allow_priv_escalation"].(bool)
@@ -192,10 +192,10 @@ func PodAllowPrivilegeEscalation(_ context.Context, g *core.ResourceGraph) ([]co
 
 // ----- 6. Run as non-root ----------------------------------------
 
-var CheckPodRunAsNonRoot = core.Check{
+var CheckPodRunAsNonRoot = compliancekit.Check{
 	ID:           "k8s-pod-run-as-non-root",
 	Title:        "Containers should run as a non-root user",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "kubernetes",
 	Service:      "pod-security",
 	ResourceType: k8scol.PodType,
@@ -217,8 +217,8 @@ var CheckPodRunAsNonRoot = core.Check{
 	Scanner: "pods.RunAsNonRoot",
 }
 
-func PodRunAsNonRoot(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func PodRunAsNonRoot(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, p := range g.ByType(k8scol.PodType) {
 		podSet, podVal := podRunAsNonRoot(p)
 		bad := violatingContainers(p, func(c map[string]any) bool {
@@ -233,10 +233,10 @@ func PodRunAsNonRoot(_ context.Context, g *core.ResourceGraph) ([]core.Finding, 
 
 // ----- 7. Read-only root filesystem ------------------------------
 
-var CheckPodReadOnlyRootFS = core.Check{
+var CheckPodReadOnlyRootFS = compliancekit.Check{
 	ID:           "k8s-pod-readonly-root-fs",
 	Title:        "Containers should use a read-only root filesystem",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "kubernetes",
 	Service:      "pod-security",
 	ResourceType: k8scol.PodType,
@@ -257,8 +257,8 @@ var CheckPodReadOnlyRootFS = core.Check{
 	Scanner: "pods.ReadOnlyRootFS",
 }
 
-func PodReadOnlyRootFS(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func PodReadOnlyRootFS(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, p := range g.ByType(k8scol.PodType) {
 		bad := violatingContainers(p, func(c map[string]any) bool {
 			v, ok := c["read_only_root_fs"].(bool)
@@ -273,10 +273,10 @@ func PodReadOnlyRootFS(_ context.Context, g *core.ResourceGraph) ([]core.Finding
 
 // ----- 8. Capabilities not dropped -------------------------------
 
-var CheckPodCapabilitiesDropAll = core.Check{
+var CheckPodCapabilitiesDropAll = compliancekit.Check{
 	ID:           "k8s-pod-capabilities-drop-all",
 	Title:        "Containers should drop all Linux capabilities by default",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "kubernetes",
 	Service:      "pod-security",
 	ResourceType: k8scol.PodType,
@@ -297,8 +297,8 @@ var CheckPodCapabilitiesDropAll = core.Check{
 	Scanner: "pods.CapabilitiesDropAll",
 }
 
-func PodCapabilitiesDropAll(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func PodCapabilitiesDropAll(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, p := range g.ByType(k8scol.PodType) {
 		bad := violatingContainers(p, func(c map[string]any) bool {
 			drop, _ := c["capabilities_drop"].([]string)
@@ -318,10 +318,10 @@ func PodCapabilitiesDropAll(_ context.Context, g *core.ResourceGraph) ([]core.Fi
 
 // ----- 9. Dangerous capabilities added ---------------------------
 
-var CheckPodDangerousCapabilities = core.Check{
+var CheckPodDangerousCapabilities = compliancekit.Check{
 	ID:           "k8s-pod-dangerous-capabilities",
 	Title:        "Containers should not add high-risk Linux capabilities",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "kubernetes",
 	Service:      "pod-security",
 	ResourceType: k8scol.PodType,
@@ -343,13 +343,13 @@ var CheckPodDangerousCapabilities = core.Check{
 	Scanner: "pods.DangerousCapabilities",
 }
 
-func PodDangerousCapabilities(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func PodDangerousCapabilities(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	dangerous := map[string]struct{}{
 		"NET_ADMIN": {}, "SYS_ADMIN": {}, "SYS_PTRACE": {},
 		"SYS_MODULE": {}, "SYS_RAWIO": {}, "SYS_BOOT": {},
 		"BPF": {}, "PERFMON": {}, "DAC_READ_SEARCH": {},
 	}
-	findings := []core.Finding{}
+	findings := []compliancekit.Finding{}
 	for _, p := range g.ByType(k8scol.PodType) {
 		bad := violatingContainers(p, func(c map[string]any) bool {
 			add, _ := c["capabilities_add"].([]string)
@@ -369,10 +369,10 @@ func PodDangerousCapabilities(_ context.Context, g *core.ResourceGraph) ([]core.
 
 // ----- 10. Seccomp profile ----------------------------------------
 
-var CheckPodSeccompProfile = core.Check{
+var CheckPodSeccompProfile = compliancekit.Check{
 	ID:           "k8s-pod-seccomp-profile",
 	Title:        "Containers should set a non-default seccomp profile",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "kubernetes",
 	Service:      "pod-security",
 	ResourceType: k8scol.PodType,
@@ -394,8 +394,8 @@ var CheckPodSeccompProfile = core.Check{
 	Scanner: "pods.SeccompProfile",
 }
 
-func PodSeccompProfile(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func PodSeccompProfile(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, p := range g.ByType(k8scol.PodType) {
 		podType := podSeccompType(p)
 		bad := violatingContainers(p, func(c map[string]any) bool {
@@ -420,16 +420,16 @@ func PodSeccompProfile(_ context.Context, g *core.ResourceGraph) ([]core.Finding
 // ----- helpers -----------------------------------------------------
 
 func init() {
-	core.Register(CheckPodPrivileged, PodPrivileged)
-	core.Register(CheckPodHostNetwork, PodHostNetwork)
-	core.Register(CheckPodHostPID, PodHostPID)
-	core.Register(CheckPodHostIPC, PodHostIPC)
-	core.Register(CheckPodAllowPrivilegeEscalation, PodAllowPrivilegeEscalation)
-	core.Register(CheckPodRunAsNonRoot, PodRunAsNonRoot)
-	core.Register(CheckPodReadOnlyRootFS, PodReadOnlyRootFS)
-	core.Register(CheckPodCapabilitiesDropAll, PodCapabilitiesDropAll)
-	core.Register(CheckPodDangerousCapabilities, PodDangerousCapabilities)
-	core.Register(CheckPodSeccompProfile, PodSeccompProfile)
+	compliancekit.Register(CheckPodPrivileged, PodPrivileged)
+	compliancekit.Register(CheckPodHostNetwork, PodHostNetwork)
+	compliancekit.Register(CheckPodHostPID, PodHostPID)
+	compliancekit.Register(CheckPodHostIPC, PodHostIPC)
+	compliancekit.Register(CheckPodAllowPrivilegeEscalation, PodAllowPrivilegeEscalation)
+	compliancekit.Register(CheckPodRunAsNonRoot, PodRunAsNonRoot)
+	compliancekit.Register(CheckPodReadOnlyRootFS, PodReadOnlyRootFS)
+	compliancekit.Register(CheckPodCapabilitiesDropAll, PodCapabilitiesDropAll)
+	compliancekit.Register(CheckPodDangerousCapabilities, PodDangerousCapabilities)
+	compliancekit.Register(CheckPodSeccompProfile, PodSeccompProfile)
 	// v0.22 phase 2 — resources + reliability checks moved to
 	// pods_resources.go; image discipline + host-volume/port checks
 	// moved to pods_volumes.go. Each split file owns its own init().
@@ -437,21 +437,21 @@ func init() {
 
 // podBooleanCheck wraps the common pattern of a Pod-level boolean
 // attribute that should be false.
-func podBooleanCheck(g *core.ResourceGraph, check core.Check, attr, failMsg, passMsg string) []core.Finding {
-	findings := []core.Finding{}
+func podBooleanCheck(g *compliancekit.ResourceGraph, check compliancekit.Check, attr, failMsg, passMsg string) []compliancekit.Finding {
+	findings := []compliancekit.Finding{}
 	for _, p := range g.ByType(k8scol.PodType) {
 		v, _ := p.Attributes[attr].(bool)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  check.ID,
 			Severity: check.Severity,
 			Resource: p.Ref(),
 			Tags:     check.Tags,
 		}
 		if v {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("pod %q: %s", podDesc(p), failMsg)
 		} else {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("pod %q: %s", podDesc(p), passMsg)
 		}
 		findings = append(findings, f)
@@ -461,7 +461,7 @@ func podBooleanCheck(g *core.ResourceGraph, check core.Check, attr, failMsg, pas
 
 // violatingContainers returns the names of containers in the pod that
 // match the predicate.
-func violatingContainers(pod core.Resource, bad func(map[string]any) bool) []string {
+func violatingContainers(pod compliancekit.Resource, bad func(map[string]any) bool) []string {
 	out := []string{}
 	cs, _ := pod.Attributes["containers"].([]any)
 	for _, ci := range cs {
@@ -480,25 +480,25 @@ func violatingContainers(pod core.Resource, bad func(map[string]any) bool) []str
 
 // podFinding builds a Pass/Fail finding for the pod based on whether
 // any violating containers were found.
-func podFinding(check core.Check, pod core.Resource, bad []string, failTmpl, passMsg string) core.Finding {
-	f := core.Finding{
+func podFinding(check compliancekit.Check, pod compliancekit.Resource, bad []string, failTmpl, passMsg string) compliancekit.Finding {
+	f := compliancekit.Finding{
 		CheckID:  check.ID,
 		Severity: check.Severity,
 		Resource: pod.Ref(),
 		Tags:     check.Tags,
 	}
 	if len(bad) > 0 {
-		f.Status = core.StatusFail
+		f.Status = compliancekit.StatusFail
 		f.Message = fmt.Sprintf("pod %q: "+failTmpl, podDesc(pod), strings.Join(bad, ", "))
 	} else {
-		f.Status = core.StatusPass
+		f.Status = compliancekit.StatusPass
 		f.Message = fmt.Sprintf("pod %q: %s", podDesc(pod), passMsg)
 	}
 	return f
 }
 
 // podDesc renders "ns/name" for finding messages.
-func podDesc(pod core.Resource) string {
+func podDesc(pod compliancekit.Resource) string {
 	ns, _ := pod.Attributes["namespace"].(string)
 	if ns == "" {
 		return pod.Name
@@ -507,7 +507,7 @@ func podDesc(pod core.Resource) string {
 }
 
 // podRunAsNonRoot returns (set, value) for the pod-level securityContext.
-func podRunAsNonRoot(pod core.Resource) (set, val bool) {
+func podRunAsNonRoot(pod compliancekit.Resource) (set, val bool) {
 	sec, ok := pod.Attributes["pod_security"].(map[string]any)
 	if !ok {
 		return false, false
@@ -533,7 +533,7 @@ func containerRunsAsNonRoot(c map[string]any, podSet, podVal bool) bool {
 }
 
 // podSeccompType returns the pod-level seccomp type or empty if unset.
-func podSeccompType(pod core.Resource) string {
+func podSeccompType(pod compliancekit.Resource) string {
 	sec, ok := pod.Attributes["pod_security"].(map[string]any)
 	if !ok {
 		return ""

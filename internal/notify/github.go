@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // GitHubConfig configures the GitHub PR comment sink. Posts one
@@ -29,7 +29,7 @@ type GitHubConfig struct {
 	Repo          string // owner/name
 	PRNumber      int
 	APIURL        string // defaults to https://api.github.com
-	SeverityFloor core.Severity
+	SeverityFloor compliancekit.Severity
 	HTTPClient    *http.Client
 }
 
@@ -53,7 +53,7 @@ func (g *GitHub) Configured() bool {
 }
 
 // Threshold returns the per-sink severity floor.
-func (g *GitHub) Threshold() core.Severity { return g.cfg.SeverityFloor }
+func (g *GitHub) Threshold() compliancekit.Severity { return g.cfg.SeverityFloor }
 
 // Send posts a single summary comment to the PR. Each notification
 // becomes a markdown bullet listing severity + title + link. The
@@ -162,7 +162,7 @@ func init() {
 		}
 	}
 	if t := os.Getenv("GITHUB_THRESHOLD"); t != "" {
-		if sev, err := core.ParseSeverity(t); err == nil {
+		if sev, err := compliancekit.ParseSeverity(t); err == nil {
 			cfg.SeverityFloor = sev
 		}
 	}

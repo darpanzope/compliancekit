@@ -10,9 +10,9 @@ import (
 	"go.yaml.in/yaml/v3"
 
 	"github.com/darpanzope/compliancekit/internal/config"
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/engine"
 	"github.com/darpanzope/compliancekit/internal/ingest"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // mergeConfigIngest is the runScan-side wrapper around
@@ -61,10 +61,10 @@ func mergeConfigIngest(ctx context.Context, w io.Writer, result *engine.Result, 
 func runIngestSources(
 	ctx context.Context,
 	sources []config.IngestSource,
-	graph *core.ResourceGraph,
-) ([]core.Finding, []string, error) {
+	graph *compliancekit.ResourceGraph,
+) ([]compliancekit.Finding, []string, error) {
 	var (
-		merged   []core.Finding
+		merged   []compliancekit.Finding
 		warnings []string
 	)
 

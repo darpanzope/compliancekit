@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // Match scans the active waivers and returns the first one matching
@@ -78,7 +78,7 @@ func matchID(pattern, target string) bool {
 //
 // `now` is injected (not time.Now) so tests pin a deterministic
 // clock; the production caller (scan engine) passes time.Now().UTC().
-func (l *WaiverList) Apply(findings []core.Finding, now time.Time) (muted int, synthesized []core.Finding) {
+func (l *WaiverList) Apply(findings []compliancekit.Finding, now time.Time) (muted int, synthesized []compliancekit.Finding) {
 	if l == nil {
 		return 0, nil
 	}
@@ -94,7 +94,7 @@ func (l *WaiverList) Apply(findings []core.Finding, now time.Time) (muted int, s
 		if w == nil {
 			continue
 		}
-		f.Status = core.StatusSkip
+		f.Status = compliancekit.StatusSkip
 		f.Waiver = w.ToRef()
 		// Append the audit-trail tag so cross-tool consumers can
 		// filter on `waived` without parsing the Waiver block.
@@ -112,11 +112,11 @@ func (l *WaiverList) Apply(findings []core.Finding, now time.Time) (muted int, s
 // rather than as a silently-revived prior finding. CheckID is
 // `compliancekit-waiver-expired`; the Waiver block carries the
 // original metadata so reporters can render "lapsed N days ago".
-func synthesizeExpiredFindings(expired []Waiver, now time.Time) []core.Finding {
+func synthesizeExpiredFindings(expired []Waiver, now time.Time) []compliancekit.Finding {
 	if len(expired) == 0 {
 		return nil
 	}
-	out := make([]core.Finding, 0, len(expired))
+	out := make([]compliancekit.Finding, 0, len(expired))
 	// Stable order for deterministic evidence-pack diffs.
 	sorted := make([]Waiver, len(expired))
 	copy(sorted, expired)
@@ -127,11 +127,11 @@ func synthesizeExpiredFindings(expired []Waiver, now time.Time) []core.Finding {
 		w := w
 		ref := w.ToRef()
 		days := -ref.DaysUntilExpiry(now) // positive = N days expired
-		out = append(out, core.Finding{
+		out = append(out, compliancekit.Finding{
 			CheckID:  "compliancekit-waiver-expired",
-			Status:   core.StatusFail,
-			Severity: core.SeverityInfo,
-			Resource: core.ResourceRef{
+			Status:   compliancekit.StatusFail,
+			Severity: compliancekit.SeverityInfo,
+			Resource: compliancekit.ResourceRef{
 				ID:   w.ResourceID,
 				Type: "compliancekit.waiver",
 				Name: w.CheckID + "/" + w.ResourceID,

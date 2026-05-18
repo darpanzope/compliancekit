@@ -3,9 +3,9 @@ package terraform
 import (
 	"fmt"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate"
 	"github.com/darpanzope/compliancekit/internal/remediate/render"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.19 phase 1 — Terraform strategies for the 10 account-governance
@@ -45,7 +45,7 @@ func init() {
 		[]string{"do-account-owner-delegation-policy"}, renderTFAccountOwnerDelegation)
 }
 
-func renderTFAccountStatusMessage(_ core.Finding) (remediate.Snippet, error) {
+func renderTFAccountStatusMessage(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return remediate.Snippet{
 		Risk: remediate.RiskManual, Idempotent: false,
 		Content: `# Account status_message is a billing / ToS flag DigitalOcean sets
@@ -61,7 +61,7 @@ func renderTFAccountStatusMessage(_ core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderTFAccountDropletQuota(_ core.Finding) (remediate.Snippet, error) {
+func renderTFAccountDropletQuota(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return remediate.Snippet{
 		Risk: remediate.RiskManual, Idempotent: false,
 		Content: "# DigitalOcean droplet_limit is set by DO support and isn't\n" +
@@ -83,7 +83,7 @@ func renderTFAccountDropletQuota(_ core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderTFAccountVolumeQuota(_ core.Finding) (remediate.Snippet, error) {
+func renderTFAccountVolumeQuota(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return remediate.Snippet{
 		Risk: remediate.RiskManual, Idempotent: false,
 		Content: `# Same shape as droplet quota: volume_limit is DO-set and
@@ -99,7 +99,7 @@ func renderTFAccountVolumeQuota(_ core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderTFAccountReservedIPQuota(_ core.Finding) (remediate.Snippet, error) {
+func renderTFAccountReservedIPQuota(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return remediate.Snippet{
 		Risk: remediate.RiskManual, Idempotent: false,
 		Content: `# reserved_ip_limit is DO-set. Free orphans via Terraform:
@@ -117,7 +117,7 @@ func renderTFAccountReservedIPQuota(_ core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderTFAccountAlertCoverage(_ core.Finding) (remediate.Snippet, error) {
+func renderTFAccountAlertCoverage(_ compliancekit.Finding) (remediate.Snippet, error) {
 	b := render.NewHCLBlock("resource", "digitalocean_monitor_alert", "cpu_high")
 	b.Attr("type", "v1/insights/droplet/cpu")
 	b.Attr("compare", "GreaterThan")
@@ -185,35 +185,35 @@ func renderTFAccountAlertCoverage(_ core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderTFAccountMFA(_ core.Finding) (remediate.Snippet, error) {
+func renderTFAccountMFA(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return renderTFManualOnly(
 		"MFA enforcement is a dashboard-only setting; no Terraform resource toggles it",
 		"https://cloud.digitalocean.com/account/security",
 		"Settings → Security → 'Require two-factor authentication'")
 }
 
-func renderTFAccountTokenRotation(_ core.Finding) (remediate.Snippet, error) {
+func renderTFAccountTokenRotation(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return renderTFManualOnly(
 		"API token lifecycle (create / revoke / introspect) is not exposed by the Terraform provider",
 		"https://cloud.digitalocean.com/account/api/tokens",
 		"API → Tokens → revoke + reissue, then rotate consumers")
 }
 
-func renderTFAccountAuditLog(_ core.Finding) (remediate.Snippet, error) {
+func renderTFAccountAuditLog(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return renderTFManualOnly(
 		"Audit-log retention + export is a dashboard-only configuration",
 		"https://cloud.digitalocean.com/account/audit-logs",
 		"Settings → Audit Logs → enable export to Splunk/Datadog/S3 for ≥90d retention")
 }
 
-func renderTFAccountBillingAlerts(_ core.Finding) (remediate.Snippet, error) {
+func renderTFAccountBillingAlerts(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return renderTFManualOnly(
 		"Billing alerts are configured via the dashboard; no TF resource exists",
 		"https://cloud.digitalocean.com/account/billing",
 		"Settings → Billing → Alerts → set 80% + 100% monthly thresholds")
 }
 
-func renderTFAccountOwnerDelegation(_ core.Finding) (remediate.Snippet, error) {
+func renderTFAccountOwnerDelegation(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return renderTFManualOnly(
 		"Team owner / member roles are dashboard-only; the Terraform provider does not expose digitalocean_team_member",
 		"https://cloud.digitalocean.com/account/team",

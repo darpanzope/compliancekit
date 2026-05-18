@@ -3,8 +3,8 @@ package ansible
 import (
 	"fmt"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.20 phase 7 — Ansible strategies for the 10 auditd rule-presence
@@ -31,7 +31,7 @@ func init() {
 	for id, e := range auditRuleAnsible {
 		id := id
 		e := e
-		register("ansible-"+id, []string{id}, func(_ core.Finding) (remediate.Snippet, error) {
+		register("ansible-"+id, []string{id}, func(_ compliancekit.Finding) (remediate.Snippet, error) {
 			body := fmt.Sprintf(`- name: %s — add audit watch on %s
   ansible.builtin.lineinfile:
     path: /etc/audit/rules.d/50-cis.rules
@@ -48,7 +48,7 @@ func init() {
 		})
 	}
 	register("ansible-linux-audit-rule-time-change", []string{"linux-audit-rule-time-change"},
-		func(_ core.Finding) (remediate.Snippet, error) {
+		func(_ compliancekit.Finding) (remediate.Snippet, error) {
 			body := `- name: audit rule — time-change syscalls
   ansible.builtin.blockinfile:
     path: /etc/audit/rules.d/50-cis.rules

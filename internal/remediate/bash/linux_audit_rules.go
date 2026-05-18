@@ -3,8 +3,8 @@ package bash
 import (
 	"fmt"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.20 phase 7 — bash strategies for the 10 auditd rule-presence
@@ -32,7 +32,7 @@ func init() {
 	for id, e := range auditRuleBash {
 		id := id
 		e := e
-		register("bash-"+id, []string{id}, func(_ core.Finding) (remediate.Snippet, error) {
+		register("bash-"+id, []string{id}, func(_ compliancekit.Finding) (remediate.Snippet, error) {
 			body := fmt.Sprintf(`# Append the audit watch rule + reload.
 sudo grep -qE -- '-w %s' /etc/audit/rules.d/50-cis.rules 2>/dev/null \
   || printf -- '-w %s -p wa -k %s\n' | sudo tee -a /etc/audit/rules.d/50-cis.rules >/dev/null
@@ -48,7 +48,7 @@ sudo augenrules --load 2>/dev/null || sudo systemctl restart auditd`,
 	}
 	// time-change rule (syscall, not a watch — needs a different shape)
 	register("bash-linux-audit-rule-time-change", []string{"linux-audit-rule-time-change"},
-		func(_ core.Finding) (remediate.Snippet, error) {
+		func(_ compliancekit.Finding) (remediate.Snippet, error) {
 			body := `# Time-change syscalls (adjtimex / settimeofday / clock_settime / stime).
 sudo grep -q 'adjtimex,settimeofday' /etc/audit/rules.d/50-cis.rules 2>/dev/null || \
   printf '%s\n%s\n' \

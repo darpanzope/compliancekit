@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	docol "github.com/darpanzope/compliancekit/internal/collectors/digitalocean"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // dropletHasFeature returns true if the droplet's features slice
@@ -13,7 +13,7 @@ import (
 // private-networking checks. Tolerant of the godo features slice
 // being either []string (collector path) or []any (test fixtures
 // that go through map[string]any).
-func dropletHasFeature(d core.Resource, name string) bool {
+func dropletHasFeature(d compliancekit.Resource, name string) bool {
 	switch features := d.Attributes["features"].(type) {
 	case []string:
 		for _, f := range features {
@@ -35,10 +35,10 @@ func dropletHasFeature(d core.Resource, name string) bool {
 // Without it, the operator cannot alert on CPU, disk, or memory
 // pressure -- and the broader monitoring + alerting story
 // degrades to "ssh in and run top."
-var CheckDropletMonitoring = core.Check{
+var CheckDropletMonitoring = compliancekit.Check{
 	ID:           "do-droplet-monitoring-disabled",
 	Title:        "Droplets should have the DigitalOcean monitoring agent enabled",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "digitalocean",
 	Service:      "droplets",
 	ResourceType: docol.DropletType,
@@ -61,21 +61,21 @@ var CheckDropletMonitoring = core.Check{
 	Scanner: "droplets.MonitoringEnabled",
 }
 
-func DropletMonitoring(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func DropletMonitoring(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, d := range g.ByType(docol.DropletType) {
 		on := dropletHasFeature(d, "monitoring")
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckDropletMonitoring.ID,
 			Severity: CheckDropletMonitoring.Severity,
 			Resource: d.Ref(),
 			Tags:     CheckDropletMonitoring.Tags,
 		}
 		if on {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("droplet %q: monitoring agent enabled", d.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("droplet %q: monitoring agent NOT enabled", d.Name)
 		}
 		findings = append(findings, f)
@@ -87,10 +87,10 @@ func DropletMonitoring(_ context.Context, g *core.ResourceGraph) ([]core.Finding
 // belong to some VPC, default or named. Old DO droplets created
 // before VPCs landed at GA in 2020 have no VPC association and
 // expose the droplet on the legacy shared private network.
-var CheckDropletInVPC = core.Check{
+var CheckDropletInVPC = compliancekit.Check{
 	ID:           "do-droplet-no-vpc",
 	Title:        "Droplets must belong to a VPC",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "digitalocean",
 	Service:      "droplets",
 	ResourceType: docol.DropletType,
@@ -113,21 +113,21 @@ var CheckDropletInVPC = core.Check{
 	Scanner: "droplets.InVPC",
 }
 
-func DropletInVPC(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func DropletInVPC(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, d := range g.ByType(docol.DropletType) {
 		vpc, _ := d.Attributes["vpc_uuid"].(string)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckDropletInVPC.ID,
 			Severity: CheckDropletInVPC.Severity,
 			Resource: d.Ref(),
 			Tags:     CheckDropletInVPC.Tags,
 		}
 		if vpc != "" {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("droplet %q: in VPC %s", d.Name, vpc)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("droplet %q: no VPC association (legacy shared private network)", d.Name)
 		}
 		findings = append(findings, f)
@@ -138,10 +138,10 @@ func DropletInVPC(_ context.Context, g *core.ResourceGraph) ([]core.Finding, err
 // CheckDropletPrivateNetworking requires the "private_networking"
 // feature. Without it the droplet has no private interface at all
 // and every internal call goes over the public Internet.
-var CheckDropletPrivateNetworking = core.Check{
+var CheckDropletPrivateNetworking = compliancekit.Check{
 	ID:           "do-droplet-private-networking-disabled",
 	Title:        "Droplets must have private networking enabled",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "digitalocean",
 	Service:      "droplets",
 	ResourceType: docol.DropletType,
@@ -165,21 +165,21 @@ var CheckDropletPrivateNetworking = core.Check{
 	Scanner: "droplets.PrivateNetworking",
 }
 
-func DropletPrivateNetworking(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func DropletPrivateNetworking(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, d := range g.ByType(docol.DropletType) {
 		on := dropletHasFeature(d, "private_networking")
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckDropletPrivateNetworking.ID,
 			Severity: CheckDropletPrivateNetworking.Severity,
 			Resource: d.Ref(),
 			Tags:     CheckDropletPrivateNetworking.Tags,
 		}
 		if on {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("droplet %q: private networking enabled", d.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("droplet %q: private networking NOT enabled", d.Name)
 		}
 		findings = append(findings, f)
@@ -191,10 +191,10 @@ func DropletPrivateNetworking(_ context.Context, g *core.ResourceGraph) ([]core.
 // "active" state. "off" droplets still bill, "archived" droplets
 // indicate possible decommissioning underway, "new"/"unknown"
 // suggest the droplet is mid-provision and could be incomplete.
-var CheckDropletStatusActive = core.Check{
+var CheckDropletStatusActive = compliancekit.Check{
 	ID:           "do-droplet-status-non-active",
 	Title:        "Droplets should be in 'active' status",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "digitalocean",
 	Service:      "droplets",
 	ResourceType: docol.DropletType,
@@ -218,21 +218,21 @@ var CheckDropletStatusActive = core.Check{
 	Scanner: "droplets.StatusActive",
 }
 
-func DropletStatusActive(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func DropletStatusActive(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, d := range g.ByType(docol.DropletType) {
 		status, _ := d.Attributes["status"].(string)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckDropletStatusActive.ID,
 			Severity: CheckDropletStatusActive.Severity,
 			Resource: d.Ref(),
 			Tags:     CheckDropletStatusActive.Tags,
 		}
 		if status == "active" {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("droplet %q: active", d.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("droplet %q: status=%q", d.Name, status)
 		}
 		findings = append(findings, f)
@@ -241,8 +241,8 @@ func DropletStatusActive(_ context.Context, g *core.ResourceGraph) ([]core.Findi
 }
 
 func init() {
-	core.Register(CheckDropletMonitoring, DropletMonitoring)
-	core.Register(CheckDropletInVPC, DropletInVPC)
-	core.Register(CheckDropletPrivateNetworking, DropletPrivateNetworking)
-	core.Register(CheckDropletStatusActive, DropletStatusActive)
+	compliancekit.Register(CheckDropletMonitoring, DropletMonitoring)
+	compliancekit.Register(CheckDropletInVPC, DropletInVPC)
+	compliancekit.Register(CheckDropletPrivateNetworking, DropletPrivateNetworking)
+	compliancekit.Register(CheckDropletStatusActive, DropletStatusActive)
 }

@@ -14,7 +14,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // Config is the parsed compliancekit.yaml.
@@ -205,7 +205,7 @@ type HetznerConfig struct {
 // SeverityConfig controls how findings are filtered and how the CLI
 // chooses its exit code.
 //
-// FailOn and MinReport are stored as strings rather than core.Severity
+// FailOn and MinReport are stored as strings rather than compliancekit.Severity
 // so the config package stays decoupled from core's enum encoding and
 // surfaces parse errors via Validate rather than at unmarshal time.
 type SeverityConfig struct {
@@ -214,13 +214,13 @@ type SeverityConfig struct {
 }
 
 // FailOnLevel parses the fail_on severity.
-func (s SeverityConfig) FailOnLevel() (core.Severity, error) {
-	return core.ParseSeverity(s.FailOn)
+func (s SeverityConfig) FailOnLevel() (compliancekit.Severity, error) {
+	return compliancekit.ParseSeverity(s.FailOn)
 }
 
 // MinReportLevel parses the min_report severity.
-func (s SeverityConfig) MinReportLevel() (core.Severity, error) {
-	return core.ParseSeverity(s.MinReport)
+func (s SeverityConfig) MinReportLevel() (compliancekit.Severity, error) {
+	return compliancekit.ParseSeverity(s.MinReport)
 }
 
 // OutputConfig controls reporter selection and output paths.

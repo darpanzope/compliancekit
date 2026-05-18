@@ -8,8 +8,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/frameworks"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // vulnCSVName is the filename written into the evidence pack root.
@@ -19,7 +19,7 @@ const vulnCSVName = "vulnerabilities.csv"
 // the v0.14+ vulnerabilities.csv writer behind one entrypoint so
 // Generate stays under gocyclo:15. Each writer's path lands on
 // the Result struct; FilesWritten is bumped per produced file.
-func writeOSCALAndVulnArtifacts(abs string, findings []core.Finding, result *Result, opts Options) error {
+func writeOSCALAndVulnArtifacts(abs string, findings []compliancekit.Finding, result *Result, opts Options) error {
 	oscalARPath, err := writeAssessmentResultsOSCAL(abs, findings, opts)
 	if err != nil {
 		return err
@@ -79,7 +79,7 @@ var vulnColumns = []string{
 
 // writeVulnerabilitiesCSV emits <out>/vulnerabilities.csv with one
 // row per (CVE, resource) pair drawn from findings whose
-// core.Finding.Vulnerability block is populated. v0.14+.
+// compliancekit.Finding.Vulnerability block is populated. v0.14+.
 //
 // The file complements control-mapping.csv (which is one row per
 // (control, finding) and covers posture findings + ingested
@@ -90,7 +90,7 @@ var vulnColumns = []string{
 //
 // Returns the absolute path of the written file, or "" + nil error
 // when zero findings carry a Vulnerability block (no file written).
-func writeVulnerabilitiesCSV(outDir string, findings []core.Finding) (string, error) {
+func writeVulnerabilitiesCSV(outDir string, findings []compliancekit.Finding) (string, error) {
 	rows := collectVulnRows(findings)
 	if len(rows) == 0 {
 		return "", nil
@@ -130,7 +130,7 @@ func writeVulnerabilitiesCSV(outDir string, findings []core.Finding) (string, er
 // carry a Vulnerability block. One row per (Finding, resolved
 // framework) — the same CVE appears multiple times when it maps to
 // multiple frameworks, mirroring control-mapping.csv's shape.
-func collectVulnRows(findings []core.Finding) [][]string {
+func collectVulnRows(findings []compliancekit.Finding) [][]string {
 	rows := make([][]string, 0, len(findings))
 	for _, f := range findings {
 		if f.Vulnerability == nil {
@@ -166,7 +166,7 @@ func collectVulnRows(findings []core.Finding) [][]string {
 // "framework:control" pairs the originating check maps to. Empty for
 // ingested checks not in the native registry.
 func framewroksForCheck(checkID string) string {
-	check, ok := core.LookupCheck(checkID)
+	check, ok := compliancekit.LookupCheck(checkID)
 	if !ok {
 		return ""
 	}
@@ -185,14 +185,14 @@ func formatCVSS(s float64) string {
 	return strconv.FormatFloat(s, 'f', 1, 64)
 }
 
-func sourceTool(f core.Finding) string {
+func sourceTool(f compliancekit.Finding) string {
 	if f.Source == nil {
 		return ""
 	}
 	return f.Source.Tool
 }
 
-func sourceToolVersion(f core.Finding) string {
+func sourceToolVersion(f compliancekit.Finding) string {
 	if f.Source == nil {
 		return ""
 	}

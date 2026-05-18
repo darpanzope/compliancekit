@@ -3,8 +3,8 @@ package bash
 import (
 	"fmt"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.20 phase 4 — bash strategies for the 10 systemd-services checks.
@@ -31,7 +31,7 @@ func init() {
 	for id, e := range serviceBash {
 		id := id
 		e := e
-		register("bash-"+id, []string{id}, func(_ core.Finding) (remediate.Snippet, error) {
+		register("bash-"+id, []string{id}, func(_ compliancekit.Finding) (remediate.Snippet, error) {
 			body := renderSvcBash(e)
 			return remediate.Snippet{
 				Risk: remediate.RiskReview, Idempotent: true, Content: body,

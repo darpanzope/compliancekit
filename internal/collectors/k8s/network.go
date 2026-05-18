@@ -9,14 +9,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/darpanzope/compliancekit/internal/collectors/cloudcommon"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // collectNetwork fetches Services, Ingresses, and NetworkPolicies.
 // Pod-network exposure plus Ingress fronting plus the policy layer
 // that controls them are the K8s network attack surface.
-func (c *Collector) collectNetwork(ctx context.Context, scope *ContextScope) ([]core.Resource, error) {
-	out := make([]core.Resource, 0, 32)
+func (c *Collector) collectNetwork(ctx context.Context, scope *ContextScope) ([]compliancekit.Resource, error) {
+	out := make([]compliancekit.Resource, 0, 32)
 
 	svcs, err := listServices(ctx, scope)
 	if err != nil {
@@ -143,7 +143,7 @@ func filterNPsByExclude(in []networkingv1.NetworkPolicy, ex []string) []networki
 
 // ---- Resource builders ----
 
-func (c *Collector) serviceResource(scope *ContextScope, s *corev1.Service) core.Resource {
+func (c *Collector) serviceResource(scope *ContextScope, s *corev1.Service) compliancekit.Resource {
 	attrs := map[string]any{
 		"namespace":                   s.Namespace,
 		"type":                        string(s.Spec.Type),
@@ -154,7 +154,7 @@ func (c *Collector) serviceResource(scope *ContextScope, s *corev1.Service) core
 		"cluster_ip":                  s.Spec.ClusterIP,
 		"labels":                      copyStringMap(s.Labels),
 	}
-	r := core.Resource{
+	r := compliancekit.Resource{
 		ID:         fmt.Sprintf("%s.%s.%s.%s", ServiceType, scope.Name, s.Namespace, s.Name),
 		Type:       ServiceType,
 		Name:       s.Name,
@@ -165,7 +165,7 @@ func (c *Collector) serviceResource(scope *ContextScope, s *corev1.Service) core
 	return r
 }
 
-func (c *Collector) ingressResource(scope *ContextScope, ing *networkingv1.Ingress) core.Resource {
+func (c *Collector) ingressResource(scope *ContextScope, ing *networkingv1.Ingress) compliancekit.Resource {
 	hasTLS := len(ing.Spec.TLS) > 0
 	hasDefaultBackend := ing.Spec.DefaultBackend != nil
 	ingressClass := ""
@@ -181,7 +181,7 @@ func (c *Collector) ingressResource(scope *ContextScope, ing *networkingv1.Ingre
 		"rule_count":          len(ing.Spec.Rules),
 		"labels":              copyStringMap(ing.Labels),
 	}
-	r := core.Resource{
+	r := compliancekit.Resource{
 		ID:         fmt.Sprintf("%s.%s.%s.%s", IngressType, scope.Name, ing.Namespace, ing.Name),
 		Type:       IngressType,
 		Name:       ing.Name,
@@ -192,7 +192,7 @@ func (c *Collector) ingressResource(scope *ContextScope, ing *networkingv1.Ingre
 	return r
 }
 
-func (c *Collector) networkPolicyResource(scope *ContextScope, np *networkingv1.NetworkPolicy) core.Resource {
+func (c *Collector) networkPolicyResource(scope *ContextScope, np *networkingv1.NetworkPolicy) compliancekit.Resource {
 	types := make([]string, 0, len(np.Spec.PolicyTypes))
 	for _, t := range np.Spec.PolicyTypes {
 		types = append(types, string(t))
@@ -209,7 +209,7 @@ func (c *Collector) networkPolicyResource(scope *ContextScope, np *networkingv1.
 		"has_from_all_namespaces": hasFromAllNamespaces(np.Spec.Ingress),
 		"labels":                  copyStringMap(np.Labels),
 	}
-	r := core.Resource{
+	r := compliancekit.Resource{
 		ID:         fmt.Sprintf("%s.%s.%s.%s", NetworkPolicyType, scope.Name, np.Namespace, np.Name),
 		Type:       NetworkPolicyType,
 		Name:       np.Name,

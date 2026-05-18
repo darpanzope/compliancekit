@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 func fixedTime() time.Time {
@@ -20,7 +20,7 @@ func sampleSnippets() []remediate.Snippet {
 		{
 			CheckID:    "aws-s3-public-access-block",
 			Format:     remediate.FormatTerraform,
-			Resource:   core.ResourceRef{ID: "aws.s3.bucket.prod-data", Name: "prod-data"},
+			Resource:   compliancekit.ResourceRef{ID: "aws.s3.bucket.prod-data", Name: "prod-data"},
 			Risk:       remediate.RiskSafe,
 			Idempotent: true,
 			Content:    "resource \"aws_s3_bucket_public_access_block\" \"prod_data\" {\n  bucket = \"prod-data\"\n}\n",
@@ -30,14 +30,14 @@ func sampleSnippets() []remediate.Snippet {
 		{
 			CheckID:  "aws-s3-public-access-block",
 			Format:   remediate.FormatAWSCLI,
-			Resource: core.ResourceRef{ID: "aws.s3.bucket.prod-data", Name: "prod-data"},
+			Resource: compliancekit.ResourceRef{ID: "aws.s3.bucket.prod-data", Name: "prod-data"},
 			Risk:     remediate.RiskSafe,
 			Content:  "aws s3api put-public-access-block --bucket prod-data --public-access-block-configuration ...",
 		},
 		{
 			CheckID:  "aws-iam-root-mfa",
 			Format:   remediate.FormatTerraform,
-			Resource: core.ResourceRef{ID: "aws.account.123", Name: "123"},
+			Resource: compliancekit.ResourceRef{ID: "aws.account.123", Name: "123"},
 			Risk:     remediate.RiskManual,
 			Content:  "# manual sentinel\n",
 			Notes:    "Manual via console.",
@@ -45,7 +45,7 @@ func sampleSnippets() []remediate.Snippet {
 		{
 			CheckID:  "linux-sshd-no-root-login",
 			Format:   remediate.FormatBash,
-			Resource: core.ResourceRef{ID: "linux.host.web-01"},
+			Resource: compliancekit.ResourceRef{ID: "linux.host.web-01"},
 			Risk:     remediate.RiskReview,
 			Content:  "sudo sed -i 's/PermitRootLogin yes/PermitRootLogin no/' /etc/ssh/sshd_config",
 		},
@@ -120,10 +120,10 @@ func TestBulkScriptOnlyIncludesRiskSafe(t *testing.T) {
 
 func TestUnmatchedSectionRendered(t *testing.T) {
 	dir := t.TempDir()
-	unmatched := []core.Finding{
+	unmatched := []compliancekit.Finding{
 		{
 			CheckID:  "weird-rule",
-			Resource: core.ResourceRef{ID: "weird-resource"},
+			Resource: compliancekit.ResourceRef{ID: "weird-resource"},
 			Message:  "no strategy for this rule",
 		},
 	}
@@ -141,7 +141,7 @@ func TestPerFormatFilenamesAreSlugged(t *testing.T) {
 	sn := remediate.Snippet{
 		CheckID:  "k8s-pod-run-as-non-root",
 		Format:   remediate.FormatKubectl,
-		Resource: core.ResourceRef{ID: "k8s.deployment.prod.default.checkout/api:v1", Name: "checkout"},
+		Resource: compliancekit.ResourceRef{ID: "k8s.deployment.prod.default.checkout/api:v1", Name: "checkout"},
 		Risk:     remediate.RiskReview,
 		Content:  "spec: ...",
 	}

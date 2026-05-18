@@ -11,7 +11,7 @@ import (
 	"google.golang.org/api/iterator"
 
 	"github.com/darpanzope/compliancekit/internal/collectors/cloudcommon"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 const (
@@ -27,7 +27,7 @@ const (
 
 // collectLogging enumerates Cloud Logging sinks + buckets per
 // project. Per-project errors emit a placeholder and continue.
-func (c *Collector) collectLogging(ctx context.Context, out []core.Resource) []core.Resource {
+func (c *Collector) collectLogging(ctx context.Context, out []compliancekit.Resource) []compliancekit.Resource {
 	for _, projectID := range c.projects {
 		updated, err := c.collectLoggingForProject(ctx, projectID, out)
 		if err != nil {
@@ -39,7 +39,7 @@ func (c *Collector) collectLogging(ctx context.Context, out []core.Resource) []c
 	return out
 }
 
-func (c *Collector) collectLoggingForProject(ctx context.Context, projectID string, out []core.Resource) ([]core.Resource, error) {
+func (c *Collector) collectLoggingForProject(ctx context.Context, projectID string, out []compliancekit.Resource) ([]compliancekit.Resource, error) {
 	client, err := logging.NewConfigClient(ctx, c.clientOption())
 	if err != nil {
 		return out, fmt.Errorf("new logging config client: %w", err)
@@ -77,10 +77,10 @@ func (c *Collector) collectLoggingForProject(ctx context.Context, projectID stri
 	return out, nil
 }
 
-func (c *Collector) logSinkResource(projectID string, s *loggingpb.LogSink) core.Resource {
+func (c *Collector) logSinkResource(projectID string, s *loggingpb.LogSink) compliancekit.Resource {
 	dest := s.Destination
 	destType := sinkDestinationType(dest)
-	r := core.Resource{
+	r := compliancekit.Resource{
 		ID:       fmt.Sprintf("gcp.logging.sink.%s.%s", projectID, s.Name),
 		Type:     LogSinkType,
 		Name:     s.Name,
@@ -97,11 +97,11 @@ func (c *Collector) logSinkResource(projectID string, s *loggingpb.LogSink) core
 	return r
 }
 
-func (c *Collector) logBucketResource(projectID string, b *loggingpb.LogBucket) core.Resource {
+func (c *Collector) logBucketResource(projectID string, b *loggingpb.LogBucket) compliancekit.Resource {
 	// b.Name is "projects/<p>/locations/<loc>/buckets/<name>".
 	short := lastPathSegment(b.Name)
 	location := bucketLocation(b.Name)
-	r := core.Resource{
+	r := compliancekit.Resource{
 		ID:       fmt.Sprintf("gcp.logging.bucket.%s.%s.%s", projectID, location, short),
 		Type:     LogBucketType,
 		Name:     short,

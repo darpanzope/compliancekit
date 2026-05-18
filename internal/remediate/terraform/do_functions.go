@@ -3,8 +3,8 @@ package terraform
 import (
 	"fmt"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.19 phase 6 — Terraform strategies for the 10 Functions-depth
@@ -55,7 +55,7 @@ resource "null_resource" %q {
 `, name, cmd)
 }
 
-func renderTFFnNamespaceRegion(f core.Finding) (remediate.Snippet, error) {
+func renderTFFnNamespaceRegion(f compliancekit.Finding) (remediate.Snippet, error) {
 	name := tfNameOrFallback(f, "NAMESPACE_LABEL")
 	return remediate.Snippet{
 		Risk: remediate.RiskReview, Idempotent: false,
@@ -65,14 +65,14 @@ func renderTFFnNamespaceRegion(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderTFFnTriggerRatio(_ core.Finding) (remediate.Snippet, error) {
+func renderTFFnTriggerRatio(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return renderTFManualOnly(
 		"Functions triggers are not surfaced by the DO TF provider",
 		"https://cloud.digitalocean.com/functions",
 		"List + audit: `doctl serverless trigger list <ns>` and delete or re-enable")
 }
 
-func renderTFFnAccessKey(f core.Finding) (remediate.Snippet, error) {
+func renderTFFnAccessKey(f compliancekit.Finding) (remediate.Snippet, error) {
 	name := tfNameOrFallback(f, "NAMESPACE")
 	return remediate.Snippet{
 		Risk: remediate.RiskReview, Idempotent: false,
@@ -82,42 +82,42 @@ func renderTFFnAccessKey(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderTFFnKeyRotation(_ core.Finding) (remediate.Snippet, error) {
+func renderTFFnKeyRotation(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return renderTFManualOnly(
 		"Functions access-key rotation has no TF surface (rotation is operational)",
 		"https://cloud.digitalocean.com/functions",
 		"Quarterly: list keys, revoke >90d, reissue, rotate consumers, record in runbook")
 }
 
-func renderTFFnRuntime(_ core.Finding) (remediate.Snippet, error) {
+func renderTFFnRuntime(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return renderTFManualOnly(
 		"Functions runtime versions live in project.yml, not the TF provider",
 		"https://docs.digitalocean.com/products/functions/reference/runtimes/",
 		"Update project.yml `runtime:` and re-deploy via `doctl serverless deploy`")
 }
 
-func renderTFFnEnvVars(_ core.Finding) (remediate.Snippet, error) {
+func renderTFFnEnvVars(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return renderTFManualOnly(
 		"Functions env-var encryption is a doctl deploy flag, not a TF resource",
 		"https://docs.digitalocean.com/reference/doctl/reference/serverless/deploy/",
 		"Re-deploy with `--env-file .env --encrypted`")
 }
 
-func renderTFFnSecretScan(_ core.Finding) (remediate.Snippet, error) {
+func renderTFFnSecretScan(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return renderTFManualOnly(
 		"Source-side secret scanning is a CI gate, not a TF resource",
 		"https://github.com/gitleaks/gitleaks",
 		"Add gitleaks/trufflehog gate in CI BEFORE `doctl serverless deploy`")
 }
 
-func renderTFFnLogExport(_ core.Finding) (remediate.Snippet, error) {
+func renderTFFnLogExport(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return renderTFManualOnly(
 		"DO Functions log forwarding has no native config",
 		"https://docs.digitalocean.com/products/functions/",
 		"Ship logs from inside the function (HTTP to sink) OR pull via doctl + cron")
 }
 
-func renderTFFnColdStart(f core.Finding) (remediate.Snippet, error) {
+func renderTFFnColdStart(f compliancekit.Finding) (remediate.Snippet, error) {
 	name := tfNameOrFallback(f, "NAMESPACE")
 	return remediate.Snippet{
 		Risk: remediate.RiskSafe, Idempotent: false,
@@ -127,7 +127,7 @@ func renderTFFnColdStart(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderTFFnEnvTag(_ core.Finding) (remediate.Snippet, error) {
+func renderTFFnEnvTag(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return renderTFManualOnly(
 		"Functions namespaces have no tag field; convention lives in the label",
 		"https://docs.digitalocean.com/products/functions/",

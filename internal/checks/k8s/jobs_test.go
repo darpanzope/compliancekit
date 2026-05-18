@@ -4,10 +4,10 @@ import (
 	"testing"
 
 	k8scol "github.com/darpanzope/compliancekit/internal/collectors/k8s"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
-func mkJob(name string, attrs map[string]any) core.Resource {
+func mkJob(name string, attrs map[string]any) compliancekit.Resource {
 	base := map[string]any{
 		"namespace":     "default",
 		"backoff_limit": int32(3),
@@ -16,7 +16,7 @@ func mkJob(name string, attrs map[string]any) core.Resource {
 	for k, v := range attrs {
 		base[k] = v
 	}
-	return core.Resource{
+	return compliancekit.Resource{
 		ID:         "k8s.job.prod.default." + name,
 		Type:       k8scol.JobType,
 		Name:       name,
@@ -25,7 +25,7 @@ func mkJob(name string, attrs map[string]any) core.Resource {
 	}
 }
 
-func mkCronJob(name string, attrs map[string]any) core.Resource {
+func mkCronJob(name string, attrs map[string]any) compliancekit.Resource {
 	base := map[string]any{
 		"namespace":                 "default",
 		"schedule":                  "*/5 * * * *",
@@ -38,7 +38,7 @@ func mkCronJob(name string, attrs map[string]any) core.Resource {
 	for k, v := range attrs {
 		base[k] = v
 	}
-	return core.Resource{
+	return compliancekit.Resource{
 		ID:         "k8s.cronjob.prod.default." + name,
 		Type:       k8scol.CronJobType,
 		Name:       name,
@@ -55,13 +55,13 @@ func TestJobBackoffLimit(t *testing.T) {
 		mkJob("cron-owned", map[string]any{"owner_kind": "CronJob", "backoff_limit": int32(-1)}),
 	)
 	got := runCheck(t, JobBackoffLimit, g)
-	if got["good"] != core.StatusPass {
+	if got["good"] != compliancekit.StatusPass {
 		t.Errorf("good: %v", got["good"])
 	}
-	if got["unset"] != core.StatusFail || got["huge"] != core.StatusFail {
+	if got["unset"] != compliancekit.StatusFail || got["huge"] != compliancekit.StatusFail {
 		t.Errorf("unset/huge: %v / %v", got["unset"], got["huge"])
 	}
-	if got["cron-owned"] != core.StatusSkip {
+	if got["cron-owned"] != compliancekit.StatusSkip {
 		t.Errorf("cron-owned: %v (want skip)", got["cron-owned"])
 	}
 }
@@ -74,10 +74,10 @@ func TestCronJobConcurrency(t *testing.T) {
 		mkCronJob("empty", map[string]any{"concurrency_policy": ""}),
 	)
 	got := runCheck(t, CronJobConcurrency, g)
-	if got["good"] != core.StatusPass || got["replace"] != core.StatusPass {
+	if got["good"] != compliancekit.StatusPass || got["replace"] != compliancekit.StatusPass {
 		t.Errorf("good/replace: %v / %v", got["good"], got["replace"])
 	}
-	if got["allow"] != core.StatusFail || got["empty"] != core.StatusFail {
+	if got["allow"] != compliancekit.StatusFail || got["empty"] != compliancekit.StatusFail {
 		t.Errorf("allow/empty: %v / %v", got["allow"], got["empty"])
 	}
 }
@@ -89,10 +89,10 @@ func TestCronJobHistoryLimit(t *testing.T) {
 		mkCronJob("missing-failed", map[string]any{"failed_jobs_history": int32(-1)}),
 	)
 	got := runCheck(t, CronJobHistoryLimit, g)
-	if got["good"] != core.StatusPass {
+	if got["good"] != compliancekit.StatusPass {
 		t.Errorf("good: %v", got["good"])
 	}
-	if got["missing-success"] != core.StatusFail || got["missing-failed"] != core.StatusFail {
+	if got["missing-success"] != compliancekit.StatusFail || got["missing-failed"] != compliancekit.StatusFail {
 		t.Errorf("missing-*: %v / %v", got["missing-success"], got["missing-failed"])
 	}
 }
@@ -104,10 +104,10 @@ func TestCronJobStartingDeadline(t *testing.T) {
 		mkCronJob("zero", map[string]any{"starting_deadline_seconds": int64(0)}),
 	)
 	got := runCheck(t, CronJobStartingDeadline, g)
-	if got["good"] != core.StatusPass {
+	if got["good"] != compliancekit.StatusPass {
 		t.Errorf("good: %v", got["good"])
 	}
-	if got["unset"] != core.StatusFail || got["zero"] != core.StatusFail {
+	if got["unset"] != compliancekit.StatusFail || got["zero"] != compliancekit.StatusFail {
 		t.Errorf("unset/zero: %v / %v", got["unset"], got["zero"])
 	}
 }

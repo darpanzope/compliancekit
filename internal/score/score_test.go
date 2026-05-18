@@ -3,11 +3,11 @@ package score
 import (
 	"testing"
 
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
-func mkFinding(status core.Status, sev core.Severity) core.Finding {
-	return core.Finding{Status: status, Severity: sev}
+func mkFinding(status compliancekit.Status, sev compliancekit.Severity) compliancekit.Finding {
+	return compliancekit.Finding{Status: status, Severity: sev}
 }
 
 func TestCompute_EmptyInput(t *testing.T) {
@@ -21,10 +21,10 @@ func TestCompute_EmptyInput(t *testing.T) {
 }
 
 func TestCompute_AllPass(t *testing.T) {
-	in := []core.Finding{
-		mkFinding(core.StatusPass, core.SeverityCritical),
-		mkFinding(core.StatusPass, core.SeverityHigh),
-		mkFinding(core.StatusPass, core.SeverityLow),
+	in := []compliancekit.Finding{
+		mkFinding(compliancekit.StatusPass, compliancekit.SeverityCritical),
+		mkFinding(compliancekit.StatusPass, compliancekit.SeverityHigh),
+		mkFinding(compliancekit.StatusPass, compliancekit.SeverityLow),
 	}
 	r := Compute(in)
 	if r.Score != 100 {
@@ -36,10 +36,10 @@ func TestCompute_AllPass(t *testing.T) {
 }
 
 func TestCompute_AllFail(t *testing.T) {
-	in := []core.Finding{
-		mkFinding(core.StatusFail, core.SeverityCritical),
-		mkFinding(core.StatusFail, core.SeverityHigh),
-		mkFinding(core.StatusFail, core.SeverityLow),
+	in := []compliancekit.Finding{
+		mkFinding(compliancekit.StatusFail, compliancekit.SeverityCritical),
+		mkFinding(compliancekit.StatusFail, compliancekit.SeverityHigh),
+		mkFinding(compliancekit.StatusFail, compliancekit.SeverityLow),
 	}
 	r := Compute(in)
 	if r.Score != 0 {
@@ -51,11 +51,11 @@ func TestCompute_AllFail(t *testing.T) {
 }
 
 func TestCompute_HalfPassHalfFail_SameSeverity(t *testing.T) {
-	in := []core.Finding{
-		mkFinding(core.StatusPass, core.SeverityHigh),
-		mkFinding(core.StatusPass, core.SeverityHigh),
-		mkFinding(core.StatusFail, core.SeverityHigh),
-		mkFinding(core.StatusFail, core.SeverityHigh),
+	in := []compliancekit.Finding{
+		mkFinding(compliancekit.StatusPass, compliancekit.SeverityHigh),
+		mkFinding(compliancekit.StatusPass, compliancekit.SeverityHigh),
+		mkFinding(compliancekit.StatusFail, compliancekit.SeverityHigh),
+		mkFinding(compliancekit.StatusFail, compliancekit.SeverityHigh),
 	}
 	r := Compute(in)
 	if r.Score != 50 {
@@ -66,9 +66,9 @@ func TestCompute_HalfPassHalfFail_SameSeverity(t *testing.T) {
 func TestCompute_OneCriticalDominatesManyLow(t *testing.T) {
 	// 1 critical fail (weight 50) against 10 low passes (weight 30)
 	// → passing/total = 30 / 80 = 37.5 → 38 (round-half-up)
-	in := []core.Finding{mkFinding(core.StatusFail, core.SeverityCritical)}
+	in := []compliancekit.Finding{mkFinding(compliancekit.StatusFail, compliancekit.SeverityCritical)}
 	for i := 0; i < 10; i++ {
-		in = append(in, mkFinding(core.StatusPass, core.SeverityLow))
+		in = append(in, mkFinding(compliancekit.StatusPass, compliancekit.SeverityLow))
 	}
 	r := Compute(in)
 	if r.Score != 38 {
@@ -77,11 +77,11 @@ func TestCompute_OneCriticalDominatesManyLow(t *testing.T) {
 }
 
 func TestCompute_SkipsExcludedFromScore(t *testing.T) {
-	in := []core.Finding{
-		mkFinding(core.StatusPass, core.SeverityHigh),
-		mkFinding(core.StatusFail, core.SeverityHigh),
-		mkFinding(core.StatusSkip, core.SeverityCritical), // would drag if counted
-		mkFinding(core.StatusSkip, core.SeverityCritical),
+	in := []compliancekit.Finding{
+		mkFinding(compliancekit.StatusPass, compliancekit.SeverityHigh),
+		mkFinding(compliancekit.StatusFail, compliancekit.SeverityHigh),
+		mkFinding(compliancekit.StatusSkip, compliancekit.SeverityCritical), // would drag if counted
+		mkFinding(compliancekit.StatusSkip, compliancekit.SeverityCritical),
 	}
 	r := Compute(in)
 	if r.Score != 50 {
@@ -97,9 +97,9 @@ func TestCompute_SkipsExcludedFromScore(t *testing.T) {
 }
 
 func TestCompute_AllSkipsIsHonest(t *testing.T) {
-	in := []core.Finding{
-		mkFinding(core.StatusSkip, core.SeverityHigh),
-		mkFinding(core.StatusSkip, core.SeverityCritical),
+	in := []compliancekit.Finding{
+		mkFinding(compliancekit.StatusSkip, compliancekit.SeverityHigh),
+		mkFinding(compliancekit.StatusSkip, compliancekit.SeverityCritical),
 	}
 	r := Compute(in)
 	if r.Score != 100 {
@@ -111,9 +111,9 @@ func TestCompute_AllSkipsIsHonest(t *testing.T) {
 }
 
 func TestCompute_ErrorsCountWithFails(t *testing.T) {
-	in := []core.Finding{
-		mkFinding(core.StatusPass, core.SeverityHigh),
-		mkFinding(core.StatusError, core.SeverityHigh),
+	in := []compliancekit.Finding{
+		mkFinding(compliancekit.StatusPass, compliancekit.SeverityHigh),
+		mkFinding(compliancekit.StatusError, compliancekit.SeverityHigh),
 	}
 	r := Compute(in)
 	if r.Score != 50 {
@@ -128,12 +128,12 @@ func TestCompute_ErrorsCountWithFails(t *testing.T) {
 // iteration order. Run Compute many times over the same shuffled
 // input and assert every result is identical.
 func TestCompute_Deterministic(t *testing.T) {
-	in := []core.Finding{
-		mkFinding(core.StatusPass, core.SeverityCritical),
-		mkFinding(core.StatusFail, core.SeverityHigh),
-		mkFinding(core.StatusError, core.SeverityMedium),
-		mkFinding(core.StatusSkip, core.SeverityLow),
-		mkFinding(core.StatusPass, core.SeverityInfo),
+	in := []compliancekit.Finding{
+		mkFinding(compliancekit.StatusPass, compliancekit.SeverityCritical),
+		mkFinding(compliancekit.StatusFail, compliancekit.SeverityHigh),
+		mkFinding(compliancekit.StatusError, compliancekit.SeverityMedium),
+		mkFinding(compliancekit.StatusSkip, compliancekit.SeverityLow),
+		mkFinding(compliancekit.StatusPass, compliancekit.SeverityInfo),
 	}
 	first := Compute(in)
 	for i := 0; i < 100; i++ {
@@ -147,18 +147,18 @@ func TestCompute_Deterministic(t *testing.T) {
 // TestCompute_Monotonic_PassUp confirms that converting a fail to a
 // pass never decreases the score.
 func TestCompute_Monotonic_PassUp(t *testing.T) {
-	base := []core.Finding{
-		mkFinding(core.StatusFail, core.SeverityHigh),
-		mkFinding(core.StatusFail, core.SeverityHigh),
-		mkFinding(core.StatusFail, core.SeverityHigh),
-		mkFinding(core.StatusPass, core.SeverityHigh),
+	base := []compliancekit.Finding{
+		mkFinding(compliancekit.StatusFail, compliancekit.SeverityHigh),
+		mkFinding(compliancekit.StatusFail, compliancekit.SeverityHigh),
+		mkFinding(compliancekit.StatusFail, compliancekit.SeverityHigh),
+		mkFinding(compliancekit.StatusPass, compliancekit.SeverityHigh),
 	}
 	baseScore := Compute(base).Score
 
 	// Convert one fail to pass.
-	improved := make([]core.Finding, len(base))
+	improved := make([]compliancekit.Finding, len(base))
 	copy(improved, base)
-	improved[0].Status = core.StatusPass
+	improved[0].Status = compliancekit.StatusPass
 	improvedScore := Compute(improved).Score
 
 	if improvedScore < baseScore {
@@ -169,17 +169,17 @@ func TestCompute_Monotonic_PassUp(t *testing.T) {
 // TestCompute_Monotonic_FailDown confirms that converting a pass to a
 // fail never increases the score.
 func TestCompute_Monotonic_FailDown(t *testing.T) {
-	base := []core.Finding{
-		mkFinding(core.StatusPass, core.SeverityHigh),
-		mkFinding(core.StatusPass, core.SeverityHigh),
-		mkFinding(core.StatusPass, core.SeverityHigh),
-		mkFinding(core.StatusFail, core.SeverityHigh),
+	base := []compliancekit.Finding{
+		mkFinding(compliancekit.StatusPass, compliancekit.SeverityHigh),
+		mkFinding(compliancekit.StatusPass, compliancekit.SeverityHigh),
+		mkFinding(compliancekit.StatusPass, compliancekit.SeverityHigh),
+		mkFinding(compliancekit.StatusFail, compliancekit.SeverityHigh),
 	}
 	baseScore := Compute(base).Score
 
-	degraded := make([]core.Finding, len(base))
+	degraded := make([]compliancekit.Finding, len(base))
 	copy(degraded, base)
-	degraded[0].Status = core.StatusFail
+	degraded[0].Status = compliancekit.StatusFail
 	degradedScore := Compute(degraded).Score
 
 	if degradedScore > baseScore {
@@ -191,9 +191,9 @@ func TestCompute_Monotonic_FailDown(t *testing.T) {
 // A single critical pass should outweigh a low pass.
 func TestCompute_SeverityWeightsHonored(t *testing.T) {
 	// 1 critical pass (50) + 1 low fail (3) → 50/53 = 94
-	in := []core.Finding{
-		mkFinding(core.StatusPass, core.SeverityCritical),
-		mkFinding(core.StatusFail, core.SeverityLow),
+	in := []compliancekit.Finding{
+		mkFinding(compliancekit.StatusPass, compliancekit.SeverityCritical),
+		mkFinding(compliancekit.StatusFail, compliancekit.SeverityLow),
 	}
 	r := Compute(in)
 	if r.Score != 94 {

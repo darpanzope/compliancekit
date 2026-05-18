@@ -7,7 +7,7 @@ import (
 	"time"
 
 	docol "github.com/darpanzope/compliancekit/internal/collectors/digitalocean"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 const certExpiryThresholdDays = 30
@@ -16,10 +16,10 @@ const certExpiryThresholdDays = 30
 // record. CAA tells the public CA ecosystem which authorities are
 // allowed to issue certificates for the zone, which blocks
 // rogue-CA issuance even after a credential leak.
-var CheckDomainCAA = core.Check{
+var CheckDomainCAA = compliancekit.Check{
 	ID:           "do-domain-no-caa",
 	Title:        "Managed domains should publish a CAA record",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "digitalocean",
 	Service:      "domains",
 	ResourceType: docol.DomainType,
@@ -44,21 +44,21 @@ var CheckDomainCAA = core.Check{
 	Scanner: "domains.CAA",
 }
 
-func DomainCAA(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func DomainCAA(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, d := range g.ByType(docol.DomainType) {
 		has, _ := d.Attributes["has_caa"].(bool)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckDomainCAA.ID,
 			Severity: CheckDomainCAA.Severity,
 			Resource: d.Ref(),
 			Tags:     CheckDomainCAA.Tags,
 		}
 		if has {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("domain %q: CAA published", d.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("domain %q: no CAA record", d.Name)
 		}
 		findings = append(findings, f)
@@ -69,10 +69,10 @@ func DomainCAA(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error)
 // CheckDomainSPF flags root-level domains that send email (have an
 // MX record) but don't publish an SPF policy. SPF lets receivers
 // reject spoofed messages claiming to come from the domain.
-var CheckDomainSPF = core.Check{
+var CheckDomainSPF = compliancekit.Check{
 	ID:           "do-domain-no-spf",
 	Title:        "Mail-sending domains should publish SPF",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "digitalocean",
 	Service:      "domains",
 	ResourceType: docol.DomainType,
@@ -95,28 +95,28 @@ var CheckDomainSPF = core.Check{
 	Scanner: "domains.SPF",
 }
 
-func DomainSPF(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func DomainSPF(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, d := range g.ByType(docol.DomainType) {
 		hasMX, _ := d.Attributes["has_mx"].(bool)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckDomainSPF.ID,
 			Severity: CheckDomainSPF.Severity,
 			Resource: d.Ref(),
 			Tags:     CheckDomainSPF.Tags,
 		}
 		if !hasMX {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("domain %q: no MX, SPF not required", d.Name)
 			findings = append(findings, f)
 			continue
 		}
 		hasSPF, _ := d.Attributes["has_spf"].(bool)
 		if hasSPF {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("domain %q: SPF published", d.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("domain %q: MX present but no SPF policy", d.Name)
 		}
 		findings = append(findings, f)
@@ -125,10 +125,10 @@ func DomainSPF(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error)
 }
 
 // CheckDomainDMARC requires mail-sending domains publish DMARC.
-var CheckDomainDMARC = core.Check{
+var CheckDomainDMARC = compliancekit.Check{
 	ID:           "do-domain-no-dmarc",
 	Title:        "Mail-sending domains should publish DMARC",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "digitalocean",
 	Service:      "domains",
 	ResourceType: docol.DomainType,
@@ -150,28 +150,28 @@ var CheckDomainDMARC = core.Check{
 	Scanner: "domains.DMARC",
 }
 
-func DomainDMARC(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func DomainDMARC(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, d := range g.ByType(docol.DomainType) {
 		hasMX, _ := d.Attributes["has_mx"].(bool)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckDomainDMARC.ID,
 			Severity: CheckDomainDMARC.Severity,
 			Resource: d.Ref(),
 			Tags:     CheckDomainDMARC.Tags,
 		}
 		if !hasMX {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("domain %q: no MX, DMARC not required", d.Name)
 			findings = append(findings, f)
 			continue
 		}
 		has, _ := d.Attributes["has_dmarc"].(bool)
 		if has {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("domain %q: DMARC published", d.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("domain %q: MX present but no DMARC policy", d.Name)
 		}
 		findings = append(findings, f)
@@ -182,10 +182,10 @@ func DomainDMARC(_ context.Context, g *core.ResourceGraph) ([]core.Finding, erro
 // CheckDomainCAANotWildcard flags CAA records that allow ANY
 // authority via the wildcard "issue" tag with no value. Better
 // than no CAA, but a tightened CAA list is the right baseline.
-var CheckDomainCAANotWildcard = core.Check{
+var CheckDomainCAANotWildcard = compliancekit.Check{
 	ID:           "do-domain-caa-wildcard",
 	Title:        "CAA records should name specific CAs, not allow any",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "digitalocean",
 	Service:      "domains",
 	ResourceType: docol.DomainType,
@@ -209,8 +209,8 @@ var CheckDomainCAANotWildcard = core.Check{
 	Scanner: "domains.CAANotWildcard",
 }
 
-func DomainCAANotWildcard(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func DomainCAANotWildcard(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, d := range g.ByType(docol.DomainType) {
 		has, _ := d.Attributes["has_caa"].(bool)
 		if !has {
@@ -219,7 +219,7 @@ func DomainCAANotWildcard(_ context.Context, g *core.ResourceGraph) ([]core.Find
 			continue
 		}
 		records, _ := d.Attributes["caa_records"].([]string)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckDomainCAANotWildcard.ID,
 			Severity: CheckDomainCAANotWildcard.Severity,
 			Resource: d.Ref(),
@@ -234,10 +234,10 @@ func DomainCAANotWildcard(_ context.Context, g *core.ResourceGraph) ([]core.Find
 			}
 		}
 		if wildcard {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("domain %q: CAA includes wildcard entry", d.Name)
 		} else {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("domain %q: CAA names %d issuer(s)", d.Name, len(records))
 		}
 		findings = append(findings, f)
@@ -248,10 +248,10 @@ func DomainCAANotWildcard(_ context.Context, g *core.ResourceGraph) ([]core.Find
 // CheckCertificateExpiry flags certs that expire in less than
 // certExpiryThresholdDays. Buying buffer to renew + propagate
 // matters; 30 days is the industry standard.
-var CheckCertificateExpiry = core.Check{
+var CheckCertificateExpiry = compliancekit.Check{
 	ID:           "do-certificate-near-expiry",
 	Title:        "Certificates should not expire within 30 days",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "digitalocean",
 	Service:      "certificates",
 	ResourceType: docol.CertificateType,
@@ -275,13 +275,13 @@ var CheckCertificateExpiry = core.Check{
 	Scanner: "certificates.Expiry",
 }
 
-func CertificateExpiry(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func CertificateExpiry(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	now := time.Now().UTC()
 	threshold := now.Add(certExpiryThresholdDays * 24 * time.Hour)
 	for _, ct := range g.ByType(docol.CertificateType) {
 		notAfter, _ := ct.Attributes["not_after"].(string)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckCertificateExpiry.ID,
 			Severity: CheckCertificateExpiry.Severity,
 			Resource: ct.Ref(),
@@ -289,19 +289,19 @@ func CertificateExpiry(_ context.Context, g *core.ResourceGraph) ([]core.Finding
 		}
 		t, err := time.Parse(time.RFC3339, notAfter)
 		if err != nil {
-			f.Status = core.StatusSkip
+			f.Status = compliancekit.StatusSkip
 			f.Message = fmt.Sprintf("cert %q: unparsable not_after=%q", ct.Name, notAfter)
 		} else {
 			days := int(t.Sub(now).Hours() / 24)
 			switch {
 			case t.Before(now):
-				f.Status = core.StatusFail
+				f.Status = compliancekit.StatusFail
 				f.Message = fmt.Sprintf("cert %q: EXPIRED %d day(s) ago", ct.Name, -days)
 			case t.Before(threshold):
-				f.Status = core.StatusFail
+				f.Status = compliancekit.StatusFail
 				f.Message = fmt.Sprintf("cert %q: expires in %d day(s) (< %d threshold)", ct.Name, days, certExpiryThresholdDays)
 			default:
-				f.Status = core.StatusPass
+				f.Status = compliancekit.StatusPass
 				f.Message = fmt.Sprintf("cert %q: expires in %d day(s)", ct.Name, days)
 			}
 		}
@@ -313,10 +313,10 @@ func CertificateExpiry(_ context.Context, g *core.ResourceGraph) ([]core.Finding
 // CheckCertificateLetsEncrypt prefers managed Let's Encrypt certs
 // over uploaded ones for any LB-attached usage. Managed certs
 // renew automatically; uploaded certs are a human responsibility.
-var CheckCertificateLetsEncrypt = core.Check{
+var CheckCertificateLetsEncrypt = compliancekit.Check{
 	ID:           "do-certificate-uploaded-not-managed",
 	Title:        "Uploaded certificates should be reviewed for migration to managed",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "digitalocean",
 	Service:      "certificates",
 	ResourceType: docol.CertificateType,
@@ -340,21 +340,21 @@ var CheckCertificateLetsEncrypt = core.Check{
 	Scanner: "certificates.Type",
 }
 
-func CertificateLetsEncrypt(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func CertificateLetsEncrypt(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, ct := range g.ByType(docol.CertificateType) {
 		typ, _ := ct.Attributes["type"].(string)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckCertificateLetsEncrypt.ID,
 			Severity: CheckCertificateLetsEncrypt.Severity,
 			Resource: ct.Ref(),
 			Tags:     CheckCertificateLetsEncrypt.Tags,
 		}
 		if typ == "lets_encrypt" {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("cert %q: managed (lets_encrypt)", ct.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("cert %q: type=%q (custom/uploaded; not auto-renewed)", ct.Name, typ)
 		}
 		findings = append(findings, f)
@@ -363,10 +363,10 @@ func CertificateLetsEncrypt(_ context.Context, g *core.ResourceGraph) ([]core.Fi
 }
 
 func init() {
-	core.Register(CheckDomainCAA, DomainCAA)
-	core.Register(CheckDomainSPF, DomainSPF)
-	core.Register(CheckDomainDMARC, DomainDMARC)
-	core.Register(CheckDomainCAANotWildcard, DomainCAANotWildcard)
-	core.Register(CheckCertificateExpiry, CertificateExpiry)
-	core.Register(CheckCertificateLetsEncrypt, CertificateLetsEncrypt)
+	compliancekit.Register(CheckDomainCAA, DomainCAA)
+	compliancekit.Register(CheckDomainSPF, DomainSPF)
+	compliancekit.Register(CheckDomainDMARC, DomainDMARC)
+	compliancekit.Register(CheckDomainCAANotWildcard, DomainCAANotWildcard)
+	compliancekit.Register(CheckCertificateExpiry, CertificateExpiry)
+	compliancekit.Register(CheckCertificateLetsEncrypt, CertificateLetsEncrypt)
 }

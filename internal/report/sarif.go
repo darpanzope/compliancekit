@@ -6,7 +6,7 @@ import (
 	"io"
 	"strings"
 
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // FormatSARIF is the lowercase identifier used in config / CLI.
@@ -32,10 +32,10 @@ type SARIFReporter struct{}
 // NewSARIF returns a SARIF reporter.
 func NewSARIF() *SARIFReporter { return &SARIFReporter{} }
 
-// Format implements core.Reporter.
+// Format implements compliancekit.Reporter.
 func (r *SARIFReporter) Format() string { return FormatSARIF }
 
-// Render implements core.Reporter. Emits a single-run SARIF document.
+// Render implements compliancekit.Reporter. Emits a single-run SARIF document.
 // Only actionable findings (Fail / Error) are emitted as results; the
 // Code Scanning UI treats every emitted result as something needing
 // action, so listing Pass would be noise.
@@ -43,7 +43,7 @@ func (r *SARIFReporter) Format() string { return FormatSARIF }
 // Every distinct check ID becomes a rule under tool.driver.rules,
 // even when no result for that run cites it -- consistent rule sets
 // make GitHub's "compare two runs" view more useful.
-func (r *SARIFReporter) Render(_ context.Context, findings []core.Finding, _ *core.ResourceGraph, w io.Writer) error {
+func (r *SARIFReporter) Render(_ context.Context, findings []compliancekit.Finding, _ *compliancekit.ResourceGraph, w io.Writer) error {
 	rules := buildSARIFRules(findings)
 	results := buildSARIFResults(findings, rules)
 
@@ -71,7 +71,7 @@ func (r *SARIFReporter) Render(_ context.Context, findings []core.Finding, _ *co
 
 // buildSARIFRules produces one rule per distinct check ID, regardless of
 // status, so the rule set is stable as findings flap pass/fail across runs.
-func buildSARIFRules(findings []core.Finding) map[string]sarifRule {
+func buildSARIFRules(findings []compliancekit.Finding) map[string]sarifRule {
 	out := map[string]sarifRule{}
 	for _, f := range findings {
 		if _, exists := out[f.CheckID]; exists {
@@ -98,7 +98,7 @@ func buildSARIFRules(findings []core.Finding) map[string]sarifRule {
 // entries. Each result references the rule by index in tool.driver.rules
 // (per the spec's preferred form) AND by ruleId (legacy form, which
 // GitHub still accepts and some other ingesters require).
-func buildSARIFResults(findings []core.Finding, rules map[string]sarifRule) []sarifResult {
+func buildSARIFResults(findings []compliancekit.Finding, rules map[string]sarifRule) []sarifResult {
 	// Build a stable index for ruleIndex assignment: alphabetical by
 	// ID matches the order we emit rules in rulesAsSlice.
 	ids := make([]string, 0, len(rules))
@@ -144,7 +144,7 @@ func buildSARIFResults(findings []core.Finding, rules map[string]sarifRule) []sa
 // Code Scanning surfaces "security-severity" specifically as a
 // GitHub-recognized property; the rest are passthrough strings other
 // SARIF consumers can filter on.
-func enrichSARIFProps(f core.Finding) map[string]any {
+func enrichSARIFProps(f compliancekit.Finding) map[string]any {
 	props := map[string]any{
 		"status":        string(f.Status),
 		"severity":      f.Severity.String(),
@@ -205,13 +205,13 @@ func rulesAsSlice(rules map[string]sarifRule) []sarifRule {
 //
 // "none" is for findings explicitly reported as informational with no
 // associated action; we don't emit those from compliancekit.
-func sarifLevelFor(sev core.Severity) string {
+func sarifLevelFor(sev compliancekit.Severity) string {
 	switch sev {
-	case core.SeverityCritical, core.SeverityHigh:
+	case compliancekit.SeverityCritical, compliancekit.SeverityHigh:
 		return "error"
-	case core.SeverityMedium:
+	case compliancekit.SeverityMedium:
 		return "warning"
-	case core.SeverityLow, core.SeverityInfo:
+	case compliancekit.SeverityLow, compliancekit.SeverityInfo:
 		return "note"
 	default:
 		return "warning"
@@ -220,7 +220,7 @@ func sarifLevelFor(sev core.Severity) string {
 
 // messageOrDefault falls back to a humane message when the check
 // emitted no text (shouldn't happen, but defensive).
-func messageOrDefault(f core.Finding) string {
+func messageOrDefault(f compliancekit.Finding) string {
 	if msg := strings.TrimSpace(f.Message); msg != "" {
 		return msg
 	}

@@ -3,8 +3,8 @@ package terraform
 import (
 	"fmt"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.19 phase 2 — Terraform strategies for the 10 Spaces-depth checks.
@@ -54,7 +54,7 @@ func tfSpacesBucketLifecycleBlock(name string) string {
 `, tfIdent(name), name)
 }
 
-func renderTFSpacesLifecycleExpiration(f core.Finding) (remediate.Snippet, error) {
+func renderTFSpacesLifecycleExpiration(f compliancekit.Finding) (remediate.Snippet, error) {
 	name := tfNameOrFallback(f, "BUCKET_NAME")
 	return remediate.Snippet{
 		Risk: remediate.RiskReview, Idempotent: true,
@@ -65,7 +65,7 @@ func renderTFSpacesLifecycleExpiration(f core.Finding) (remediate.Snippet, error
 	}, nil
 }
 
-func renderTFSpacesLifecycleMPU(f core.Finding) (remediate.Snippet, error) {
+func renderTFSpacesLifecycleMPU(f compliancekit.Finding) (remediate.Snippet, error) {
 	name := tfNameOrFallback(f, "BUCKET_NAME")
 	return remediate.Snippet{
 		Risk: remediate.RiskSafe, Idempotent: true,
@@ -75,7 +75,7 @@ func renderTFSpacesLifecycleMPU(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderTFSpacesLoggingTarget(f core.Finding) (remediate.Snippet, error) {
+func renderTFSpacesLoggingTarget(f compliancekit.Finding) (remediate.Snippet, error) {
 	name := tfNameOrFallback(f, "BUCKET_NAME")
 	body := fmt.Sprintf(`resource "digitalocean_spaces_bucket" "audit_logs" {
   name   = "%s-access-logs"
@@ -105,7 +105,7 @@ resource "digitalocean_spaces_bucket" %q {
 	}, nil
 }
 
-func renderTFSpacesPolicy(f core.Finding) (remediate.Snippet, error) {
+func renderTFSpacesPolicy(f compliancekit.Finding) (remediate.Snippet, error) {
 	name := tfNameOrFallback(f, "BUCKET_NAME")
 	body := fmt.Sprintf(`# Bucket policies on Spaces are NOT natively expressed in the
 # digitalocean Terraform provider. The provider supports the bucket
@@ -140,7 +140,7 @@ func renderTFSpacesPolicy(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderTFSpacesVersioningLifecycle(f core.Finding) (remediate.Snippet, error) {
+func renderTFSpacesVersioningLifecycle(f compliancekit.Finding) (remediate.Snippet, error) {
 	name := tfNameOrFallback(f, "BUCKET_NAME")
 	body := fmt.Sprintf(`resource "digitalocean_spaces_bucket" %q {
   name   = %q
@@ -162,7 +162,7 @@ func renderTFSpacesVersioningLifecycle(f core.Finding) (remediate.Snippet, error
 	}, nil
 }
 
-func renderTFSpacesAuditPairing(f core.Finding) (remediate.Snippet, error) {
+func renderTFSpacesAuditPairing(f compliancekit.Finding) (remediate.Snippet, error) {
 	name := tfNameOrFallback(f, "BUCKET_NAME")
 	body := fmt.Sprintf(`# Enable BOTH encryption (SSE-S3 via aws s3api) AND logging.
 # Terraform side:
@@ -189,28 +189,28 @@ resource "digitalocean_spaces_bucket" %q {
 	}, nil
 }
 
-func renderTFSpacesObjectLock(_ core.Finding) (remediate.Snippet, error) {
+func renderTFSpacesObjectLock(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return renderTFManualOnly(
 		"DO Spaces does not implement S3 Object Lock — there is no TF resource to enable it",
 		"https://www.digitalocean.com/trust",
 		"replicate audit-relevant writes off-Spaces to an Object-Lock-capable target")
 }
 
-func renderTFSpacesReplication(_ core.Finding) (remediate.Snippet, error) {
+func renderTFSpacesReplication(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return renderTFManualOnly(
 		"DO Spaces does not implement S3 CRR — no TF resource exists",
 		"https://docs.digitalocean.com/products/spaces/",
 		"run rclone sync on a cron between source and target regions / providers")
 }
 
-func renderTFSpacesMFADelete(_ core.Finding) (remediate.Snippet, error) {
+func renderTFSpacesMFADelete(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return renderTFManualOnly(
 		"DO Spaces does not implement S3 MFA-Delete — no TF surface",
 		"https://cloud.digitalocean.com/account/security",
 		"enforce team 2FA + segregate delete-capable Spaces keys per bucket")
 }
 
-func renderTFSpacesKeyRotation(_ core.Finding) (remediate.Snippet, error) {
+func renderTFSpacesKeyRotation(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return renderTFManualOnly(
 		"Spaces encryption keys are platform-managed; key rotation is DO's responsibility",
 		"https://www.digitalocean.com/trust",
@@ -222,7 +222,7 @@ func renderTFSpacesKeyRotation(_ core.Finding) (remediate.Snippet, error) {
 // functions one-liners. The placeholder argument is kept (always
 // "BUCKET_NAME" today) so future strategies can pass a more specific
 // hint without rewriting the helper signature.
-func tfNameOrFallback(f core.Finding, fallback string) string { //nolint:unparam // fallback varies in future strategies
+func tfNameOrFallback(f compliancekit.Finding, fallback string) string { //nolint:unparam // fallback varies in future strategies
 	if f.Resource.Name != "" {
 		return f.Resource.Name
 	}

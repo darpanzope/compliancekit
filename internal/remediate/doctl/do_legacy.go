@@ -3,8 +3,8 @@ package doctl
 import (
 	"fmt"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.19 phase 9 — shared helpers for the per-category legacy backfill
@@ -22,7 +22,7 @@ func registerLegacyDoctl(entries map[string]legacyDoctlEntry) {
 	for id, e := range entries {
 		e := e
 		id := id
-		register("doctl-legacy-"+id, []string{id}, func(_ core.Finding) (remediate.Snippet, error) {
+		register("doctl-legacy-"+id, []string{id}, func(_ compliancekit.Finding) (remediate.Snippet, error) {
 			s := remediate.Snippet{
 				Risk: e.risk, Idempotent: false,
 				Content: e.content, VerifyCmd: e.verify, Notes: e.notes,

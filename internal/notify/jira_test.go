@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 func TestJira_NotConfigured(t *testing.T) {
@@ -55,11 +55,11 @@ func TestJira_ThresholdDefault(t *testing.T) {
 		ProjectKey: os.Getenv("JIRA_NOTIFY_PROJECT"),
 	}
 	if t := os.Getenv("JIRA_NOTIFY_THRESHOLD"); t != "" {
-		sev, _ := core.ParseSeverity(t)
+		sev, _ := compliancekit.ParseSeverity(t)
 		cfg.SeverityFloor = sev
 	}
 	sink := NewJira(cfg)
-	if sink.Threshold() != core.SeverityHigh {
+	if sink.Threshold() != compliancekit.SeverityHigh {
 		t.Errorf("Threshold = %v, want high", sink.Threshold())
 	}
 }

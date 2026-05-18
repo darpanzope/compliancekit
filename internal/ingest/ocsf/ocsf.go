@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/ingest"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 type adapter struct{}
@@ -224,7 +224,7 @@ func projectEvent(
 	productID, toolVersion string,
 	mapping *ingest.MappingTable,
 	opts ingest.Options,
-) (core.Finding, *core.Resource, []string) {
+) (compliancekit.Finding, *compliancekit.Resource, []string) {
 	var warnings []string
 	ruleID := ruleIDFor(ev)
 
@@ -233,7 +233,7 @@ func projectEvent(
 	status := resolveStatus(ev)
 
 	tags := []string{}
-	source := &core.Source{
+	source := &compliancekit.Source{
 		Type:        "ingest",
 		Tool:        productID,
 		ToolVersion: toolVersion,
@@ -269,7 +269,7 @@ func projectEvent(
 		}
 	}
 
-	finding := core.Finding{
+	finding := compliancekit.Finding{
 		CheckID:   checkID,
 		Status:    status,
 		Severity:  severity,
@@ -286,7 +286,7 @@ func projectEvent(
 // an OCSF event's unmapped.compliancekit_source slot. Returns nil if
 // the slot is absent or its shape doesn't match — never errors,
 // since this is a best-effort enrichment.
-func extractCompliancekitSource(ev event) *core.Source {
+func extractCompliancekitSource(ev event) *compliancekit.Source {
 	raw, ok := ev.Unmapped["compliancekit_source"]
 	if !ok {
 		return nil
@@ -298,7 +298,7 @@ func extractCompliancekitSource(ev event) *core.Source {
 	if err != nil {
 		return nil
 	}
-	var s core.Source
+	var s compliancekit.Source
 	if err := json.Unmarshal(b, &s); err != nil {
 		return nil
 	}
@@ -354,17 +354,17 @@ func ruleIDFor(ev event) string {
 	return ""
 }
 
-func resolveSubject(ev event, productID string, opts ingest.Options) (core.ResourceRef, *core.Resource) {
+func resolveSubject(ev event, productID string, opts ingest.Options) (compliancekit.ResourceRef, *compliancekit.Resource) {
 	if len(ev.Resources) == 0 {
 		// Synthetic catch-all for events that name no resource.
 		id := fmt.Sprintf("ingest://%s/unknown", productID)
-		phantom := core.Resource{
+		phantom := compliancekit.Resource{
 			ID:       id,
 			Type:     "ingest." + productID + ".unknown",
 			Name:     "<no-resource>",
 			Provider: "ingest",
 		}
-		return core.ResourceRef{
+		return compliancekit.ResourceRef{
 			ID: id, Type: phantom.Type, Name: phantom.Name, Provider: phantom.Provider,
 		}, &phantom
 	}
@@ -375,7 +375,7 @@ func resolveSubject(ev event, productID string, opts ingest.Options) (core.Resou
 	}
 	if opts.Graph != nil {
 		if existing, ok := opts.Graph.ByID(id); ok {
-			return core.ResourceRef{
+			return compliancekit.ResourceRef{
 				ID: existing.ID, Type: existing.Type, Name: existing.Name,
 				Provider: existing.Provider, Region: existing.Region,
 				AccountID: accountIDFromEvent(ev),
@@ -386,7 +386,7 @@ func resolveSubject(ev event, productID string, opts ingest.Options) (core.Resou
 	if region == "" && ev.Cloud != nil {
 		region = ev.Cloud.Region
 	}
-	phantom := core.Resource{
+	phantom := compliancekit.Resource{
 		ID:       id,
 		Type:     normalizeResourceType(first.Type, productID),
 		Name:     firstNonEmpty(first.Name, lastSegment(id)),
@@ -398,7 +398,7 @@ func resolveSubject(ev event, productID string, opts ingest.Options) (core.Resou
 			"ocsf_type_raw": first.Type,
 		},
 	}
-	return core.ResourceRef{
+	return compliancekit.ResourceRef{
 		ID:        phantom.ID,
 		Type:      phantom.Type,
 		Name:      phantom.Name,
@@ -408,10 +408,10 @@ func resolveSubject(ev event, productID string, opts ingest.Options) (core.Resou
 	}, &phantom
 }
 
-func resolveSeverity(ev event, mapping *ingest.MappingTable, ruleID string, def core.Severity) core.Severity {
+func resolveSeverity(ev event, mapping *ingest.MappingTable, ruleID string, def compliancekit.Severity) compliancekit.Severity {
 	if mapping != nil && ruleID != "" {
 		if m, ok := mapping.Lookup(ruleID); ok && m.Severity != "" {
-			if s, err := core.ParseSeverity(m.Severity); err == nil {
+			if s, err := compliancekit.ParseSeverity(m.Severity); err == nil {
 				return s
 			}
 		}
@@ -419,23 +419,23 @@ func resolveSeverity(ev event, mapping *ingest.MappingTable, ruleID string, def 
 	// OCSF severity_id: 1=Info, 2=Low, 3=Medium, 4=High, 5=Critical, 6=Fatal
 	switch ev.SeverityID {
 	case 5, 6:
-		return core.SeverityCritical
+		return compliancekit.SeverityCritical
 	case 4:
-		return core.SeverityHigh
+		return compliancekit.SeverityHigh
 	case 3:
-		return core.SeverityMedium
+		return compliancekit.SeverityMedium
 	case 2:
-		return core.SeverityLow
+		return compliancekit.SeverityLow
 	case 1:
-		return core.SeverityInfo
+		return compliancekit.SeverityInfo
 	}
 	if ev.Severity != "" {
-		if s, err := core.ParseSeverity(ev.Severity); err == nil {
+		if s, err := compliancekit.ParseSeverity(ev.Severity); err == nil {
 			return s
 		}
 	}
-	if def == core.SeverityInfo {
-		return core.SeverityMedium
+	if def == compliancekit.SeverityInfo {
+		return compliancekit.SeverityMedium
 	}
 	return def
 }
@@ -444,26 +444,26 @@ func resolveSeverity(ev event, mapping *ingest.MappingTable, ruleID string, def 
 // status_id 1=New, 2=In Progress, 3=Suppressed, 4=Resolved, 99=Other,
 // 0=Unknown. Anything but Resolved/Suppressed counts as actionable
 // (StatusFail). A compliance.status_id can refine this further.
-func resolveStatus(ev event) core.Status {
+func resolveStatus(ev event) compliancekit.Status {
 	if ev.Compliance != nil {
 		// OCSF compliance.status_id: 1=Compliant, 2=Non-Compliant,
 		// 3=Not Applicable, 4=Manual, 99=Other.
 		switch ev.Compliance.StatusID {
 		case 1:
-			return core.StatusPass
+			return compliancekit.StatusPass
 		case 2:
-			return core.StatusFail
+			return compliancekit.StatusFail
 		case 3, 4:
-			return core.StatusSkip
+			return compliancekit.StatusSkip
 		}
 	}
 	switch ev.StatusID {
 	case 4: // Resolved
-		return core.StatusPass
+		return compliancekit.StatusPass
 	case 3: // Suppressed
-		return core.StatusSkip
+		return compliancekit.StatusSkip
 	default:
-		return core.StatusFail
+		return compliancekit.StatusFail
 	}
 }
 

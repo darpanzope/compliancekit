@@ -5,15 +5,15 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // fixtureGraph builds a graph with two test buckets — one public,
 // one private — used across the loader + evaluator tests.
-func fixtureGraph(t *testing.T) *core.ResourceGraph {
+func fixtureGraph(t *testing.T) *compliancekit.ResourceGraph {
 	t.Helper()
-	g := core.NewResourceGraph()
-	g.Add(core.Resource{
+	g := compliancekit.NewResourceGraph()
+	g.Add(compliancekit.Resource{
 		ID:       "test.bucket.public",
 		Type:     "test.bucket",
 		Name:     "public-data",
@@ -22,7 +22,7 @@ func fixtureGraph(t *testing.T) *core.ResourceGraph {
 			"public": true,
 		},
 	})
-	g.Add(core.Resource{
+	g.Add(compliancekit.Resource{
 		ID:       "test.bucket.private",
 		Type:     "test.bucket",
 		Name:     "private-data",
@@ -42,7 +42,7 @@ func TestLoadFile(t *testing.T) {
 	if m.Check.ID != "test-sample-bucket-public" {
 		t.Errorf("Check.ID = %q", m.Check.ID)
 	}
-	if m.Check.Severity != core.SeverityHigh {
+	if m.Check.Severity != compliancekit.SeverityHigh {
 		t.Errorf("Check.Severity = %v, want high", m.Check.Severity)
 	}
 	if m.Check.Policy != "testdata/sample.rego" {
@@ -72,10 +72,10 @@ func TestEvaluate(t *testing.T) {
 	if f.CheckID != "test-sample-bucket-public" {
 		t.Errorf("CheckID = %q", f.CheckID)
 	}
-	if f.Status != core.StatusFail {
+	if f.Status != compliancekit.StatusFail {
 		t.Errorf("Status = %v, want fail", f.Status)
 	}
-	if f.Severity != core.SeverityHigh {
+	if f.Severity != compliancekit.SeverityHigh {
 		t.Errorf("Severity inherited from Check expected high, got %v", f.Severity)
 	}
 	if !strings.Contains(f.Message, "public-data") {
@@ -171,7 +171,7 @@ findings := [{
 	if err != nil {
 		t.Fatalf("Evaluate: %v", err)
 	}
-	if len(out) != 1 || out[0].Status != core.StatusPass {
+	if len(out) != 1 || out[0].Status != compliancekit.StatusPass {
 		t.Errorf("expected one pass finding, got %+v", out)
 	}
 }

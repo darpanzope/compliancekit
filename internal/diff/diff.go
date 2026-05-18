@@ -20,17 +20,17 @@ package diff
 
 import (
 	"github.com/darpanzope/compliancekit/internal/baseline"
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/score"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // DiffResult is the typed shape downstream tooling joins against.
 // Counts are pre-computed because every consumer needs them; the
 // raw slices are kept so a renderer can drill in.
 type DiffResult struct {
-	New      []core.Finding   // findings whose fingerprint is not in the baseline
-	Existing []core.Finding   // findings whose fingerprint matches the baseline
-	Resolved []baseline.Entry // baseline entries whose fingerprint is no longer in the scan
+	New      []compliancekit.Finding // findings whose fingerprint is not in the baseline
+	Existing []compliancekit.Finding // findings whose fingerprint matches the baseline
+	Resolved []baseline.Entry        // baseline entries whose fingerprint is no longer in the scan
 
 	// PreviousScore + CurrentScore come from the baseline (captured
 	// at baseline time) and a fresh Compute() over the current
@@ -43,10 +43,10 @@ type DiffResult struct {
 // arriving in `current` are de-duplicated by fingerprint -- a
 // finding referenced under multiple framework controls counts once
 // in the diff, matching the baseline's own dedup.
-func Compute(b baseline.Baseline, current []core.Finding) DiffResult {
+func Compute(b baseline.Baseline, current []compliancekit.Finding) DiffResult {
 	baselineSet := b.FingerprintSet()
 
-	currentSet := map[string]core.Finding{}
+	currentSet := map[string]compliancekit.Finding{}
 	for _, f := range current {
 		fp := f.Fingerprint()
 		if _, dup := currentSet[fp]; dup {
@@ -56,8 +56,8 @@ func Compute(b baseline.Baseline, current []core.Finding) DiffResult {
 	}
 
 	var (
-		newFindings []core.Finding
-		existing    []core.Finding
+		newFindings []compliancekit.Finding
+		existing    []compliancekit.Finding
 		resolved    []baseline.Entry
 	)
 	for fp, f := range currentSet {
@@ -81,7 +81,7 @@ func Compute(b baseline.Baseline, current []core.Finding) DiffResult {
 	sortFindings(existing)
 	sortEntries(resolved)
 
-	dedupedCurrent := make([]core.Finding, 0, len(currentSet))
+	dedupedCurrent := make([]compliancekit.Finding, 0, len(currentSet))
 	for _, f := range currentSet {
 		dedupedCurrent = append(dedupedCurrent, f)
 	}
@@ -98,7 +98,7 @@ func Compute(b baseline.Baseline, current []core.Finding) DiffResult {
 // CountsBySeverity tallies a slice of findings into a per-severity
 // map keyed by the lowercase severity name. Used by the CLI
 // renderer to produce the "+ 2 new (1 high, 1 medium)" footer line.
-func CountsBySeverity(findings []core.Finding) map[string]int {
+func CountsBySeverity(findings []compliancekit.Finding) map[string]int {
 	counts := map[string]int{}
 	for _, f := range findings {
 		counts[f.Severity.String()]++
@@ -119,7 +119,7 @@ func CountsBySeverityEntries(entries []baseline.Entry) map[string]int {
 // HasNewAtOrAbove reports whether any New finding is actionable
 // (fail/error) and at or above the given severity. Powers the
 // `--fail-on=new-<sev>` exit-code gate.
-func (r DiffResult) HasNewAtOrAbove(level core.Severity) bool {
+func (r DiffResult) HasNewAtOrAbove(level compliancekit.Severity) bool {
 	for _, f := range r.New {
 		if f.Status.IsActionable() && f.Severity >= level {
 			return true
@@ -132,7 +132,7 @@ func (r DiffResult) HasNewAtOrAbove(level core.Severity) bool {
 // or existing) is actionable at or above the given severity. Powers
 // the `--fail-on=<sev>` gate, identical in shape to the scan
 // command's gate.
-func (r DiffResult) HasActionableAtOrAbove(level core.Severity) bool {
+func (r DiffResult) HasActionableAtOrAbove(level compliancekit.Severity) bool {
 	for _, f := range r.New {
 		if f.Status.IsActionable() && f.Severity >= level {
 			return true
@@ -146,7 +146,7 @@ func (r DiffResult) HasActionableAtOrAbove(level core.Severity) bool {
 	return false
 }
 
-func sortFindings(in []core.Finding) {
+func sortFindings(in []compliancekit.Finding) {
 	// Use insertion sort -- the slices are small (tens or low
 	// hundreds of findings in any practical CI scenario) and the
 	// stdlib sort import adds zero functional value for this size.

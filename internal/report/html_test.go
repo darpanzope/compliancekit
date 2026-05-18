@@ -6,12 +6,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // Compile-time assertion.
-var _ core.Reporter = (*HTMLReporter)(nil)
+var _ compliancekit.Reporter = (*HTMLReporter)(nil)
 
 func TestHTML_Format(t *testing.T) {
 	if got := NewHTML().Format(); got != "html" {
@@ -41,19 +41,19 @@ func TestHTML_RenderEmptyProducesValidPage(t *testing.T) {
 }
 
 func TestHTML_RenderEmitsFindingsGroupedBySeverity(t *testing.T) {
-	findings := []core.Finding{
+	findings := []compliancekit.Finding{
 		{
 			CheckID:  "low-check",
-			Status:   core.StatusFail,
-			Severity: core.SeverityLow,
-			Resource: core.ResourceRef{ID: "r1", Name: "host-low", Type: "linux.host"},
+			Status:   compliancekit.StatusFail,
+			Severity: compliancekit.SeverityLow,
+			Resource: compliancekit.ResourceRef{ID: "r1", Name: "host-low", Type: "linux.host"},
 			Message:  "low-priority gap",
 		},
 		{
 			CheckID:  "critical-check",
-			Status:   core.StatusFail,
-			Severity: core.SeverityCritical,
-			Resource: core.ResourceRef{ID: "r2", Name: "host-crit", Type: "digitalocean.droplet"},
+			Status:   compliancekit.StatusFail,
+			Severity: compliancekit.SeverityCritical,
+			Resource: compliancekit.ResourceRef{ID: "r2", Name: "host-crit", Type: "digitalocean.droplet"},
 			Message:  "critical exposure",
 		},
 	}
@@ -91,12 +91,12 @@ func TestHTML_RenderEmitsFindingsGroupedBySeverity(t *testing.T) {
 func TestHTML_RenderIncludesPassFindings(t *testing.T) {
 	// Unlike Markdown (PR summary), HTML emits everything -- the
 	// audience opens the file in a browser and wants the full picture.
-	findings := []core.Finding{
+	findings := []compliancekit.Finding{
 		{
 			CheckID:  "passing-check",
-			Status:   core.StatusPass,
-			Severity: core.SeverityHigh,
-			Resource: core.ResourceRef{ID: "r", Name: "ok-host", Type: "linux.host"},
+			Status:   compliancekit.StatusPass,
+			Severity: compliancekit.SeverityHigh,
+			Resource: compliancekit.ResourceRef{ID: "r", Name: "ok-host", Type: "linux.host"},
 			Message:  "passed",
 		},
 	}
@@ -177,12 +177,12 @@ func TestHTML_RendersRemediationSnippetsInline(t *testing.T) {
 	remediate.Default.Register(fakeStrategy)
 	t.Cleanup(func() { remediate.Default = remediate.NewRegistry() })
 
-	findings := []core.Finding{
+	findings := []compliancekit.Finding{
 		{
 			CheckID:  "html-test-check",
-			Status:   core.StatusFail,
-			Severity: core.SeverityHigh,
-			Resource: core.ResourceRef{ID: "r1", Name: "demo", Type: "fake.type"},
+			Status:   compliancekit.StatusFail,
+			Severity: compliancekit.SeverityHigh,
+			Resource: compliancekit.ResourceRef{ID: "r1", Name: "demo", Type: "fake.type"},
 			Message:  "failing for the test",
 		},
 	}
@@ -226,7 +226,7 @@ type fakeHTMLStrategy struct {
 func (s *fakeHTMLStrategy) Name() string                { return s.name }
 func (s *fakeHTMLStrategy) CheckIDs() []string          { return []string{s.checkID} }
 func (s *fakeHTMLStrategy) Formats() []remediate.Format { return s.formats }
-func (s *fakeHTMLStrategy) Render(_ core.Finding, f remediate.Format) (remediate.Snippet, error) {
+func (s *fakeHTMLStrategy) Render(_ compliancekit.Finding, f remediate.Format) (remediate.Snippet, error) {
 	snip, ok := s.snippets[f]
 	if !ok {
 		return remediate.Snippet{}, remediate.ErrFormatUnsupported

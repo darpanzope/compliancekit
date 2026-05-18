@@ -6,31 +6,31 @@ import (
 	"time"
 
 	docol "github.com/darpanzope/compliancekit/internal/collectors/digitalocean"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
-func mkCDN(name string, attrs map[string]any) core.Resource {
-	return core.Resource{ID: "digitalocean.cdn." + name, Type: docol.CDNType, Name: name, Provider: "digitalocean", Attributes: attrs}
+func mkCDN(name string, attrs map[string]any) compliancekit.Resource {
+	return compliancekit.Resource{ID: "digitalocean.cdn." + name, Type: docol.CDNType, Name: name, Provider: "digitalocean", Attributes: attrs}
 }
 
-func mkRIP(name string, attrs map[string]any) core.Resource {
-	return core.Resource{ID: "digitalocean.reserved_ip." + name, Type: docol.ReservedIPType, Name: name, Provider: "digitalocean", Attributes: attrs}
+func mkRIP(name string, attrs map[string]any) compliancekit.Resource {
+	return compliancekit.Resource{ID: "digitalocean.reserved_ip." + name, Type: docol.ReservedIPType, Name: name, Provider: "digitalocean", Attributes: attrs}
 }
 
-func mkSSH(name string, attrs map[string]any) core.Resource {
-	return core.Resource{ID: "digitalocean.ssh_key." + name, Type: docol.SSHKeyType, Name: name, Provider: "digitalocean", Attributes: attrs}
+func mkSSH(name string, attrs map[string]any) compliancekit.Resource {
+	return compliancekit.Resource{ID: "digitalocean.ssh_key." + name, Type: docol.SSHKeyType, Name: name, Provider: "digitalocean", Attributes: attrs}
 }
 
-func mkImg(name string, attrs map[string]any) core.Resource {
-	return core.Resource{ID: "digitalocean.image." + name, Type: docol.ImageType, Name: name, Provider: "digitalocean", Attributes: attrs}
+func mkImg(name string, attrs map[string]any) compliancekit.Resource {
+	return compliancekit.Resource{ID: "digitalocean.image." + name, Type: docol.ImageType, Name: name, Provider: "digitalocean", Attributes: attrs}
 }
 
-func mkAlert(name string, attrs map[string]any) core.Resource {
-	return core.Resource{ID: "digitalocean.alert_policy." + name, Type: docol.AlertPolicyType, Name: name, Provider: "digitalocean", Attributes: attrs}
+func mkAlert(name string, attrs map[string]any) compliancekit.Resource {
+	return compliancekit.Resource{ID: "digitalocean.alert_policy." + name, Type: docol.AlertPolicyType, Name: name, Provider: "digitalocean", Attributes: attrs}
 }
 
-func mkProj(name string, attrs map[string]any) core.Resource {
-	return core.Resource{ID: "digitalocean.project." + name, Type: docol.ProjectType, Name: name, Provider: "digitalocean", Attributes: attrs}
+func mkProj(name string, attrs map[string]any) compliancekit.Resource {
+	return compliancekit.Resource{ID: "digitalocean.project." + name, Type: docol.ProjectType, Name: name, Provider: "digitalocean", Attributes: attrs}
 }
 
 func TestCDNHasCustomDomain(t *testing.T) {
@@ -39,7 +39,7 @@ func TestCDNHasCustomDomain(t *testing.T) {
 		mkCDN("off", map[string]any{"has_custom_domain": false}),
 	)
 	f, _ := CDNHasCustomDomain(context.Background(), g)
-	if f[0].Status != core.StatusPass || f[1].Status != core.StatusFail {
+	if f[0].Status != compliancekit.StatusPass || f[1].Status != compliancekit.StatusFail {
 		t.Errorf("got %v / %v", f[0].Status, f[1].Status)
 	}
 }
@@ -62,7 +62,7 @@ func TestReservedIPOrphan(t *testing.T) {
 		mkRIP("orphan", map[string]any{"attached": false}),
 	)
 	f, _ := ReservedIPOrphan(context.Background(), g)
-	if f[0].Status != core.StatusPass || f[1].Status != core.StatusFail {
+	if f[0].Status != compliancekit.StatusPass || f[1].Status != compliancekit.StatusFail {
 		t.Errorf("got %v / %v", f[0].Status, f[1].Status)
 	}
 }
@@ -73,7 +73,7 @@ func TestReservedIPInProject(t *testing.T) {
 		mkRIP("none", map[string]any{"project_id": ""}),
 	)
 	f, _ := ReservedIPInProject(context.Background(), g)
-	if f[0].Status != core.StatusPass || f[1].Status != core.StatusFail {
+	if f[0].Status != compliancekit.StatusPass || f[1].Status != compliancekit.StatusFail {
 		t.Errorf("got %v / %v", f[0].Status, f[1].Status)
 	}
 }
@@ -84,20 +84,20 @@ func TestSSHKeyAlgorithm(t *testing.T) {
 		mkSSH("rsa-weak", map[string]any{"algorithm": "ssh-rsa", "is_weak_algo": true}),
 	)
 	f, _ := SSHKeyAlgorithm(context.Background(), g)
-	if f[0].Status != core.StatusPass || f[1].Status != core.StatusFail {
+	if f[0].Status != compliancekit.StatusPass || f[1].Status != compliancekit.StatusFail {
 		t.Errorf("got %v / %v", f[0].Status, f[1].Status)
 	}
 }
 
 func TestSSHKeyCount(t *testing.T) {
 	// Build 25 keys; should fail
-	resources := []core.Resource{mkAccount("a", map[string]any{})}
+	resources := []compliancekit.Resource{mkAccount("a", map[string]any{})}
 	for i := 0; i < 25; i++ {
 		resources = append(resources, mkSSH("k"+string(rune('a'+i)), map[string]any{}))
 	}
 	g := newAccountGraph(resources...)
 	f, _ := SSHKeyCount(context.Background(), g)
-	if f[0].Status != core.StatusFail {
+	if f[0].Status != compliancekit.StatusFail {
 		t.Errorf("got %v, want fail", f[0].Status)
 	}
 }
@@ -108,7 +108,7 @@ func TestImageNotPublic(t *testing.T) {
 		mkImg("public", map[string]any{"public": true}),
 	)
 	f, _ := ImageNotPublic(context.Background(), g)
-	if f[0].Status != core.StatusPass || f[1].Status != core.StatusFail {
+	if f[0].Status != compliancekit.StatusPass || f[1].Status != compliancekit.StatusFail {
 		t.Errorf("got %v / %v", f[0].Status, f[1].Status)
 	}
 }
@@ -120,7 +120,7 @@ func TestImageAge(t *testing.T) {
 		mkImg("old", map[string]any{"created_at": now.Add(-400 * 24 * time.Hour).Format(time.RFC3339)}),
 	)
 	f, _ := ImageAge(context.Background(), g)
-	if f[0].Status != core.StatusPass || f[1].Status != core.StatusFail {
+	if f[0].Status != compliancekit.StatusPass || f[1].Status != compliancekit.StatusFail {
 		t.Errorf("got %v / %v", f[0].Status, f[1].Status)
 	}
 }
@@ -131,7 +131,7 @@ func TestAccountHasAlerts(t *testing.T) {
 		mkAlert("cpu", map[string]any{"enabled": true}),
 	)
 	f, _ := AccountHasAlerts(context.Background(), g)
-	if f[0].Status != core.StatusPass {
+	if f[0].Status != compliancekit.StatusPass {
 		t.Errorf("got %v", f[0].Status)
 	}
 }
@@ -142,7 +142,7 @@ func TestAlertEnabled(t *testing.T) {
 		mkAlert("off", map[string]any{"enabled": false}),
 	)
 	f, _ := AlertEnabled(context.Background(), g)
-	if f[0].Status != core.StatusPass || f[1].Status != core.StatusFail {
+	if f[0].Status != compliancekit.StatusPass || f[1].Status != compliancekit.StatusFail {
 		t.Errorf("got %v / %v", f[0].Status, f[1].Status)
 	}
 }
@@ -153,7 +153,7 @@ func TestProjectEnvironmentSet(t *testing.T) {
 		mkProj("unset", map[string]any{"environment": ""}),
 	)
 	f, _ := ProjectEnvironmentSet(context.Background(), g)
-	if f[0].Status != core.StatusPass || f[1].Status != core.StatusFail {
+	if f[0].Status != compliancekit.StatusPass || f[1].Status != compliancekit.StatusFail {
 		t.Errorf("got %v / %v", f[0].Status, f[1].Status)
 	}
 }

@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/ingest"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 func mustOpen(t *testing.T, name string) *os.File {
@@ -57,7 +57,7 @@ func TestIngest_ImageScan(t *testing.T) {
 	if cve1.Vulnerability.Package.PURL == "" {
 		t.Errorf("Package.PURL empty")
 	}
-	if cve1.Severity != core.SeverityHigh {
+	if cve1.Severity != compliancekit.SeverityHigh {
 		t.Errorf("Severity = %v", cve1.Severity)
 	}
 
@@ -87,8 +87,8 @@ func TestIngest_MisconfigAndSecret(t *testing.T) {
 	}
 
 	var (
-		misconfig *core.Finding
-		secret    *core.Finding
+		misconfig *compliancekit.Finding
+		secret    *compliancekit.Finding
 	)
 	for i := range r.Findings {
 		switch {
@@ -160,14 +160,14 @@ func TestRedactSecret(t *testing.T) {
 func TestSeverityFromTrivy(t *testing.T) {
 	cases := []struct {
 		in   string
-		want core.Severity
+		want compliancekit.Severity
 	}{
-		{"CRITICAL", core.SeverityCritical},
-		{"High", core.SeverityHigh},
-		{"  medium  ", core.SeverityMedium},
-		{"LOW", core.SeverityLow},
-		{"UNKNOWN", core.SeverityInfo},
-		{"", core.SeverityInfo},
+		{"CRITICAL", compliancekit.SeverityCritical},
+		{"High", compliancekit.SeverityHigh},
+		{"  medium  ", compliancekit.SeverityMedium},
+		{"LOW", compliancekit.SeverityLow},
+		{"UNKNOWN", compliancekit.SeverityInfo},
+		{"", compliancekit.SeverityInfo},
 	}
 	for _, c := range cases {
 		got := severityFromTrivy(c.in)

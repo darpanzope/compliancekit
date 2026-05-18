@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 func TestEmail_NotConfigured(t *testing.T) {
@@ -69,7 +69,7 @@ func TestEmail_Send_HappyPath(t *testing.T) {
 		Port:          587,
 		From:          "compliance@acme.com",
 		To:            []string{"security@acme.com"},
-		SeverityFloor: core.SeverityInfo,
+		SeverityFloor: compliancekit.SeverityInfo,
 		sendMail: func(addr string, _ smtp.Auth, from string, to []string, msg []byte) error {
 			captured.addr = addr
 			captured.from = from
@@ -79,7 +79,7 @@ func TestEmail_Send_HappyPath(t *testing.T) {
 		},
 	}
 	sink := NewEmail(cfg)
-	notifications := BuildNotifications([]core.Finding{
+	notifications := BuildNotifications([]compliancekit.Finding{
 		sampleFinding("aws-s3-public-access-block", "critical"),
 	}, BuildOptions{})
 
@@ -108,13 +108,13 @@ func TestEmail_Send_HappyPath(t *testing.T) {
 func TestEmail_PerNotificationFailureCounts(t *testing.T) {
 	cfg := EmailConfig{
 		Host: "smtp", Port: 587, From: "f@x.c", To: []string{"r@x.c"},
-		SeverityFloor: core.SeverityInfo,
+		SeverityFloor: compliancekit.SeverityInfo,
 		sendMail: func(_ string, _ smtp.Auth, _ string, _ []string, _ []byte) error {
 			return errors.New("connection refused")
 		},
 	}
 	sink := NewEmail(cfg)
-	notifications := BuildNotifications([]core.Finding{sampleFinding("x", "critical")}, BuildOptions{})
+	notifications := BuildNotifications([]compliancekit.Finding{sampleFinding("x", "critical")}, BuildOptions{})
 	res, err := sink.Send(context.Background(), notifications)
 	if err == nil {
 		t.Errorf("all-fail should return top-level error")

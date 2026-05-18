@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	k8scol "github.com/darpanzope/compliancekit/internal/collectors/k8s"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.22 phase 2 — image-discipline + host-namespace volume/port pod
@@ -17,10 +17,10 @@ import (
 
 // ----- 13. Image tag :latest --------------------------------------
 
-var CheckPodImageTagLatest = core.Check{
+var CheckPodImageTagLatest = compliancekit.Check{
 	ID:           "k8s-pod-image-tag-latest",
 	Title:        "Container images should not use the :latest tag",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "kubernetes",
 	Service:      "pod-security",
 	ResourceType: k8scol.PodType,
@@ -40,8 +40,8 @@ var CheckPodImageTagLatest = core.Check{
 	Scanner: "pods.ImageTagLatest",
 }
 
-func PodImageTagLatest(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func PodImageTagLatest(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, p := range g.ByType(k8scol.PodType) {
 		bad := violatingContainers(p, func(c map[string]any) bool {
 			tag, _ := c["image_tag"].(string)
@@ -56,10 +56,10 @@ func PodImageTagLatest(_ context.Context, g *core.ResourceGraph) ([]core.Finding
 
 // ----- 14. imagePullPolicy ----------------------------------------
 
-var CheckPodImagePullPolicy = core.Check{
+var CheckPodImagePullPolicy = compliancekit.Check{
 	ID:           "k8s-pod-image-pull-policy",
 	Title:        "Containers with mutable tags should set imagePullPolicy=Always",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "kubernetes",
 	Service:      "pod-security",
 	ResourceType: k8scol.PodType,
@@ -81,8 +81,8 @@ var CheckPodImagePullPolicy = core.Check{
 	Scanner: "pods.ImagePullPolicy",
 }
 
-func PodImagePullPolicy(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func PodImagePullPolicy(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, p := range g.ByType(k8scol.PodType) {
 		bad := violatingContainers(p, func(c map[string]any) bool {
 			image, _ := c["image"].(string)
@@ -107,10 +107,10 @@ func PodImagePullPolicy(_ context.Context, g *core.ResourceGraph) ([]core.Findin
 
 // ----- 16. hostPath volumes ---------------------------------------
 
-var CheckPodHostPathVolume = core.Check{
+var CheckPodHostPathVolume = compliancekit.Check{
 	ID:           "k8s-pod-host-path-volume",
 	Title:        "Pods should not mount sensitive hostPath volumes",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "kubernetes",
 	Service:      "pod-security",
 	ResourceType: k8scol.PodType,
@@ -132,21 +132,21 @@ var CheckPodHostPathVolume = core.Check{
 	Scanner: "pods.HostPathVolume",
 }
 
-func PodHostPathVolume(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func PodHostPathVolume(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, p := range g.ByType(k8scol.PodType) {
 		paths, _ := p.Attributes["host_path_volumes"].([]string)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckPodHostPathVolume.ID,
 			Severity: CheckPodHostPathVolume.Severity,
 			Resource: p.Ref(),
 			Tags:     CheckPodHostPathVolume.Tags,
 		}
 		if len(paths) == 0 {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("pod %q: no hostPath volumes", podDesc(p))
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("pod %q: hostPath volumes mounted: %s", podDesc(p), strings.Join(paths, ", "))
 		}
 		findings = append(findings, f)
@@ -156,10 +156,10 @@ func PodHostPathVolume(_ context.Context, g *core.ResourceGraph) ([]core.Finding
 
 // ----- 17. hostPort ------------------------------------------------
 
-var CheckPodHostPort = core.Check{
+var CheckPodHostPort = compliancekit.Check{
 	ID:           "k8s-pod-host-port",
 	Title:        "Containers should not declare hostPort",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "kubernetes",
 	Service:      "pod-security",
 	ResourceType: k8scol.PodType,
@@ -180,8 +180,8 @@ var CheckPodHostPort = core.Check{
 	Scanner: "pods.HostPort",
 }
 
-func PodHostPort(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func PodHostPort(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, p := range g.ByType(k8scol.PodType) {
 		bad := violatingContainers(p, func(c map[string]any) bool {
 			ports, _ := c["host_ports"].([]int)
@@ -195,8 +195,8 @@ func PodHostPort(_ context.Context, g *core.ResourceGraph) ([]core.Finding, erro
 }
 
 func init() {
-	core.Register(CheckPodImageTagLatest, PodImageTagLatest)
-	core.Register(CheckPodImagePullPolicy, PodImagePullPolicy)
-	core.Register(CheckPodHostPathVolume, PodHostPathVolume)
-	core.Register(CheckPodHostPort, PodHostPort)
+	compliancekit.Register(CheckPodImageTagLatest, PodImageTagLatest)
+	compliancekit.Register(CheckPodImagePullPolicy, PodImagePullPolicy)
+	compliancekit.Register(CheckPodHostPathVolume, PodHostPathVolume)
+	compliancekit.Register(CheckPodHostPort, PodHostPort)
 }

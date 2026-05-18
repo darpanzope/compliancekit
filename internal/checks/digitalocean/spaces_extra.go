@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	docol "github.com/darpanzope/compliancekit/internal/collectors/digitalocean"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.19 phase 2 — Spaces depth: lifecycle rule completeness, logging
@@ -28,8 +28,8 @@ const spacesDocsURL = "https://docs.digitalocean.com/products/spaces/"
 
 // ----- shared helpers ---------------------------------------------------
 
-func newSpacesFinding(check core.Check, bucket core.Resource) core.Finding {
-	return core.Finding{
+func newSpacesFinding(check compliancekit.Check, bucket compliancekit.Resource) compliancekit.Finding {
+	return compliancekit.Finding{
 		CheckID:  check.ID,
 		Severity: check.Severity,
 		Resource: bucket.Ref(),
@@ -37,9 +37,9 @@ func newSpacesFinding(check core.Check, bucket core.Resource) core.Finding {
 	}
 }
 
-func spacesManualVerify(check core.Check, bucket core.Resource, gap, docsURL string) core.Finding {
+func spacesManualVerify(check compliancekit.Check, bucket compliancekit.Resource, gap, docsURL string) compliancekit.Finding {
 	f := newSpacesFinding(check, bucket)
-	f.Status = core.StatusError
+	f.Status = compliancekit.StatusError
 	f.Message = fmt.Sprintf("bucket %q: %s — DigitalOcean Spaces does not implement this S3 feature; verify compensating control then waive per ADR-013 (docs: %s)",
 		bucket.Name, gap, docsURL)
 	return f
@@ -47,10 +47,10 @@ func spacesManualVerify(check core.Check, bucket core.Resource, gap, docsURL str
 
 // ----- 1. lifecycle rules cover expiration ------------------------------
 
-var CheckSpacesLifecycleNoExpiration = core.Check{
+var CheckSpacesLifecycleNoExpiration = compliancekit.Check{
 	ID:           "do-spaces-bucket-lifecycle-no-expiration",
 	Title:        "Lifecycle configuration must include an expiration rule",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "digitalocean",
 	Service:      "spaces",
 	ResourceType: docol.SpacesBucketType,
@@ -74,8 +74,8 @@ var CheckSpacesLifecycleNoExpiration = core.Check{
 	Scanner: "spaces.LifecycleNoExpiration",
 }
 
-func SpacesLifecycleNoExpiration(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func SpacesLifecycleNoExpiration(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, b := range g.ByType(docol.SpacesBucketType) {
 		configured, _ := b.Attributes["lifecycle_configured"].(bool)
 		if !configured {
@@ -84,10 +84,10 @@ func SpacesLifecycleNoExpiration(_ context.Context, g *core.ResourceGraph) ([]co
 		hasExp, _ := b.Attributes["lifecycle_has_expiration"].(bool)
 		f := newSpacesFinding(CheckSpacesLifecycleNoExpiration, b)
 		if hasExp {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("bucket %q: lifecycle has expiration rule", b.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("bucket %q: lifecycle configured but no expiration rule", b.Name)
 		}
 		findings = append(findings, f)
@@ -97,10 +97,10 @@ func SpacesLifecycleNoExpiration(_ context.Context, g *core.ResourceGraph) ([]co
 
 // ----- 2. lifecycle covers MPU abort ------------------------------------
 
-var CheckSpacesLifecycleNoMPUAbort = core.Check{
+var CheckSpacesLifecycleNoMPUAbort = compliancekit.Check{
 	ID:           "do-spaces-bucket-lifecycle-no-mpu-cleanup",
 	Title:        "Lifecycle configuration must abort incomplete multipart uploads",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "digitalocean",
 	Service:      "spaces",
 	ResourceType: docol.SpacesBucketType,
@@ -126,8 +126,8 @@ var CheckSpacesLifecycleNoMPUAbort = core.Check{
 	Scanner: "spaces.LifecycleNoMPUAbort",
 }
 
-func SpacesLifecycleNoMPUAbort(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func SpacesLifecycleNoMPUAbort(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, b := range g.ByType(docol.SpacesBucketType) {
 		configured, _ := b.Attributes["lifecycle_configured"].(bool)
 		if !configured {
@@ -136,10 +136,10 @@ func SpacesLifecycleNoMPUAbort(_ context.Context, g *core.ResourceGraph) ([]core
 		hasMPU, _ := b.Attributes["lifecycle_has_mpu_abort"].(bool)
 		f := newSpacesFinding(CheckSpacesLifecycleNoMPUAbort, b)
 		if hasMPU {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("bucket %q: lifecycle has MPU abort rule", b.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("bucket %q: lifecycle configured but no MPU abort rule", b.Name)
 		}
 		findings = append(findings, f)
@@ -149,10 +149,10 @@ func SpacesLifecycleNoMPUAbort(_ context.Context, g *core.ResourceGraph) ([]core
 
 // ----- 3. logging target must not be the source bucket ------------------
 
-var CheckSpacesLoggingSelfTarget = core.Check{
+var CheckSpacesLoggingSelfTarget = compliancekit.Check{
 	ID:           "do-spaces-bucket-logging-self-target",
 	Title:        "Server-access log target must be a different bucket",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "digitalocean",
 	Service:      "spaces",
 	ResourceType: docol.SpacesBucketType,
@@ -175,8 +175,8 @@ var CheckSpacesLoggingSelfTarget = core.Check{
 	Scanner: "spaces.LoggingSelfTarget",
 }
 
-func SpacesLoggingSelfTarget(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func SpacesLoggingSelfTarget(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, b := range g.ByType(docol.SpacesBucketType) {
 		enabled, _ := b.Attributes["logging_enabled"].(bool)
 		if !enabled {
@@ -186,13 +186,13 @@ func SpacesLoggingSelfTarget(_ context.Context, g *core.ResourceGraph) ([]core.F
 		f := newSpacesFinding(CheckSpacesLoggingSelfTarget, b)
 		switch {
 		case target == "":
-			f.Status = core.StatusError
+			f.Status = compliancekit.StatusError
 			f.Message = fmt.Sprintf("bucket %q: logging_enabled=true but no target_bucket reported", b.Name)
 		case target == b.Name:
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("bucket %q: logs target the source bucket (feedback loop)", b.Name)
 		default:
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("bucket %q: logs target %q (segregated)", b.Name, target)
 		}
 		findings = append(findings, f)
@@ -202,10 +202,10 @@ func SpacesLoggingSelfTarget(_ context.Context, g *core.ResourceGraph) ([]core.F
 
 // ----- 4. bucket policy required for production buckets -----------------
 
-var CheckSpacesPolicyRequired = core.Check{
+var CheckSpacesPolicyRequired = compliancekit.Check{
 	ID:           "do-spaces-bucket-policy-required",
 	Title:        "Production Spaces buckets must declare an explicit bucket policy",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "digitalocean",
 	Service:      "spaces",
 	ResourceType: docol.SpacesBucketType,
@@ -229,16 +229,16 @@ var CheckSpacesPolicyRequired = core.Check{
 	Scanner: "spaces.PolicyRequired",
 }
 
-func SpacesPolicyRequired(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func SpacesPolicyRequired(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, b := range g.ByType(docol.SpacesBucketType) {
 		configured, _ := b.Attributes["policy_configured"].(bool)
 		f := newSpacesFinding(CheckSpacesPolicyRequired, b)
 		if configured {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("bucket %q: bucket policy configured", b.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("bucket %q: no bucket policy configured", b.Name)
 		}
 		findings = append(findings, f)
@@ -248,10 +248,10 @@ func SpacesPolicyRequired(_ context.Context, g *core.ResourceGraph) ([]core.Find
 
 // ----- 5. versioning enabled implies lifecycle (cost guard) -------------
 
-var CheckSpacesVersioningRequiresLifecycle = core.Check{
+var CheckSpacesVersioningRequiresLifecycle = compliancekit.Check{
 	ID:           "do-spaces-bucket-versioning-requires-lifecycle",
 	Title:        "Versioned buckets must declare a lifecycle policy",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "digitalocean",
 	Service:      "spaces",
 	ResourceType: docol.SpacesBucketType,
@@ -274,8 +274,8 @@ var CheckSpacesVersioningRequiresLifecycle = core.Check{
 	Scanner: "spaces.VersioningRequiresLifecycle",
 }
 
-func SpacesVersioningRequiresLifecycle(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func SpacesVersioningRequiresLifecycle(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, b := range g.ByType(docol.SpacesBucketType) {
 		versioning, _ := b.Attributes["versioning_enabled"].(bool)
 		if !versioning {
@@ -284,10 +284,10 @@ func SpacesVersioningRequiresLifecycle(_ context.Context, g *core.ResourceGraph)
 		lifecycle, _ := b.Attributes["lifecycle_configured"].(bool)
 		f := newSpacesFinding(CheckSpacesVersioningRequiresLifecycle, b)
 		if lifecycle {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("bucket %q: versioning + lifecycle both enabled", b.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("bucket %q: versioning enabled but no lifecycle config", b.Name)
 		}
 		findings = append(findings, f)
@@ -297,10 +297,10 @@ func SpacesVersioningRequiresLifecycle(_ context.Context, g *core.ResourceGraph)
 
 // ----- 6. audit-grade buckets need encryption AND logging ---------------
 
-var CheckSpacesAuditPairing = core.Check{
+var CheckSpacesAuditPairing = compliancekit.Check{
 	ID:           "do-spaces-bucket-audit-pairing",
 	Title:        "Audit-relevant buckets must have encryption AND logging both on",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "digitalocean",
 	Service:      "spaces",
 	ResourceType: docol.SpacesBucketType,
@@ -323,14 +323,14 @@ var CheckSpacesAuditPairing = core.Check{
 	Scanner: "spaces.AuditPairing",
 }
 
-func SpacesAuditPairing(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func SpacesAuditPairing(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, b := range g.ByType(docol.SpacesBucketType) {
 		enc, _ := b.Attributes["encryption_configured"].(bool)
 		log, _ := b.Attributes["logging_enabled"].(bool)
 		f := newSpacesFinding(CheckSpacesAuditPairing, b)
 		if enc && log {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("bucket %q: encryption + logging both enabled", b.Name)
 		} else {
 			missing := []string{}
@@ -340,7 +340,7 @@ func SpacesAuditPairing(_ context.Context, g *core.ResourceGraph) ([]core.Findin
 			if !log {
 				missing = append(missing, "logging")
 			}
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("bucket %q: missing %v", b.Name, missing)
 		}
 		findings = append(findings, f)
@@ -350,10 +350,10 @@ func SpacesAuditPairing(_ context.Context, g *core.ResourceGraph) ([]core.Findin
 
 // ----- 7. manual-verify: object-lock unsupported ------------------------
 
-var CheckSpacesObjectLockAppLayer = core.Check{
+var CheckSpacesObjectLockAppLayer = compliancekit.Check{
 	ID:           "do-spaces-bucket-object-lock-via-app-layer",
 	Title:        "DO Spaces does not support S3 Object Lock — verify app-layer immutability",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "digitalocean",
 	Service:      "spaces",
 	ResourceType: docol.SpacesBucketType,
@@ -380,8 +380,8 @@ var CheckSpacesObjectLockAppLayer = core.Check{
 	Scanner: "spaces.ObjectLockAppLayer",
 }
 
-func SpacesObjectLockAppLayer(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func SpacesObjectLockAppLayer(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, b := range g.ByType(docol.SpacesBucketType) {
 		findings = append(findings,
 			spacesManualVerify(CheckSpacesObjectLockAppLayer, b,
@@ -393,10 +393,10 @@ func SpacesObjectLockAppLayer(_ context.Context, g *core.ResourceGraph) ([]core.
 
 // ----- 8. manual-verify: replication unsupported ------------------------
 
-var CheckSpacesReplicationViaExternalSync = core.Check{
+var CheckSpacesReplicationViaExternalSync = compliancekit.Check{
 	ID:           "do-spaces-bucket-replication-via-external-sync",
 	Title:        "DO Spaces does not support cross-region replication — verify external sync",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "digitalocean",
 	Service:      "spaces",
 	ResourceType: docol.SpacesBucketType,
@@ -421,8 +421,8 @@ var CheckSpacesReplicationViaExternalSync = core.Check{
 	Scanner: "spaces.ReplicationViaExternalSync",
 }
 
-func SpacesReplicationViaExternalSync(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func SpacesReplicationViaExternalSync(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, b := range g.ByType(docol.SpacesBucketType) {
 		findings = append(findings,
 			spacesManualVerify(CheckSpacesReplicationViaExternalSync, b,
@@ -434,10 +434,10 @@ func SpacesReplicationViaExternalSync(_ context.Context, g *core.ResourceGraph) 
 
 // ----- 9. manual-verify: MFA-delete unsupported -------------------------
 
-var CheckSpacesMFADeleteViaTeamIAM = core.Check{
+var CheckSpacesMFADeleteViaTeamIAM = compliancekit.Check{
 	ID:           "do-spaces-bucket-mfa-delete-via-team-iam",
 	Title:        "DO Spaces does not support MFA-Delete — verify via team IAM controls",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "digitalocean",
 	Service:      "spaces",
 	ResourceType: docol.SpacesBucketType,
@@ -462,8 +462,8 @@ var CheckSpacesMFADeleteViaTeamIAM = core.Check{
 	Scanner: "spaces.MFADeleteViaTeamIAM",
 }
 
-func SpacesMFADeleteViaTeamIAM(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func SpacesMFADeleteViaTeamIAM(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, b := range g.ByType(docol.SpacesBucketType) {
 		findings = append(findings,
 			spacesManualVerify(CheckSpacesMFADeleteViaTeamIAM, b,
@@ -475,10 +475,10 @@ func SpacesMFADeleteViaTeamIAM(_ context.Context, g *core.ResourceGraph) ([]core
 
 // ----- 10. manual-verify: encryption key rotation -----------------------
 
-var CheckSpacesEncryptionKeyRotation = core.Check{
+var CheckSpacesEncryptionKeyRotation = compliancekit.Check{
 	ID:           "do-spaces-bucket-encryption-key-rotation-documented",
 	Title:        "Spaces encryption uses platform-managed keys — verify rotation cadence",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "digitalocean",
 	Service:      "spaces",
 	ResourceType: docol.SpacesBucketType,
@@ -503,8 +503,8 @@ var CheckSpacesEncryptionKeyRotation = core.Check{
 	Scanner: "spaces.EncryptionKeyRotation",
 }
 
-func SpacesEncryptionKeyRotation(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func SpacesEncryptionKeyRotation(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, b := range g.ByType(docol.SpacesBucketType) {
 		findings = append(findings,
 			spacesManualVerify(CheckSpacesEncryptionKeyRotation, b,
@@ -515,14 +515,14 @@ func SpacesEncryptionKeyRotation(_ context.Context, g *core.ResourceGraph) ([]co
 }
 
 func init() {
-	core.Register(CheckSpacesLifecycleNoExpiration, SpacesLifecycleNoExpiration)
-	core.Register(CheckSpacesLifecycleNoMPUAbort, SpacesLifecycleNoMPUAbort)
-	core.Register(CheckSpacesLoggingSelfTarget, SpacesLoggingSelfTarget)
-	core.Register(CheckSpacesPolicyRequired, SpacesPolicyRequired)
-	core.Register(CheckSpacesVersioningRequiresLifecycle, SpacesVersioningRequiresLifecycle)
-	core.Register(CheckSpacesAuditPairing, SpacesAuditPairing)
-	core.Register(CheckSpacesObjectLockAppLayer, SpacesObjectLockAppLayer)
-	core.Register(CheckSpacesReplicationViaExternalSync, SpacesReplicationViaExternalSync)
-	core.Register(CheckSpacesMFADeleteViaTeamIAM, SpacesMFADeleteViaTeamIAM)
-	core.Register(CheckSpacesEncryptionKeyRotation, SpacesEncryptionKeyRotation)
+	compliancekit.Register(CheckSpacesLifecycleNoExpiration, SpacesLifecycleNoExpiration)
+	compliancekit.Register(CheckSpacesLifecycleNoMPUAbort, SpacesLifecycleNoMPUAbort)
+	compliancekit.Register(CheckSpacesLoggingSelfTarget, SpacesLoggingSelfTarget)
+	compliancekit.Register(CheckSpacesPolicyRequired, SpacesPolicyRequired)
+	compliancekit.Register(CheckSpacesVersioningRequiresLifecycle, SpacesVersioningRequiresLifecycle)
+	compliancekit.Register(CheckSpacesAuditPairing, SpacesAuditPairing)
+	compliancekit.Register(CheckSpacesObjectLockAppLayer, SpacesObjectLockAppLayer)
+	compliancekit.Register(CheckSpacesReplicationViaExternalSync, SpacesReplicationViaExternalSync)
+	compliancekit.Register(CheckSpacesMFADeleteViaTeamIAM, SpacesMFADeleteViaTeamIAM)
+	compliancekit.Register(CheckSpacesEncryptionKeyRotation, SpacesEncryptionKeyRotation)
 }

@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/ingest"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 type adapter struct{}
@@ -25,7 +25,7 @@ func (adapter) Description() string {
 // Ingest decodes a Trivy v0.50+ JSON report and projects every
 // Vulnerabilities[], Misconfigurations[], and Secrets[] entry into
 // compliancekit Findings. Vulnerability findings carry a populated
-// core.Vulnerability block with CVE-ID, PURL, FixedVersion, CVSS
+// compliancekit.Vulnerability block with CVE-ID, PURL, FixedVersion, CVSS
 // vector, image SHA — much richer than the SARIF projection alone.
 //
 // Resource projection: container-image scans synthesize a phantom
@@ -80,16 +80,16 @@ func (adapter) Ingest(ctx context.Context, r io.Reader, opts ingest.Options) (in
 }
 
 // buildVulnFinding constructs a Finding from one Trivy vulnerability
-// record. Always populates core.Finding.Vulnerability; framework
+// record. Always populates compliancekit.Finding.Vulnerability; framework
 // attribution flows through the default vuln-mgmt control set
 // (defined at ingest layer in the SARIF adapter; v0.14 will pull
 // that helper up to ingest itself in a future phase).
-func buildVulnFinding(v vulnRecord, res result, artifact, imageSHA string, opts ingest.Options) (core.Finding, *core.Resource) {
+func buildVulnFinding(v vulnRecord, res result, artifact, imageSHA string, opts ingest.Options) (compliancekit.Finding, *compliancekit.Resource) {
 	cvss := preferredCVSS(v.CVSS)
 	severity := severityFromTrivy(v.Severity)
 
 	subject, phantom := vulnSubject(v, res, artifact, imageSHA, opts)
-	vuln := &core.Vulnerability{
+	vuln := &compliancekit.Vulnerability{
 		ID:               v.VulnerabilityID,
 		CVSSScore:        cvss.V3Score,
 		CVSSVector:       cvss.V3Vector,
@@ -99,7 +99,7 @@ func buildVulnFinding(v vulnRecord, res result, artifact, imageSHA string, opts 
 		PublishedDate:    v.PublishedDate,
 		LastModifiedDate: v.LastModifiedDate,
 		Image:            artifact,
-		Package: core.Package{
+		Package: compliancekit.Package{
 			Name:      v.PkgName,
 			Version:   v.InstalledVer,
 			Ecosystem: res.Type,
@@ -107,16 +107,16 @@ func buildVulnFinding(v vulnRecord, res result, artifact, imageSHA string, opts 
 		},
 	}
 
-	finding := core.Finding{
+	finding := compliancekit.Finding{
 		CheckID:       "ingest.trivy." + v.VulnerabilityID,
-		Status:        core.StatusFail,
+		Status:        compliancekit.StatusFail,
 		Severity:      severity,
 		Resource:      subject,
 		Message:       composeVulnMessage(v),
 		Tags:          []string{"vulnerability", "cve", strings.ToLower(strings.ReplaceAll(res.Type, " ", "-"))},
 		Vulnerability: vuln,
 		Timestamp:     opts.Provenance.IngestedAt,
-		Source: &core.Source{
+		Source: &compliancekit.Source{
 			Type:        "ingest",
 			Tool:        "trivy",
 			ToolVersion: opts.Provenance.ToolVersion,
@@ -130,20 +130,20 @@ func buildVulnFinding(v vulnRecord, res result, artifact, imageSHA string, opts 
 // buildMisconfigFinding constructs a Finding from one Trivy AVD
 // misconfig record (an IaC / Docker / K8s posture issue, distinct
 // from a CVE).
-func buildMisconfigFinding(m misconfig, res result, artifact string, opts ingest.Options) (core.Finding, *core.Resource) {
+func buildMisconfigFinding(m misconfig, res result, artifact string, opts ingest.Options) (compliancekit.Finding, *compliancekit.Resource) {
 	ruleID := firstNonEmpty(m.AVDID, m.ID)
 	severity := severityFromTrivy(m.Severity)
 	subject, phantom := misconfigSubject(res, m, artifact, opts)
 
-	finding := core.Finding{
+	finding := compliancekit.Finding{
 		CheckID:   "ingest.trivy." + ruleID,
-		Status:    core.StatusFail,
+		Status:    compliancekit.StatusFail,
 		Severity:  severity,
 		Resource:  subject,
 		Message:   firstNonEmpty(m.Message, m.Description, m.Title, ruleID),
 		Tags:      []string{"misconfiguration", strings.ToLower(strings.ReplaceAll(res.Type, " ", "-"))},
 		Timestamp: opts.Provenance.IngestedAt,
-		Source: &core.Source{
+		Source: &compliancekit.Source{
 			Type:        "ingest",
 			Tool:        "trivy",
 			ToolVersion: opts.Provenance.ToolVersion,
@@ -156,20 +156,20 @@ func buildMisconfigFinding(m misconfig, res result, artifact string, opts ingest
 
 // buildSecretFinding constructs a Finding from one Trivy secret
 // record. The raw match value is REDACTED through redactSecret
-// before landing in core.Secret.Fingerprint — the raw value never
+// before landing in compliancekit.Secret.Fingerprint — the raw value never
 // touches the Finding (ADR-010).
-func buildSecretFinding(s secretRecord, res result, artifact string, opts ingest.Options) (core.Finding, *core.Resource) {
+func buildSecretFinding(s secretRecord, res result, artifact string, opts ingest.Options) (compliancekit.Finding, *compliancekit.Resource) {
 	severity := severityFromTrivy(s.Severity)
 	subject, phantom := secretSubject(res, s, artifact, opts)
 
-	finding := core.Finding{
+	finding := compliancekit.Finding{
 		CheckID:  "ingest.trivy.secret." + s.RuleID,
-		Status:   core.StatusFail,
+		Status:   compliancekit.StatusFail,
 		Severity: severity,
 		Resource: subject,
 		Message:  firstNonEmpty(s.Title, "secret detected: "+s.RuleID),
 		Tags:     []string{"secret", strings.ToLower(s.Category)},
-		Secret: &core.Secret{
+		Secret: &compliancekit.Secret{
 			RuleID:      s.RuleID,
 			RuleName:    s.Title,
 			Fingerprint: redactSecret(s.Match),
@@ -177,7 +177,7 @@ func buildSecretFinding(s secretRecord, res result, artifact string, opts ingest
 			Line:        s.StartLine,
 		},
 		Timestamp: opts.Provenance.IngestedAt,
-		Source: &core.Source{
+		Source: &compliancekit.Source{
 			Type:        "ingest",
 			Tool:        "trivy",
 			ToolVersion: opts.Provenance.ToolVersion,
@@ -193,7 +193,7 @@ func buildSecretFinding(s secretRecord, res result, artifact string, opts ingest
 // scans it's the package. The image SHA is preserved as
 // Resource.Attributes["image_sha"] so Phase 5's graph-join can
 // match against K8s container imageID values.
-func vulnSubject(v vulnRecord, res result, artifact, imageSHA string, opts ingest.Options) (core.ResourceRef, *core.Resource) {
+func vulnSubject(v vulnRecord, res result, artifact, imageSHA string, opts ingest.Options) (compliancekit.ResourceRef, *compliancekit.Resource) {
 	var (
 		id   string
 		kind string
@@ -210,13 +210,13 @@ func vulnSubject(v vulnRecord, res result, artifact, imageSHA string, opts inges
 	}
 	if opts.Graph != nil {
 		if existing, ok := opts.Graph.ByID(id); ok {
-			return core.ResourceRef{
+			return compliancekit.ResourceRef{
 				ID: existing.ID, Type: existing.Type, Name: existing.Name,
 				Provider: existing.Provider, Region: existing.Region,
 			}, nil
 		}
 	}
-	phantom := core.Resource{
+	phantom := compliancekit.Resource{
 		ID:       id,
 		Type:     kind,
 		Name:     name,
@@ -228,24 +228,24 @@ func vulnSubject(v vulnRecord, res result, artifact, imageSHA string, opts inges
 			"package_purl":  v.PkgIdentifier.PURL,
 		},
 	}
-	return core.ResourceRef{
+	return compliancekit.ResourceRef{
 		ID: phantom.ID, Type: phantom.Type, Name: phantom.Name, Provider: phantom.Provider,
 	}, &phantom
 }
 
-func misconfigSubject(res result, m misconfig, artifact string, opts ingest.Options) (core.ResourceRef, *core.Resource) {
+func misconfigSubject(res result, m misconfig, artifact string, opts ingest.Options) (compliancekit.ResourceRef, *compliancekit.Resource) {
 	id := "ingest://trivy/" + res.Target
 	if m.CauseMetadata.Resource != "" {
 		id += "#" + m.CauseMetadata.Resource
 	}
 	if opts.Graph != nil {
 		if existing, ok := opts.Graph.ByID(id); ok {
-			return core.ResourceRef{
+			return compliancekit.ResourceRef{
 				ID: existing.ID, Type: existing.Type, Name: existing.Name, Provider: existing.Provider,
 			}, nil
 		}
 	}
-	phantom := core.Resource{
+	phantom := compliancekit.Resource{
 		ID:       id,
 		Type:     "trivy.misconfig.target",
 		Name:     firstNonEmpty(m.CauseMetadata.Resource, res.Target),
@@ -256,24 +256,24 @@ func misconfigSubject(res result, m misconfig, artifact string, opts ingest.Opti
 			"artifact_name": artifact,
 		},
 	}
-	return core.ResourceRef{
+	return compliancekit.ResourceRef{
 		ID: phantom.ID, Type: phantom.Type, Name: phantom.Name, Provider: phantom.Provider,
 	}, &phantom
 }
 
-func secretSubject(res result, s secretRecord, artifact string, opts ingest.Options) (core.ResourceRef, *core.Resource) {
+func secretSubject(res result, s secretRecord, artifact string, opts ingest.Options) (compliancekit.ResourceRef, *compliancekit.Resource) {
 	id := "ingest://trivy/secret/" + res.Target
 	if s.StartLine > 0 {
 		id += "#L" + itoa(s.StartLine)
 	}
 	if opts.Graph != nil {
 		if existing, ok := opts.Graph.ByID(id); ok {
-			return core.ResourceRef{
+			return compliancekit.ResourceRef{
 				ID: existing.ID, Type: existing.Type, Name: existing.Name, Provider: existing.Provider,
 			}, nil
 		}
 	}
-	phantom := core.Resource{
+	phantom := compliancekit.Resource{
 		ID:       id,
 		Type:     "secret.file",
 		Name:     res.Target,
@@ -283,7 +283,7 @@ func secretSubject(res result, s secretRecord, artifact string, opts ingest.Opti
 			"artifact_name": artifact,
 		},
 	}
-	return core.ResourceRef{
+	return compliancekit.ResourceRef{
 		ID: phantom.ID, Type: phantom.Type, Name: phantom.Name, Provider: phantom.Provider,
 	}, &phantom
 }
@@ -313,18 +313,18 @@ func preferredCVSS(scores map[string]cvssDetail) cvssDetail {
 
 // severityFromTrivy maps Trivy's severity string to compliancekit's
 // scale. Trivy's enum: UNKNOWN / LOW / MEDIUM / HIGH / CRITICAL.
-func severityFromTrivy(s string) core.Severity {
+func severityFromTrivy(s string) compliancekit.Severity {
 	switch strings.ToUpper(strings.TrimSpace(s)) {
 	case "CRITICAL":
-		return core.SeverityCritical
+		return compliancekit.SeverityCritical
 	case "HIGH":
-		return core.SeverityHigh
+		return compliancekit.SeverityHigh
 	case "MEDIUM":
-		return core.SeverityMedium
+		return compliancekit.SeverityMedium
 	case "LOW":
-		return core.SeverityLow
+		return compliancekit.SeverityLow
 	}
-	return core.SeverityInfo
+	return compliancekit.SeverityInfo
 }
 
 // composeVulnMessage assembles a single-line message for a CVE

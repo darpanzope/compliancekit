@@ -3,8 +3,8 @@ package bash
 import (
 	"fmt"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.19 phase 1 — bash strategies for the 10 account-governance checks.
@@ -36,7 +36,7 @@ func init() {
 		[]string{"do-account-owner-delegation-policy"}, renderBashAccountOwnerDelegation)
 }
 
-func renderBashAccountStatusMessage(_ core.Finding) (remediate.Snippet, error) {
+func renderBashAccountStatusMessage(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return remediate.Snippet{
 		Risk: remediate.RiskReview, Idempotent: true,
 		Content: `# Pull current status_message and exit non-zero if non-empty.
@@ -53,7 +53,7 @@ printf 'account status_message clear\n'`,
 	}, nil
 }
 
-func renderBashAccountDropletQuota(_ core.Finding) (remediate.Snippet, error) {
+func renderBashAccountDropletQuota(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return remediate.Snippet{
 		Risk: remediate.RiskReview, Idempotent: true,
 		Content: `# Report droplet utilization vs limit, fail at >80%.
@@ -73,7 +73,7 @@ fi`,
 	}, nil
 }
 
-func renderBashAccountVolumeQuota(_ core.Finding) (remediate.Snippet, error) {
+func renderBashAccountVolumeQuota(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return remediate.Snippet{
 		Risk: remediate.RiskReview, Idempotent: true,
 		Content: `# Report volume utilization vs limit.
@@ -90,7 +90,7 @@ if [ "$pct" -gt 80 ]; then exit 1; fi`,
 	}, nil
 }
 
-func renderBashAccountReservedIPQuota(_ core.Finding) (remediate.Snippet, error) {
+func renderBashAccountReservedIPQuota(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return remediate.Snippet{
 		Risk: remediate.RiskReview, Idempotent: true,
 		Content: `# Report reserved-IP utilization + orphans.
@@ -106,7 +106,7 @@ if [ "$pct" -gt 80 ]; then exit 1; fi`,
 	}, nil
 }
 
-func renderBashAccountAlertCoverage(_ core.Finding) (remediate.Snippet, error) {
+func renderBashAccountAlertCoverage(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return remediate.Snippet{
 		Risk: remediate.RiskSafe, Idempotent: true,
 		Content: `# Idempotent-ish: skip create when an enabled alert of the type already exists.
@@ -125,35 +125,35 @@ have v1/insights/droplet/load_5                       || doctl monitoring alert 
 	}, nil
 }
 
-func renderBashAccountMFA(_ core.Finding) (remediate.Snippet, error) {
+func renderBashAccountMFA(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return renderBashManualOnly(
 		"MFA enforcement",
 		"https://cloud.digitalocean.com/account/security",
 		"Toggle on 'Require two-factor authentication'")
 }
 
-func renderBashAccountTokenRotation(_ core.Finding) (remediate.Snippet, error) {
+func renderBashAccountTokenRotation(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return renderBashManualOnly(
 		"API token rotation",
 		"https://cloud.digitalocean.com/account/api/tokens",
 		"Sort by Last Used; revoke tokens >90d or stale >30d; reissue + rotate")
 }
 
-func renderBashAccountAuditLog(_ core.Finding) (remediate.Snippet, error) {
+func renderBashAccountAuditLog(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return renderBashManualOnly(
 		"audit-log retention",
 		"https://cloud.digitalocean.com/account/audit-logs",
 		"Enable export to Splunk / Datadog / S3 for ≥90d retention")
 }
 
-func renderBashAccountBillingAlerts(_ core.Finding) (remediate.Snippet, error) {
+func renderBashAccountBillingAlerts(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return renderBashManualOnly(
 		"billing alert thresholds",
 		"https://cloud.digitalocean.com/account/billing",
 		"Set monthly 80% + 100% thresholds, route to finance + eng distros")
 }
 
-func renderBashAccountOwnerDelegation(_ core.Finding) (remediate.Snippet, error) {
+func renderBashAccountOwnerDelegation(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return renderBashManualOnly(
 		"owner-delegation policy",
 		"https://cloud.digitalocean.com/account/team",

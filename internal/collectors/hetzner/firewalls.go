@@ -7,7 +7,7 @@ import (
 	"github.com/hetznercloud/hcloud-go/v2/hcloud"
 
 	"github.com/darpanzope/compliancekit/internal/collectors/cloudcommon"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // FirewallType is the resource type for Hetzner Cloud firewalls.
@@ -15,19 +15,19 @@ import (
 // means "deny everything," not "allow everything."
 const FirewallType = "hetzner.firewall"
 
-func (c *Collector) collectFirewalls(ctx context.Context) ([]core.Resource, error) {
+func (c *Collector) collectFirewalls(ctx context.Context) ([]compliancekit.Resource, error) {
 	firewalls, err := c.client.Firewall.All(ctx)
 	if err != nil {
 		return nil, err
 	}
-	out := make([]core.Resource, 0, len(firewalls))
+	out := make([]compliancekit.Resource, 0, len(firewalls))
 	for _, fw := range firewalls {
 		out = append(out, c.firewallResource(fw))
 	}
 	return out, nil
 }
 
-func (c *Collector) firewallResource(fw *hcloud.Firewall) core.Resource {
+func (c *Collector) firewallResource(fw *hcloud.Firewall) compliancekit.Resource {
 	rules := []map[string]any{}
 	for _, rule := range fw.Rules {
 		sources := []string{}
@@ -65,7 +65,7 @@ func (c *Collector) firewallResource(fw *hcloud.Firewall) core.Resource {
 		applied = append(applied, entry)
 	}
 
-	r := core.Resource{
+	r := compliancekit.Resource{
 		ID:       fmt.Sprintf("%s.%d", FirewallType, fw.ID),
 		Type:     FirewallType,
 		Name:     fw.Name,

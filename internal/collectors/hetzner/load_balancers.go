@@ -7,7 +7,7 @@ import (
 	"github.com/hetznercloud/hcloud-go/v2/hcloud"
 
 	"github.com/darpanzope/compliancekit/internal/collectors/cloudcommon"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // LoadBalancerType is the resource type for Hetzner Cloud Load
@@ -15,19 +15,19 @@ import (
 // here.
 const LoadBalancerType = "hetzner.load_balancer"
 
-func (c *Collector) collectLoadBalancers(ctx context.Context) ([]core.Resource, error) {
+func (c *Collector) collectLoadBalancers(ctx context.Context) ([]compliancekit.Resource, error) {
 	lbs, err := c.client.LoadBalancer.All(ctx)
 	if err != nil {
 		return nil, err
 	}
-	out := make([]core.Resource, 0, len(lbs))
+	out := make([]compliancekit.Resource, 0, len(lbs))
 	for _, lb := range lbs {
 		out = append(out, c.loadBalancerResource(lb))
 	}
 	return out, nil
 }
 
-func (c *Collector) loadBalancerResource(lb *hcloud.LoadBalancer) core.Resource {
+func (c *Collector) loadBalancerResource(lb *hcloud.LoadBalancer) compliancekit.Resource {
 	region := ""
 	if lb.Location != nil {
 		region = lb.Location.Name
@@ -43,7 +43,7 @@ func (c *Collector) loadBalancerResource(lb *hcloud.LoadBalancer) core.Resource 
 		}
 		services = append(services, entry)
 	}
-	r := core.Resource{
+	r := compliancekit.Resource{
 		ID:       fmt.Sprintf("%s.%d", LoadBalancerType, lb.ID),
 		Type:     LoadBalancerType,
 		Name:     lb.Name,

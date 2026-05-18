@@ -1,7 +1,7 @@
 // Package gitleaks implements a native-JSON ingest adapter for
 // gitleaks (gitleaks/gitleaks) output. v0.14+. gitleaks scans git
 // history (or a filesystem) for leaked credentials. Every match is
-// projected into a core.Finding with a populated core.Secret block
+// projected into a compliancekit.Finding with a populated compliancekit.Secret block
 // whose Fingerprint is REDACTED — the raw secret value never lands
 // in the Finding (ADR-010).
 //
@@ -16,8 +16,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/ingest"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 type adapter struct{}
@@ -28,7 +28,7 @@ func (adapter) Description() string {
 }
 
 // Ingest decodes a gitleaks JSON report (top-level array of findings).
-// Each finding becomes a compliancekit Finding with core.Secret
+// Each finding becomes a compliancekit Finding with compliancekit.Secret
 // populated; raw secret values are redacted before storage.
 func (adapter) Ingest(ctx context.Context, r io.Reader, opts ingest.Options) (ingest.Result, error) {
 	var matches []match
@@ -56,18 +56,18 @@ func (adapter) Ingest(ctx context.Context, r io.Reader, opts ingest.Options) (in
 	return out, nil
 }
 
-func buildSecretFinding(m match, opts ingest.Options) (core.Finding, *core.Resource) {
+func buildSecretFinding(m match, opts ingest.Options) (compliancekit.Finding, *compliancekit.Resource) {
 	subject, phantom := resolveSubject(m, opts)
 	severity := severityFromGitleaks(m.RuleID)
 
-	return core.Finding{
+	return compliancekit.Finding{
 		CheckID:  "ingest.gitleaks." + m.RuleID,
-		Status:   core.StatusFail,
+		Status:   compliancekit.StatusFail,
 		Severity: severity,
 		Resource: subject,
 		Message:  fmt.Sprintf("%s detected in %s", m.RuleID, m.File),
 		Tags:     []string{"secret", strings.ToLower(m.RuleID)},
-		Secret: &core.Secret{
+		Secret: &compliancekit.Secret{
 			RuleID:      m.RuleID,
 			RuleName:    m.Description,
 			Fingerprint: redactSecret(m.Secret),
@@ -79,7 +79,7 @@ func buildSecretFinding(m match, opts ingest.Options) (core.Finding, *core.Resou
 			Date:        m.Date,
 		},
 		Timestamp: opts.Provenance.IngestedAt,
-		Source: &core.Source{
+		Source: &compliancekit.Source{
 			Type:        "ingest",
 			Tool:        "gitleaks",
 			ToolVersion: opts.Provenance.ToolVersion,
@@ -89,19 +89,19 @@ func buildSecretFinding(m match, opts ingest.Options) (core.Finding, *core.Resou
 	}, phantom
 }
 
-func resolveSubject(m match, opts ingest.Options) (core.ResourceRef, *core.Resource) {
+func resolveSubject(m match, opts ingest.Options) (compliancekit.ResourceRef, *compliancekit.Resource) {
 	id := "ingest://gitleaks/" + m.File
 	if m.StartLine > 0 {
 		id += fmt.Sprintf("#L%d", m.StartLine)
 	}
 	if opts.Graph != nil {
 		if existing, ok := opts.Graph.ByID(id); ok {
-			return core.ResourceRef{
+			return compliancekit.ResourceRef{
 				ID: existing.ID, Type: existing.Type, Name: existing.Name, Provider: existing.Provider,
 			}, nil
 		}
 	}
-	phantom := core.Resource{
+	phantom := compliancekit.Resource{
 		ID:       id,
 		Type:     "secret.file",
 		Name:     m.File,
@@ -113,7 +113,7 @@ func resolveSubject(m match, opts ingest.Options) (core.ResourceRef, *core.Resou
 			"date":          m.Date,
 		},
 	}
-	return core.ResourceRef{
+	return compliancekit.ResourceRef{
 		ID: phantom.ID, Type: phantom.Type, Name: phantom.Name, Provider: phantom.Provider,
 	}, &phantom
 }
@@ -123,7 +123,7 @@ func resolveSubject(m match, opts ingest.Options) (core.ResourceRef, *core.Resou
 // classify by token: credentials with key/token/secret in the name
 // land at high; tokens with "test" or "example" land at medium;
 // everything else defaults to medium.
-func severityFromGitleaks(ruleID string) core.Severity {
+func severityFromGitleaks(ruleID string) compliancekit.Severity {
 	r := strings.ToLower(ruleID)
 	switch {
 	case strings.Contains(r, "private-key"),
@@ -132,14 +132,14 @@ func severityFromGitleaks(ruleID string) core.Severity {
 		strings.Contains(r, "gcp-service-account"),
 		strings.Contains(r, "rsa"),
 		strings.Contains(r, "ssh"):
-		return core.SeverityCritical
+		return compliancekit.SeverityCritical
 	case strings.Contains(r, "token"),
 		strings.Contains(r, "secret"),
 		strings.Contains(r, "password"),
 		strings.Contains(r, "api-key"):
-		return core.SeverityHigh
+		return compliancekit.SeverityHigh
 	}
-	return core.SeverityMedium
+	return compliancekit.SeverityMedium
 }
 
 func init() {

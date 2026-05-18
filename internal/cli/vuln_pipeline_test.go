@@ -7,8 +7,8 @@ import (
 	"testing"
 
 	"github.com/darpanzope/compliancekit/internal/config"
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/ingest"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 
 	_ "github.com/darpanzope/compliancekit/internal/ingest/grype"
 	_ "github.com/darpanzope/compliancekit/internal/ingest/sarif"
@@ -37,8 +37,8 @@ func grypeFixture(name string) string {
 // This is the killer-demo property of v0.14 — Trivy's image-side
 // CVE finds its way to the cloud resource that's actually exposed.
 func TestVulnPipeline_TrivyImageScanCorrelatesToK8s(t *testing.T) {
-	graph := core.NewResourceGraph()
-	graph.Add(core.Resource{
+	graph := compliancekit.NewResourceGraph()
+	graph.Add(compliancekit.Resource{
 		ID:       "k8s://prod/Deployment/checkout-api",
 		Type:     "k8s.deployment",
 		Name:     "checkout-api",
@@ -70,7 +70,7 @@ func TestVulnPipeline_TrivyImageScanCorrelatesToK8s(t *testing.T) {
 		t.Fatalf("expected at least one correlated finding via image-SHA join, got 0")
 	}
 
-	var clonedToK8s *core.Finding
+	var clonedToK8s *compliancekit.Finding
 	for i := range expanded {
 		if expanded[i].Resource.Type == "k8s.deployment" {
 			clonedToK8s = &expanded[i]
@@ -107,7 +107,7 @@ func TestVulnPipeline_TrivyAndGrypeMergeUniformly(t *testing.T) {
 		{Format: "trivy-json", File: trivyFixture("image-scan.json"), Tool: "trivy"},
 		{Format: "grype-json", File: grypeFixture("image-scan.json"), Tool: "grype"},
 	}
-	findings, _, err := runIngestSources(context.Background(), sources, core.NewResourceGraph())
+	findings, _, err := runIngestSources(context.Background(), sources, compliancekit.NewResourceGraph())
 	if err != nil {
 		t.Fatalf("runIngestSources: %v", err)
 	}

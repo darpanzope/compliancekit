@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	k8scol "github.com/darpanzope/compliancekit/internal/collectors/k8s"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.21 phase 1 — pod-security deepening. 12 new checks covering the
@@ -20,10 +20,10 @@ import (
 
 // ----- 1. shareProcessNamespace --------------------------------------
 
-var CheckPodShareProcessNamespace = core.Check{
+var CheckPodShareProcessNamespace = compliancekit.Check{
 	ID:           "k8s-pod-share-process-namespace",
 	Title:        "Pods should not enable shareProcessNamespace",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "kubernetes",
 	Service:      "pod-security",
 	ResourceType: k8scol.PodType,
@@ -45,23 +45,23 @@ var CheckPodShareProcessNamespace = core.Check{
 	Scanner: "pods.ShareProcessNamespace",
 }
 
-func PodShareProcessNamespace(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func PodShareProcessNamespace(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, p := range g.ByType(k8scol.PodType) {
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID: CheckPodShareProcessNamespace.ID, Severity: CheckPodShareProcessNamespace.Severity,
 			Resource: p.Ref(), Tags: CheckPodShareProcessNamespace.Tags,
 		}
 		v, set := p.Attributes["share_process_namespace"].(bool)
 		switch {
 		case !set:
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("pod %q: shareProcessNamespace unset (defaults to false)", podDesc(p))
 		case v:
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("pod %q: shareProcessNamespace=true", podDesc(p))
 		default:
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("pod %q: shareProcessNamespace=false", podDesc(p))
 		}
 		findings = append(findings, f)
@@ -71,10 +71,10 @@ func PodShareProcessNamespace(_ context.Context, g *core.ResourceGraph) ([]core.
 
 // ----- 2. dnsPolicy --------------------------------------------------
 
-var CheckPodDNSPolicy = core.Check{
+var CheckPodDNSPolicy = compliancekit.Check{
 	ID:           "k8s-pod-dns-policy-not-default",
 	Title:        "Pods should not use dnsPolicy=Default (host resolver)",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "kubernetes",
 	Service:      "pod-security",
 	ResourceType: k8scol.PodType,
@@ -95,19 +95,19 @@ var CheckPodDNSPolicy = core.Check{
 	Scanner: "pods.DNSPolicy",
 }
 
-func PodDNSPolicy(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func PodDNSPolicy(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, p := range g.ByType(k8scol.PodType) {
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID: CheckPodDNSPolicy.ID, Severity: CheckPodDNSPolicy.Severity,
 			Resource: p.Ref(), Tags: CheckPodDNSPolicy.Tags,
 		}
 		policy, _ := p.Attributes["dns_policy"].(string)
 		if policy == "Default" {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("pod %q: dnsPolicy=Default (host resolver)", podDesc(p))
 		} else {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("pod %q: dnsPolicy=%q", podDesc(p), policy)
 		}
 		findings = append(findings, f)
@@ -117,10 +117,10 @@ func PodDNSPolicy(_ context.Context, g *core.ResourceGraph) ([]core.Finding, err
 
 // ----- 3. priorityClassName explicit --------------------------------
 
-var CheckPodPriorityClass = core.Check{
+var CheckPodPriorityClass = compliancekit.Check{
 	ID:           "k8s-pod-priority-class-explicit",
 	Title:        "Production pods should set priorityClassName explicitly",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "kubernetes",
 	Service:      "pod-security",
 	ResourceType: k8scol.PodType,
@@ -141,26 +141,26 @@ var CheckPodPriorityClass = core.Check{
 	Scanner: "pods.PriorityClass",
 }
 
-func PodPriorityClass(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func PodPriorityClass(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, p := range g.ByType(k8scol.PodType) {
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID: CheckPodPriorityClass.ID, Severity: CheckPodPriorityClass.Severity,
 			Resource: p.Ref(), Tags: CheckPodPriorityClass.Tags,
 		}
 		ns, _ := p.Attributes["namespace"].(string)
 		if ns == "kube-system" {
-			f.Status = core.StatusSkip
+			f.Status = compliancekit.StatusSkip
 			f.Message = fmt.Sprintf("pod %q: kube-system pods use cluster-managed priority", podDesc(p))
 			findings = append(findings, f)
 			continue
 		}
 		pc, _ := p.Attributes["priority_class_name"].(string)
 		if pc == "" {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("pod %q: priorityClassName unset (defaults to priority 0)", podDesc(p))
 		} else {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("pod %q: priorityClassName=%q", podDesc(p), pc)
 		}
 		findings = append(findings, f)
@@ -170,10 +170,10 @@ func PodPriorityClass(_ context.Context, g *core.ResourceGraph) ([]core.Finding,
 
 // ----- 4. hostUsers (k8s 1.28+) -------------------------------------
 
-var CheckPodHostUsers = core.Check{
+var CheckPodHostUsers = compliancekit.Check{
 	ID:           "k8s-pod-host-users-disabled",
 	Title:        "Pods should set hostUsers=false on k8s 1.30+",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "kubernetes",
 	Service:      "pod-security",
 	ResourceType: k8scol.PodType,
@@ -194,23 +194,23 @@ var CheckPodHostUsers = core.Check{
 	Scanner: "pods.HostUsers",
 }
 
-func PodHostUsers(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func PodHostUsers(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, p := range g.ByType(k8scol.PodType) {
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID: CheckPodHostUsers.ID, Severity: CheckPodHostUsers.Severity,
 			Resource: p.Ref(), Tags: CheckPodHostUsers.Tags,
 		}
 		v, set := p.Attributes["host_users"].(bool)
 		switch {
 		case !set:
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("pod %q: hostUsers unset — explicit `hostUsers: false` recommended for kernel-breakout mitigation", podDesc(p))
 		case v:
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("pod %q: hostUsers=true (pod runs in host user namespace)", podDesc(p))
 		default:
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("pod %q: hostUsers=false (user-namespace isolated)", podDesc(p))
 		}
 		findings = append(findings, f)
@@ -220,10 +220,10 @@ func PodHostUsers(_ context.Context, g *core.ResourceGraph) ([]core.Finding, err
 
 // ----- 5. pod-level fsGroup set -------------------------------------
 
-var CheckPodFSGroup = core.Check{
+var CheckPodFSGroup = compliancekit.Check{
 	ID:           "k8s-pod-fs-group-set",
 	Title:        "Pods with volumes should set securityContext.fsGroup",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "kubernetes",
 	Service:      "pod-security",
 	ResourceType: k8scol.PodType,
@@ -244,20 +244,20 @@ var CheckPodFSGroup = core.Check{
 	Scanner: "pods.FSGroup",
 }
 
-func PodFSGroup(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func PodFSGroup(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, p := range g.ByType(k8scol.PodType) {
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID: CheckPodFSGroup.ID, Severity: CheckPodFSGroup.Severity,
 			Resource: p.Ref(), Tags: CheckPodFSGroup.Tags,
 		}
 		sec, _ := p.Attributes["pod_security"].(map[string]any)
 		_, set := sec["fs_group"]
 		if !set {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("pod %q: securityContext.fsGroup unset", podDesc(p))
 		} else {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("pod %q: fsGroup=%v", podDesc(p), sec["fs_group"])
 		}
 		findings = append(findings, f)
@@ -267,10 +267,10 @@ func PodFSGroup(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error
 
 // ----- 6. pod-level runAsGroup set ----------------------------------
 
-var CheckPodRunAsGroup = core.Check{
+var CheckPodRunAsGroup = compliancekit.Check{
 	ID:           "k8s-pod-run-as-group-set",
 	Title:        "Pods should set securityContext.runAsGroup",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "kubernetes",
 	Service:      "pod-security",
 	ResourceType: k8scol.PodType,
@@ -288,27 +288,27 @@ var CheckPodRunAsGroup = core.Check{
 	Scanner: "pods.RunAsGroup",
 }
 
-func PodRunAsGroup(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func PodRunAsGroup(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, p := range g.ByType(k8scol.PodType) {
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID: CheckPodRunAsGroup.ID, Severity: CheckPodRunAsGroup.Severity,
 			Resource: p.Ref(), Tags: CheckPodRunAsGroup.Tags,
 		}
 		sec, _ := p.Attributes["pod_security"].(map[string]any)
 		raw, set := sec["run_as_group"]
 		if !set {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("pod %q: runAsGroup unset (image GID inherited)", podDesc(p))
 			findings = append(findings, f)
 			continue
 		}
 		gid, _ := raw.(int64)
 		if gid == 0 {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("pod %q: runAsGroup=0 (root group)", podDesc(p))
 		} else {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("pod %q: runAsGroup=%d", podDesc(p), gid)
 		}
 		findings = append(findings, f)
@@ -318,10 +318,10 @@ func PodRunAsGroup(_ context.Context, g *core.ResourceGraph) ([]core.Finding, er
 
 // ----- 7. AppArmor profile set + not unconfined ---------------------
 
-var CheckPodAppArmorProfile = core.Check{
+var CheckPodAppArmorProfile = compliancekit.Check{
 	ID:           "k8s-pod-apparmor-profile-set",
 	Title:        "Pods should set an AppArmor profile (not Unconfined)",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "kubernetes",
 	Service:      "pod-security",
 	ResourceType: k8scol.PodType,
@@ -344,17 +344,17 @@ var CheckPodAppArmorProfile = core.Check{
 	Scanner: "pods.AppArmorProfile",
 }
 
-func PodAppArmorProfile(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func PodAppArmorProfile(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, p := range g.ByType(k8scol.PodType) {
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID: CheckPodAppArmorProfile.ID, Severity: CheckPodAppArmorProfile.Severity,
 			Resource: p.Ref(), Tags: CheckPodAppArmorProfile.Tags,
 		}
 		profiles, _ := p.Attributes["apparmor_profile"].([]string)
 		switch {
 		case len(profiles) == 0:
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("pod %q: no AppArmor profile annotations set", podDesc(p))
 		default:
 			unconfined := []string{}
@@ -364,10 +364,10 @@ func PodAppArmorProfile(_ context.Context, g *core.ResourceGraph) ([]core.Findin
 				}
 			}
 			if len(unconfined) > 0 {
-				f.Status = core.StatusFail
+				f.Status = compliancekit.StatusFail
 				f.Message = fmt.Sprintf("pod %q: AppArmor unconfined on: %s", podDesc(p), strings.Join(unconfined, ", "))
 			} else {
-				f.Status = core.StatusPass
+				f.Status = compliancekit.StatusPass
 				f.Message = fmt.Sprintf("pod %q: AppArmor profiles set: %s", podDesc(p), strings.Join(profiles, ", "))
 			}
 		}
@@ -378,10 +378,10 @@ func PodAppArmorProfile(_ context.Context, g *core.ResourceGraph) ([]core.Findin
 
 // ----- 8. seccompProfile != Unconfined (strict) --------------------
 
-var CheckPodSeccompNotUnconfined = core.Check{
+var CheckPodSeccompNotUnconfined = compliancekit.Check{
 	ID:           "k8s-pod-seccomp-not-unconfined",
 	Title:        "Pods should not set seccompProfile.type=Unconfined",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "kubernetes",
 	Service:      "pod-security",
 	ResourceType: k8scol.PodType,
@@ -402,8 +402,8 @@ var CheckPodSeccompNotUnconfined = core.Check{
 	Scanner: "pods.SeccompNotUnconfined",
 }
 
-func PodSeccompNotUnconfined(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func PodSeccompNotUnconfined(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, p := range g.ByType(k8scol.PodType) {
 		bad := violatingContainers(p, func(c map[string]any) bool {
 			t, _ := c["seccomp_type"].(string)
@@ -421,10 +421,10 @@ func PodSeccompNotUnconfined(_ context.Context, g *core.ResourceGraph) ([]core.F
 
 // ----- 9. runtimeClassName explicit (manual-verify) ----------------
 
-var CheckPodRuntimeClass = core.Check{
+var CheckPodRuntimeClass = compliancekit.Check{
 	ID:           "k8s-pod-runtime-class-explicit",
 	Title:        "Untrusted workloads should set runtimeClassName (gVisor / Kata)",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "kubernetes",
 	Service:      "pod-security",
 	ResourceType: k8scol.PodType,
@@ -446,19 +446,19 @@ var CheckPodRuntimeClass = core.Check{
 	Scanner: "pods.RuntimeClass",
 }
 
-func PodRuntimeClass(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func PodRuntimeClass(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, p := range g.ByType(k8scol.PodType) {
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID: CheckPodRuntimeClass.ID, Severity: CheckPodRuntimeClass.Severity,
 			Resource: p.Ref(), Tags: CheckPodRuntimeClass.Tags,
 		}
 		rc, _ := p.Attributes["runtime_class_name"].(string)
 		if rc == "" {
-			f.Status = core.StatusError
+			f.Status = compliancekit.StatusError
 			f.Message = fmt.Sprintf("pod %q: runtimeClassName unset — verify whether this workload tier requires sandbox runtime", podDesc(p))
 		} else {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("pod %q: runtimeClassName=%q", podDesc(p), rc)
 		}
 		findings = append(findings, f)
@@ -468,10 +468,10 @@ func PodRuntimeClass(_ context.Context, g *core.ResourceGraph) ([]core.Finding, 
 
 // ----- 10. volume subPath usage (symlink-attack surface) -----------
 
-var CheckPodVolumeSubpath = core.Check{
+var CheckPodVolumeSubpath = compliancekit.Check{
 	ID:           "k8s-pod-volume-subpath-restricted",
 	Title:        "Pods using volume subPath should be audited (CVE-2017-1002101 family)",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "kubernetes",
 	Service:      "pod-security",
 	ResourceType: k8scol.PodType,
@@ -493,19 +493,19 @@ var CheckPodVolumeSubpath = core.Check{
 	Scanner: "pods.VolumeSubpath",
 }
 
-func PodVolumeSubpath(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func PodVolumeSubpath(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, p := range g.ByType(k8scol.PodType) {
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID: CheckPodVolumeSubpath.ID, Severity: CheckPodVolumeSubpath.Severity,
 			Resource: p.Ref(), Tags: CheckPodVolumeSubpath.Tags,
 		}
 		mounts, _ := p.Attributes["volume_subpath_mounts"].([]string)
 		if len(mounts) == 0 {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("pod %q: no subPath volume mounts", podDesc(p))
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("pod %q: subPath mounts in use (audit required): %s", podDesc(p), strings.Join(mounts, ", "))
 		}
 		findings = append(findings, f)
@@ -515,10 +515,10 @@ func PodVolumeSubpath(_ context.Context, g *core.ResourceGraph) ([]core.Finding,
 
 // ----- 11. default service account use ----------------------------
 
-var CheckPodDefaultSA = core.Check{
+var CheckPodDefaultSA = compliancekit.Check{
 	ID:           "k8s-pod-default-service-account",
 	Title:        "Pods should not use the 'default' ServiceAccount",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "kubernetes",
 	Service:      "pod-security",
 	ResourceType: k8scol.PodType,
@@ -538,10 +538,10 @@ var CheckPodDefaultSA = core.Check{
 	Scanner: "pods.DefaultServiceAccount",
 }
 
-func PodDefaultServiceAccount(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func PodDefaultServiceAccount(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, p := range g.ByType(k8scol.PodType) {
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID: CheckPodDefaultSA.ID, Severity: CheckPodDefaultSA.Severity,
 			Resource: p.Ref(), Tags: CheckPodDefaultSA.Tags,
 		}
@@ -549,13 +549,13 @@ func PodDefaultServiceAccount(_ context.Context, g *core.ResourceGraph) ([]core.
 		ns, _ := p.Attributes["namespace"].(string)
 		switch {
 		case ns == "kube-system":
-			f.Status = core.StatusSkip
+			f.Status = compliancekit.StatusSkip
 			f.Message = fmt.Sprintf("pod %q: kube-system pods use cluster-managed SAs", podDesc(p))
 		case sa == "" || sa == "default":
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("pod %q: uses the namespace default ServiceAccount", podDesc(p))
 		default:
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("pod %q: serviceAccountName=%q", podDesc(p), sa)
 		}
 		findings = append(findings, f)
@@ -566,16 +566,16 @@ func PodDefaultServiceAccount(_ context.Context, g *core.ResourceGraph) ([]core.
 // ----- 12. supplementalGroups configured ---------------------------
 
 func init() {
-	core.Register(CheckPodShareProcessNamespace, PodShareProcessNamespace)
-	core.Register(CheckPodDNSPolicy, PodDNSPolicy)
-	core.Register(CheckPodPriorityClass, PodPriorityClass)
-	core.Register(CheckPodHostUsers, PodHostUsers)
-	core.Register(CheckPodFSGroup, PodFSGroup)
-	core.Register(CheckPodRunAsGroup, PodRunAsGroup)
-	core.Register(CheckPodAppArmorProfile, PodAppArmorProfile)
-	core.Register(CheckPodSeccompNotUnconfined, PodSeccompNotUnconfined)
-	core.Register(CheckPodRuntimeClass, PodRuntimeClass)
-	core.Register(CheckPodVolumeSubpath, PodVolumeSubpath)
-	core.Register(CheckPodDefaultSA, PodDefaultServiceAccount)
+	compliancekit.Register(CheckPodShareProcessNamespace, PodShareProcessNamespace)
+	compliancekit.Register(CheckPodDNSPolicy, PodDNSPolicy)
+	compliancekit.Register(CheckPodPriorityClass, PodPriorityClass)
+	compliancekit.Register(CheckPodHostUsers, PodHostUsers)
+	compliancekit.Register(CheckPodFSGroup, PodFSGroup)
+	compliancekit.Register(CheckPodRunAsGroup, PodRunAsGroup)
+	compliancekit.Register(CheckPodAppArmorProfile, PodAppArmorProfile)
+	compliancekit.Register(CheckPodSeccompNotUnconfined, PodSeccompNotUnconfined)
+	compliancekit.Register(CheckPodRuntimeClass, PodRuntimeClass)
+	compliancekit.Register(CheckPodVolumeSubpath, PodVolumeSubpath)
+	compliancekit.Register(CheckPodDefaultSA, PodDefaultServiceAccount)
 	// v0.22 phase 4 — supplementalGroups check moved to pods_groups.go.
 }

@@ -6,7 +6,7 @@ import (
 
 	"github.com/digitalocean/godo"
 
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 const (
@@ -18,8 +18,8 @@ const (
 	SnapshotType = "digitalocean.snapshot"
 )
 
-func (c *Collector) collectVolumes(ctx context.Context) ([]core.Resource, error) {
-	out := []core.Resource{}
+func (c *Collector) collectVolumes(ctx context.Context) ([]compliancekit.Resource, error) {
+	out := []compliancekit.Resource{}
 	opt := &godo.ListVolumeParams{ListOptions: &godo.ListOptions{PerPage: pageSize}}
 	for {
 		if err := ctx.Err(); err != nil {
@@ -44,13 +44,13 @@ func (c *Collector) collectVolumes(ctx context.Context) ([]core.Resource, error)
 	return out, nil
 }
 
-func (c *Collector) volumeResource(v godo.Volume) core.Resource {
+func (c *Collector) volumeResource(v godo.Volume) compliancekit.Resource {
 	region := ""
 	if v.Region != nil {
 		region = v.Region.Slug
 	}
 	dropletIDs := append([]int(nil), v.DropletIDs...)
-	r := core.Resource{
+	r := compliancekit.Resource{
 		ID:       fmt.Sprintf("%s.%s", VolumeType, v.ID),
 		Type:     VolumeType,
 		Name:     v.Name,
@@ -68,8 +68,8 @@ func (c *Collector) volumeResource(v godo.Volume) core.Resource {
 	return r
 }
 
-func (c *Collector) collectSnapshots(ctx context.Context) ([]core.Resource, error) {
-	out := []core.Resource{}
+func (c *Collector) collectSnapshots(ctx context.Context) ([]compliancekit.Resource, error) {
+	out := []compliancekit.Resource{}
 	opt := &godo.ListOptions{PerPage: pageSize}
 	for {
 		if err := ctx.Err(); err != nil {
@@ -94,13 +94,13 @@ func (c *Collector) collectSnapshots(ctx context.Context) ([]core.Resource, erro
 	return out, nil
 }
 
-func (c *Collector) snapshotResource(s godo.Snapshot) core.Resource {
+func (c *Collector) snapshotResource(s godo.Snapshot) compliancekit.Resource {
 	regions := append([]string(nil), s.Regions...)
 	primaryRegion := ""
 	if len(regions) > 0 {
 		primaryRegion = regions[0]
 	}
-	r := core.Resource{
+	r := compliancekit.Resource{
 		ID:       fmt.Sprintf("%s.%s", SnapshotType, s.ID),
 		Type:     SnapshotType,
 		Name:     s.Name,

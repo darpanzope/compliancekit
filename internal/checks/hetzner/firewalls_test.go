@@ -5,11 +5,11 @@ import (
 	"testing"
 
 	hetznercol "github.com/darpanzope/compliancekit/internal/collectors/hetzner"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
-func mkFirewall(name string, attrs map[string]any) core.Resource {
-	return core.Resource{
+func mkFirewall(name string, attrs map[string]any) compliancekit.Resource {
+	return compliancekit.Resource{
 		ID:         "hetzner.firewall." + name,
 		Type:       hetznercol.FirewallType,
 		Name:       name,
@@ -22,18 +22,18 @@ func TestFirewallSSHFromAny(t *testing.T) {
 	cases := []struct {
 		name  string
 		rules []map[string]any
-		want  core.Status
+		want  compliancekit.Status
 	}{
 		{"ssh-from-any-ipv4", []map[string]any{
 			{"direction": "in", "protocol": "tcp", "port": "22", "source_ips": []string{"0.0.0.0/0"}},
-		}, core.StatusFail},
+		}, compliancekit.StatusFail},
 		{"ssh-from-any-ipv6", []map[string]any{
 			{"direction": "in", "protocol": "tcp", "port": "22", "source_ips": []string{"::/0"}},
-		}, core.StatusFail},
+		}, compliancekit.StatusFail},
 		{"ssh-from-bastion", []map[string]any{
 			{"direction": "in", "protocol": "tcp", "port": "22", "source_ips": []string{"203.0.113.0/24"}},
-		}, core.StatusPass},
-		{"no-ssh-rule", []map[string]any{}, core.StatusPass},
+		}, compliancekit.StatusPass},
+		{"no-ssh-rule", []map[string]any{}, compliancekit.StatusPass},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -50,20 +50,20 @@ func TestFirewallAnyFromAny(t *testing.T) {
 	cases := []struct {
 		name  string
 		rules []map[string]any
-		want  core.Status
+		want  compliancekit.Status
 	}{
 		{"any-port-from-any-no-port", []map[string]any{
 			{"direction": "in", "protocol": "tcp", "port": "", "source_ips": []string{"0.0.0.0/0"}},
-		}, core.StatusFail},
+		}, compliancekit.StatusFail},
 		{"any-port-from-any-full-range", []map[string]any{
 			{"direction": "in", "protocol": "tcp", "port": "1-65535", "source_ips": []string{"0.0.0.0/0"}},
-		}, core.StatusFail},
+		}, compliancekit.StatusFail},
 		{"any-port-from-private", []map[string]any{
 			{"direction": "in", "protocol": "tcp", "port": "", "source_ips": []string{"10.0.0.0/8"}},
-		}, core.StatusPass},
+		}, compliancekit.StatusPass},
 		{"narrow-from-public", []map[string]any{
 			{"direction": "in", "protocol": "tcp", "port": "443", "source_ips": []string{"0.0.0.0/0"}},
-		}, core.StatusPass},
+		}, compliancekit.StatusPass},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -83,9 +83,9 @@ func TestFirewallOrphan(t *testing.T) {
 	)
 	findings, _ := FirewallOrphan(context.Background(), g)
 	for _, f := range findings {
-		want := core.StatusPass
+		want := compliancekit.StatusPass
 		if f.Resource.Name == "orphan" {
-			want = core.StatusFail
+			want = compliancekit.StatusFail
 		}
 		if f.Status != want {
 			t.Errorf("%s: got %v", f.Resource.Name, f.Status)

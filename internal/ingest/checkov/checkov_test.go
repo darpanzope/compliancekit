@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/ingest"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 func mustOpen(t *testing.T, name string) *os.File {
@@ -39,7 +39,7 @@ func TestIngest_Terraform(t *testing.T) {
 		t.Fatalf("Findings = %d, want 3 (2 failed + 1 skipped)", len(r.Findings))
 	}
 
-	var failHigh, failMedium, skipped *core.Finding
+	var failHigh, failMedium, skipped *compliancekit.Finding
 	for i := range r.Findings {
 		switch r.Findings[i].CheckID {
 		case "ingest.checkov.CKV_AWS_24":
@@ -50,13 +50,13 @@ func TestIngest_Terraform(t *testing.T) {
 			skipped = &r.Findings[i]
 		}
 	}
-	if failHigh == nil || failHigh.Status != core.StatusFail || failHigh.Severity != core.SeverityHigh {
+	if failHigh == nil || failHigh.Status != compliancekit.StatusFail || failHigh.Severity != compliancekit.SeverityHigh {
 		t.Errorf("CKV_AWS_24 finding = %+v", failHigh)
 	}
-	if failMedium == nil || failMedium.Severity != core.SeverityMedium {
+	if failMedium == nil || failMedium.Severity != compliancekit.SeverityMedium {
 		t.Errorf("CKV_AWS_19 finding = %+v", failMedium)
 	}
-	if skipped == nil || skipped.Status != core.StatusSkip {
+	if skipped == nil || skipped.Status != compliancekit.StatusSkip {
 		t.Errorf("CKV_AWS_21 skipped finding = %+v", skipped)
 	}
 
@@ -73,14 +73,14 @@ func TestIngest_Terraform(t *testing.T) {
 func TestSeverityFromCheckov(t *testing.T) {
 	cases := []struct {
 		in   string
-		want core.Severity
+		want compliancekit.Severity
 	}{
-		{"CRITICAL", core.SeverityCritical},
-		{"HIGH", core.SeverityHigh},
-		{"medium", core.SeverityMedium},
-		{"LOW", core.SeverityLow},
-		{"INFO", core.SeverityInfo},
-		{"", core.SeverityMedium}, // blank → medium fallback for failed checks
+		{"CRITICAL", compliancekit.SeverityCritical},
+		{"HIGH", compliancekit.SeverityHigh},
+		{"medium", compliancekit.SeverityMedium},
+		{"LOW", compliancekit.SeverityLow},
+		{"INFO", compliancekit.SeverityInfo},
+		{"", compliancekit.SeverityMedium}, // blank → medium fallback for failed checks
 	}
 	for _, c := range cases {
 		got := severityFromCheckov(c.in)

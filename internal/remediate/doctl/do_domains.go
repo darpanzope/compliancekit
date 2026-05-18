@@ -3,8 +3,8 @@ package doctl
 import (
 	"fmt"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.19 phase 3 — doctl strategies for the 10 DNS-depth checks.
@@ -35,14 +35,14 @@ func init() {
 		[]string{"do-domain-dnssec-via-registrar"}, renderDoctlDNSSECRegistrar)
 }
 
-func doctlDomain(f core.Finding) string {
+func doctlDomain(f compliancekit.Finding) string {
 	if f.Resource.Name != "" {
 		return f.Resource.Name
 	}
 	return "DOMAIN"
 }
 
-func renderDoctlDMARCPolicy(f core.Finding) (remediate.Snippet, error) {
+func renderDoctlDMARCPolicy(f compliancekit.Finding) (remediate.Snippet, error) {
 	d := doctlDomain(f)
 	body := fmt.Sprintf(`# DMARC: enforce + report. Phase rollout via pct=10 → 50 → 100.
 # If the _dmarc record already exists, find its ID first:
@@ -61,14 +61,20 @@ doctl compute domain records create %s \
 	}, nil
 }
 
-func renderDoctlDMARCSubdomain(f core.Finding) (remediate.Snippet, error) {
+func renderDoctlDMARCSubdomain(f compliancekit.Finding) (remediate.Snippet, error) {
 	return renderDoctlDMARCPolicy(f)
 }
-func renderDoctlDMARCPct(f core.Finding) (remediate.Snippet, error) { return renderDoctlDMARCPolicy(f) }
-func renderDoctlDMARCRUA(f core.Finding) (remediate.Snippet, error) { return renderDoctlDMARCPolicy(f) }
-func renderDoctlDMARCRUF(f core.Finding) (remediate.Snippet, error) { return renderDoctlDMARCPolicy(f) }
+func renderDoctlDMARCPct(f compliancekit.Finding) (remediate.Snippet, error) {
+	return renderDoctlDMARCPolicy(f)
+}
+func renderDoctlDMARCRUA(f compliancekit.Finding) (remediate.Snippet, error) {
+	return renderDoctlDMARCPolicy(f)
+}
+func renderDoctlDMARCRUF(f compliancekit.Finding) (remediate.Snippet, error) {
+	return renderDoctlDMARCPolicy(f)
+}
 
-func renderDoctlSPFStrict(f core.Finding) (remediate.Snippet, error) {
+func renderDoctlSPFStrict(f compliancekit.Finding) (remediate.Snippet, error) {
 	d := doctlDomain(f)
 	body := fmt.Sprintf(`# Tighten the SPF terminator to -all. Update the existing root TXT record.
 doctl compute domain records list %s --format ID,Type,Name,Data | grep 'spf1'
@@ -83,11 +89,11 @@ doctl compute domain records update %s --record-id RECORD_ID \
 	}, nil
 }
 
-func renderDoctlSPFNoRedirect(f core.Finding) (remediate.Snippet, error) {
+func renderDoctlSPFNoRedirect(f compliancekit.Finding) (remediate.Snippet, error) {
 	return renderDoctlSPFStrict(f)
 }
 
-func renderDoctlDKIMSelector(f core.Finding) (remediate.Snippet, error) {
+func renderDoctlDKIMSelector(f compliancekit.Finding) (remediate.Snippet, error) {
 	d := doctlDomain(f)
 	body := fmt.Sprintf(`# Publish a DKIM selector. Key generation example (opendkim-genkey):
 #   opendkim-genkey -s primary -d %s
@@ -105,7 +111,7 @@ doctl compute domain records create %s \
 	}, nil
 }
 
-func renderDoctlCAAIodef(f core.Finding) (remediate.Snippet, error) {
+func renderDoctlCAAIodef(f compliancekit.Finding) (remediate.Snippet, error) {
 	d := doctlDomain(f)
 	body := fmt.Sprintf(`doctl compute domain records create %s \
   --record-type CAA \
@@ -119,7 +125,7 @@ func renderDoctlCAAIodef(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderDoctlDNSSECRegistrar(_ core.Finding) (remediate.Snippet, error) {
+func renderDoctlDNSSECRegistrar(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return renderDoctlManualOnly(
 		"DNSSEC for DO-managed zones",
 		"https://dnssec-analyzer.verisignlabs.com",

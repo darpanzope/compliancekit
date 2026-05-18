@@ -1,7 +1,7 @@
 // Package digitalocean is the DigitalOcean Collector.
 //
 // It uses godo (the official DO SDK) to fetch resources via the v2 API
-// and emits typed core.Resource values into the engine's ResourceGraph.
+// and emits typed compliancekit.Resource values into the engine's ResourceGraph.
 // See ARCHITECTURE.md §8 for the prioritized check list and CHECKS.md
 // for how a check consumes the resources this collector produces.
 //
@@ -20,7 +20,7 @@ import (
 	"github.com/digitalocean/godo"
 
 	"github.com/darpanzope/compliancekit/internal/collectors/cloudcommon"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 const (
@@ -68,7 +68,7 @@ func NewWithClient(client *godo.Client) *Collector {
 func (c *Collector) Name() string { return providerName }
 
 // Collect fetches every supported resource type and emits a flat
-// slice of core.Resource values. The engine adds them to a
+// slice of compliancekit.Resource values. The engine adds them to a
 // ResourceGraph and runs registered checks against it.
 //
 // Order of operations:
@@ -81,26 +81,26 @@ func (c *Collector) Name() string { return providerName }
 //     continues to the next service.
 //  3. Cross-service edges (droplet -> firewall) are populated last.
 //
-// Sub-collectors return ([]core.Resource, error). When err != nil
+// Sub-collectors return ([]compliancekit.Resource, error). When err != nil
 // the helper still gets a chance to return any resources collected
 // before the failure; the orchestrator adds them AND a placeholder
 // so the check engine sees both.
-func (c *Collector) Collect(ctx context.Context) ([]core.Resource, error) {
+func (c *Collector) Collect(ctx context.Context) ([]compliancekit.Resource, error) {
 	account, accountResource, err := c.fetchAccount(ctx)
 	if err != nil {
 		return nil, err
 	}
 	c.accountID = stampAccountID(account)
-	out := []core.Resource{accountResource}
+	out := []compliancekit.Resource{accountResource}
 
 	type result struct {
 		service   string
-		resources []core.Resource
+		resources []compliancekit.Resource
 		err       error
 	}
 	type subCollector struct {
 		service string
-		run     func(context.Context) ([]core.Resource, error)
+		run     func(context.Context) ([]compliancekit.Resource, error)
 	}
 	subs := []subCollector{
 		{"droplets", c.collectDroplets},
@@ -157,8 +157,8 @@ func (c *Collector) Collect(ctx context.Context) ([]core.Resource, error) {
 // collectError emits a placeholder when a per-service collector
 // fails outright. Lets the scan continue with findings from other
 // services while still surfacing the failure to the operator.
-func (c *Collector) collectError(service string, err error) core.Resource {
-	r := core.Resource{
+func (c *Collector) collectError(service string, err error) compliancekit.Resource {
+	r := compliancekit.Resource{
 		ID:       fmt.Sprintf("%s.%s", CollectErrorType, service),
 		Type:     CollectErrorType,
 		Name:     service,
@@ -173,10 +173,10 @@ func (c *Collector) collectError(service string, err error) core.Resource {
 }
 
 // stamp is the per-resource helper every service collector should
-// use after building a core.Resource so account_id is always set.
+// use after building a compliancekit.Resource so account_id is always set.
 // Region is passed by the caller because it varies per resource
 // (droplets are regional, account is global, etc.).
-func (c *Collector) stamp(r *core.Resource, region string) {
+func (c *Collector) stamp(r *compliancekit.Resource, region string) {
 	cloudcommon.Stamp(r, cloudcommon.ResourceCoord{
 		AccountID: c.accountID,
 		Region:    region,

@@ -6,12 +6,12 @@ import (
 	"time"
 
 	awscol "github.com/darpanzope/compliancekit/internal/collectors/aws"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
-func newAccountGraph(attrs map[string]any) *core.ResourceGraph {
-	g := core.NewResourceGraph()
-	g.Add(core.Resource{
+func newAccountGraph(attrs map[string]any) *compliancekit.ResourceGraph {
+	g := compliancekit.NewResourceGraph()
+	g.Add(compliancekit.Resource{
 		ID:         "aws.account.123456789012",
 		Type:       awscol.AccountType,
 		Name:       "123456789012",
@@ -21,9 +21,9 @@ func newAccountGraph(attrs map[string]any) *core.ResourceGraph {
 	return g
 }
 
-func newUserGraph(attrs map[string]any) *core.ResourceGraph {
-	g := core.NewResourceGraph()
-	g.Add(core.Resource{
+func newUserGraph(attrs map[string]any) *compliancekit.ResourceGraph {
+	g := compliancekit.NewResourceGraph()
+	g.Add(compliancekit.Resource{
 		ID:         "aws.iam.user.alice",
 		Type:       awscol.IAMUserType,
 		Name:       "alice",
@@ -41,7 +41,7 @@ func TestRootAccessKey_Fail(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(findings) != 1 || findings[0].Status != core.StatusFail {
+	if len(findings) != 1 || findings[0].Status != compliancekit.StatusFail {
 		t.Errorf("expected one Fail finding, got %+v", findings)
 	}
 }
@@ -49,7 +49,7 @@ func TestRootAccessKey_Fail(t *testing.T) {
 func TestRootAccessKey_Pass(t *testing.T) {
 	g := newAccountGraph(map[string]any{"root_has_access_keys": false})
 	findings, _ := RootAccessKey(context.Background(), g)
-	if len(findings) != 1 || findings[0].Status != core.StatusPass {
+	if len(findings) != 1 || findings[0].Status != compliancekit.StatusPass {
 		t.Errorf("expected Pass, got %+v", findings)
 	}
 }
@@ -60,10 +60,10 @@ func TestRootMFA(t *testing.T) {
 	cases := []struct {
 		name  string
 		enabl bool
-		want  core.Status
+		want  compliancekit.Status
 	}{
-		{"enabled", true, core.StatusPass},
-		{"disabled", false, core.StatusFail},
+		{"enabled", true, compliancekit.StatusPass},
+		{"disabled", false, compliancekit.StatusFail},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -81,7 +81,7 @@ func TestRootMFA(t *testing.T) {
 func TestPasswordPolicy_None(t *testing.T) {
 	g := newAccountGraph(map[string]any{"password_policy": nil})
 	findings, _ := PasswordPolicy(context.Background(), g)
-	if findings[0].Status != core.StatusFail {
+	if findings[0].Status != compliancekit.StatusFail {
 		t.Errorf("expected fail with no policy, got %v", findings[0].Status)
 	}
 }
@@ -100,7 +100,7 @@ func TestPasswordPolicy_CompliantMeetsAll(t *testing.T) {
 		},
 	})
 	findings, _ := PasswordPolicy(context.Background(), g)
-	if findings[0].Status != core.StatusPass {
+	if findings[0].Status != compliancekit.StatusPass {
 		t.Errorf("expected Pass, got %v: %s", findings[0].Status, findings[0].Message)
 	}
 }
@@ -119,7 +119,7 @@ func TestPasswordPolicy_WeakLength(t *testing.T) {
 		},
 	})
 	findings, _ := PasswordPolicy(context.Background(), g)
-	if findings[0].Status != core.StatusFail {
+	if findings[0].Status != compliancekit.StatusFail {
 		t.Errorf("expected fail on weak length, got %v", findings[0].Status)
 	}
 }
@@ -134,7 +134,7 @@ func TestAccessKeyAge_Old(t *testing.T) {
 		},
 	})
 	findings, _ := AccessKeyAge(context.Background(), g)
-	if findings[0].Status != core.StatusFail {
+	if findings[0].Status != compliancekit.StatusFail {
 		t.Errorf("expected fail on old key, got %v: %s", findings[0].Status, findings[0].Message)
 	}
 }
@@ -147,7 +147,7 @@ func TestAccessKeyAge_Fresh(t *testing.T) {
 		},
 	})
 	findings, _ := AccessKeyAge(context.Background(), g)
-	if findings[0].Status != core.StatusPass {
+	if findings[0].Status != compliancekit.StatusPass {
 		t.Errorf("expected pass on fresh key, got %v", findings[0].Status)
 	}
 }
@@ -160,7 +160,7 @@ func TestAccessKeyAge_InactiveIgnored(t *testing.T) {
 		},
 	})
 	findings, _ := AccessKeyAge(context.Background(), g)
-	if findings[0].Status != core.StatusPass {
+	if findings[0].Status != compliancekit.StatusPass {
 		t.Errorf("inactive keys should be ignored, got %v", findings[0].Status)
 	}
 }
@@ -174,7 +174,7 @@ func TestUnusedUsers_RecentlyActive(t *testing.T) {
 		"access_keys":        []map[string]any{},
 	})
 	findings, _ := UnusedUsers(context.Background(), g)
-	if findings[0].Status != core.StatusPass {
+	if findings[0].Status != compliancekit.StatusPass {
 		t.Errorf("expected pass for recently active, got %v", findings[0].Status)
 	}
 }
@@ -186,7 +186,7 @@ func TestUnusedUsers_LongIdle(t *testing.T) {
 		"access_keys":        []map[string]any{},
 	})
 	findings, _ := UnusedUsers(context.Background(), g)
-	if findings[0].Status != core.StatusFail {
+	if findings[0].Status != compliancekit.StatusFail {
 		t.Errorf("expected fail for long idle, got %v: %s", findings[0].Status, findings[0].Message)
 	}
 }
@@ -197,7 +197,7 @@ func TestUnusedUsers_NeverUsedWithinOnboarding(t *testing.T) {
 		"access_keys": []map[string]any{},
 	})
 	findings, _ := UnusedUsers(context.Background(), g)
-	if findings[0].Status != core.StatusPass {
+	if findings[0].Status != compliancekit.StatusPass {
 		t.Errorf("expected pass for new user in onboarding, got %v", findings[0].Status)
 	}
 }
@@ -208,7 +208,7 @@ func TestNoUserManagedPolicies(t *testing.T) {
 	t.Run("none attached", func(t *testing.T) {
 		g := newUserGraph(map[string]any{"attached_managed_policies": []string{}})
 		findings, _ := NoUserManagedPolicies(context.Background(), g)
-		if findings[0].Status != core.StatusPass {
+		if findings[0].Status != compliancekit.StatusPass {
 			t.Errorf("got %v", findings[0].Status)
 		}
 	})
@@ -217,7 +217,7 @@ func TestNoUserManagedPolicies(t *testing.T) {
 			"attached_managed_policies": []string{"arn:aws:iam::aws:policy/AdministratorAccess"},
 		})
 		findings, _ := NoUserManagedPolicies(context.Background(), g)
-		if findings[0].Status != core.StatusFail {
+		if findings[0].Status != compliancekit.StatusFail {
 			t.Errorf("got %v: %s", findings[0].Status, findings[0].Message)
 		}
 	})
@@ -230,11 +230,11 @@ func TestConsoleUserMFA(t *testing.T) {
 		name    string
 		console bool
 		mfa     bool
-		want    core.Status
+		want    compliancekit.Status
 	}{
-		{"no console", false, false, core.StatusPass},
-		{"console+mfa", true, true, core.StatusPass},
-		{"console no mfa", true, false, core.StatusFail},
+		{"no console", false, false, compliancekit.StatusPass},
+		{"console+mfa", true, true, compliancekit.StatusPass},
+		{"console no mfa", true, false, compliancekit.StatusFail},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -256,7 +256,7 @@ func TestNoStarInlinePolicies(t *testing.T) {
 	t.Run("no inline", func(t *testing.T) {
 		g := newUserGraph(map[string]any{"inline_policies": []map[string]any{}})
 		findings, _ := NoStarInlinePolicies(context.Background(), g)
-		if findings[0].Status != core.StatusPass {
+		if findings[0].Status != compliancekit.StatusPass {
 			t.Errorf("got %v", findings[0].Status)
 		}
 	})
@@ -267,7 +267,7 @@ func TestNoStarInlinePolicies(t *testing.T) {
 			"inline_policies": []map[string]any{{"name": "scoped", "document": scoped}},
 		})
 		findings, _ := NoStarInlinePolicies(context.Background(), g)
-		if findings[0].Status != core.StatusPass {
+		if findings[0].Status != compliancekit.StatusPass {
 			t.Errorf("expected pass on scoped policy, got %v: %s", findings[0].Status, findings[0].Message)
 		}
 	})
@@ -278,7 +278,7 @@ func TestNoStarInlinePolicies(t *testing.T) {
 			"inline_policies": []map[string]any{{"name": "bad", "document": bad}},
 		})
 		findings, _ := NoStarInlinePolicies(context.Background(), g)
-		if findings[0].Status != core.StatusFail {
+		if findings[0].Status != compliancekit.StatusFail {
 			t.Errorf("expected fail on *:* policy, got %v", findings[0].Status)
 		}
 	})
@@ -289,7 +289,7 @@ func TestNoStarInlinePolicies(t *testing.T) {
 			"inline_policies": []map[string]any{{"name": "bad", "document": bad}},
 		})
 		findings, _ := NoStarInlinePolicies(context.Background(), g)
-		if findings[0].Status != core.StatusFail {
+		if findings[0].Status != compliancekit.StatusFail {
 			t.Errorf("expected fail on array-form *:*, got %v", findings[0].Status)
 		}
 	})
@@ -301,7 +301,7 @@ func TestNoStarInlinePolicies(t *testing.T) {
 			"inline_policies": []map[string]any{{"name": "deny-all", "document": deny}},
 		})
 		findings, _ := NoStarInlinePolicies(context.Background(), g)
-		if findings[0].Status != core.StatusPass {
+		if findings[0].Status != compliancekit.StatusPass {
 			t.Errorf("Deny-*:* should pass, got %v: %s", findings[0].Status, findings[0].Message)
 		}
 	})

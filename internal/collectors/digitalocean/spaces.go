@@ -11,7 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	s3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
 
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // SpacesBucketType is the resource type for DO Spaces buckets
@@ -38,7 +38,7 @@ func spacesEndpoint(region string) string {
 // env vars are unset -- Spaces auth is independent from the
 // main DO API token, and not every operator who uses DO uses
 // Spaces.
-func (c *Collector) collectSpaces(ctx context.Context) ([]core.Resource, error) {
+func (c *Collector) collectSpaces(ctx context.Context) ([]compliancekit.Resource, error) {
 	key := os.Getenv("SPACES_KEY")
 	secret := os.Getenv("SPACES_SECRET")
 	if key == "" || secret == "" {
@@ -60,7 +60,7 @@ func (c *Collector) collectSpaces(ctx context.Context) ([]core.Resource, error) 
 		return nil, fmt.Errorf("spaces list buckets: %w", err)
 	}
 
-	out := []core.Resource{}
+	out := []compliancekit.Resource{}
 	for _, b := range buckets.Buckets {
 		name := aws.ToString(b.Name)
 		region, regErr := bucketRegion(ctx, client, name)
@@ -101,7 +101,7 @@ func bucketRegion(ctx context.Context, client *s3.Client, bucket string) (string
 // encryption, etc.) are independent; any failure is captured as
 // a collect_error_<field> attribute rather than aborting the
 // whole bucket. Check code reads pass/fail off the booleans.
-func (c *Collector) spacesBucketResource(ctx context.Context, client *s3.Client, bucket, region string, created any) core.Resource {
+func (c *Collector) spacesBucketResource(ctx context.Context, client *s3.Client, bucket, region string, created any) compliancekit.Resource {
 	attrs := map[string]any{
 		"bucket_name": bucket,
 		"region":      region,
@@ -160,7 +160,7 @@ func (c *Collector) spacesBucketResource(ctx context.Context, client *s3.Client,
 	// without an explicit deny posture.
 	collectSpacesPolicy(ctx, client, bucket, attrs)
 
-	r := core.Resource{
+	r := compliancekit.Resource{
 		ID:         fmt.Sprintf("%s.%s.%s", SpacesBucketType, region, bucket),
 		Type:       SpacesBucketType,
 		Name:       bucket,

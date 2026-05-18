@@ -3,7 +3,7 @@ package ingest
 import (
 	"time"
 
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // Options carries per-call configuration into an Ingester.Ingest call.
@@ -29,11 +29,11 @@ type Options struct {
 	// one we already know about, and (2) check before creating a
 	// phantom resource so we don't duplicate. Nil means the adapter
 	// freely creates phantoms for every distinct subject.
-	Graph *core.ResourceGraph
+	Graph *compliancekit.ResourceGraph
 
 	// DefaultSeverity is used when the external tool's severity
-	// can't be parsed or is absent. Default core.SeverityMedium.
-	DefaultSeverity core.Severity
+	// can't be parsed or is absent. Default compliancekit.SeverityMedium.
+	DefaultSeverity compliancekit.Severity
 
 	// FailOnUnmapped, when true, causes Ingest to error if any
 	// finding has no mapping in MappingTable. Default false: an
@@ -78,8 +78,8 @@ type Provenance struct {
 // non-fatal parse advisories (unrecognized rule IDs, missing
 // severities mapped to default, etc.).
 type Result struct {
-	Findings  []core.Finding
-	Resources []core.Resource
+	Findings  []compliancekit.Finding
+	Resources []compliancekit.Resource
 	Warnings  []string
 }
 

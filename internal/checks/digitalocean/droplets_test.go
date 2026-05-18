@@ -6,20 +6,20 @@ import (
 	"time"
 
 	docol "github.com/darpanzope/compliancekit/internal/collectors/digitalocean"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
-func newDropletGraph(t *testing.T, droplets ...core.Resource) *core.ResourceGraph {
+func newDropletGraph(t *testing.T, droplets ...compliancekit.Resource) *compliancekit.ResourceGraph {
 	t.Helper()
-	g := core.NewResourceGraph()
+	g := compliancekit.NewResourceGraph()
 	for _, d := range droplets {
 		g.Add(d)
 	}
 	return g
 }
 
-func droplet(id, name string, features []string, tags []string, imageCreatedAt string) core.Resource {
-	return core.Resource{
+func droplet(id, name string, features []string, tags []string, imageCreatedAt string) compliancekit.Resource {
+	return compliancekit.Resource{
 		ID:       "digitalocean.droplet." + id,
 		Type:     docol.DropletType,
 		Name:     name,
@@ -47,20 +47,20 @@ func TestBackupsDisabled(t *testing.T) {
 		t.Fatalf("len(findings) = %d, want %d", got, want)
 	}
 
-	statusByResource := map[string]core.Status{}
+	statusByResource := map[string]compliancekit.Status{}
 	for _, f := range findings {
 		statusByResource[f.Resource.ID] = f.Status
-		if f.Severity != core.SeverityMedium {
+		if f.Severity != compliancekit.SeverityMedium {
 			t.Errorf("%s: severity = %s, want medium", f.Resource.ID, f.Severity)
 		}
 	}
-	if got := statusByResource["digitalocean.droplet.1"]; got != core.StatusPass {
+	if got := statusByResource["digitalocean.droplet.1"]; got != compliancekit.StatusPass {
 		t.Errorf("web-01 status = %s, want pass", got)
 	}
-	if got := statusByResource["digitalocean.droplet.2"]; got != core.StatusFail {
+	if got := statusByResource["digitalocean.droplet.2"]; got != compliancekit.StatusFail {
 		t.Errorf("db-01 status = %s, want fail", got)
 	}
-	if got := statusByResource["digitalocean.droplet.3"]; got != core.StatusFail {
+	if got := statusByResource["digitalocean.droplet.3"]; got != compliancekit.StatusFail {
 		t.Errorf("cache-01 status = %s, want fail (no 'backups' in features)", got)
 	}
 }
@@ -82,11 +82,11 @@ func TestNoTags(t *testing.T) {
 	for _, f := range findings {
 		switch f.Resource.ID {
 		case "digitalocean.droplet.1":
-			if f.Status != core.StatusPass {
+			if f.Status != compliancekit.StatusPass {
 				t.Errorf("web-01: %s, want pass", f.Status)
 			}
 		case "digitalocean.droplet.2":
-			if f.Status != core.StatusFail {
+			if f.Status != compliancekit.StatusFail {
 				t.Errorf("orphan: %s, want fail", f.Status)
 			}
 		}
@@ -113,20 +113,20 @@ func TestOldImage(t *testing.T) {
 		t.Fatalf("len(findings) = %d, want 4", len(findings))
 	}
 
-	byID := map[string]core.Status{}
+	byID := map[string]compliancekit.Status{}
 	for _, f := range findings {
 		byID[f.Resource.ID] = f.Status
 	}
-	if got := byID["digitalocean.droplet.1"]; got != core.StatusPass {
+	if got := byID["digitalocean.droplet.1"]; got != compliancekit.StatusPass {
 		t.Errorf("fresh: %s, want pass", got)
 	}
-	if got := byID["digitalocean.droplet.2"]; got != core.StatusFail {
+	if got := byID["digitalocean.droplet.2"]; got != compliancekit.StatusFail {
 		t.Errorf("ancient: %s, want fail", got)
 	}
-	if got := byID["digitalocean.droplet.3"]; got != core.StatusSkip {
+	if got := byID["digitalocean.droplet.3"]; got != compliancekit.StatusSkip {
 		t.Errorf("unknown-time: %s, want skip", got)
 	}
-	if got := byID["digitalocean.droplet.4"]; got != core.StatusError {
+	if got := byID["digitalocean.droplet.4"]; got != compliancekit.StatusError {
 		t.Errorf("bad-time: %s, want error", got)
 	}
 }
@@ -139,7 +139,7 @@ func TestChecks_RegisterIntoDefaultRegistry(t *testing.T) {
 		CheckNoTags.ID,
 		CheckOldImage.ID,
 	} {
-		if _, ok := core.Lookup(id); !ok {
+		if _, ok := compliancekit.Lookup(id); !ok {
 			t.Errorf("check %q not registered in default registry", id)
 		}
 	}

@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	awscol "github.com/darpanzope/compliancekit/internal/collectors/aws"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // ========================================================================
@@ -16,10 +16,10 @@ import (
 // (or ::/0) ingress except on the explicit "public ports" 80, 443.
 // SG ingress from the world on anything else is the textbook AWS
 // breach vector. CIS AWS Foundations 5.2 / 5.3.
-var CheckEC2SGNoIngressFromAny = core.Check{
+var CheckEC2SGNoIngressFromAny = compliancekit.Check{
 	ID:           "aws-ec2-sg-no-ingress-from-any",
 	Title:        "EC2 security groups must not allow ingress from 0.0.0.0/0 except on 80/443",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "aws",
 	Service:      "ec2",
 	ResourceType: awscol.EC2SGType,
@@ -43,19 +43,19 @@ var CheckEC2SGNoIngressFromAny = core.Check{
 	Scanner: "ec2.SGNoIngressFromAny",
 }
 
-func EC2SGNoIngressFromAny(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func EC2SGNoIngressFromAny(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, sg := range g.ByType(awscol.EC2SGType) {
 		v4, _ := sg.Attributes["open_to_any_v4"].(bool)
 		v6, _ := sg.Attributes["open_to_any_v6"].(bool)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckEC2SGNoIngressFromAny.ID,
 			Severity: CheckEC2SGNoIngressFromAny.Severity,
 			Resource: sg.Ref(),
 			Tags:     CheckEC2SGNoIngressFromAny.Tags,
 		}
 		if !v4 && !v6 {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("security group %q: no ingress from 0.0.0.0/0 or ::/0", sg.Name)
 			findings = append(findings, f)
 			continue
@@ -65,10 +65,10 @@ func EC2SGNoIngressFromAny(_ context.Context, g *core.ResourceGraph) ([]core.Fin
 		ingress, _ := sg.Attributes["ingress_rules"].([]map[string]any)
 		nonPublic := nonPublicOpenIngressPorts(ingress)
 		if len(nonPublic) == 0 {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("security group %q: open ingress only on 80/443 (allowed)", sg.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("security group %q: open ingress on non-public ports: %v", sg.Name, nonPublic)
 		}
 		findings = append(findings, f)
@@ -121,10 +121,10 @@ func nonPublicOpenIngressPorts(ingress []map[string]any) []int {
 // default VPC. The default VPC has overly permissive defaults (open
 // SG, public subnet); production workloads belong in a purpose-built
 // VPC.
-var CheckEC2NoDefaultVPCInUse = core.Check{
+var CheckEC2NoDefaultVPCInUse = compliancekit.Check{
 	ID:           "aws-ec2-no-default-vpc-in-use",
 	Title:        "EC2 instances must not run in the default VPC",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "aws",
 	Service:      "ec2",
 	ResourceType: awscol.EC2InstanceType,
@@ -147,7 +147,7 @@ var CheckEC2NoDefaultVPCInUse = core.Check{
 	Scanner: "ec2.NoDefaultVPCInUse",
 }
 
-func EC2NoDefaultVPCInUse(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func EC2NoDefaultVPCInUse(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	// Build a set of default VPC IDs from the graph.
 	defaultVPCs := map[string]bool{}
 	for _, v := range g.ByType(awscol.EC2VPCType) {
@@ -157,7 +157,7 @@ func EC2NoDefaultVPCInUse(_ context.Context, g *core.ResourceGraph) ([]core.Find
 		}
 	}
 
-	findings := []core.Finding{}
+	findings := []compliancekit.Finding{}
 	for _, inst := range g.ByType(awscol.EC2InstanceType) {
 		state, _ := inst.Attributes["state"].(string)
 		if state != "running" {
@@ -165,17 +165,17 @@ func EC2NoDefaultVPCInUse(_ context.Context, g *core.ResourceGraph) ([]core.Find
 			continue
 		}
 		vpcID, _ := inst.Attributes["vpc_id"].(string)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckEC2NoDefaultVPCInUse.ID,
 			Severity: CheckEC2NoDefaultVPCInUse.Severity,
 			Resource: inst.Ref(),
 			Tags:     CheckEC2NoDefaultVPCInUse.Tags,
 		}
 		if defaultVPCs[vpcID] {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("instance %q runs in default VPC %s", inst.Name, vpcID)
 		} else {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("instance %q runs in non-default VPC %s", inst.Name, vpcID)
 		}
 		findings = append(findings, f)
@@ -185,10 +185,10 @@ func EC2NoDefaultVPCInUse(_ context.Context, g *core.ResourceGraph) ([]core.Find
 
 // CheckEC2IMDSv2Required requires every running instance to enforce
 // IMDSv2. CIS AWS Foundations 5.6.
-var CheckEC2IMDSv2Required = core.Check{
+var CheckEC2IMDSv2Required = compliancekit.Check{
 	ID:           "aws-ec2-imdsv2-required",
 	Title:        "EC2 instances must require IMDSv2",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "aws",
 	Service:      "ec2",
 	ResourceType: awscol.EC2InstanceType,
@@ -209,25 +209,25 @@ var CheckEC2IMDSv2Required = core.Check{
 	Scanner: "ec2.IMDSv2Required",
 }
 
-func EC2IMDSv2Required(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func EC2IMDSv2Required(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, inst := range g.ByType(awscol.EC2InstanceType) {
 		state, _ := inst.Attributes["state"].(string)
 		if state != "running" {
 			continue
 		}
 		required, _ := inst.Attributes["imdsv2_required"].(bool)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckEC2IMDSv2Required.ID,
 			Severity: CheckEC2IMDSv2Required.Severity,
 			Resource: inst.Ref(),
 			Tags:     CheckEC2IMDSv2Required.Tags,
 		}
 		if required {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("instance %q: IMDSv2 required", inst.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("instance %q: IMDSv2 not required (IMDSv1 still accepted)", inst.Name)
 		}
 		findings = append(findings, f)
@@ -237,10 +237,10 @@ func EC2IMDSv2Required(_ context.Context, g *core.ResourceGraph) ([]core.Finding
 
 // CheckEC2EBSEncrypted requires every EBS volume to be encrypted.
 // CIS AWS Foundations 2.2.1 (regional default) and 2.2.2 (per-volume).
-var CheckEC2EBSEncrypted = core.Check{
+var CheckEC2EBSEncrypted = compliancekit.Check{
 	ID:           "aws-ec2-ebs-encrypted",
 	Title:        "EBS volumes must be encrypted at rest",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "aws",
 	Service:      "ec2",
 	ResourceType: awscol.EC2VolumeType,
@@ -264,21 +264,21 @@ var CheckEC2EBSEncrypted = core.Check{
 	Scanner: "ec2.EBSEncrypted",
 }
 
-func EC2EBSEncrypted(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func EC2EBSEncrypted(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, vol := range g.ByType(awscol.EC2VolumeType) {
 		encrypted, _ := vol.Attributes["encrypted"].(bool)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckEC2EBSEncrypted.ID,
 			Severity: CheckEC2EBSEncrypted.Severity,
 			Resource: vol.Ref(),
 			Tags:     CheckEC2EBSEncrypted.Tags,
 		}
 		if encrypted {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("volume %q: encrypted", vol.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("volume %q: not encrypted", vol.Name)
 		}
 		findings = append(findings, f)
@@ -289,10 +289,10 @@ func EC2EBSEncrypted(_ context.Context, g *core.ResourceGraph) ([]core.Finding, 
 // CheckEC2NoPublicAMIs flags AMIs owned by this account that are
 // public. Public AMIs may leak baked-in secrets, internal IP
 // schemes, and pre-installed software inventory.
-var CheckEC2NoPublicAMIs = core.Check{
+var CheckEC2NoPublicAMIs = compliancekit.Check{
 	ID:           "aws-ec2-no-public-amis",
 	Title:        "AMIs owned by this account must not be public",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "aws",
 	Service:      "ec2",
 	ResourceType: awscol.EC2AMIType,
@@ -316,21 +316,21 @@ var CheckEC2NoPublicAMIs = core.Check{
 	Scanner: "ec2.NoPublicAMIs",
 }
 
-func EC2NoPublicAMIs(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func EC2NoPublicAMIs(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, ami := range g.ByType(awscol.EC2AMIType) {
 		public, _ := ami.Attributes["public"].(bool)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckEC2NoPublicAMIs.ID,
 			Severity: CheckEC2NoPublicAMIs.Severity,
 			Resource: ami.Ref(),
 			Tags:     CheckEC2NoPublicAMIs.Tags,
 		}
 		if public {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("AMI %q: public (visible to every AWS account)", ami.Name)
 		} else {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("AMI %q: private", ami.Name)
 		}
 		findings = append(findings, f)
@@ -339,9 +339,9 @@ func EC2NoPublicAMIs(_ context.Context, g *core.ResourceGraph) ([]core.Finding, 
 }
 
 func init() {
-	core.Register(CheckEC2SGNoIngressFromAny, EC2SGNoIngressFromAny)
-	core.Register(CheckEC2NoDefaultVPCInUse, EC2NoDefaultVPCInUse)
-	core.Register(CheckEC2IMDSv2Required, EC2IMDSv2Required)
-	core.Register(CheckEC2EBSEncrypted, EC2EBSEncrypted)
-	core.Register(CheckEC2NoPublicAMIs, EC2NoPublicAMIs)
+	compliancekit.Register(CheckEC2SGNoIngressFromAny, EC2SGNoIngressFromAny)
+	compliancekit.Register(CheckEC2NoDefaultVPCInUse, EC2NoDefaultVPCInUse)
+	compliancekit.Register(CheckEC2IMDSv2Required, EC2IMDSv2Required)
+	compliancekit.Register(CheckEC2EBSEncrypted, EC2EBSEncrypted)
+	compliancekit.Register(CheckEC2NoPublicAMIs, EC2NoPublicAMIs)
 }

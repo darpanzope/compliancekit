@@ -16,7 +16,7 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/darpanzope/compliancekit/internal/collectors/cloudcommon"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 const (
@@ -44,7 +44,7 @@ func (c *Collector) clientOption() option.ClientOption {
 // emits a per-project error placeholder and continues. Per-SA
 // key-listing errors land as a collect_error_keys attribute on the
 // SA resource.
-func (c *Collector) collectIAM(ctx context.Context, out []core.Resource) []core.Resource {
+func (c *Collector) collectIAM(ctx context.Context, out []compliancekit.Resource) []compliancekit.Resource {
 	for _, projectID := range c.projects {
 		updated, err := c.collectIAMForProject(ctx, projectID, out)
 		if err != nil {
@@ -56,7 +56,7 @@ func (c *Collector) collectIAM(ctx context.Context, out []core.Resource) []core.
 	return out
 }
 
-func (c *Collector) collectIAMForProject(ctx context.Context, projectID string, out []core.Resource) ([]core.Resource, error) {
+func (c *Collector) collectIAMForProject(ctx context.Context, projectID string, out []compliancekit.Resource) ([]compliancekit.Resource, error) {
 	projClient, err := resourcemanager.NewProjectsClient(ctx, c.clientOption())
 	if err != nil {
 		return out, fmt.Errorf("new projects client: %w", err)
@@ -93,10 +93,10 @@ func (c *Collector) collectIAMForProject(ctx context.Context, projectID string, 
 	return out, nil
 }
 
-// iamPolicyResource projects the IAM Policy onto a core.Resource.
+// iamPolicyResource projects the IAM Policy onto a compliancekit.Resource.
 // Bindings + audit configs land as map slices so check code reads
 // them without importing iampb.
-func (c *Collector) iamPolicyResource(projectID string, policy *iampb.Policy) core.Resource {
+func (c *Collector) iamPolicyResource(projectID string, policy *iampb.Policy) compliancekit.Resource {
 	bindings := []map[string]any{}
 	for _, b := range policy.Bindings {
 		bindings = append(bindings, map[string]any{
@@ -118,7 +118,7 @@ func (c *Collector) iamPolicyResource(projectID string, policy *iampb.Policy) co
 			"audit_log_configs": entries,
 		})
 	}
-	r := core.Resource{
+	r := compliancekit.Resource{
 		ID:       fmt.Sprintf("gcp.iam.policy.%s", projectID),
 		Type:     IAMPolicyType,
 		Name:     projectID,
@@ -134,9 +134,9 @@ func (c *Collector) iamPolicyResource(projectID string, policy *iampb.Policy) co
 	return r
 }
 
-func (c *Collector) serviceAccountResource(ctx context.Context, client *iamadmin.IamClient, projectID string, sa *iamadminpb.ServiceAccount) core.Resource {
+func (c *Collector) serviceAccountResource(ctx context.Context, client *iamadmin.IamClient, projectID string, sa *iamadminpb.ServiceAccount) compliancekit.Resource {
 	email := sa.Email
-	r := core.Resource{
+	r := compliancekit.Resource{
 		ID:       fmt.Sprintf("gcp.iam.service_account.%s", email),
 		Type:     ServiceAccountType,
 		Name:     email,
@@ -191,8 +191,8 @@ func isDefaultSA(email string) bool {
 // projectErrorResource emits a placeholder when a per-project
 // collect fails outright. Lets the scan continue with findings
 // from other projects while still surfacing the failure.
-func (c *Collector) projectErrorResource(projectID, service string, err error) core.Resource {
-	r := core.Resource{
+func (c *Collector) projectErrorResource(projectID, service string, err error) compliancekit.Resource {
+	r := compliancekit.Resource{
 		ID:       fmt.Sprintf("gcp.%s.error.%s", service, projectID),
 		Type:     "gcp.collect_error",
 		Name:     fmt.Sprintf("%s/%s", service, projectID),

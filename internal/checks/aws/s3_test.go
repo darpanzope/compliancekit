@@ -5,12 +5,12 @@ import (
 	"testing"
 
 	awscol "github.com/darpanzope/compliancekit/internal/collectors/aws"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
-func newBucketGraph(attrs map[string]any) *core.ResourceGraph {
-	g := core.NewResourceGraph()
-	g.Add(core.Resource{
+func newBucketGraph(attrs map[string]any) *compliancekit.ResourceGraph {
+	g := compliancekit.NewResourceGraph()
+	g.Add(compliancekit.Resource{
 		ID:         "aws.s3.bucket.test",
 		Type:       awscol.S3BucketType,
 		Name:       "test",
@@ -40,11 +40,11 @@ func TestS3PublicAccessBlock(t *testing.T) {
 	cases := []struct {
 		name string
 		pab  map[string]any
-		want core.Status
+		want compliancekit.Status
 	}{
-		{"all on", allOn, core.StatusPass},
-		{"some off", someOff, core.StatusFail},
-		{"not configured", map[string]any{"configured": false}, core.StatusFail},
+		{"all on", allOn, compliancekit.StatusPass},
+		{"some off", someOff, compliancekit.StatusFail},
+		{"not configured", map[string]any{"configured": false}, compliancekit.StatusFail},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -61,11 +61,11 @@ func TestS3DefaultEncryption(t *testing.T) {
 	cases := []struct {
 		name  string
 		attrs map[string]any
-		want  core.Status
+		want  compliancekit.Status
 	}{
-		{"AES256", map[string]any{"default_encryption_configured": true, "default_encryption_algorithm": "AES256"}, core.StatusPass},
-		{"aws:kms", map[string]any{"default_encryption_configured": true, "default_encryption_algorithm": "aws:kms"}, core.StatusPass},
-		{"not configured", map[string]any{"default_encryption_configured": false}, core.StatusFail},
+		{"AES256", map[string]any{"default_encryption_configured": true, "default_encryption_algorithm": "AES256"}, compliancekit.StatusPass},
+		{"aws:kms", map[string]any{"default_encryption_configured": true, "default_encryption_algorithm": "aws:kms"}, compliancekit.StatusPass},
+		{"not configured", map[string]any{"default_encryption_configured": false}, compliancekit.StatusFail},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -81,11 +81,11 @@ func TestS3DefaultEncryption(t *testing.T) {
 func TestS3Versioning(t *testing.T) {
 	cases := []struct {
 		status string
-		want   core.Status
+		want   compliancekit.Status
 	}{
-		{"Enabled", core.StatusPass},
-		{"Suspended", core.StatusFail},
-		{"", core.StatusFail},
+		{"Enabled", compliancekit.StatusPass},
+		{"Suspended", compliancekit.StatusFail},
+		{"", compliancekit.StatusFail},
 	}
 	for _, c := range cases {
 		t.Run(c.status, func(t *testing.T) {
@@ -102,11 +102,11 @@ func TestS3Logging(t *testing.T) {
 	cases := []struct {
 		name  string
 		attrs map[string]any
-		want  core.Status
+		want  compliancekit.Status
 	}{
-		{"enabled to other bucket", map[string]any{"logging_enabled": true, "logging_target_bucket": "logs"}, core.StatusPass},
-		{"disabled", map[string]any{"logging_enabled": false}, core.StatusFail},
-		{"loop", map[string]any{"logging_enabled": true, "logging_target_bucket": "test"}, core.StatusFail},
+		{"enabled to other bucket", map[string]any{"logging_enabled": true, "logging_target_bucket": "logs"}, compliancekit.StatusPass},
+		{"disabled", map[string]any{"logging_enabled": false}, compliancekit.StatusFail},
+		{"loop", map[string]any{"logging_enabled": true, "logging_target_bucket": "test"}, compliancekit.StatusFail},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -122,10 +122,10 @@ func TestS3Logging(t *testing.T) {
 func TestS3NoPublicACLs(t *testing.T) {
 	cases := []struct {
 		public bool
-		want   core.Status
+		want   compliancekit.Status
 	}{
-		{false, core.StatusPass},
-		{true, core.StatusFail},
+		{false, compliancekit.StatusPass},
+		{true, compliancekit.StatusFail},
 	}
 	for _, c := range cases {
 		t.Run("", func(t *testing.T) {

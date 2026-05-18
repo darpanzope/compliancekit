@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	docol "github.com/darpanzope/compliancekit/internal/collectors/digitalocean"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.19 phase 6 — Functions depth. godo exposes namespace + trigger
@@ -16,8 +16,8 @@ import (
 
 const functionsDocsURL = "https://docs.digitalocean.com/products/functions/"
 
-func newFnFinding(check core.Check, ns core.Resource) core.Finding {
-	return core.Finding{
+func newFnFinding(check compliancekit.Check, ns compliancekit.Resource) compliancekit.Finding {
+	return compliancekit.Finding{
 		CheckID:  check.ID,
 		Severity: check.Severity,
 		Resource: ns.Ref(),
@@ -25,9 +25,9 @@ func newFnFinding(check core.Check, ns core.Resource) core.Finding {
 	}
 }
 
-func fnManualVerify(check core.Check, ns core.Resource, control, hint string) core.Finding {
+func fnManualVerify(check compliancekit.Check, ns compliancekit.Resource, control, hint string) compliancekit.Finding {
 	f := newFnFinding(check, ns)
-	f.Status = core.StatusError
+	f.Status = compliancekit.StatusError
 	f.Message = fmt.Sprintf("functions namespace %q: %s — DO API does not surface this; verify via %s",
 		ns.Name, control, hint)
 	return f
@@ -35,10 +35,10 @@ func fnManualVerify(check core.Check, ns core.Resource, control, hint string) co
 
 // ----- 1. region pinned -----------------------------------------------
 
-var CheckFnNamespaceRegion = core.Check{
+var CheckFnNamespaceRegion = compliancekit.Check{
 	ID:           "do-functions-namespace-no-region",
 	Title:        "Functions namespaces must declare an explicit region",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "digitalocean",
 	Service:      "functions",
 	ResourceType: docol.FunctionsNamespaceType,
@@ -59,15 +59,15 @@ var CheckFnNamespaceRegion = core.Check{
 	Scanner: "functions.NamespaceRegion",
 }
 
-func FnNamespaceRegion(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func FnNamespaceRegion(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, ns := range g.ByType(docol.FunctionsNamespaceType) {
 		f := newFnFinding(CheckFnNamespaceRegion, ns)
 		if ns.Region == "" {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("functions namespace %q: no region declared", ns.Name)
 		} else {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("functions namespace %q: region=%s", ns.Name, ns.Region)
 		}
 		findings = append(findings, f)
@@ -77,10 +77,10 @@ func FnNamespaceRegion(_ context.Context, g *core.ResourceGraph) ([]core.Finding
 
 // ----- 2. all triggers enabled? ----------------------------------------
 
-var CheckFnAllTriggersEnabledRatio = core.Check{
+var CheckFnAllTriggersEnabledRatio = compliancekit.Check{
 	ID:           "do-functions-disabled-trigger-ratio",
 	Title:        "Disabled-trigger ratio must be 0 (no orphan triggers)",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "digitalocean",
 	Service:      "functions",
 	ResourceType: docol.FunctionsNamespaceType,
@@ -100,8 +100,8 @@ var CheckFnAllTriggersEnabledRatio = core.Check{
 	Scanner: "functions.DisabledTriggerRatio",
 }
 
-func FnAllTriggersEnabledRatio(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func FnAllTriggersEnabledRatio(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, ns := range g.ByType(docol.FunctionsNamespaceType) {
 		total, _ := ns.Attributes["trigger_count"].(int)
 		if total == 0 {
@@ -111,10 +111,10 @@ func FnAllTriggersEnabledRatio(_ context.Context, g *core.ResourceGraph) ([]core
 		disabled := total - enabled
 		f := newFnFinding(CheckFnAllTriggersEnabledRatio, ns)
 		if disabled == 0 {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("functions namespace %q: %d/%d triggers enabled", ns.Name, enabled, total)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("functions namespace %q: %d/%d triggers disabled", ns.Name, disabled, total)
 		}
 		findings = append(findings, f)
@@ -124,10 +124,10 @@ func FnAllTriggersEnabledRatio(_ context.Context, g *core.ResourceGraph) ([]core
 
 // ----- 3. access key minimum + rotation reminder ---------------------
 
-var CheckFnAccessKeyMinimum = core.Check{
+var CheckFnAccessKeyMinimum = compliancekit.Check{
 	ID:           "do-functions-namespace-no-access-key",
 	Title:        "Functions namespaces must have at least one access key registered",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "digitalocean",
 	Service:      "functions",
 	ResourceType: docol.FunctionsNamespaceType,
@@ -148,16 +148,16 @@ var CheckFnAccessKeyMinimum = core.Check{
 	Scanner: "functions.AccessKeyMinimum",
 }
 
-func FnAccessKeyMinimum(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func FnAccessKeyMinimum(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, ns := range g.ByType(docol.FunctionsNamespaceType) {
 		n, _ := ns.Attributes["access_key_count"].(int)
 		f := newFnFinding(CheckFnAccessKeyMinimum, ns)
 		if n > 0 {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("functions namespace %q: %d access key(s)", ns.Name, n)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("functions namespace %q: no access keys registered", ns.Name)
 		}
 		findings = append(findings, f)
@@ -167,10 +167,10 @@ func FnAccessKeyMinimum(_ context.Context, g *core.ResourceGraph) ([]core.Findin
 
 // ----- 4. manual: access key rotation -------------------------------
 
-var CheckFnAccessKeyRotation = core.Check{
+var CheckFnAccessKeyRotation = compliancekit.Check{
 	ID:           "do-functions-access-key-rotation",
 	Title:        "Functions access keys must be rotated on a documented cadence",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "digitalocean",
 	Service:      "functions",
 	ResourceType: docol.FunctionsNamespaceType,
@@ -192,8 +192,8 @@ var CheckFnAccessKeyRotation = core.Check{
 	Scanner: "functions.AccessKeyRotation",
 }
 
-func FnAccessKeyRotation(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func FnAccessKeyRotation(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, ns := range g.ByType(docol.FunctionsNamespaceType) {
 		findings = append(findings,
 			fnManualVerify(CheckFnAccessKeyRotation, ns,
@@ -205,10 +205,10 @@ func FnAccessKeyRotation(_ context.Context, g *core.ResourceGraph) ([]core.Findi
 
 // ----- 5. manual: runtime versions current --------------------------
 
-var CheckFnRuntimeNotEOL = core.Check{
+var CheckFnRuntimeNotEOL = compliancekit.Check{
 	ID:           "do-functions-runtime-eol",
 	Title:        "Functions runtimes must not be EOL (Node 14/16, Python 3.8, etc.)",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "digitalocean",
 	Service:      "functions",
 	ResourceType: docol.FunctionsNamespaceType,
@@ -228,8 +228,8 @@ var CheckFnRuntimeNotEOL = core.Check{
 	Scanner: "functions.RuntimeNotEOL",
 }
 
-func FnRuntimeNotEOL(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func FnRuntimeNotEOL(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, ns := range g.ByType(docol.FunctionsNamespaceType) {
 		findings = append(findings,
 			fnManualVerify(CheckFnRuntimeNotEOL, ns,
@@ -241,10 +241,10 @@ func FnRuntimeNotEOL(_ context.Context, g *core.ResourceGraph) ([]core.Finding, 
 
 // ----- 6. manual: env vars encrypted --------------------------------
 
-var CheckFnEnvVarsEncrypted = core.Check{
+var CheckFnEnvVarsEncrypted = compliancekit.Check{
 	ID:           "do-functions-env-vars-plain",
 	Title:        "Functions env vars containing secrets must use --encrypted",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "digitalocean",
 	Service:      "functions",
 	ResourceType: docol.FunctionsNamespaceType,
@@ -265,8 +265,8 @@ var CheckFnEnvVarsEncrypted = core.Check{
 	Scanner: "functions.EnvVarsEncrypted",
 }
 
-func FnEnvVarsEncrypted(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func FnEnvVarsEncrypted(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, ns := range g.ByType(docol.FunctionsNamespaceType) {
 		findings = append(findings,
 			fnManualVerify(CheckFnEnvVarsEncrypted, ns,
@@ -278,10 +278,10 @@ func FnEnvVarsEncrypted(_ context.Context, g *core.ResourceGraph) ([]core.Findin
 
 // ----- 7. manual: source secret scanning -----------------------------
 
-var CheckFnSourceSecretScan = core.Check{
+var CheckFnSourceSecretScan = compliancekit.Check{
 	ID:           "do-functions-source-secret-scan",
 	Title:        "Function source must pass secret scanning before deploy",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "digitalocean",
 	Service:      "functions",
 	ResourceType: docol.FunctionsNamespaceType,
@@ -301,8 +301,8 @@ var CheckFnSourceSecretScan = core.Check{
 	Scanner: "functions.SourceSecretScan",
 }
 
-func FnSourceSecretScan(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func FnSourceSecretScan(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, ns := range g.ByType(docol.FunctionsNamespaceType) {
 		findings = append(findings,
 			fnManualVerify(CheckFnSourceSecretScan, ns,
@@ -314,10 +314,10 @@ func FnSourceSecretScan(_ context.Context, g *core.ResourceGraph) ([]core.Findin
 
 // ----- 8. manual: log forwarding -------------------------------------
 
-var CheckFnLogExport = core.Check{
+var CheckFnLogExport = compliancekit.Check{
 	ID:           "do-functions-log-export",
 	Title:        "Functions logs must be exported to a long-retention sink",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "digitalocean",
 	Service:      "functions",
 	ResourceType: docol.FunctionsNamespaceType,
@@ -340,8 +340,8 @@ var CheckFnLogExport = core.Check{
 	Scanner: "functions.LogExport",
 }
 
-func FnLogExport(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func FnLogExport(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, ns := range g.ByType(docol.FunctionsNamespaceType) {
 		findings = append(findings,
 			fnManualVerify(CheckFnLogExport, ns,
@@ -353,10 +353,10 @@ func FnLogExport(_ context.Context, g *core.ResourceGraph) ([]core.Finding, erro
 
 // ----- 9. manual: cold-start mitigation -----------------------------
 
-var CheckFnColdStartMitigation = core.Check{
+var CheckFnColdStartMitigation = compliancekit.Check{
 	ID:           "do-functions-cold-start-mitigation",
 	Title:        "Latency-sensitive functions must mitigate cold starts",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "digitalocean",
 	Service:      "functions",
 	ResourceType: docol.FunctionsNamespaceType,
@@ -378,8 +378,8 @@ var CheckFnColdStartMitigation = core.Check{
 	Scanner: "functions.ColdStartMitigation",
 }
 
-func FnColdStartMitigation(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func FnColdStartMitigation(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, ns := range g.ByType(docol.FunctionsNamespaceType) {
 		findings = append(findings,
 			fnManualVerify(CheckFnColdStartMitigation, ns,
@@ -391,10 +391,10 @@ func FnColdStartMitigation(_ context.Context, g *core.ResourceGraph) ([]core.Fin
 
 // ----- 10. manual: namespace tagged with environment ---------------
 
-var CheckFnNamespaceEnvironmentTag = core.Check{
+var CheckFnNamespaceEnvironmentTag = compliancekit.Check{
 	ID:           "do-functions-namespace-no-environment-tag",
 	Title:        "Functions namespaces should carry an environment label",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "digitalocean",
 	Service:      "functions",
 	ResourceType: docol.FunctionsNamespaceType,
@@ -415,8 +415,8 @@ var CheckFnNamespaceEnvironmentTag = core.Check{
 	Scanner: "functions.NamespaceEnvironmentTag",
 }
 
-func FnNamespaceEnvironmentTag(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func FnNamespaceEnvironmentTag(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, ns := range g.ByType(docol.FunctionsNamespaceType) {
 		findings = append(findings,
 			fnManualVerify(CheckFnNamespaceEnvironmentTag, ns,
@@ -427,14 +427,14 @@ func FnNamespaceEnvironmentTag(_ context.Context, g *core.ResourceGraph) ([]core
 }
 
 func init() {
-	core.Register(CheckFnNamespaceRegion, FnNamespaceRegion)
-	core.Register(CheckFnAllTriggersEnabledRatio, FnAllTriggersEnabledRatio)
-	core.Register(CheckFnAccessKeyMinimum, FnAccessKeyMinimum)
-	core.Register(CheckFnAccessKeyRotation, FnAccessKeyRotation)
-	core.Register(CheckFnRuntimeNotEOL, FnRuntimeNotEOL)
-	core.Register(CheckFnEnvVarsEncrypted, FnEnvVarsEncrypted)
-	core.Register(CheckFnSourceSecretScan, FnSourceSecretScan)
-	core.Register(CheckFnLogExport, FnLogExport)
-	core.Register(CheckFnColdStartMitigation, FnColdStartMitigation)
-	core.Register(CheckFnNamespaceEnvironmentTag, FnNamespaceEnvironmentTag)
+	compliancekit.Register(CheckFnNamespaceRegion, FnNamespaceRegion)
+	compliancekit.Register(CheckFnAllTriggersEnabledRatio, FnAllTriggersEnabledRatio)
+	compliancekit.Register(CheckFnAccessKeyMinimum, FnAccessKeyMinimum)
+	compliancekit.Register(CheckFnAccessKeyRotation, FnAccessKeyRotation)
+	compliancekit.Register(CheckFnRuntimeNotEOL, FnRuntimeNotEOL)
+	compliancekit.Register(CheckFnEnvVarsEncrypted, FnEnvVarsEncrypted)
+	compliancekit.Register(CheckFnSourceSecretScan, FnSourceSecretScan)
+	compliancekit.Register(CheckFnLogExport, FnLogExport)
+	compliancekit.Register(CheckFnColdStartMitigation, FnColdStartMitigation)
+	compliancekit.Register(CheckFnNamespaceEnvironmentTag, FnNamespaceEnvironmentTag)
 }

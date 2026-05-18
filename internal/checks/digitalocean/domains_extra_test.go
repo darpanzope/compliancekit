@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.19 phase 3 — table tests for the 10 DNS-depth checks.
@@ -25,12 +25,12 @@ func TestDomainDMARCPolicyStrict(t *testing.T) {
 	cases := []struct {
 		name  string
 		dmarc string
-		want  core.Status
+		want  compliancekit.Status
 	}{
 		{"no dmarc", "", ""},
-		{"p=none", "v=DMARC1; p=none", core.StatusFail},
-		{"p=quarantine", "v=DMARC1; p=quarantine", core.StatusPass},
-		{"p=reject", "v=DMARC1; p=reject", core.StatusPass},
+		{"p=none", "v=DMARC1; p=none", compliancekit.StatusFail},
+		{"p=quarantine", "v=DMARC1; p=quarantine", compliancekit.StatusPass},
+		{"p=reject", "v=DMARC1; p=reject", compliancekit.StatusPass},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -57,11 +57,11 @@ func TestDomainDMARCSubdomainPolicy(t *testing.T) {
 	cases := []struct {
 		name  string
 		dmarc string
-		want  core.Status
+		want  compliancekit.Status
 	}{
-		{"sp set strict", "v=DMARC1; p=reject; sp=reject", core.StatusPass},
-		{"sp=none", "v=DMARC1; p=reject; sp=none", core.StatusFail},
-		{"sp absent", "v=DMARC1; p=reject", core.StatusFail},
+		{"sp set strict", "v=DMARC1; p=reject; sp=reject", compliancekit.StatusPass},
+		{"sp=none", "v=DMARC1; p=reject; sp=none", compliancekit.StatusFail},
+		{"sp absent", "v=DMARC1; p=reject", compliancekit.StatusFail},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -78,12 +78,12 @@ func TestDomainDMARCPctFull(t *testing.T) {
 	cases := []struct {
 		name  string
 		dmarc string
-		want  core.Status
+		want  compliancekit.Status
 	}{
-		{"pct omitted", "v=DMARC1; p=reject", core.StatusPass},
-		{"pct=100", "v=DMARC1; p=reject; pct=100", core.StatusPass},
-		{"pct=50", "v=DMARC1; p=reject; pct=50", core.StatusFail},
-		{"pct=garbage", "v=DMARC1; p=reject; pct=abc", core.StatusError},
+		{"pct omitted", "v=DMARC1; p=reject", compliancekit.StatusPass},
+		{"pct=100", "v=DMARC1; p=reject; pct=100", compliancekit.StatusPass},
+		{"pct=50", "v=DMARC1; p=reject; pct=50", compliancekit.StatusFail},
+		{"pct=garbage", "v=DMARC1; p=reject; pct=abc", compliancekit.StatusError},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -101,11 +101,11 @@ func TestDomainDMARCReporting(t *testing.T) {
 		"dmarc_records": []string{"v=DMARC1; p=reject; rua=mailto:r@x.com"},
 	}))
 	rua, _ := DomainDMARCRUAPresent(context.Background(), g)
-	if rua[0].Status != core.StatusPass {
+	if rua[0].Status != compliancekit.StatusPass {
 		t.Errorf("rua status=%v", rua[0].Status)
 	}
 	ruf, _ := DomainDMARCRUFPresent(context.Background(), g)
-	if ruf[0].Status != core.StatusFail {
+	if ruf[0].Status != compliancekit.StatusFail {
 		t.Errorf("ruf missing should fail, got %v", ruf[0].Status)
 	}
 }
@@ -114,13 +114,13 @@ func TestDomainSPFStrictAll(t *testing.T) {
 	cases := []struct {
 		name string
 		spf  string
-		want core.Status
+		want compliancekit.Status
 	}{
-		{"-all", "v=spf1 include:_spf.google.com -all", core.StatusPass},
-		{"~all", "v=spf1 include:_spf.google.com ~all", core.StatusFail},
-		{"?all", "v=spf1 include:_spf.google.com ?all", core.StatusFail},
-		{"+all (open relay)", "v=spf1 +all", core.StatusFail},
-		{"missing all", "v=spf1 include:_spf.google.com", core.StatusFail},
+		{"-all", "v=spf1 include:_spf.google.com -all", compliancekit.StatusPass},
+		{"~all", "v=spf1 include:_spf.google.com ~all", compliancekit.StatusFail},
+		{"?all", "v=spf1 include:_spf.google.com ?all", compliancekit.StatusFail},
+		{"+all (open relay)", "v=spf1 +all", compliancekit.StatusFail},
+		{"missing all", "v=spf1 include:_spf.google.com", compliancekit.StatusFail},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -138,7 +138,7 @@ func TestDomainSPFNoRedirect(t *testing.T) {
 	fail := newAccountGraph(mkDomain("y.com", map[string]any{"spf_records": []string{"v=spf1 redirect=other.com"}}))
 	p, _ := DomainSPFNoRedirect(context.Background(), pass)
 	f, _ := DomainSPFNoRedirect(context.Background(), fail)
-	if p[0].Status != core.StatusPass || f[0].Status != core.StatusFail {
+	if p[0].Status != compliancekit.StatusPass || f[0].Status != compliancekit.StatusFail {
 		t.Errorf("pass=%v fail=%v", p[0].Status, f[0].Status)
 	}
 }
@@ -148,11 +148,11 @@ func TestDomainDKIMSelectorPresent(t *testing.T) {
 		name      string
 		attrs     map[string]any
 		expectN   int
-		wantFirst core.Status
+		wantFirst compliancekit.Status
 	}{
 		{"no MX → skip", map[string]any{"has_mx": false}, 0, ""},
-		{"MX no DKIM", map[string]any{"has_mx": true, "dkim_selectors": []string{}}, 1, core.StatusFail},
-		{"MX + 1 DKIM", map[string]any{"has_mx": true, "dkim_selectors": []string{"primary"}}, 1, core.StatusPass},
+		{"MX no DKIM", map[string]any{"has_mx": true, "dkim_selectors": []string{}}, 1, compliancekit.StatusFail},
+		{"MX + 1 DKIM", map[string]any{"has_mx": true, "dkim_selectors": []string{"primary"}}, 1, compliancekit.StatusPass},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -172,11 +172,11 @@ func TestDomainCAAIodef(t *testing.T) {
 	cases := []struct {
 		name string
 		caas []string
-		want core.Status
+		want compliancekit.Status
 	}{
 		{"no caa → skip", nil, ""},
-		{"with iodef", []string{"0 issue \"letsencrypt.org\"", "0 iodef \"mailto:s@x.com\""}, core.StatusPass},
-		{"without iodef", []string{"0 issue \"letsencrypt.org\""}, core.StatusFail},
+		{"with iodef", []string{"0 issue \"letsencrypt.org\"", "0 iodef \"mailto:s@x.com\""}, compliancekit.StatusPass},
+		{"without iodef", []string{"0 issue \"letsencrypt.org\""}, compliancekit.StatusFail},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -202,7 +202,7 @@ func TestDomainCAAIodef(t *testing.T) {
 func TestDomainDNSSECViaRegistrar(t *testing.T) {
 	g := newAccountGraph(mkDomain("x.com", nil))
 	findings, _ := DomainDNSSECViaRegistrar(context.Background(), g)
-	if findings[0].Status != core.StatusError {
+	if findings[0].Status != compliancekit.StatusError {
 		t.Errorf("DNSSEC must be StatusError (manual-verify); got %v", findings[0].Status)
 	}
 	if !strings.Contains(findings[0].Message, "registrar") {

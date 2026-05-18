@@ -3,8 +3,8 @@ package doctl
 import (
 	"fmt"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.19 phase 2 — doctl-flavored strategies for the 10 Spaces-depth
@@ -44,7 +44,7 @@ func spacesEndpoint(region string) string {
 	return fmt.Sprintf("https://%s.digitaloceanspaces.com", region)
 }
 
-func spacesNameOrFallback(f core.Finding) (name, region string) {
+func spacesNameOrFallback(f compliancekit.Finding) (name, region string) {
 	name = f.Resource.Name
 	if name == "" {
 		name = "BUCKET_NAME"
@@ -56,7 +56,7 @@ func spacesNameOrFallback(f core.Finding) (name, region string) {
 	return name, region
 }
 
-func renderDoctlSpacesLifecycleExp(f core.Finding) (remediate.Snippet, error) {
+func renderDoctlSpacesLifecycleExp(f compliancekit.Finding) (remediate.Snippet, error) {
 	name, region := spacesNameOrFallback(f)
 	body := fmt.Sprintf(`# doctl has no spaces subcommand; use aws s3api against the Spaces endpoint.
 
@@ -85,12 +85,12 @@ aws s3api put-bucket-lifecycle-configuration \
 	}, nil
 }
 
-func renderDoctlSpacesLifecycleMPU(f core.Finding) (remediate.Snippet, error) {
+func renderDoctlSpacesLifecycleMPU(f compliancekit.Finding) (remediate.Snippet, error) {
 	// Same shape as expiration — both rules belong in one PutBucketLifecycleConfiguration call.
 	return renderDoctlSpacesLifecycleExp(f)
 }
 
-func renderDoctlSpacesLoggingTarget(f core.Finding) (remediate.Snippet, error) {
+func renderDoctlSpacesLoggingTarget(f compliancekit.Finding) (remediate.Snippet, error) {
 	name, region := spacesNameOrFallback(f)
 	body := fmt.Sprintf(`# 1. Create a dedicated access-logs bucket (skip if it already exists).
 aws s3api create-bucket --bucket %s-access-logs --endpoint-url %s
@@ -116,7 +116,7 @@ aws s3api put-bucket-logging \
 	}, nil
 }
 
-func renderDoctlSpacesPolicy(f core.Finding) (remediate.Snippet, error) {
+func renderDoctlSpacesPolicy(f compliancekit.Finding) (remediate.Snippet, error) {
 	name, region := spacesNameOrFallback(f)
 	body := fmt.Sprintf(`cat > policy.json <<'JSON'
 {
@@ -145,7 +145,7 @@ aws s3api put-bucket-policy \
 	}, nil
 }
 
-func renderDoctlSpacesVersionLifecycle(f core.Finding) (remediate.Snippet, error) {
+func renderDoctlSpacesVersionLifecycle(f compliancekit.Finding) (remediate.Snippet, error) {
 	name, region := spacesNameOrFallback(f)
 	body := fmt.Sprintf(`cat > lifecycle.json <<'JSON'
 {
@@ -172,7 +172,7 @@ aws s3api put-bucket-lifecycle-configuration \
 	}, nil
 }
 
-func renderDoctlSpacesAuditPairing(f core.Finding) (remediate.Snippet, error) {
+func renderDoctlSpacesAuditPairing(f compliancekit.Finding) (remediate.Snippet, error) {
 	name, region := spacesNameOrFallback(f)
 	body := fmt.Sprintf(`# 1. Enable SSE-S3 default encryption.
 aws s3api put-bucket-encryption --bucket %s \
@@ -190,28 +190,28 @@ aws s3api put-bucket-logging --bucket %s \
 	}, nil
 }
 
-func renderDoctlSpacesObjectLock(_ core.Finding) (remediate.Snippet, error) {
+func renderDoctlSpacesObjectLock(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return renderDoctlManualOnly(
 		"S3 Object Lock — DO Spaces returns 501 on PutBucketObjectLockConfiguration",
 		"https://www.digitalocean.com/trust",
 		"Replicate audit-relevant writes off-Spaces to an Object-Lock-capable target (AWS S3 with Object Lock, Backblaze B2, MinIO WORM)")
 }
 
-func renderDoctlSpacesReplication(_ core.Finding) (remediate.Snippet, error) {
+func renderDoctlSpacesReplication(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return renderDoctlManualOnly(
 		"S3 Cross-Region Replication — DO Spaces does not implement",
 		"https://docs.digitalocean.com/products/spaces/",
 		"Run an rclone sync cron between source and target regions; record schedule + last-success in the runbook")
 }
 
-func renderDoctlSpacesMFADelete(_ core.Finding) (remediate.Snippet, error) {
+func renderDoctlSpacesMFADelete(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return renderDoctlManualOnly(
 		"S3 MFA-Delete — DO Spaces does not implement",
 		"https://cloud.digitalocean.com/account/security",
 		"Enforce team 2FA + issue scoped Spaces keys with delete privilege per bucket")
 }
 
-func renderDoctlSpacesKeyRotation(_ core.Finding) (remediate.Snippet, error) {
+func renderDoctlSpacesKeyRotation(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return renderDoctlManualOnly(
 		"Spaces SSE key rotation",
 		"https://www.digitalocean.com/trust",

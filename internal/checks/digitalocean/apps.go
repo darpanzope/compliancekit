@@ -5,13 +5,13 @@ import (
 	"fmt"
 
 	docol "github.com/darpanzope/compliancekit/internal/collectors/digitalocean"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
-var CheckAppNoPlainEnvs = core.Check{
+var CheckAppNoPlainEnvs = compliancekit.Check{
 	ID:           "do-app-plain-env-vars",
 	Title:        "App Platform apps must mark secrets as SECRET type",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "digitalocean",
 	Service:      "apps",
 	ResourceType: docol.AppType,
@@ -35,11 +35,11 @@ var CheckAppNoPlainEnvs = core.Check{
 	Scanner: "apps.NoPlainEnvs",
 }
 
-func AppNoPlainEnvs(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func AppNoPlainEnvs(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, a := range g.ByType(docol.AppType) {
 		n, _ := a.Attributes["plain_env_count"].(int)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckAppNoPlainEnvs.ID,
 			Severity: CheckAppNoPlainEnvs.Severity,
 			Resource: a.Ref(),
@@ -50,10 +50,10 @@ func AppNoPlainEnvs(_ context.Context, g *core.ResourceGraph) ([]core.Finding, e
 		// signal threshold; below that, the operator has likely
 		// classified intentionally.
 		if n > 5 {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("app %q: %d plaintext env vars (review for secrets)", a.Name, n)
 		} else {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("app %q: %d plaintext env vars", a.Name, n)
 		}
 		findings = append(findings, f)
@@ -61,10 +61,10 @@ func AppNoPlainEnvs(_ context.Context, g *core.ResourceGraph) ([]core.Finding, e
 	return findings, nil
 }
 
-var CheckAppCustomDomain = core.Check{
+var CheckAppCustomDomain = compliancekit.Check{
 	ID:           "do-app-no-custom-domain",
 	Title:        "Production App Platform apps should have a custom domain",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "digitalocean",
 	Service:      "apps",
 	ResourceType: docol.AppType,
@@ -85,21 +85,21 @@ var CheckAppCustomDomain = core.Check{
 	Scanner: "apps.CustomDomain",
 }
 
-func AppCustomDomain(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func AppCustomDomain(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, a := range g.ByType(docol.AppType) {
 		has, _ := a.Attributes["has_custom_domains"].(bool)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckAppCustomDomain.ID,
 			Severity: CheckAppCustomDomain.Severity,
 			Resource: a.Ref(),
 			Tags:     CheckAppCustomDomain.Tags,
 		}
 		if has {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("app %q: custom domain(s) configured", a.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("app %q: only the default ondigitalocean.app domain", a.Name)
 		}
 		findings = append(findings, f)
@@ -107,10 +107,10 @@ func AppCustomDomain(_ context.Context, g *core.ResourceGraph) ([]core.Finding, 
 	return findings, nil
 }
 
-var CheckAppDomainTLSVersion = core.Check{
+var CheckAppDomainTLSVersion = compliancekit.Check{
 	ID:           "do-app-domain-weak-tls",
 	Title:        "App Platform custom domains must require TLS 1.2 or higher",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "digitalocean",
 	Service:      "apps",
 	ResourceType: docol.AppType,
@@ -130,14 +130,14 @@ var CheckAppDomainTLSVersion = core.Check{
 	Scanner: "apps.DomainTLSVersion",
 }
 
-func AppDomainTLSVersion(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func AppDomainTLSVersion(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, a := range g.ByType(docol.AppType) {
 		domains, _ := a.Attributes["domains"].([]map[string]any)
 		if len(domains) == 0 {
 			continue
 		}
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckAppDomainTLSVersion.ID,
 			Severity: CheckAppDomainTLSVersion.Severity,
 			Resource: a.Ref(),
@@ -152,10 +152,10 @@ func AppDomainTLSVersion(_ context.Context, g *core.ResourceGraph) ([]core.Findi
 			}
 		}
 		if len(weak) > 0 {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("app %q: %d domain(s) on weak TLS: %v", a.Name, len(weak), weak)
 		} else {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("app %q: %d domain(s), all TLS >= 1.2", a.Name, len(domains))
 		}
 		findings = append(findings, f)
@@ -163,10 +163,10 @@ func AppDomainTLSVersion(_ context.Context, g *core.ResourceGraph) ([]core.Findi
 	return findings, nil
 }
 
-var CheckAppHasAlerts = core.Check{
+var CheckAppHasAlerts = compliancekit.Check{
 	ID:           "do-app-no-alerts",
 	Title:        "App Platform apps should have alerts configured",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "digitalocean",
 	Service:      "apps",
 	ResourceType: docol.AppType,
@@ -186,21 +186,21 @@ var CheckAppHasAlerts = core.Check{
 	Scanner: "apps.HasAlerts",
 }
 
-func AppHasAlerts(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func AppHasAlerts(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, a := range g.ByType(docol.AppType) {
 		has, _ := a.Attributes["has_alerts"].(bool)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckAppHasAlerts.ID,
 			Severity: CheckAppHasAlerts.Severity,
 			Resource: a.Ref(),
 			Tags:     CheckAppHasAlerts.Tags,
 		}
 		if has {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("app %q: alerts configured", a.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("app %q: no alerts configured", a.Name)
 		}
 		findings = append(findings, f)
@@ -208,10 +208,10 @@ func AppHasAlerts(_ context.Context, g *core.ResourceGraph) ([]core.Finding, err
 	return findings, nil
 }
 
-var CheckAppInVPC = core.Check{
+var CheckAppInVPC = compliancekit.Check{
 	ID:           "do-app-no-vpc",
 	Title:        "App Platform apps should bind to a VPC",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "digitalocean",
 	Service:      "apps",
 	ResourceType: docol.AppType,
@@ -231,21 +231,21 @@ var CheckAppInVPC = core.Check{
 	Scanner: "apps.InVPC",
 }
 
-func AppInVPC(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func AppInVPC(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, a := range g.ByType(docol.AppType) {
 		in, _ := a.Attributes["in_vpc"].(bool)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckAppInVPC.ID,
 			Severity: CheckAppInVPC.Severity,
 			Resource: a.Ref(),
 			Tags:     CheckAppInVPC.Tags,
 		}
 		if in {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("app %q: bound to VPC", a.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("app %q: no VPC binding (egress over public internet)", a.Name)
 		}
 		findings = append(findings, f)
@@ -254,9 +254,9 @@ func AppInVPC(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) 
 }
 
 func init() {
-	core.Register(CheckAppNoPlainEnvs, AppNoPlainEnvs)
-	core.Register(CheckAppCustomDomain, AppCustomDomain)
-	core.Register(CheckAppDomainTLSVersion, AppDomainTLSVersion)
-	core.Register(CheckAppHasAlerts, AppHasAlerts)
-	core.Register(CheckAppInVPC, AppInVPC)
+	compliancekit.Register(CheckAppNoPlainEnvs, AppNoPlainEnvs)
+	compliancekit.Register(CheckAppCustomDomain, AppCustomDomain)
+	compliancekit.Register(CheckAppDomainTLSVersion, AppDomainTLSVersion)
+	compliancekit.Register(CheckAppHasAlerts, AppHasAlerts)
+	compliancekit.Register(CheckAppInVPC, AppInVPC)
 }

@@ -6,11 +6,11 @@ import (
 	"time"
 
 	docol "github.com/darpanzope/compliancekit/internal/collectors/digitalocean"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
-func mkVolume(name string, attrs map[string]any) core.Resource {
-	return core.Resource{
+func mkVolume(name string, attrs map[string]any) compliancekit.Resource {
+	return compliancekit.Resource{
 		ID:         "digitalocean.volume." + name,
 		Type:       docol.VolumeType,
 		Name:       name,
@@ -19,8 +19,8 @@ func mkVolume(name string, attrs map[string]any) core.Resource {
 	}
 }
 
-func mkSnapshot(name string, attrs map[string]any) core.Resource {
-	return core.Resource{
+func mkSnapshot(name string, attrs map[string]any) compliancekit.Resource {
+	return compliancekit.Resource{
 		ID:         "digitalocean.snapshot." + name,
 		Type:       docol.SnapshotType,
 		Name:       name,
@@ -36,9 +36,9 @@ func TestVolumeOrphan(t *testing.T) {
 	)
 	findings, _ := VolumeOrphan(context.Background(), g)
 	for _, f := range findings {
-		want := core.StatusPass
+		want := compliancekit.StatusPass
 		if f.Resource.Name == "orphan" {
-			want = core.StatusFail
+			want = compliancekit.StatusFail
 		}
 		if f.Status != want {
 			t.Errorf("%s: got %v", f.Resource.Name, f.Status)
@@ -55,9 +55,9 @@ func TestVolumeUnformattedOrphan(t *testing.T) {
 	)
 	findings, _ := VolumeUnformattedOrphan(context.Background(), g)
 	for _, f := range findings {
-		want := core.StatusPass
+		want := compliancekit.StatusPass
 		if f.Resource.Name == "orphan-unformatted" {
-			want = core.StatusFail
+			want = compliancekit.StatusFail
 		}
 		if f.Status != want {
 			t.Errorf("%s: got %v", f.Resource.Name, f.Status)
@@ -74,14 +74,14 @@ func TestSnapshotAge(t *testing.T) {
 	)
 	findings, _ := SnapshotAge(context.Background(), g)
 	for _, f := range findings {
-		var want core.Status
+		var want compliancekit.Status
 		switch f.Resource.Name {
 		case "recent":
-			want = core.StatusPass
+			want = compliancekit.StatusPass
 		case "old":
-			want = core.StatusFail
+			want = compliancekit.StatusFail
 		case "unparsable":
-			want = core.StatusSkip
+			want = compliancekit.StatusSkip
 		}
 		if f.Status != want {
 			t.Errorf("%s: got %v", f.Resource.Name, f.Status)
@@ -100,14 +100,14 @@ func TestSnapshotResourceExists(t *testing.T) {
 	)
 	findings, _ := SnapshotResourceExists(context.Background(), g)
 	for _, f := range findings {
-		var want core.Status
+		var want compliancekit.Status
 		switch f.Resource.Name {
 		case "good-droplet", "good-volume":
-			want = core.StatusPass
+			want = compliancekit.StatusPass
 		case "orphan-droplet":
-			want = core.StatusFail
+			want = compliancekit.StatusFail
 		case "weird":
-			want = core.StatusSkip
+			want = compliancekit.StatusSkip
 		}
 		if f.Status != want {
 			t.Errorf("%s: got %v: %s", f.Resource.Name, f.Status, f.Message)

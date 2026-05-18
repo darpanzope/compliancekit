@@ -8,7 +8,7 @@ import (
 
 	"k8s.io/client-go/kubernetes/fake"
 
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // fakeScope returns a ContextScope wired to an empty fake clientset.
@@ -181,5 +181,5 @@ func TestCollectError_Shape(t *testing.T) {
 	}
 }
 
-// Compile-time guard: Collector satisfies core.Collector.
-var _ core.Collector = (*Collector)(nil)
+// Compile-time guard: Collector satisfies compliancekit.Collector.
+var _ compliancekit.Collector = (*Collector)(nil)

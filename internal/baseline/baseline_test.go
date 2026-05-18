@@ -8,15 +8,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
-func mkFinding(checkID, resID string, status core.Status, sev core.Severity) core.Finding {
-	return core.Finding{
+func mkFinding(checkID, resID string, status compliancekit.Status, sev compliancekit.Severity) compliancekit.Finding {
+	return compliancekit.Finding{
 		CheckID:  checkID,
 		Status:   status,
 		Severity: sev,
-		Resource: core.ResourceRef{
+		Resource: compliancekit.ResourceRef{
 			ID:       resID,
 			Type:     "digitalocean.droplet",
 			Name:     resID,
@@ -26,18 +26,18 @@ func mkFinding(checkID, resID string, status core.Status, sev core.Severity) cor
 }
 
 func TestCapture_DeduplicatesByFingerprint(t *testing.T) {
-	f := mkFinding("do-droplet-no-firewall", "droplet-1", core.StatusFail, core.SeverityHigh)
-	b := Capture([]core.Finding{f, f, f}, time.Date(2026, 5, 14, 0, 0, 0, 0, time.UTC))
+	f := mkFinding("do-droplet-no-firewall", "droplet-1", compliancekit.StatusFail, compliancekit.SeverityHigh)
+	b := Capture([]compliancekit.Finding{f, f, f}, time.Date(2026, 5, 14, 0, 0, 0, 0, time.UTC))
 	if len(b.Entries) != 1 {
 		t.Errorf("dedup failed: got %d entries, want 1", len(b.Entries))
 	}
 }
 
 func TestCapture_DeterministicOrdering(t *testing.T) {
-	in := []core.Finding{
-		mkFinding("zzz-check", "droplet-9", core.StatusPass, core.SeverityLow),
-		mkFinding("aaa-check", "droplet-1", core.StatusFail, core.SeverityHigh),
-		mkFinding("mmm-check", "droplet-5", core.StatusSkip, core.SeverityMedium),
+	in := []compliancekit.Finding{
+		mkFinding("zzz-check", "droplet-9", compliancekit.StatusPass, compliancekit.SeverityLow),
+		mkFinding("aaa-check", "droplet-1", compliancekit.StatusFail, compliancekit.SeverityHigh),
+		mkFinding("mmm-check", "droplet-5", compliancekit.StatusSkip, compliancekit.SeverityMedium),
 	}
 	b1 := Capture(in, time.Now())
 	b2 := Capture(in, time.Now())
@@ -58,9 +58,9 @@ func TestCapture_DeterministicOrdering(t *testing.T) {
 }
 
 func TestCapture_ScoreCarried(t *testing.T) {
-	in := []core.Finding{
-		mkFinding("a", "r1", core.StatusPass, core.SeverityHigh),
-		mkFinding("b", "r2", core.StatusFail, core.SeverityHigh),
+	in := []compliancekit.Finding{
+		mkFinding("a", "r1", compliancekit.StatusPass, compliancekit.SeverityHigh),
+		mkFinding("b", "r2", compliancekit.StatusFail, compliancekit.SeverityHigh),
 	}
 	b := Capture(in, time.Now())
 	if b.Score != 50 {
@@ -72,9 +72,9 @@ func TestSaveLoadRoundTrip(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, ".compliancekit", "baseline.json")
 
-	want := Capture([]core.Finding{
-		mkFinding("do-droplet-no-firewall", "droplet-1", core.StatusFail, core.SeverityHigh),
-		mkFinding("linux-sshd-no-root-login", "host-1", core.StatusPass, core.SeverityHigh),
+	want := Capture([]compliancekit.Finding{
+		mkFinding("do-droplet-no-firewall", "droplet-1", compliancekit.StatusFail, compliancekit.SeverityHigh),
+		mkFinding("linux-sshd-no-root-login", "host-1", compliancekit.StatusPass, compliancekit.SeverityHigh),
 	}, time.Date(2026, 5, 14, 12, 0, 0, 0, time.UTC))
 
 	if err := Save(want, path); err != nil {
@@ -123,9 +123,9 @@ func TestSave_CreatesParentDir(t *testing.T) {
 }
 
 func TestFingerprintSet(t *testing.T) {
-	b := Capture([]core.Finding{
-		mkFinding("a", "r1", core.StatusFail, core.SeverityHigh),
-		mkFinding("b", "r2", core.StatusPass, core.SeverityLow),
+	b := Capture([]compliancekit.Finding{
+		mkFinding("a", "r1", compliancekit.StatusFail, compliancekit.SeverityHigh),
+		mkFinding("b", "r2", compliancekit.StatusPass, compliancekit.SeverityLow),
 	}, time.Now())
 	set := b.FingerprintSet()
 	if len(set) != 2 {
@@ -139,8 +139,8 @@ func TestFingerprintSet(t *testing.T) {
 }
 
 func TestWriteJSON_Pretty(t *testing.T) {
-	b := Capture([]core.Finding{
-		mkFinding("a", "r1", core.StatusFail, core.SeverityHigh),
+	b := Capture([]compliancekit.Finding{
+		mkFinding("a", "r1", compliancekit.StatusFail, compliancekit.SeverityHigh),
 	}, time.Date(2026, 5, 14, 0, 0, 0, 0, time.UTC))
 	var buf bytes.Buffer
 	if err := WriteJSON(b, &buf); err != nil {

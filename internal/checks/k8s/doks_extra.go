@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	docol "github.com/darpanzope/compliancekit/internal/collectors/digitalocean"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.19 phase 4 — DOKS add-on coverage + node-pool isolation +
@@ -22,8 +22,8 @@ import (
 // the existing pattern; this keeps them out of the DO parity ratchet
 // (which only gates Provider == "digitalocean").
 
-func newDOKSFinding(check core.Check, cluster core.Resource) core.Finding {
-	return core.Finding{
+func newDOKSFinding(check compliancekit.Check, cluster compliancekit.Resource) compliancekit.Finding {
+	return compliancekit.Finding{
 		CheckID:  check.ID,
 		Severity: check.Severity,
 		Resource: cluster.Ref(),
@@ -31,9 +31,9 @@ func newDOKSFinding(check core.Check, cluster core.Resource) core.Finding {
 	}
 }
 
-func doksManualVerify(check core.Check, cluster core.Resource, control, kubectlHint string) core.Finding {
+func doksManualVerify(check compliancekit.Check, cluster compliancekit.Resource, control, kubectlHint string) compliancekit.Finding {
 	f := newDOKSFinding(check, cluster)
-	f.Status = core.StatusError
+	f.Status = compliancekit.StatusError
 	f.Message = fmt.Sprintf("doks cluster %q: %s — verify with %s (DO API does not surface this state)",
 		cluster.Name, control, kubectlHint)
 	return f
@@ -46,10 +46,10 @@ func doksManualVerify(check core.Check, cluster core.Resource, control, kubectlH
 // match (prefix) on the cluster's version_slug as a fail.
 var doksDeprecatedMinors = []string{"1.26.", "1.25.", "1.24.", "1.23.", "1.22."}
 
-var CheckDOKSVersionSupported = core.Check{
+var CheckDOKSVersionSupported = compliancekit.Check{
 	ID:           "k8s-doks-version-deprecated",
 	Title:        "DOKS cluster version must not be on the DO deprecation list",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "kubernetes",
 	Service:      "doks",
 	ResourceType: docol.DOKSClusterType,
@@ -70,8 +70,8 @@ var CheckDOKSVersionSupported = core.Check{
 	Scanner: "doks.VersionSupported",
 }
 
-func DOKSVersionSupported(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func DOKSVersionSupported(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, c := range g.ByType(docol.DOKSClusterType) {
 		ver, _ := c.Attributes["version"].(string)
 		f := newDOKSFinding(CheckDOKSVersionSupported, c)
@@ -83,10 +83,10 @@ func DOKSVersionSupported(_ context.Context, g *core.ResourceGraph) ([]core.Find
 			}
 		}
 		if deprecated {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("doks cluster %q: version %q is in the deprecated list", c.Name, ver)
 		} else {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("doks cluster %q: version %q is supported", c.Name, ver)
 		}
 		findings = append(findings, f)
@@ -96,10 +96,10 @@ func DOKSVersionSupported(_ context.Context, g *core.ResourceGraph) ([]core.Find
 
 // ----- 2. nodepool taints isolation -----------------------------------
 
-var CheckDOKSNodepoolTaints = core.Check{
+var CheckDOKSNodepoolTaints = compliancekit.Check{
 	ID:           "k8s-doks-nodepool-no-taints",
 	Title:        "Non-default node pools should declare workload-isolation taints",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "kubernetes",
 	Service:      "doks",
 	ResourceType: docol.DOKSNodePoolType,
@@ -121,8 +121,8 @@ var CheckDOKSNodepoolTaints = core.Check{
 	Scanner: "doks.NodepoolTaints",
 }
 
-func DOKSNodepoolTaints(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func DOKSNodepoolTaints(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, np := range g.ByType(docol.DOKSNodePoolType) {
 		name := np.Name
 		// Skip the implicit default-pool naming convention; only flag
@@ -133,10 +133,10 @@ func DOKSNodepoolTaints(_ context.Context, g *core.ResourceGraph) ([]core.Findin
 		taints, _ := np.Attributes["taints"].([]map[string]string)
 		f := newDOKSFinding(CheckDOKSNodepoolTaints, np)
 		if len(taints) > 0 {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("nodepool %q: %d taint(s) declared", name, len(taints))
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("nodepool %q: no taints declared (no workload-isolation pressure)", name)
 		}
 		findings = append(findings, f)
@@ -146,10 +146,10 @@ func DOKSNodepoolTaints(_ context.Context, g *core.ResourceGraph) ([]core.Findin
 
 // ----- 3. nodepool environment tag --------------------------------------
 
-var CheckDOKSNodepoolEnvironmentTag = core.Check{
+var CheckDOKSNodepoolEnvironmentTag = compliancekit.Check{
 	ID:           "k8s-doks-nodepool-no-environment-tag",
 	Title:        "DOKS node pools should declare an environment tag",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "kubernetes",
 	Service:      "doks",
 	ResourceType: docol.DOKSNodePoolType,
@@ -169,8 +169,8 @@ var CheckDOKSNodepoolEnvironmentTag = core.Check{
 	Scanner: "doks.NodepoolEnvironmentTag",
 }
 
-func DOKSNodepoolEnvironmentTag(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func DOKSNodepoolEnvironmentTag(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, np := range g.ByType(docol.DOKSNodePoolType) {
 		tags, _ := np.Attributes["tags"].([]string)
 		f := newDOKSFinding(CheckDOKSNodepoolEnvironmentTag, np)
@@ -182,10 +182,10 @@ func DOKSNodepoolEnvironmentTag(_ context.Context, g *core.ResourceGraph) ([]cor
 			}
 		}
 		if hasEnv {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("nodepool %q: environment tag present", np.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("nodepool %q: no environment tag", np.Name)
 		}
 		findings = append(findings, f)
@@ -200,10 +200,10 @@ func DOKSNodepoolEnvironmentTag(_ context.Context, g *core.ResourceGraph) ([]cor
 // further — new node creation fails.
 var doksRetiredSizes = []string{"s-1vcpu-1gb", "s-1vcpu-2gb"}
 
-var CheckDOKSNodepoolSizeSupported = core.Check{
+var CheckDOKSNodepoolSizeSupported = compliancekit.Check{
 	ID:           "k8s-doks-nodepool-size-retired",
 	Title:        "DOKS node pools must not use retired droplet sizes",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "kubernetes",
 	Service:      "doks",
 	ResourceType: docol.DOKSNodePoolType,
@@ -224,8 +224,8 @@ var CheckDOKSNodepoolSizeSupported = core.Check{
 	Scanner: "doks.NodepoolSizeSupported",
 }
 
-func DOKSNodepoolSizeSupported(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func DOKSNodepoolSizeSupported(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, np := range g.ByType(docol.DOKSNodePoolType) {
 		size, _ := np.Attributes["size"].(string)
 		f := newDOKSFinding(CheckDOKSNodepoolSizeSupported, np)
@@ -237,10 +237,10 @@ func DOKSNodepoolSizeSupported(_ context.Context, g *core.ResourceGraph) ([]core
 			}
 		}
 		if retired {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("nodepool %q: size %q is retired from the DOKS catalog", np.Name, size)
 		} else {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("nodepool %q: size %q is supported", np.Name, size)
 		}
 		findings = append(findings, f)
@@ -250,10 +250,10 @@ func DOKSNodepoolSizeSupported(_ context.Context, g *core.ResourceGraph) ([]core
 
 // ----- 5. cluster maintenance window covers production-quiet hours ----
 
-var CheckDOKSMaintenanceQuietHours = core.Check{
+var CheckDOKSMaintenanceQuietHours = compliancekit.Check{
 	ID:           "k8s-doks-maintenance-window-loud-hours",
 	Title:        "Maintenance window should fall outside business hours",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "kubernetes",
 	Service:      "doks",
 	ResourceType: docol.DOKSClusterType,
@@ -275,20 +275,20 @@ var CheckDOKSMaintenanceQuietHours = core.Check{
 	Scanner: "doks.MaintenanceQuietHours",
 }
 
-func DOKSMaintenanceQuietHours(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func DOKSMaintenanceQuietHours(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, c := range g.ByType(docol.DOKSClusterType) {
 		mw, _ := c.Attributes["maintenance_window"].(string)
 		f := newDOKSFinding(CheckDOKSMaintenanceQuietHours, c)
 		switch {
 		case mw == "":
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("doks cluster %q: no maintenance window pinned", c.Name)
 		case looksLikeBusinessHour(mw):
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("doks cluster %q: maintenance window %q overlaps business hours", c.Name, mw)
 		default:
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("doks cluster %q: maintenance window %q is outside business hours", c.Name, mw)
 		}
 		findings = append(findings, f)
@@ -318,10 +318,10 @@ func looksLikeBusinessHour(mw string) bool {
 
 // ----- 6. manual: control-plane logging exported ----------------------
 
-var CheckDOKSControlPlaneLogging = core.Check{
+var CheckDOKSControlPlaneLogging = compliancekit.Check{
 	ID:           "k8s-doks-control-plane-logging-exported",
 	Title:        "DOKS control-plane logs must be exported (API audit, scheduler, controller-manager)",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "kubernetes",
 	Service:      "doks",
 	ResourceType: docol.DOKSClusterType,
@@ -346,8 +346,8 @@ var CheckDOKSControlPlaneLogging = core.Check{
 	Scanner: "doks.ControlPlaneLogging",
 }
 
-func DOKSControlPlaneLogging(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func DOKSControlPlaneLogging(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, c := range g.ByType(docol.DOKSClusterType) {
 		findings = append(findings,
 			doksManualVerify(CheckDOKSControlPlaneLogging, c,
@@ -359,10 +359,10 @@ func DOKSControlPlaneLogging(_ context.Context, g *core.ResourceGraph) ([]core.F
 
 // ----- 7. manual: metrics-server installed ----------------------------
 
-var CheckDOKSMetricsServer = core.Check{
+var CheckDOKSMetricsServer = compliancekit.Check{
 	ID:           "k8s-doks-metrics-server-installed",
 	Title:        "metrics-server must be installed (HPA + kubectl top dependency)",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "kubernetes",
 	Service:      "doks",
 	ResourceType: docol.DOKSClusterType,
@@ -384,8 +384,8 @@ var CheckDOKSMetricsServer = core.Check{
 	Scanner: "doks.MetricsServer",
 }
 
-func DOKSMetricsServer(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func DOKSMetricsServer(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, c := range g.ByType(docol.DOKSClusterType) {
 		findings = append(findings,
 			doksManualVerify(CheckDOKSMetricsServer, c,
@@ -397,10 +397,10 @@ func DOKSMetricsServer(_ context.Context, g *core.ResourceGraph) ([]core.Finding
 
 // ----- 8. manual: cert-manager installed ------------------------------
 
-var CheckDOKSCertManager = core.Check{
+var CheckDOKSCertManager = compliancekit.Check{
 	ID:           "k8s-doks-cert-manager-installed",
 	Title:        "cert-manager (or equivalent) must manage workload TLS certificates",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "kubernetes",
 	Service:      "doks",
 	ResourceType: docol.DOKSClusterType,
@@ -424,8 +424,8 @@ var CheckDOKSCertManager = core.Check{
 	Scanner: "doks.CertManager",
 }
 
-func DOKSCertManager(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func DOKSCertManager(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, c := range g.ByType(docol.DOKSClusterType) {
 		findings = append(findings,
 			doksManualVerify(CheckDOKSCertManager, c,
@@ -437,10 +437,10 @@ func DOKSCertManager(_ context.Context, g *core.ResourceGraph) ([]core.Finding, 
 
 // ----- 9. manual: cluster autoscaler add-on ---------------------------
 
-var CheckDOKSClusterAutoscaler = core.Check{
+var CheckDOKSClusterAutoscaler = compliancekit.Check{
 	ID:           "k8s-doks-cluster-autoscaler-eligible",
 	Title:        "Production clusters should run cluster-autoscaler (or use DO's built-in)",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "kubernetes",
 	Service:      "doks",
 	ResourceType: docol.DOKSClusterType,
@@ -463,8 +463,8 @@ var CheckDOKSClusterAutoscaler = core.Check{
 	Scanner: "doks.ClusterAutoscaler",
 }
 
-func DOKSClusterAutoscaler(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func DOKSClusterAutoscaler(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, c := range g.ByType(docol.DOKSClusterType) {
 		findings = append(findings,
 			doksManualVerify(CheckDOKSClusterAutoscaler, c,
@@ -476,10 +476,10 @@ func DOKSClusterAutoscaler(_ context.Context, g *core.ResourceGraph) ([]core.Fin
 
 // ----- 10. manual: Pod Security Standards baseline ---------------------
 
-var CheckDOKSPodSecurityStandards = core.Check{
+var CheckDOKSPodSecurityStandards = compliancekit.Check{
 	ID:           "k8s-doks-pod-security-standards-baseline",
 	Title:        "Pod Security Admission must enforce ≥ baseline on production namespaces",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "kubernetes",
 	Service:      "doks",
 	ResourceType: docol.DOKSClusterType,
@@ -504,8 +504,8 @@ var CheckDOKSPodSecurityStandards = core.Check{
 	Scanner: "doks.PodSecurityStandards",
 }
 
-func DOKSPodSecurityStandards(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func DOKSPodSecurityStandards(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, c := range g.ByType(docol.DOKSClusterType) {
 		findings = append(findings,
 			doksManualVerify(CheckDOKSPodSecurityStandards, c,
@@ -516,14 +516,14 @@ func DOKSPodSecurityStandards(_ context.Context, g *core.ResourceGraph) ([]core.
 }
 
 func init() {
-	core.Register(CheckDOKSVersionSupported, DOKSVersionSupported)
-	core.Register(CheckDOKSNodepoolTaints, DOKSNodepoolTaints)
-	core.Register(CheckDOKSNodepoolEnvironmentTag, DOKSNodepoolEnvironmentTag)
-	core.Register(CheckDOKSNodepoolSizeSupported, DOKSNodepoolSizeSupported)
-	core.Register(CheckDOKSMaintenanceQuietHours, DOKSMaintenanceQuietHours)
-	core.Register(CheckDOKSControlPlaneLogging, DOKSControlPlaneLogging)
-	core.Register(CheckDOKSMetricsServer, DOKSMetricsServer)
-	core.Register(CheckDOKSCertManager, DOKSCertManager)
-	core.Register(CheckDOKSClusterAutoscaler, DOKSClusterAutoscaler)
-	core.Register(CheckDOKSPodSecurityStandards, DOKSPodSecurityStandards)
+	compliancekit.Register(CheckDOKSVersionSupported, DOKSVersionSupported)
+	compliancekit.Register(CheckDOKSNodepoolTaints, DOKSNodepoolTaints)
+	compliancekit.Register(CheckDOKSNodepoolEnvironmentTag, DOKSNodepoolEnvironmentTag)
+	compliancekit.Register(CheckDOKSNodepoolSizeSupported, DOKSNodepoolSizeSupported)
+	compliancekit.Register(CheckDOKSMaintenanceQuietHours, DOKSMaintenanceQuietHours)
+	compliancekit.Register(CheckDOKSControlPlaneLogging, DOKSControlPlaneLogging)
+	compliancekit.Register(CheckDOKSMetricsServer, DOKSMetricsServer)
+	compliancekit.Register(CheckDOKSCertManager, DOKSCertManager)
+	compliancekit.Register(CheckDOKSClusterAutoscaler, DOKSClusterAutoscaler)
+	compliancekit.Register(CheckDOKSPodSecurityStandards, DOKSPodSecurityStandards)
 }

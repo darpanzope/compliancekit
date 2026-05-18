@@ -3,7 +3,7 @@ package evidence
 import (
 	"regexp"
 
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // Redaction policy: messages emitted by checks at v0.3 contain hostnames,
@@ -72,11 +72,11 @@ var patterns = []struct {
 // returned unchanged. The returned slice is a new slice; the original
 // is not mutated so reporters running after the evidence pack still
 // see the unredacted findings.
-func redactFindings(in []core.Finding, includeRaw bool) []core.Finding {
+func redactFindings(in []compliancekit.Finding, includeRaw bool) []compliancekit.Finding {
 	if includeRaw {
 		return in
 	}
-	out := make([]core.Finding, len(in))
+	out := make([]compliancekit.Finding, len(in))
 	for i, f := range in {
 		f.Message = redactString(f.Message)
 		// Evidence.Path is filesystem-local and may include a user

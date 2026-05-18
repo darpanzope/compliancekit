@@ -6,11 +6,11 @@ import (
 	"testing"
 
 	docol "github.com/darpanzope/compliancekit/internal/collectors/digitalocean"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
-func mkFnNS(name, region string, attrs map[string]any) core.Resource {
-	r := core.Resource{
+func mkFnNS(name, region string, attrs map[string]any) compliancekit.Resource {
+	r := compliancekit.Resource{
 		ID:         "digitalocean.functions_namespace." + name,
 		Type:       docol.FunctionsNamespaceType,
 		Name:       name,
@@ -24,10 +24,10 @@ func mkFnNS(name, region string, attrs map[string]any) core.Resource {
 func TestFnNamespaceRegion(t *testing.T) {
 	cases := []struct {
 		name, region string
-		want         core.Status
+		want         compliancekit.Status
 	}{
-		{"with region", "nyc1", core.StatusPass},
-		{"no region", "", core.StatusFail},
+		{"with region", "nyc1", compliancekit.StatusPass},
+		{"no region", "", compliancekit.StatusFail},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -44,11 +44,11 @@ func TestFnAllTriggersEnabledRatio(t *testing.T) {
 	cases := []struct {
 		name string
 		t, e int
-		want core.Status
+		want compliancekit.Status
 	}{
 		{"no triggers → skip", 0, 0, ""},
-		{"all enabled", 4, 4, core.StatusPass},
-		{"partial disabled", 4, 3, core.StatusFail},
+		{"all enabled", 4, 4, compliancekit.StatusPass},
+		{"partial disabled", 4, 3, compliancekit.StatusFail},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -76,11 +76,11 @@ func TestFnAccessKeyMinimum(t *testing.T) {
 		mkFnNS("without", "nyc1", map[string]any{"access_key_count": 0}),
 	)
 	findings, _ := FnAccessKeyMinimum(context.Background(), g)
-	byName := map[string]core.Status{}
+	byName := map[string]compliancekit.Status{}
 	for _, f := range findings {
 		byName[f.Resource.Name] = f.Status
 	}
-	if byName["with"] != core.StatusPass || byName["without"] != core.StatusFail {
+	if byName["with"] != compliancekit.StatusPass || byName["without"] != compliancekit.StatusFail {
 		t.Errorf("statuses=%+v", byName)
 	}
 }
@@ -89,7 +89,7 @@ func TestFnManualVerifyChecks(t *testing.T) {
 	g := newAccountGraph(mkFnNS("ns", "nyc1", nil))
 	cases := []struct {
 		name string
-		fn   func(context.Context, *core.ResourceGraph) ([]core.Finding, error)
+		fn   func(context.Context, *compliancekit.ResourceGraph) ([]compliancekit.Finding, error)
 		hint string
 	}{
 		{"key rotation", FnAccessKeyRotation, "list-keys"},
@@ -103,7 +103,7 @@ func TestFnManualVerifyChecks(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			findings, _ := c.fn(context.Background(), g)
-			if findings[0].Status != core.StatusError {
+			if findings[0].Status != compliancekit.StatusError {
 				t.Errorf("status=%v want StatusError", findings[0].Status)
 			}
 			if !strings.Contains(strings.ToLower(findings[0].Message), c.hint) {

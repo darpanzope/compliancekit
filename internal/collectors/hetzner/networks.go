@@ -7,7 +7,7 @@ import (
 	"github.com/hetznercloud/hcloud-go/v2/hcloud"
 
 	"github.com/darpanzope/compliancekit/internal/collectors/cloudcommon"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // NetworkType is the resource type for Hetzner Cloud private
@@ -16,19 +16,19 @@ import (
 // AWS has VPCs + subnets.
 const NetworkType = "hetzner.network"
 
-func (c *Collector) collectNetworks(ctx context.Context) ([]core.Resource, error) {
+func (c *Collector) collectNetworks(ctx context.Context) ([]compliancekit.Resource, error) {
 	nets, err := c.client.Network.All(ctx)
 	if err != nil {
 		return nil, err
 	}
-	out := make([]core.Resource, 0, len(nets))
+	out := make([]compliancekit.Resource, 0, len(nets))
 	for _, n := range nets {
 		out = append(out, c.networkResource(n))
 	}
 	return out, nil
 }
 
-func (c *Collector) networkResource(n *hcloud.Network) core.Resource {
+func (c *Collector) networkResource(n *hcloud.Network) compliancekit.Resource {
 	ipRange := ""
 	if n.IPRange != nil {
 		ipRange = n.IPRange.String()
@@ -47,7 +47,7 @@ func (c *Collector) networkResource(n *hcloud.Network) core.Resource {
 		})
 	}
 
-	r := core.Resource{
+	r := compliancekit.Resource{
 		ID:       fmt.Sprintf("%s.%d", NetworkType, n.ID),
 		Type:     NetworkType,
 		Name:     n.Name,

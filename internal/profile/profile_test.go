@@ -4,11 +4,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
-func mkCheck(id, provider string, sev core.Severity, tags []string, frameworks map[string][]string) core.Check {
-	return core.Check{
+func mkCheck(id, provider string, sev compliancekit.Severity, tags []string, frameworks map[string][]string) compliancekit.Check {
+	return compliancekit.Check{
 		ID:         id,
 		Provider:   provider,
 		Severity:   sev,
@@ -17,12 +17,12 @@ func mkCheck(id, provider string, sev core.Severity, tags []string, frameworks m
 	}
 }
 
-func sampleCatalog() []core.Check {
-	return []core.Check{
-		mkCheck("do-droplet-no-firewall", "digitalocean", core.SeverityHigh, []string{"network", "exposure"}, map[string][]string{"soc2": {"CC6.6"}, "cis-v8": {"4.4"}}),
-		mkCheck("do-droplet-no-tags", "digitalocean", core.SeverityLow, []string{"inventory"}, map[string][]string{"soc2": {"CC1.4"}, "iso27001": {"A.5.9"}}),
-		mkCheck("linux-sshd-no-root-login", "linux", core.SeverityHigh, []string{"ssh"}, map[string][]string{"soc2": {"CC6.1"}, "cis-v8": {"5.4"}}),
-		mkCheck("linux-aslr-enabled", "linux", core.SeverityMedium, []string{"kernel"}, map[string][]string{"cis-v8": {"4.1"}}),
+func sampleCatalog() []compliancekit.Check {
+	return []compliancekit.Check{
+		mkCheck("do-droplet-no-firewall", "digitalocean", compliancekit.SeverityHigh, []string{"network", "exposure"}, map[string][]string{"soc2": {"CC6.6"}, "cis-v8": {"4.4"}}),
+		mkCheck("do-droplet-no-tags", "digitalocean", compliancekit.SeverityLow, []string{"inventory"}, map[string][]string{"soc2": {"CC1.4"}, "iso27001": {"A.5.9"}}),
+		mkCheck("linux-sshd-no-root-login", "linux", compliancekit.SeverityHigh, []string{"ssh"}, map[string][]string{"soc2": {"CC6.1"}, "cis-v8": {"5.4"}}),
+		mkCheck("linux-aslr-enabled", "linux", compliancekit.SeverityMedium, []string{"kernel"}, map[string][]string{"cis-v8": {"4.1"}}),
 	}
 }
 
@@ -173,10 +173,10 @@ func TestFilter_CaseInsensitive(t *testing.T) {
 
 func TestFilter_SortedOutput(t *testing.T) {
 	// Output sorted by ID regardless of input order.
-	shuffled := []core.Check{
-		mkCheck("zzz", "x", core.SeverityHigh, nil, nil),
-		mkCheck("aaa", "x", core.SeverityHigh, nil, nil),
-		mkCheck("mmm", "x", core.SeverityHigh, nil, nil),
+	shuffled := []compliancekit.Check{
+		mkCheck("zzz", "x", compliancekit.SeverityHigh, nil, nil),
+		mkCheck("aaa", "x", compliancekit.SeverityHigh, nil, nil),
+		mkCheck("mmm", "x", compliancekit.SeverityHigh, nil, nil),
 	}
 	p := Profile{Name: "any"}
 	out, err := p.Filter(shuffled)
@@ -188,7 +188,7 @@ func TestFilter_SortedOutput(t *testing.T) {
 	}
 }
 
-func checkIDs(checks []core.Check) []string {
+func checkIDs(checks []compliancekit.Check) []string {
 	out := make([]string, len(checks))
 	for i, c := range checks {
 		out[i] = c.ID

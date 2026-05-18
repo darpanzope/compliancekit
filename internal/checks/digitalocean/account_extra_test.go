@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.19 phase 1 — table-driven tests for the 10 account-governance
@@ -16,11 +16,11 @@ func TestAccountStatusMessageClean(t *testing.T) {
 	cases := []struct {
 		name string
 		msg  string
-		want core.Status
+		want compliancekit.Status
 	}{
-		{"empty", "", core.StatusPass},
-		{"whitespace", "   ", core.StatusPass},
-		{"flagged", "billing arrears — payment failed", core.StatusFail},
+		{"empty", "", compliancekit.StatusPass},
+		{"whitespace", "   ", compliancekit.StatusPass},
+		{"flagged", "billing arrears — payment failed", compliancekit.StatusFail},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -41,17 +41,17 @@ func TestAccountDropletQuotaHeadroom(t *testing.T) {
 		name    string
 		limit   int
 		droplet int
-		want    core.Status
+		want    compliancekit.Status
 	}{
-		{"unbounded", 0, 100, core.StatusSkip},
-		{"half-used", 25, 12, core.StatusPass},
-		{"at-threshold", 25, 20, core.StatusPass}, // 80% exactly = pass
-		{"over-threshold", 25, 21, core.StatusFail},
-		{"saturated", 25, 25, core.StatusFail},
+		{"unbounded", 0, 100, compliancekit.StatusSkip},
+		{"half-used", 25, 12, compliancekit.StatusPass},
+		{"at-threshold", 25, 20, compliancekit.StatusPass}, // 80% exactly = pass
+		{"over-threshold", 25, 21, compliancekit.StatusFail},
+		{"saturated", 25, 25, compliancekit.StatusFail},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			resources := []core.Resource{mkAccount("a", map[string]any{"droplet_limit": c.limit})}
+			resources := []compliancekit.Resource{mkAccount("a", map[string]any{"droplet_limit": c.limit})}
 			for i := 0; i < c.droplet; i++ {
 				resources = append(resources, mkDroplet("d"+itoaSimple(i), nil))
 			}
@@ -75,7 +75,7 @@ func TestAccountVolumeQuotaHeadroom(t *testing.T) {
 		mkVolume("v7", nil), mkVolume("v8", nil), mkVolume("v9", nil),
 	) // 9/10 = 90% > threshold
 	findings, _ := AccountVolumeQuotaHeadroom(context.Background(), g)
-	if findings[0].Status != core.StatusFail {
+	if findings[0].Status != compliancekit.StatusFail {
 		t.Errorf("9/10 should fail, got %v", findings[0].Status)
 	}
 }
@@ -86,7 +86,7 @@ func TestAccountReservedIPQuotaHeadroom(t *testing.T) {
 		mkRIP("ip1", nil), mkRIP("ip2", nil), // 2/5 = 40% → pass
 	)
 	findings, _ := AccountReservedIPQuotaHeadroom(context.Background(), g)
-	if findings[0].Status != core.StatusPass {
+	if findings[0].Status != compliancekit.StatusPass {
 		t.Errorf("2/5 should pass, got %v", findings[0].Status)
 	}
 }
@@ -101,7 +101,7 @@ func TestAccountMonitoringAlertCoverage(t *testing.T) {
 			mkAlert("load", map[string]any{"alert_type": "v1/insights/droplet/load_5", "enabled": true}),
 		)
 		findings, _ := AccountMonitoringAlertCoverage(context.Background(), g)
-		if findings[0].Status != core.StatusPass {
+		if findings[0].Status != compliancekit.StatusPass {
 			t.Errorf("got %v, want pass", findings[0].Status)
 		}
 	})
@@ -112,7 +112,7 @@ func TestAccountMonitoringAlertCoverage(t *testing.T) {
 			mkAlert("disk", map[string]any{"alert_type": "v1/insights/droplet/disk_utilization_percent", "enabled": true}),
 		)
 		findings, _ := AccountMonitoringAlertCoverage(context.Background(), g)
-		if findings[0].Status != core.StatusFail {
+		if findings[0].Status != compliancekit.StatusFail {
 			t.Fatalf("got %v, want fail", findings[0].Status)
 		}
 		if !strings.Contains(findings[0].Message, "memory") || !strings.Contains(findings[0].Message, "load") {
@@ -125,7 +125,7 @@ func TestAccountMonitoringAlertCoverage(t *testing.T) {
 			mkAlert("cpu-disabled", map[string]any{"alert_type": "v1/insights/droplet/cpu", "enabled": false}),
 		)
 		findings, _ := AccountMonitoringAlertCoverage(context.Background(), g)
-		if findings[0].Status != core.StatusFail {
+		if findings[0].Status != compliancekit.StatusFail {
 			t.Errorf("disabled alert should not count, got %v", findings[0].Status)
 		}
 	})
@@ -139,7 +139,7 @@ func TestAccountManualVerifyChecks(t *testing.T) {
 
 	cases := []struct {
 		name string
-		fn   func(context.Context, *core.ResourceGraph) ([]core.Finding, error)
+		fn   func(context.Context, *compliancekit.ResourceGraph) ([]compliancekit.Finding, error)
 		url  string
 	}{
 		{"mfa", AccountMFARequired, "/account/security"},
@@ -154,7 +154,7 @@ func TestAccountManualVerifyChecks(t *testing.T) {
 			if len(findings) != 1 {
 				t.Fatalf("findings=%d, want 1", len(findings))
 			}
-			if findings[0].Status != core.StatusError {
+			if findings[0].Status != compliancekit.StatusError {
 				t.Errorf("manual-verify must use StatusError; got %v", findings[0].Status)
 			}
 			if !strings.Contains(findings[0].Message, c.url) {

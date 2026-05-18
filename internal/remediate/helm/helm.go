@@ -13,11 +13,11 @@ package helm
 import (
 	"fmt"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
-type strategyFunc func(core.Finding) (remediate.Snippet, error)
+type strategyFunc func(compliancekit.Finding) (remediate.Snippet, error)
 
 type strategy struct {
 	name string
@@ -28,7 +28,7 @@ type strategy struct {
 func (s *strategy) Name() string                { return s.name }
 func (s *strategy) CheckIDs() []string          { return s.ids }
 func (s *strategy) Formats() []remediate.Format { return []remediate.Format{remediate.FormatHelm} }
-func (s *strategy) Render(f core.Finding, format remediate.Format) (remediate.Snippet, error) {
+func (s *strategy) Render(f compliancekit.Finding, format remediate.Format) (remediate.Snippet, error) {
 	if format != remediate.FormatHelm {
 		return remediate.Snippet{}, remediate.ErrFormatUnsupported
 	}
@@ -76,7 +76,7 @@ func init() {
 		renderServiceAccountOverlay)
 }
 
-func renderPodSecurityOverlay(_ core.Finding) (remediate.Snippet, error) {
+func renderPodSecurityOverlay(_ compliancekit.Finding) (remediate.Snippet, error) {
 	values := `# Merge into your existing values.yaml. Most charts surface these
 # under .Values.podSecurityContext + .Values.securityContext —
 # but key paths VARY by chart. Inspect the chart's templates/ to
@@ -104,7 +104,7 @@ securityContext:
 	}, nil
 }
 
-func renderResourcesOverlay(_ core.Finding) (remediate.Snippet, error) {
+func renderResourcesOverlay(_ compliancekit.Finding) (remediate.Snippet, error) {
 	values := `resources:
   requests:
     cpu: 100m
@@ -119,7 +119,7 @@ func renderResourcesOverlay(_ core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderPDBOverlay(f core.Finding) (remediate.Snippet, error) {
+func renderPDBOverlay(f compliancekit.Finding) (remediate.Snippet, error) {
 	name := f.Resource.Name
 	if name == "" {
 		name = "REPLACE_RELEASE_NAME"
@@ -145,7 +145,7 @@ podDisruptionBudget:
 	}, nil
 }
 
-func renderReplicasOverlay(_ core.Finding) (remediate.Snippet, error) {
+func renderReplicasOverlay(_ compliancekit.Finding) (remediate.Snippet, error) {
 	values := `# Most charts respect .Values.replicaCount (or .Values.replicas).
 replicaCount: 3
 
@@ -162,7 +162,7 @@ autoscaling:
 	}, nil
 }
 
-func renderNetworkPolicyOverlay(_ core.Finding) (remediate.Snippet, error) {
+func renderNetworkPolicyOverlay(_ compliancekit.Finding) (remediate.Snippet, error) {
 	values := `# Many charts ship NetworkPolicy templates gated on this flag.
 networkPolicy:
   enabled: true
@@ -179,7 +179,7 @@ networkPolicy:
 	}, nil
 }
 
-func renderServiceAccountOverlay(_ core.Finding) (remediate.Snippet, error) {
+func renderServiceAccountOverlay(_ compliancekit.Finding) (remediate.Snippet, error) {
 	values := `serviceAccount:
   create: true
   automountServiceAccountToken: false

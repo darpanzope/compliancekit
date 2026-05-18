@@ -3,8 +3,8 @@ package terraform
 import (
 	"fmt"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.19 phase 5 — Terraform strategies for the 10 App-Platform depth
@@ -34,11 +34,11 @@ func init() {
 		[]string{"do-app-cdn-attachment"}, renderTFAppCDN)
 }
 
-func tfAppName(f core.Finding) string {
+func tfAppName(f compliancekit.Finding) string {
 	return tfNameOrFallback(f, "APP")
 }
 
-func renderTFAppHealthcheck(f core.Finding) (remediate.Snippet, error) {
+func renderTFAppHealthcheck(f compliancekit.Finding) (remediate.Snippet, error) {
 	name := tfAppName(f)
 	body := fmt.Sprintf(`# Add a HealthCheck block to every service in the app spec.
 
@@ -65,7 +65,7 @@ resource "digitalocean_app" %q {
 	}, nil
 }
 
-func renderTFAppLogDest(f core.Finding) (remediate.Snippet, error) {
+func renderTFAppLogDest(f compliancekit.Finding) (remediate.Snippet, error) {
 	name := tfAppName(f)
 	body := fmt.Sprintf(`resource "digitalocean_app" %q {
   spec {
@@ -89,7 +89,7 @@ func renderTFAppLogDest(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderTFAppServiceAlerts(f core.Finding) (remediate.Snippet, error) {
+func renderTFAppServiceAlerts(f compliancekit.Finding) (remediate.Snippet, error) {
 	name := tfAppName(f)
 	body := fmt.Sprintf(`resource "digitalocean_app" %q {
   spec {
@@ -117,7 +117,7 @@ func renderTFAppServiceAlerts(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderTFAppTier(f core.Finding) (remediate.Snippet, error) {
+func renderTFAppTier(f compliancekit.Finding) (remediate.Snippet, error) {
 	name := tfAppName(f)
 	body := fmt.Sprintf(`resource "digitalocean_app" %q {
   spec {
@@ -136,7 +136,7 @@ func renderTFAppTier(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderTFAppDatabase(f core.Finding) (remediate.Snippet, error) {
+func renderTFAppDatabase(f compliancekit.Finding) (remediate.Snippet, error) {
 	name := tfAppName(f)
 	body := fmt.Sprintf(`resource "digitalocean_app" %q {
   spec {
@@ -156,14 +156,14 @@ func renderTFAppDatabase(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderTFAppDeployProtection(_ core.Finding) (remediate.Snippet, error) {
+func renderTFAppDeployProtection(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return renderTFManualOnly(
 		"branch-protection state lives on GitHub / GitLab, not the DO App spec",
 		"https://github.com/settings",
 		"On the source repo: require ≥1 review + status checks on the deploy branch")
 }
 
-func renderTFAppDomainTLS13(f core.Finding) (remediate.Snippet, error) {
+func renderTFAppDomainTLS13(f compliancekit.Finding) (remediate.Snippet, error) {
 	name := tfAppName(f)
 	body := fmt.Sprintf(`resource "digitalocean_app" %q {
   spec {
@@ -181,21 +181,21 @@ func renderTFAppDomainTLS13(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderTFAppBuildSecretScan(_ core.Finding) (remediate.Snippet, error) {
+func renderTFAppBuildSecretScan(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return renderTFManualOnly(
 		"secret scanning is a source-repo CI control; not surfaced by the DO App spec",
 		"https://github.com/gitleaks/gitleaks",
 		"Add a gitleaks/trufflehog gate in the source-repo CI BEFORE the DO deploy webhook fires")
 }
 
-func renderTFAppCertRotation(_ core.Finding) (remediate.Snippet, error) {
+func renderTFAppCertRotation(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return renderTFManualOnly(
 		"DO App spec doesn't expose cert provenance at runtime",
 		"https://cloud.digitalocean.com/apps",
 		"Declare custom domains WITHOUT cert_id to use auto-renewing Let's Encrypt")
 }
 
-func renderTFAppCDN(_ core.Finding) (remediate.Snippet, error) {
+func renderTFAppCDN(_ compliancekit.Finding) (remediate.Snippet, error) {
 	body := `# Static assets via a Spaces bucket with CDN enabled.
 
 resource "digitalocean_spaces_bucket" "static_assets" {

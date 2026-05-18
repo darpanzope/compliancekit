@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/ingest"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // adapter implements ingest.Ingester for SARIF 2.1.0.
@@ -123,7 +123,7 @@ func projectResult(
 	toolID, toolVersion string,
 	mapping *ingest.MappingTable,
 	opts ingest.Options,
-) (core.Finding, *core.Resource, []string) {
+) (compliancekit.Finding, *compliancekit.Resource, []string) {
 	var warnings []string
 
 	subject, phantom := resolveSubject(res, toolID, opts)
@@ -166,16 +166,16 @@ func projectResult(
 	}
 
 	checkID := composeCheckID(toolID, res.RuleID)
-	finding := core.Finding{
+	finding := compliancekit.Finding{
 		CheckID:       checkID,
-		Status:        core.StatusFail,
+		Status:        compliancekit.StatusFail,
 		Severity:      severity,
 		Resource:      subject,
 		Message:       composeMessage(res, rules),
 		Tags:          tags,
 		Vulnerability: vulnerabilityFromResult(res, rules),
 		Timestamp:     opts.Provenance.IngestedAt,
-		Source: &core.Source{
+		Source: &compliancekit.Source{
 			Type:        "ingest",
 			Tool:        toolID,
 			ToolVersion: toolVersion,
@@ -195,7 +195,7 @@ func projectResult(
 // rule). When the graph in opts.Graph already contains a resource
 // for this subject, the existing ID is reused; otherwise a phantom
 // is returned for the caller to add to the graph.
-func resolveSubject(res result, toolID string, opts ingest.Options) (core.ResourceRef, *core.Resource) {
+func resolveSubject(res result, toolID string, opts ingest.Options) (compliancekit.ResourceRef, *compliancekit.Resource) {
 	uri, line := primaryLocation(res)
 	logical := primaryLogical(res)
 
@@ -231,7 +231,7 @@ func resolveSubject(res result, toolID string, opts ingest.Options) (core.Resour
 	id := synthResourceID(toolID, name, line)
 	if opts.Graph != nil {
 		if existing, ok := opts.Graph.ByID(id); ok {
-			return core.ResourceRef{
+			return compliancekit.ResourceRef{
 				ID:       existing.ID,
 				Type:     existing.Type,
 				Name:     existing.Name,
@@ -240,7 +240,7 @@ func resolveSubject(res result, toolID string, opts ingest.Options) (core.Resour
 		}
 	}
 
-	phantom := core.Resource{
+	phantom := compliancekit.Resource{
 		ID:       id,
 		Type:     kind,
 		Name:     filepath.Base(name),
@@ -250,7 +250,7 @@ func resolveSubject(res result, toolID string, opts ingest.Options) (core.Resour
 			"source_path":   name,
 		},
 	}
-	return core.ResourceRef{
+	return compliancekit.ResourceRef{
 		ID:       phantom.ID,
 		Type:     phantom.Type,
 		Name:     phantom.Name,
@@ -267,11 +267,11 @@ func resolveSeverity(
 	res result,
 	rules map[string]rule,
 	mapping *ingest.MappingTable,
-	def core.Severity,
-) core.Severity {
+	def compliancekit.Severity,
+) compliancekit.Severity {
 	if mapping != nil {
 		if m, ok := mapping.Lookup(res.RuleID); ok && m.Severity != "" {
-			if s, err := core.ParseSeverity(m.Severity); err == nil {
+			if s, err := compliancekit.ParseSeverity(m.Severity); err == nil {
 				return s
 			}
 		}
@@ -287,12 +287,12 @@ func resolveSeverity(
 		}
 	}
 	if v, ok := res.Properties["security-severity"]; ok {
-		if s := cvssToSeverity(v); s != core.SeverityInfo || def == core.SeverityInfo {
+		if s := cvssToSeverity(v); s != compliancekit.SeverityInfo || def == compliancekit.SeverityInfo {
 			return s
 		}
 	}
-	if def == core.SeverityInfo {
-		return core.SeverityMedium
+	if def == compliancekit.SeverityInfo {
+		return compliancekit.SeverityMedium
 	}
 	return def
 }
@@ -301,25 +301,25 @@ func resolveSeverity(
 // compliancekit's severity scale. SARIF "error" → high (we reserve
 // critical for severity-elevated findings via mapping tables or
 // CVSS≥9.0); "warning" → medium; "note" → low; "none" → info.
-func sarifLevelToSeverity(level string) (core.Severity, bool) {
+func sarifLevelToSeverity(level string) (compliancekit.Severity, bool) {
 	switch strings.ToLower(level) {
 	case "error":
-		return core.SeverityHigh, true
+		return compliancekit.SeverityHigh, true
 	case "warning":
-		return core.SeverityMedium, true
+		return compliancekit.SeverityMedium, true
 	case "note":
-		return core.SeverityLow, true
+		return compliancekit.SeverityLow, true
 	case "none":
-		return core.SeverityInfo, true
+		return compliancekit.SeverityInfo, true
 	}
-	return core.SeverityInfo, false
+	return compliancekit.SeverityInfo, false
 }
 
 // cvssToSeverity converts the SARIF "security-severity" property
 // Trivy emits (a stringified CVSS base score, 0.0–10.0) into the
 // compliancekit severity scale. Aligns with the CVSS v3.1 qualitative
 // rating bands: 9.0+ critical, 7.0+ high, 4.0+ medium, 0.1+ low.
-func cvssToSeverity(v any) core.Severity {
+func cvssToSeverity(v any) compliancekit.Severity {
 	var n float64
 	switch x := v.(type) {
 	case float64:
@@ -331,23 +331,23 @@ func cvssToSeverity(v any) core.Severity {
 		var parsed float64
 		_, err := fmt.Sscanf(x, "%f", &parsed)
 		if err != nil {
-			return core.SeverityInfo
+			return compliancekit.SeverityInfo
 		}
 		n = parsed
 	default:
-		return core.SeverityInfo
+		return compliancekit.SeverityInfo
 	}
 	switch {
 	case n >= 9.0:
-		return core.SeverityCritical
+		return compliancekit.SeverityCritical
 	case n >= 7.0:
-		return core.SeverityHigh
+		return compliancekit.SeverityHigh
 	case n >= 4.0:
-		return core.SeverityMedium
+		return compliancekit.SeverityMedium
 	case n >= 0.1:
-		return core.SeverityLow
+		return compliancekit.SeverityLow
 	}
-	return core.SeverityInfo
+	return compliancekit.SeverityInfo
 }
 
 // composeCheckID assembles a stable, namespaced CheckID for an
@@ -476,15 +476,15 @@ func defaultVulnControls() []ingest.ControlMapping {
 	}
 }
 
-// vulnerabilityFromResult builds a core.Vulnerability block when the
+// vulnerabilityFromResult builds a compliancekit.Vulnerability block when the
 // SARIF result describes a CVE / GHSA / advisory finding. Returns
 // nil for non-advisory rules (Trivy AVD misconfigs, Checkov CKV_*,
 // etc.) so reporters can branch cleanly on presence.
-func vulnerabilityFromResult(res result, rules map[string]rule) *core.Vulnerability {
+func vulnerabilityFromResult(res result, rules map[string]rule) *compliancekit.Vulnerability {
 	if !isVulnAdvisoryRuleID(res.RuleID) {
 		return nil
 	}
-	v := &core.Vulnerability{
+	v := &compliancekit.Vulnerability{
 		ID:          res.RuleID,
 		Description: res.Message.Text,
 	}

@@ -5,17 +5,17 @@ import (
 	"fmt"
 
 	k8scol "github.com/darpanzope/compliancekit/internal/collectors/k8s"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.22 phase 3 — NetworkPolicy checks split out of network.go.
 
 // ----- NetworkPolicy default-deny ingress -----------------------
 
-var CheckNPDefaultDenyIngress = core.Check{
+var CheckNPDefaultDenyIngress = compliancekit.Check{
 	ID:           "k8s-networkpolicy-default-deny-ingress",
 	Title:        "Each namespace should have a default-deny ingress NetworkPolicy",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "kubernetes",
 	Service:      "network",
 	ResourceType: k8scol.NamespaceType,
@@ -40,16 +40,16 @@ var CheckNPDefaultDenyIngress = core.Check{
 // Phase 4 ships the default-deny check against the set of namespaces
 // referenced by Services/Pods/etc. Phase 6 will add the explicit
 // k8s.namespace resource and re-target this against it.
-func NPDefaultDenyIngress(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func NPDefaultDenyIngress(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	return namespaceNPCoverageCheck(g, CheckNPDefaultDenyIngress, "Ingress"), nil
 }
 
 // ----- NetworkPolicy default-deny egress ------------------------
 
-var CheckNPDefaultDenyEgress = core.Check{
+var CheckNPDefaultDenyEgress = compliancekit.Check{
 	ID:           "k8s-networkpolicy-default-deny-egress",
 	Title:        "Each namespace should have a default-deny egress NetworkPolicy",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "kubernetes",
 	Service:      "network",
 	ResourceType: k8scol.NamespaceType,
@@ -72,16 +72,16 @@ var CheckNPDefaultDenyEgress = core.Check{
 	Scanner: "network.NPDefaultDenyEgress",
 }
 
-func NPDefaultDenyEgress(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func NPDefaultDenyEgress(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	return namespaceNPCoverageCheck(g, CheckNPDefaultDenyEgress, "Egress"), nil
 }
 
 // ----- NetworkPolicy namespace coverage --------------------------
 
-var CheckNPNamespaceHasAny = core.Check{
+var CheckNPNamespaceHasAny = compliancekit.Check{
 	ID:           "k8s-networkpolicy-namespace-coverage",
 	Title:        "Workload namespaces should have at least one NetworkPolicy",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "kubernetes",
 	Service:      "network",
 	ResourceType: k8scol.NamespaceType,
@@ -101,28 +101,28 @@ var CheckNPNamespaceHasAny = core.Check{
 	Scanner: "network.NPNamespaceHasAny",
 }
 
-func NPNamespaceHasAny(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func NPNamespaceHasAny(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	npsByNs := map[string]int{}
 	for _, np := range g.ByType(k8scol.NetworkPolicyType) {
 		ns, _ := np.Attributes["namespace"].(string)
 		npsByNs[ns]++
 	}
-	findings := []core.Finding{}
+	findings := []compliancekit.Finding{}
 	for _, ns := range knownNamespaces(g) {
 		if isSystemNamespace(ns) {
 			continue
 		}
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckNPNamespaceHasAny.ID,
 			Severity: CheckNPNamespaceHasAny.Severity,
-			Resource: core.ResourceRef{ID: "k8s.namespace." + ns, Type: k8scol.NamespaceType, Name: ns},
+			Resource: compliancekit.ResourceRef{ID: "k8s.namespace." + ns, Type: k8scol.NamespaceType, Name: ns},
 			Tags:     CheckNPNamespaceHasAny.Tags,
 		}
 		if npsByNs[ns] > 0 {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("namespace %q: %d NetworkPolicy resource(s)", ns, npsByNs[ns])
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("namespace %q: no NetworkPolicy resources", ns)
 		}
 		findings = append(findings, f)
@@ -132,10 +132,10 @@ func NPNamespaceHasAny(_ context.Context, g *core.ResourceGraph) ([]core.Finding
 
 // ----- NetworkPolicy allow-all ingress ---------------------------
 
-var CheckNPAllowAllIngress = core.Check{
+var CheckNPAllowAllIngress = compliancekit.Check{
 	ID:           "k8s-networkpolicy-allow-all-ingress",
 	Title:        "NetworkPolicies should not have allow-all ingress rules",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "kubernetes",
 	Service:      "network",
 	ResourceType: k8scol.NetworkPolicyType,
@@ -157,7 +157,7 @@ var CheckNPAllowAllIngress = core.Check{
 	Scanner: "network.NPAllowAllIngress",
 }
 
-func NPAllowAllIngress(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func NPAllowAllIngress(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	return npAttributeCheck(g, CheckNPAllowAllIngress, "has_allow_all_ingress",
 		"rule allows from any source",
 		"no rule allows all ingress"), nil
@@ -165,10 +165,10 @@ func NPAllowAllIngress(_ context.Context, g *core.ResourceGraph) ([]core.Finding
 
 // ----- NetworkPolicy allow-all egress ----------------------------
 
-var CheckNPAllowAllEgress = core.Check{
+var CheckNPAllowAllEgress = compliancekit.Check{
 	ID:           "k8s-networkpolicy-allow-all-egress",
 	Title:        "NetworkPolicies should not have allow-all egress rules",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "kubernetes",
 	Service:      "network",
 	ResourceType: k8scol.NetworkPolicyType,
@@ -189,7 +189,7 @@ var CheckNPAllowAllEgress = core.Check{
 	Scanner: "network.NPAllowAllEgress",
 }
 
-func NPAllowAllEgress(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func NPAllowAllEgress(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	return npAttributeCheck(g, CheckNPAllowAllEgress, "has_allow_all_egress",
 		"rule allows to any destination",
 		"no rule allows all egress"), nil
@@ -197,10 +197,10 @@ func NPAllowAllEgress(_ context.Context, g *core.ResourceGraph) ([]core.Finding,
 
 // ----- NetworkPolicy from all namespaces -------------------------
 
-var CheckNPFromAllNamespaces = core.Check{
+var CheckNPFromAllNamespaces = compliancekit.Check{
 	ID:           "k8s-networkpolicy-from-all-namespaces",
 	Title:        "NetworkPolicies should not allow ingress from all namespaces",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "kubernetes",
 	Service:      "network",
 	ResourceType: k8scol.NetworkPolicyType,
@@ -221,7 +221,7 @@ var CheckNPFromAllNamespaces = core.Check{
 	Scanner: "network.NPFromAllNamespaces",
 }
 
-func NPFromAllNamespaces(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func NPFromAllNamespaces(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	return npAttributeCheck(g, CheckNPFromAllNamespaces, "has_from_all_namespaces",
 		"peer matches all namespaces",
 		"no all-namespaces peer"), nil
@@ -229,10 +229,10 @@ func NPFromAllNamespaces(_ context.Context, g *core.ResourceGraph) ([]core.Findi
 
 // ----- NetworkPolicy empty selector ------------------------------
 
-var CheckNPEmptySelector = core.Check{
+var CheckNPEmptySelector = compliancekit.Check{
 	ID:           "k8s-networkpolicy-empty-selector",
 	Title:        "NetworkPolicies with empty podSelector apply to every pod",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "kubernetes",
 	Service:      "network",
 	ResourceType: k8scol.NetworkPolicyType,
@@ -253,13 +253,13 @@ var CheckNPEmptySelector = core.Check{
 	Scanner: "network.NPEmptySelector",
 }
 
-func NPEmptySelector(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func NPEmptySelector(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, np := range g.ByType(k8scol.NetworkPolicyType) {
 		matchesAll, _ := np.Attributes["matches_all_pods"].(bool)
 		ingressCount, _ := np.Attributes["ingress_rule_count"].(int)
 		egressCount, _ := np.Attributes["egress_rule_count"].(int)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckNPEmptySelector.ID,
 			Severity: CheckNPEmptySelector.Severity,
 			Resource: np.Ref(),
@@ -269,13 +269,13 @@ func NPEmptySelector(_ context.Context, g *core.ResourceGraph) ([]core.Finding, 
 		// matchesAll plus rules == suspicious all-pods allow.
 		switch {
 		case !matchesAll:
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("networkpolicy %q: scoped via podSelector", networkDesc(np))
 		case ingressCount == 0 && egressCount == 0:
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("networkpolicy %q: default-deny pattern (matches all pods, no rules)", networkDesc(np))
 		default:
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("networkpolicy %q: empty podSelector with %d/%d ingress/egress rules", networkDesc(np), ingressCount, egressCount)
 		}
 		findings = append(findings, f)
@@ -284,11 +284,11 @@ func NPEmptySelector(_ context.Context, g *core.ResourceGraph) ([]core.Finding, 
 }
 
 func init() {
-	core.Register(CheckNPDefaultDenyIngress, NPDefaultDenyIngress)
-	core.Register(CheckNPDefaultDenyEgress, NPDefaultDenyEgress)
-	core.Register(CheckNPNamespaceHasAny, NPNamespaceHasAny)
-	core.Register(CheckNPAllowAllIngress, NPAllowAllIngress)
-	core.Register(CheckNPAllowAllEgress, NPAllowAllEgress)
-	core.Register(CheckNPFromAllNamespaces, NPFromAllNamespaces)
-	core.Register(CheckNPEmptySelector, NPEmptySelector)
+	compliancekit.Register(CheckNPDefaultDenyIngress, NPDefaultDenyIngress)
+	compliancekit.Register(CheckNPDefaultDenyEgress, NPDefaultDenyEgress)
+	compliancekit.Register(CheckNPNamespaceHasAny, NPNamespaceHasAny)
+	compliancekit.Register(CheckNPAllowAllIngress, NPAllowAllIngress)
+	compliancekit.Register(CheckNPAllowAllEgress, NPAllowAllEgress)
+	compliancekit.Register(CheckNPFromAllNamespaces, NPFromAllNamespaces)
+	compliancekit.Register(CheckNPEmptySelector, NPEmptySelector)
 }

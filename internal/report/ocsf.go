@@ -7,8 +7,8 @@ import (
 	"io"
 	"time"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/frameworks"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // FormatOCSF is the lowercase identifier matching ROADMAP.md /
@@ -55,10 +55,10 @@ type OCSFReporter struct{}
 // NewOCSF returns an OCSF reporter.
 func NewOCSF() *OCSFReporter { return &OCSFReporter{} }
 
-// Format implements core.Reporter.
+// Format implements compliancekit.Reporter.
 func (r *OCSFReporter) Format() string { return FormatOCSF }
 
-// Render implements core.Reporter. Emits a JSON array of events --
+// Render implements compliancekit.Reporter. Emits a JSON array of events --
 // not NDJSON, which would be preferred for streaming but is awkward
 // for a file-on-disk reporter. SIEMs typically configure either
 // "JSON array" or "JSON Lines" ingestion; the array form is more
@@ -67,7 +67,7 @@ func (r *OCSFReporter) Format() string { return FormatOCSF }
 // All findings (any status) are emitted. SIEM use cases include
 // dashboarding pass rates and trend analysis, which need the full
 // set -- unlike SARIF, where only actionable findings make sense.
-func (r *OCSFReporter) Render(_ context.Context, findings []core.Finding, _ *core.ResourceGraph, w io.Writer) error {
+func (r *OCSFReporter) Render(_ context.Context, findings []compliancekit.Finding, _ *compliancekit.ResourceGraph, w io.Writer) error {
 	events := make([]ocsfEvent, 0, len(findings))
 	for _, f := range findings {
 		events = append(events, findingToOCSFEvent(f))
@@ -77,7 +77,7 @@ func (r *OCSFReporter) Render(_ context.Context, findings []core.Finding, _ *cor
 	return enc.Encode(events)
 }
 
-func findingToOCSFEvent(f core.Finding) ocsfEvent {
+func findingToOCSFEvent(f compliancekit.Finding) ocsfEvent {
 	when := f.Timestamp
 	if when.IsZero() {
 		when = time.Now().UTC()
@@ -160,7 +160,7 @@ func findingToOCSFEvent(f core.Finding) ocsfEvent {
 	return ev
 }
 
-func vulnerabilityToOCSF(v *core.Vulnerability) ocsfVulnerability {
+func vulnerabilityToOCSF(v *compliancekit.Vulnerability) ocsfVulnerability {
 	return ocsfVulnerability{
 		CVE: ocsfCVE{
 			UID:  v.ID,
@@ -184,8 +184,8 @@ func vulnerabilityToOCSF(v *core.Vulnerability) ocsfVulnerability {
 // from the registry when available, falling back to the CheckID
 // + Message. Empty-string fallbacks keep the OCSF event well-formed
 // even for ingested findings whose checks aren't in our registry.
-func titleAndDescription(f core.Finding) (title, desc string) {
-	if check, ok := core.LookupCheck(f.CheckID); ok {
+func titleAndDescription(f compliancekit.Finding) (title, desc string) {
+	if check, ok := compliancekit.LookupCheck(f.CheckID); ok {
 		title = check.Title
 		desc = check.Description
 		return title, desc
@@ -201,8 +201,8 @@ func titleAndDescription(f core.Finding) (title, desc string) {
 // "framework_id:control_id" pairs. Empty slices when the check isn't
 // in the registry or has no framework mapping (typical for ingested
 // findings before mapping-table lookup).
-func complianceFromFinding(f core.Finding) (standards []string, requirements []string) {
-	check, ok := core.LookupCheck(f.CheckID)
+func complianceFromFinding(f compliancekit.Finding) (standards []string, requirements []string) {
+	check, ok := compliancekit.LookupCheck(f.CheckID)
 	if !ok {
 		return nil, nil
 	}
@@ -221,7 +221,7 @@ func complianceFromFinding(f core.Finding) (standards []string, requirements []s
 // resourceFromRef builds an OCSF resource object, propagating region
 // and cloud-account fields from the ResourceRef so SIEM filtering
 // and Phase 8's graph-join round-trip have the data they need.
-func resourceFromRef(ref core.ResourceRef) ocsfResource {
+func resourceFromRef(ref compliancekit.ResourceRef) ocsfResource {
 	res := ocsfResource{
 		Name:   ref.Name,
 		Type:   ref.Type,
@@ -250,17 +250,17 @@ func resourceFromRef(ref core.ResourceRef) ocsfResource {
 //
 // We do not emit Fatal -- it would require human-life implications
 // per the spec.
-func ocsfSeverityFor(sev core.Severity) (id int, label string) {
+func ocsfSeverityFor(sev compliancekit.Severity) (id int, label string) {
 	switch sev {
-	case core.SeverityInfo:
+	case compliancekit.SeverityInfo:
 		return 1, "Informational"
-	case core.SeverityLow:
+	case compliancekit.SeverityLow:
 		return 2, "Low"
-	case core.SeverityMedium:
+	case compliancekit.SeverityMedium:
 		return 3, "Medium"
-	case core.SeverityHigh:
+	case compliancekit.SeverityHigh:
 		return 4, "High"
-	case core.SeverityCritical:
+	case compliancekit.SeverityCritical:
 		return 5, "Critical"
 	default:
 		return 0, "Unknown"
@@ -274,11 +274,11 @@ func ocsfSeverityFor(sev core.Severity) (id int, label string) {
 //
 // We collapse Skip and Error into Other so the SIEM can still
 // classify them without inventing a new enum value.
-func ocsfStatusFor(s core.Status) (id int, label string) {
+func ocsfStatusFor(s compliancekit.Status) (id int, label string) {
 	switch s {
-	case core.StatusPass:
+	case compliancekit.StatusPass:
 		return 1, "Pass"
-	case core.StatusFail:
+	case compliancekit.StatusFail:
 		return 2, "Failure"
 	default:
 		return 99, "Other"

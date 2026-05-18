@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	hetznercol "github.com/darpanzope/compliancekit/internal/collectors/hetzner"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // publicCIDRs are the IPv4 + IPv6 "any source" addresses that
@@ -17,7 +17,7 @@ var publicCIDRs = map[string]bool{
 
 // rulesOf reads the firewall rules slice from a firewall resource.
 // Returns an empty slice when missing or wrong type.
-func rulesOf(fw core.Resource) []map[string]any {
+func rulesOf(fw compliancekit.Resource) []map[string]any {
 	r, _ := fw.Attributes["rules"].([]map[string]any)
 	return r
 }
@@ -25,10 +25,10 @@ func rulesOf(fw core.Resource) []map[string]any {
 // CheckFirewallSSHFromAny flags firewalls allowing TCP 22 inbound
 // from the public Internet. SOC 2 CC6.6 / ISO 27001 A.8.21 / CIS
 // Controls v8 4.4 all require narrow administrative access.
-var CheckFirewallSSHFromAny = core.Check{
+var CheckFirewallSSHFromAny = compliancekit.Check{
 	ID:           "hetzner-firewall-ssh-from-any",
 	Title:        "Hetzner firewalls must not allow SSH (port 22) from the public internet",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "hetzner",
 	Service:      "firewalls",
 	ResourceType: hetznercol.FirewallType,
@@ -48,10 +48,10 @@ var CheckFirewallSSHFromAny = core.Check{
 	Scanner: "firewalls.SSHFromAny",
 }
 
-func FirewallSSHFromAny(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func FirewallSSHFromAny(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, fw := range g.ByType(hetznercol.FirewallType) {
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckFirewallSSHFromAny.ID,
 			Severity: CheckFirewallSSHFromAny.Severity,
 			Resource: fw.Ref(),
@@ -59,10 +59,10 @@ func FirewallSSHFromAny(_ context.Context, g *core.ResourceGraph) ([]core.Findin
 		}
 		offender := findRulePublic(rulesOf(fw), "in", "tcp", "22")
 		if offender != "" {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("firewall %q: TCP 22 from %s", fw.Name, offender)
 		} else {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("firewall %q: no public SSH rule", fw.Name)
 		}
 		findings = append(findings, f)
@@ -74,10 +74,10 @@ func FirewallSSHFromAny(_ context.Context, g *core.ResourceGraph) ([]core.Findin
 // (Port == "" in our normalization, i.e. no port restriction)
 // from the public Internet for protocol tcp/udp. The catastrophic
 // "default-allow" shape.
-var CheckFirewallAnyFromAny = core.Check{
+var CheckFirewallAnyFromAny = compliancekit.Check{
 	ID:           "hetzner-firewall-any-port-from-any",
 	Title:        "Hetzner firewalls must not allow any-port from the public internet",
-	Severity:     core.SeverityCritical,
+	Severity:     compliancekit.SeverityCritical,
 	Provider:     "hetzner",
 	Service:      "firewalls",
 	ResourceType: hetznercol.FirewallType,
@@ -98,10 +98,10 @@ var CheckFirewallAnyFromAny = core.Check{
 	Scanner: "firewalls.AnyFromAny",
 }
 
-func FirewallAnyFromAny(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func FirewallAnyFromAny(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, fw := range g.ByType(hetznercol.FirewallType) {
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckFirewallAnyFromAny.ID,
 			Severity: CheckFirewallAnyFromAny.Severity,
 			Resource: fw.Ref(),
@@ -132,10 +132,10 @@ func FirewallAnyFromAny(_ context.Context, g *core.ResourceGraph) ([]core.Findin
 			}
 		}
 		if offending != "" {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("firewall %q: %s", fw.Name, offending)
 		} else {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("firewall %q: no any-port-from-any rule", fw.Name)
 		}
 		findings = append(findings, f)
@@ -145,10 +145,10 @@ func FirewallAnyFromAny(_ context.Context, g *core.ResourceGraph) ([]core.Findin
 
 // CheckFirewallOrphan flags firewalls applied to zero resources.
 // They protect nothing and pollute the audit trail.
-var CheckFirewallOrphan = core.Check{
+var CheckFirewallOrphan = compliancekit.Check{
 	ID:           "hetzner-firewall-orphan",
 	Title:        "Hetzner firewalls should be applied to at least one resource",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "hetzner",
 	Service:      "firewalls",
 	ResourceType: hetznercol.FirewallType,
@@ -168,21 +168,21 @@ var CheckFirewallOrphan = core.Check{
 	Scanner: "firewalls.Orphan",
 }
 
-func FirewallOrphan(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func FirewallOrphan(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, fw := range g.ByType(hetznercol.FirewallType) {
 		count, _ := fw.Attributes["applied_count"].(int)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckFirewallOrphan.ID,
 			Severity: CheckFirewallOrphan.Severity,
 			Resource: fw.Ref(),
 			Tags:     CheckFirewallOrphan.Tags,
 		}
 		if count > 0 {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("firewall %q: applied to %d resource(s)", fw.Name, count)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("firewall %q: applied to nothing", fw.Name)
 		}
 		findings = append(findings, f)
@@ -219,7 +219,7 @@ func asString(v any) string {
 }
 
 func init() {
-	core.Register(CheckFirewallSSHFromAny, FirewallSSHFromAny)
-	core.Register(CheckFirewallAnyFromAny, FirewallAnyFromAny)
-	core.Register(CheckFirewallOrphan, FirewallOrphan)
+	compliancekit.Register(CheckFirewallSSHFromAny, FirewallSSHFromAny)
+	compliancekit.Register(CheckFirewallAnyFromAny, FirewallAnyFromAny)
+	compliancekit.Register(CheckFirewallOrphan, FirewallOrphan)
 }

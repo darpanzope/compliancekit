@@ -6,17 +6,17 @@ import (
 
 	"github.com/digitalocean/godo"
 
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
-// DropletType is the core.Resource Type for droplet resources.
+// DropletType is the compliancekit.Resource Type for droplet resources.
 // Exported so check packages can reference it without hard-coding.
 const DropletType = "digitalocean.droplet"
 
 // collectDroplets fetches every droplet in the authenticated account
-// and maps each to a typed core.Resource. Pagination is handled
+// and maps each to a typed compliancekit.Resource. Pagination is handled
 // internally; callers see a single flat slice.
-func (c *Collector) collectDroplets(ctx context.Context) ([]core.Resource, error) {
+func (c *Collector) collectDroplets(ctx context.Context) ([]compliancekit.Resource, error) {
 	var all []godo.Droplet
 	opt := &godo.ListOptions{PerPage: pageSize}
 
@@ -40,7 +40,7 @@ func (c *Collector) collectDroplets(ctx context.Context) ([]core.Resource, error
 		opt.Page = page + 1
 	}
 
-	out := make([]core.Resource, 0, len(all))
+	out := make([]compliancekit.Resource, 0, len(all))
 	for _, d := range all {
 		r := dropletToResource(d)
 		c.stamp(&r, r.Region)
@@ -49,12 +49,12 @@ func (c *Collector) collectDroplets(ctx context.Context) ([]core.Resource, error
 	return out, nil
 }
 
-// dropletToResource maps a godo.Droplet to a core.Resource.
+// dropletToResource maps a godo.Droplet to a compliancekit.Resource.
 //
 // Attribute keys are part of the check contract -- renaming one breaks
 // every check that reads it. The set documented in CHECKS.md is
 // authoritative; this function must keep parity.
-func dropletToResource(d godo.Droplet) core.Resource {
+func dropletToResource(d godo.Droplet) compliancekit.Resource {
 	attrs := map[string]any{
 		"status":      d.Status,
 		"memory":      d.Memory,
@@ -77,7 +77,7 @@ func dropletToResource(d godo.Droplet) core.Resource {
 		region = d.Region.Slug
 	}
 
-	return core.Resource{
+	return compliancekit.Resource{
 		ID:         fmt.Sprintf("%s.%d", DropletType, d.ID),
 		Type:       DropletType,
 		Name:       d.Name,

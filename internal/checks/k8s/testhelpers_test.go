@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	k8scol "github.com/darpanzope/compliancekit/internal/collectors/k8s"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.21 phase 11 — shared test helpers used by the new spec-driven
@@ -16,9 +16,9 @@ import (
 // the older files.
 
 // gph builds a ResourceGraph from a variadic list of resources.
-func gph(t *testing.T, rs ...core.Resource) *core.ResourceGraph {
+func gph(t *testing.T, rs ...compliancekit.Resource) *compliancekit.ResourceGraph {
 	t.Helper()
-	g := core.NewResourceGraph()
+	g := compliancekit.NewResourceGraph()
 	for _, r := range rs {
 		g.Add(r)
 	}
@@ -27,8 +27,8 @@ func gph(t *testing.T, rs ...core.Resource) *core.ResourceGraph {
 
 // mkCluster builds the per-context anchor resource that cluster-
 // scoped manual-verify checks emit findings against.
-func mkCluster(name string) core.Resource {
-	return core.Resource{
+func mkCluster(name string) compliancekit.Resource {
+	return compliancekit.Resource{
 		ID:         "k8s.cluster." + name,
 		Type:       k8scol.ClusterType,
 		Name:       name,

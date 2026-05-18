@@ -8,7 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/configservice"
 
 	"github.com/darpanzope/compliancekit/internal/collectors/cloudcommon"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // ConfigRegionType is the resource type for AWS Config service
@@ -28,7 +28,7 @@ type configClient interface {
 // delivery channel there. The presence of the resource alone is
 // the signal -- the check reads its attributes to determine pass
 // or fail.
-func (c *Collector) collectConfig(ctx context.Context, regions []string, out []core.Resource) []core.Resource {
+func (c *Collector) collectConfig(ctx context.Context, regions []string, out []compliancekit.Resource) []compliancekit.Resource {
 	for _, region := range regions {
 		cfg := c.cfg
 		cfg.Region = region
@@ -42,8 +42,8 @@ func (c *Collector) collectConfig(ctx context.Context, regions []string, out []c
 	return out
 }
 
-func (c *Collector) collectConfigForRegion(ctx context.Context, client configClient, region string) (core.Resource, error) {
-	r := core.Resource{
+func (c *Collector) collectConfigForRegion(ctx context.Context, client configClient, region string) (compliancekit.Resource, error) {
+	r := compliancekit.Resource{
 		ID:       fmt.Sprintf("aws.config.region.%s", region),
 		Type:     ConfigRegionType,
 		Name:     region,

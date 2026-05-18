@@ -6,11 +6,11 @@ import (
 	"time"
 
 	docol "github.com/darpanzope/compliancekit/internal/collectors/digitalocean"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
-func mkRegistry(name string, attrs map[string]any) core.Resource {
-	return core.Resource{
+func mkRegistry(name string, attrs map[string]any) compliancekit.Resource {
+	return compliancekit.Resource{
 		ID:         "digitalocean.registry." + name,
 		Type:       docol.RegistryType,
 		Name:       name,
@@ -28,12 +28,12 @@ func TestRegistryGarbageCollection(t *testing.T) {
 	)
 	findings, _ := RegistryGarbageCollection(context.Background(), g)
 	for _, f := range findings {
-		var want core.Status
+		var want compliancekit.Status
 		switch f.Resource.Name {
 		case "recent":
-			want = core.StatusPass
+			want = compliancekit.StatusPass
 		case "stale", "never":
-			want = core.StatusFail
+			want = compliancekit.StatusFail
 		}
 		if f.Status != want {
 			t.Errorf("%s: got %v: %s", f.Resource.Name, f.Status, f.Message)
@@ -48,9 +48,9 @@ func TestRegistryHasRepositories(t *testing.T) {
 	)
 	findings, _ := RegistryHasRepositories(context.Background(), g)
 	for _, f := range findings {
-		want := core.StatusPass
+		want := compliancekit.StatusPass
 		if f.Resource.Name == "empty" {
-			want = core.StatusFail
+			want = compliancekit.StatusFail
 		}
 		if f.Status != want {
 			t.Errorf("%s: got %v", f.Resource.Name, f.Status)
@@ -65,9 +65,9 @@ func TestRegistryNotStarterTier(t *testing.T) {
 	)
 	findings, _ := RegistryNotStarterTier(context.Background(), g)
 	for _, f := range findings {
-		want := core.StatusPass
+		want := compliancekit.StatusPass
 		if f.Resource.Name == "starter" {
-			want = core.StatusFail
+			want = compliancekit.StatusFail
 		}
 		if f.Status != want {
 			t.Errorf("%s: got %v", f.Resource.Name, f.Status)

@@ -2,7 +2,7 @@
 //
 // At v0.7 it fetches the resources needed by the 30 highest-leverage
 // AWS checks (IAM / EC2 / S3 / RDS / CloudTrail / KMS / Config /
-// GuardDuty) and emits typed core.Resource values into the engine's
+// GuardDuty) and emits typed compliancekit.Resource values into the engine's
 // ResourceGraph.
 //
 // Per ARCHITECTURE.md and DECISIONS.md ADR-007 we are explicitly NOT

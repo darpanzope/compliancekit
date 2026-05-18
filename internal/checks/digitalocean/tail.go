@@ -6,17 +6,17 @@ import (
 	"time"
 
 	docol "github.com/darpanzope/compliancekit/internal/collectors/digitalocean"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 const imageMaxAgeDays = 365
 
 // --- CDN (2) ---
 
-var CheckCDNHasCustomDomain = core.Check{
+var CheckCDNHasCustomDomain = compliancekit.Check{
 	ID:           "do-cdn-no-custom-domain",
 	Title:        "CDN endpoints should use a custom domain",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "digitalocean",
 	Service:      "cdn",
 	ResourceType: docol.CDNType,
@@ -36,21 +36,21 @@ var CheckCDNHasCustomDomain = core.Check{
 	Scanner: "cdn.CustomDomain",
 }
 
-func CDNHasCustomDomain(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func CDNHasCustomDomain(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, c := range g.ByType(docol.CDNType) {
 		has, _ := c.Attributes["has_custom_domain"].(bool)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckCDNHasCustomDomain.ID,
 			Severity: CheckCDNHasCustomDomain.Severity,
 			Resource: c.Ref(),
 			Tags:     CheckCDNHasCustomDomain.Tags,
 		}
 		if has {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("cdn %q: custom domain", c.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("cdn %q: no custom domain", c.Name)
 		}
 		findings = append(findings, f)
@@ -58,10 +58,10 @@ func CDNHasCustomDomain(_ context.Context, g *core.ResourceGraph) ([]core.Findin
 	return findings, nil
 }
 
-var CheckCDNHasCustomCert = core.Check{
+var CheckCDNHasCustomCert = compliancekit.Check{
 	ID:           "do-cdn-no-custom-cert",
 	Title:        "CDN endpoints with custom domains should use a custom cert",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "digitalocean",
 	Service:      "cdn",
 	ResourceType: docol.CDNType,
@@ -81,25 +81,25 @@ var CheckCDNHasCustomCert = core.Check{
 	Scanner: "cdn.CustomCert",
 }
 
-func CDNHasCustomCert(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func CDNHasCustomCert(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, c := range g.ByType(docol.CDNType) {
 		hasDomain, _ := c.Attributes["has_custom_domain"].(bool)
 		if !hasDomain {
 			continue
 		}
 		hasCert, _ := c.Attributes["has_custom_cert"].(bool)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckCDNHasCustomCert.ID,
 			Severity: CheckCDNHasCustomCert.Severity,
 			Resource: c.Ref(),
 			Tags:     CheckCDNHasCustomCert.Tags,
 		}
 		if hasCert {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("cdn %q: custom cert attached", c.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("cdn %q: custom domain but no cert", c.Name)
 		}
 		findings = append(findings, f)
@@ -109,10 +109,10 @@ func CDNHasCustomCert(_ context.Context, g *core.ResourceGraph) ([]core.Finding,
 
 // --- Reserved IPs (2) ---
 
-var CheckReservedIPOrphan = core.Check{
+var CheckReservedIPOrphan = compliancekit.Check{
 	ID:           "do-reserved-ip-orphan",
 	Title:        "Reserved IPs should be attached to a droplet",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "digitalocean",
 	Service:      "reserved_ips",
 	ResourceType: docol.ReservedIPType,
@@ -131,21 +131,21 @@ var CheckReservedIPOrphan = core.Check{
 	Scanner: "reservedips.Orphan",
 }
 
-func ReservedIPOrphan(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func ReservedIPOrphan(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, ip := range g.ByType(docol.ReservedIPType) {
 		attached, _ := ip.Attributes["attached"].(bool)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckReservedIPOrphan.ID,
 			Severity: CheckReservedIPOrphan.Severity,
 			Resource: ip.Ref(),
 			Tags:     CheckReservedIPOrphan.Tags,
 		}
 		if attached {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("ip %q: attached", ip.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("ip %q: orphan (unattached)", ip.Name)
 		}
 		findings = append(findings, f)
@@ -153,10 +153,10 @@ func ReservedIPOrphan(_ context.Context, g *core.ResourceGraph) ([]core.Finding,
 	return findings, nil
 }
 
-var CheckReservedIPInProject = core.Check{
+var CheckReservedIPInProject = compliancekit.Check{
 	ID:           "do-reserved-ip-no-project",
 	Title:        "Reserved IPs should be assigned to a project",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "digitalocean",
 	Service:      "reserved_ips",
 	ResourceType: docol.ReservedIPType,
@@ -173,21 +173,21 @@ var CheckReservedIPInProject = core.Check{
 	Scanner: "reservedips.InProject",
 }
 
-func ReservedIPInProject(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func ReservedIPInProject(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, ip := range g.ByType(docol.ReservedIPType) {
 		pid, _ := ip.Attributes["project_id"].(string)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckReservedIPInProject.ID,
 			Severity: CheckReservedIPInProject.Severity,
 			Resource: ip.Ref(),
 			Tags:     CheckReservedIPInProject.Tags,
 		}
 		if pid != "" {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("ip %q: project=%s", ip.Name, pid)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("ip %q: no project assignment", ip.Name)
 		}
 		findings = append(findings, f)
@@ -197,10 +197,10 @@ func ReservedIPInProject(_ context.Context, g *core.ResourceGraph) ([]core.Findi
 
 // --- SSH keys (2) ---
 
-var CheckSSHKeyAlgorithm = core.Check{
+var CheckSSHKeyAlgorithm = compliancekit.Check{
 	ID:           "do-ssh-key-weak-algorithm",
 	Title:        "Account SSH keys must use strong algorithms",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "digitalocean",
 	Service:      "ssh_keys",
 	ResourceType: docol.SSHKeyType,
@@ -220,22 +220,22 @@ var CheckSSHKeyAlgorithm = core.Check{
 	Scanner: "sshkeys.Algorithm",
 }
 
-func SSHKeyAlgorithm(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func SSHKeyAlgorithm(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, k := range g.ByType(docol.SSHKeyType) {
 		weak, _ := k.Attributes["is_weak_algo"].(bool)
 		algo, _ := k.Attributes["algorithm"].(string)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckSSHKeyAlgorithm.ID,
 			Severity: CheckSSHKeyAlgorithm.Severity,
 			Resource: k.Ref(),
 			Tags:     CheckSSHKeyAlgorithm.Tags,
 		}
 		if weak {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("key %q: weak algorithm %q", k.Name, algo)
 		} else {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("key %q: %s", k.Name, algo)
 		}
 		findings = append(findings, f)
@@ -249,10 +249,10 @@ func SSHKeyAlgorithm(_ context.Context, g *core.ResourceGraph) ([]core.Finding, 
 // landing on every droplet) is over-broad.
 const sshKeyCountThreshold = 20
 
-var CheckSSHKeyCount = core.Check{
+var CheckSSHKeyCount = compliancekit.Check{
 	ID:           "do-ssh-key-too-many",
 	Title:        "Account-level SSH key count should be bounded",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "digitalocean",
 	Service:      "ssh_keys",
 	ResourceType: docol.SSHKeyType,
@@ -272,7 +272,7 @@ var CheckSSHKeyCount = core.Check{
 	Scanner: "sshkeys.Count",
 }
 
-func SSHKeyCount(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func SSHKeyCount(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	keys := g.ByType(docol.SSHKeyType)
 	// Single finding attached to the account anchor; everyone's
 	// view of "too many" is the count, not which specific keys.
@@ -280,28 +280,28 @@ func SSHKeyCount(_ context.Context, g *core.ResourceGraph) ([]core.Finding, erro
 	if len(accounts) == 0 {
 		return nil, nil
 	}
-	f := core.Finding{
+	f := compliancekit.Finding{
 		CheckID:  CheckSSHKeyCount.ID,
 		Severity: CheckSSHKeyCount.Severity,
 		Resource: accounts[0].Ref(),
 		Tags:     CheckSSHKeyCount.Tags,
 	}
 	if len(keys) > sshKeyCountThreshold {
-		f.Status = core.StatusFail
+		f.Status = compliancekit.StatusFail
 		f.Message = fmt.Sprintf("account has %d SSH keys (> %d threshold)", len(keys), sshKeyCountThreshold)
 	} else {
-		f.Status = core.StatusPass
+		f.Status = compliancekit.StatusPass
 		f.Message = fmt.Sprintf("account has %d SSH keys", len(keys))
 	}
-	return []core.Finding{f}, nil
+	return []compliancekit.Finding{f}, nil
 }
 
 // --- Images (2) ---
 
-var CheckImageNotPublic = core.Check{
+var CheckImageNotPublic = compliancekit.Check{
 	ID:           "do-image-public",
 	Title:        "Custom images should not be marked public",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "digitalocean",
 	Service:      "images",
 	ResourceType: docol.ImageType,
@@ -320,21 +320,21 @@ var CheckImageNotPublic = core.Check{
 	Scanner: "images.NotPublic",
 }
 
-func ImageNotPublic(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func ImageNotPublic(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, img := range g.ByType(docol.ImageType) {
 		pub, _ := img.Attributes["public"].(bool)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckImageNotPublic.ID,
 			Severity: CheckImageNotPublic.Severity,
 			Resource: img.Ref(),
 			Tags:     CheckImageNotPublic.Tags,
 		}
 		if pub {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("image %q: MARKED PUBLIC", img.Name)
 		} else {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("image %q: private", img.Name)
 		}
 		findings = append(findings, f)
@@ -342,10 +342,10 @@ func ImageNotPublic(_ context.Context, g *core.ResourceGraph) ([]core.Finding, e
 	return findings, nil
 }
 
-var CheckImageAge = core.Check{
+var CheckImageAge = compliancekit.Check{
 	ID:           "do-image-too-old",
 	Title:        "Custom images older than 1 year should be reviewed",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "digitalocean",
 	Service:      "images",
 	ResourceType: docol.ImageType,
@@ -363,12 +363,12 @@ var CheckImageAge = core.Check{
 	Scanner: "images.Age",
 }
 
-func ImageAge(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func ImageAge(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	threshold := time.Now().UTC().Add(-imageMaxAgeDays * 24 * time.Hour)
 	for _, img := range g.ByType(docol.ImageType) {
 		created, _ := img.Attributes["created_at"].(string)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckImageAge.ID,
 			Severity: CheckImageAge.Severity,
 			Resource: img.Ref(),
@@ -377,14 +377,14 @@ func ImageAge(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) 
 		t, err := time.Parse(time.RFC3339, created)
 		switch {
 		case err != nil:
-			f.Status = core.StatusSkip
+			f.Status = compliancekit.StatusSkip
 			f.Message = fmt.Sprintf("image %q: unparsable created_at=%q", img.Name, created)
 		case t.Before(threshold):
 			days := int(time.Since(t).Hours() / 24)
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("image %q: %d days old", img.Name, days)
 		default:
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("image %q: created %s", img.Name, created)
 		}
 		findings = append(findings, f)
@@ -394,10 +394,10 @@ func ImageAge(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) 
 
 // --- Monitoring (2) ---
 
-var CheckAccountHasAlerts = core.Check{
+var CheckAccountHasAlerts = compliancekit.Check{
 	ID:           "do-monitoring-no-alerts",
 	Title:        "Account should have at least one configured alert policy",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "digitalocean",
 	Service:      "monitoring",
 	ResourceType: docol.AccountType,
@@ -418,7 +418,7 @@ var CheckAccountHasAlerts = core.Check{
 	Scanner: "monitoring.HasAlerts",
 }
 
-func AccountHasAlerts(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func AccountHasAlerts(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	alerts := g.ByType(docol.AlertPolicyType)
 	accounts := g.ByType(docol.AccountType)
 	if len(accounts) == 0 {
@@ -430,26 +430,26 @@ func AccountHasAlerts(_ context.Context, g *core.ResourceGraph) ([]core.Finding,
 			enabled++
 		}
 	}
-	f := core.Finding{
+	f := compliancekit.Finding{
 		CheckID:  CheckAccountHasAlerts.ID,
 		Severity: CheckAccountHasAlerts.Severity,
 		Resource: accounts[0].Ref(),
 		Tags:     CheckAccountHasAlerts.Tags,
 	}
 	if enabled > 0 {
-		f.Status = core.StatusPass
+		f.Status = compliancekit.StatusPass
 		f.Message = fmt.Sprintf("account has %d enabled alert policies", enabled)
 	} else {
-		f.Status = core.StatusFail
+		f.Status = compliancekit.StatusFail
 		f.Message = "account has no enabled alert policies"
 	}
-	return []core.Finding{f}, nil
+	return []compliancekit.Finding{f}, nil
 }
 
-var CheckAlertEnabled = core.Check{
+var CheckAlertEnabled = compliancekit.Check{
 	ID:           "do-monitoring-disabled-alert",
 	Title:        "Configured alert policies should be enabled",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "digitalocean",
 	Service:      "monitoring",
 	ResourceType: docol.AlertPolicyType,
@@ -467,21 +467,21 @@ var CheckAlertEnabled = core.Check{
 	Scanner: "monitoring.AlertEnabled",
 }
 
-func AlertEnabled(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func AlertEnabled(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, a := range g.ByType(docol.AlertPolicyType) {
 		on, _ := a.Attributes["enabled"].(bool)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckAlertEnabled.ID,
 			Severity: CheckAlertEnabled.Severity,
 			Resource: a.Ref(),
 			Tags:     CheckAlertEnabled.Tags,
 		}
 		if on {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("alert %q: enabled", a.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("alert %q: disabled", a.Name)
 		}
 		findings = append(findings, f)
@@ -492,15 +492,15 @@ func AlertEnabled(_ context.Context, g *core.ResourceGraph) ([]core.Finding, err
 // --- Projects (2) ---
 
 func init() {
-	core.Register(CheckCDNHasCustomDomain, CDNHasCustomDomain)
-	core.Register(CheckCDNHasCustomCert, CDNHasCustomCert)
-	core.Register(CheckReservedIPOrphan, ReservedIPOrphan)
-	core.Register(CheckReservedIPInProject, ReservedIPInProject)
-	core.Register(CheckSSHKeyAlgorithm, SSHKeyAlgorithm)
-	core.Register(CheckSSHKeyCount, SSHKeyCount)
-	core.Register(CheckImageNotPublic, ImageNotPublic)
-	core.Register(CheckImageAge, ImageAge)
-	core.Register(CheckAccountHasAlerts, AccountHasAlerts)
-	core.Register(CheckAlertEnabled, AlertEnabled)
+	compliancekit.Register(CheckCDNHasCustomDomain, CDNHasCustomDomain)
+	compliancekit.Register(CheckCDNHasCustomCert, CDNHasCustomCert)
+	compliancekit.Register(CheckReservedIPOrphan, ReservedIPOrphan)
+	compliancekit.Register(CheckReservedIPInProject, ReservedIPInProject)
+	compliancekit.Register(CheckSSHKeyAlgorithm, SSHKeyAlgorithm)
+	compliancekit.Register(CheckSSHKeyCount, SSHKeyCount)
+	compliancekit.Register(CheckImageNotPublic, ImageNotPublic)
+	compliancekit.Register(CheckImageAge, ImageAge)
+	compliancekit.Register(CheckAccountHasAlerts, AccountHasAlerts)
+	compliancekit.Register(CheckAlertEnabled, AlertEnabled)
 	// v0.22 phase 4 — Project hygiene checks moved to projects_hygiene.go.
 }

@@ -6,11 +6,11 @@ import (
 	"time"
 
 	docol "github.com/darpanzope/compliancekit/internal/collectors/digitalocean"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
-func mkDomain(name string, attrs map[string]any) core.Resource {
-	return core.Resource{
+func mkDomain(name string, attrs map[string]any) compliancekit.Resource {
+	return compliancekit.Resource{
 		ID:         "digitalocean.domain." + name,
 		Type:       docol.DomainType,
 		Name:       name,
@@ -19,8 +19,8 @@ func mkDomain(name string, attrs map[string]any) core.Resource {
 	}
 }
 
-func mkCert(name string, attrs map[string]any) core.Resource {
-	return core.Resource{
+func mkCert(name string, attrs map[string]any) compliancekit.Resource {
+	return compliancekit.Resource{
 		ID:         "digitalocean.certificate." + name,
 		Type:       docol.CertificateType,
 		Name:       name,
@@ -36,9 +36,9 @@ func TestDomainCAA(t *testing.T) {
 	)
 	findings, _ := DomainCAA(context.Background(), g)
 	for _, f := range findings {
-		want := core.StatusPass
+		want := compliancekit.StatusPass
 		if f.Resource.Name == "no-caa" {
-			want = core.StatusFail
+			want = compliancekit.StatusFail
 		}
 		if f.Status != want {
 			t.Errorf("%s: got %v", f.Resource.Name, f.Status)
@@ -51,11 +51,11 @@ func TestDomainSPF(t *testing.T) {
 		name string
 		mx   bool
 		spf  bool
-		want core.Status
+		want compliancekit.Status
 	}{
-		{"no-mx-no-spf", false, false, core.StatusPass},
-		{"mx-with-spf", true, true, core.StatusPass},
-		{"mx-no-spf", true, false, core.StatusFail},
+		{"no-mx-no-spf", false, false, compliancekit.StatusPass},
+		{"mx-with-spf", true, true, compliancekit.StatusPass},
+		{"mx-no-spf", true, false, compliancekit.StatusFail},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -73,11 +73,11 @@ func TestDomainDMARC(t *testing.T) {
 		name  string
 		mx    bool
 		dmarc bool
-		want  core.Status
+		want  compliancekit.Status
 	}{
-		{"no-mx", false, false, core.StatusPass},
-		{"mx-with-dmarc", true, true, core.StatusPass},
-		{"mx-no-dmarc", true, false, core.StatusFail},
+		{"no-mx", false, false, compliancekit.StatusPass},
+		{"mx-with-dmarc", true, true, compliancekit.StatusPass},
+		{"mx-no-dmarc", true, false, compliancekit.StatusFail},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -94,10 +94,10 @@ func TestDomainCAANotWildcard(t *testing.T) {
 	cases := []struct {
 		name    string
 		records []string
-		want    core.Status
+		want    compliancekit.Status
 	}{
-		{"explicit", []string{"0 issue \"letsencrypt.org\""}, core.StatusPass},
-		{"wildcard-semicolon", []string{";"}, core.StatusFail},
+		{"explicit", []string{"0 issue \"letsencrypt.org\""}, compliancekit.StatusPass},
+		{"wildcard-semicolon", []string{";"}, compliancekit.StatusFail},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -118,12 +118,12 @@ func TestCertificateExpiry(t *testing.T) {
 	cases := []struct {
 		name     string
 		notAfter string
-		want     core.Status
+		want     compliancekit.Status
 	}{
-		{"expired", now.Add(-24 * time.Hour).Format(time.RFC3339), core.StatusFail},
-		{"near-expiry", now.Add(10 * 24 * time.Hour).Format(time.RFC3339), core.StatusFail},
-		{"healthy", now.Add(60 * 24 * time.Hour).Format(time.RFC3339), core.StatusPass},
-		{"unparsable", "garbage", core.StatusSkip},
+		{"expired", now.Add(-24 * time.Hour).Format(time.RFC3339), compliancekit.StatusFail},
+		{"near-expiry", now.Add(10 * 24 * time.Hour).Format(time.RFC3339), compliancekit.StatusFail},
+		{"healthy", now.Add(60 * 24 * time.Hour).Format(time.RFC3339), compliancekit.StatusPass},
+		{"unparsable", "garbage", compliancekit.StatusSkip},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -143,9 +143,9 @@ func TestCertificateLetsEncrypt(t *testing.T) {
 	)
 	findings, _ := CertificateLetsEncrypt(context.Background(), g)
 	for _, f := range findings {
-		want := core.StatusPass
+		want := compliancekit.StatusPass
 		if f.Resource.Name == "custom" {
-			want = core.StatusFail
+			want = compliancekit.StatusFail
 		}
 		if f.Status != want {
 			t.Errorf("%s: got %v", f.Resource.Name, f.Status)

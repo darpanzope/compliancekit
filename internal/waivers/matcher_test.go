@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 func TestMatch_ExactPair(t *testing.T) {
@@ -59,15 +59,15 @@ func TestApply_MutesFindingsAndTagsThem(t *testing.T) {
 	now := fixedNow()
 	list, _ := NewWaiverList([]Waiver{validWaiver()}, now)
 
-	findings := []core.Finding{
+	findings := []compliancekit.Finding{
 		{
-			CheckID: "aws-s3-public-access-block", Status: core.StatusFail, Severity: core.SeverityCritical,
-			Resource: core.ResourceRef{ID: "aws.s3.bucket.public-cdn", Name: "public-cdn"},
+			CheckID: "aws-s3-public-access-block", Status: compliancekit.StatusFail, Severity: compliancekit.SeverityCritical,
+			Resource: compliancekit.ResourceRef{ID: "aws.s3.bucket.public-cdn", Name: "public-cdn"},
 		},
 		{
 			// Different resource — should NOT be muted.
-			CheckID: "aws-s3-public-access-block", Status: core.StatusFail, Severity: core.SeverityCritical,
-			Resource: core.ResourceRef{ID: "aws.s3.bucket.other", Name: "other"},
+			CheckID: "aws-s3-public-access-block", Status: compliancekit.StatusFail, Severity: compliancekit.SeverityCritical,
+			Resource: compliancekit.ResourceRef{ID: "aws.s3.bucket.other", Name: "other"},
 		},
 	}
 	muted, synth := list.Apply(findings, now)
@@ -77,7 +77,7 @@ func TestApply_MutesFindingsAndTagsThem(t *testing.T) {
 	if len(synth) != 0 {
 		t.Errorf("no expired waivers → no synthesized findings: got %d", len(synth))
 	}
-	if findings[0].Status != core.StatusSkip {
+	if findings[0].Status != compliancekit.StatusSkip {
 		t.Errorf("matched finding should be StatusSkip; got %v", findings[0].Status)
 	}
 	if findings[0].Waiver == nil {
@@ -86,7 +86,7 @@ func TestApply_MutesFindingsAndTagsThem(t *testing.T) {
 	if !hasTag(findings[0].Tags, "waived") {
 		t.Errorf("`waived` tag should be appended")
 	}
-	if findings[1].Status != core.StatusFail {
+	if findings[1].Status != compliancekit.StatusFail {
 		t.Errorf("non-matching finding should retain StatusFail")
 	}
 }
@@ -94,17 +94,17 @@ func TestApply_MutesFindingsAndTagsThem(t *testing.T) {
 func TestApply_DoesNotMutePassingFindings(t *testing.T) {
 	now := fixedNow()
 	list, _ := NewWaiverList([]Waiver{validWaiver()}, now)
-	findings := []core.Finding{
+	findings := []compliancekit.Finding{
 		{
-			CheckID: "aws-s3-public-access-block", Status: core.StatusPass,
-			Resource: core.ResourceRef{ID: "aws.s3.bucket.public-cdn"},
+			CheckID: "aws-s3-public-access-block", Status: compliancekit.StatusPass,
+			Resource: compliancekit.ResourceRef{ID: "aws.s3.bucket.public-cdn"},
 		},
 	}
 	muted, _ := list.Apply(findings, now)
 	if muted != 0 {
 		t.Errorf("passing findings shouldn't be touched; muted=%d", muted)
 	}
-	if findings[0].Status != core.StatusPass {
+	if findings[0].Status != compliancekit.StatusPass {
 		t.Errorf("passing finding status changed: %v", findings[0].Status)
 	}
 }
@@ -123,7 +123,7 @@ func TestApply_SynthesizesExpiredFindings(t *testing.T) {
 	if got.CheckID != "compliancekit-waiver-expired" {
 		t.Errorf("CheckID = %q", got.CheckID)
 	}
-	if got.Severity != core.SeverityInfo {
+	if got.Severity != compliancekit.SeverityInfo {
 		t.Errorf("Severity = %v, want info", got.Severity)
 	}
 	if got.Waiver == nil || got.Waiver.Reason == "" {
@@ -187,7 +187,7 @@ func TestMatchID_EmptyPattern(t *testing.T) {
 
 // Ensure DaysUntilExpiry returns negative for past dates.
 func TestDaysUntilExpiry_Negative(t *testing.T) {
-	w := &core.WaiverRef{Expires: time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC)}
+	w := &compliancekit.WaiverRef{Expires: time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC)}
 	days := w.DaysUntilExpiry(time.Date(2026, 5, 17, 0, 0, 0, 0, time.UTC))
 	if days >= 0 {
 		t.Errorf("expected negative days for past expiry; got %d", days)

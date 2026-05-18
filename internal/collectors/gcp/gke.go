@@ -8,7 +8,7 @@ import (
 	containerpb "cloud.google.com/go/container/apiv1/containerpb"
 
 	"github.com/darpanzope/compliancekit/internal/collectors/cloudcommon"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // GKE resource types. The cluster carries control-plane posture
@@ -21,7 +21,7 @@ const (
 // collectGKE enumerates GKE clusters and node pools for each scanned
 // project. The list-clusters call accepts a parent of "-" to query
 // all locations; per-project errors emit a placeholder.
-func (c *Collector) collectGKE(ctx context.Context, out []core.Resource) []core.Resource {
+func (c *Collector) collectGKE(ctx context.Context, out []compliancekit.Resource) []compliancekit.Resource {
 	for _, projectID := range c.projects {
 		updated, err := c.collectGKEForProject(ctx, projectID, out)
 		if err != nil {
@@ -33,7 +33,7 @@ func (c *Collector) collectGKE(ctx context.Context, out []core.Resource) []core.
 	return out
 }
 
-func (c *Collector) collectGKEForProject(ctx context.Context, projectID string, out []core.Resource) ([]core.Resource, error) {
+func (c *Collector) collectGKEForProject(ctx context.Context, projectID string, out []compliancekit.Resource) ([]compliancekit.Resource, error) {
 	client, err := container.NewClusterManagerClient(ctx, c.clientOption())
 	if err != nil {
 		return out, fmt.Errorf("client: %w", err)
@@ -55,7 +55,7 @@ func (c *Collector) collectGKEForProject(ctx context.Context, projectID string, 
 	return out, nil
 }
 
-func (c *Collector) gkeClusterResource(projectID string, cl *containerpb.Cluster) core.Resource {
+func (c *Collector) gkeClusterResource(projectID string, cl *containerpb.Cluster) compliancekit.Resource {
 	flags := extractGKEClusterFlags(cl)
 	wlIdentity := flags.wlIdentity
 	netPolicy := flags.netPolicy
@@ -87,7 +87,7 @@ func (c *Collector) gkeClusterResource(projectID string, cl *containerpb.Cluster
 		"status":                  cl.Status.String(),
 		"autopilot":               cl.Autopilot != nil && cl.Autopilot.Enabled,
 	}
-	r := core.Resource{
+	r := compliancekit.Resource{
 		ID:         fmt.Sprintf("%s.%s.%s.%s", GKEClusterType, projectID, cl.Location, cl.Name),
 		Type:       GKEClusterType,
 		Name:       cl.Name,
@@ -161,7 +161,7 @@ func extractGKEHardeningFlags(cl *containerpb.Cluster, f *gkeClusterFlags) {
 	f.monitoringEnabled = cl.MonitoringService != "" && cl.MonitoringService != "none"
 }
 
-func (c *Collector) gkeNodePoolResource(projectID string, cl *containerpb.Cluster, np *containerpb.NodePool) core.Resource {
+func (c *Collector) gkeNodePoolResource(projectID string, cl *containerpb.Cluster, np *containerpb.NodePool) compliancekit.Resource {
 	autoUpgrade := false
 	autoRepair := false
 	if np.Management != nil {
@@ -200,7 +200,7 @@ func (c *Collector) gkeNodePoolResource(projectID string, cl *containerpb.Cluste
 		"autoscaling":    autoscaling,
 		"initial_count":  int(np.InitialNodeCount),
 	}
-	r := core.Resource{
+	r := compliancekit.Resource{
 		ID:         fmt.Sprintf("%s.%s.%s.%s.%s", GKENodePoolType, projectID, cl.Location, cl.Name, np.Name),
 		Type:       GKENodePoolType,
 		Name:       np.Name,

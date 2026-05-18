@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 
 	// Side-effect: register every shipped DO check + every remediation
 	// format adapter so the registry the assertions read is fully
@@ -46,8 +46,8 @@ const (
 )
 
 func TestParity_DigitalOcean(t *testing.T) {
-	var doChecks []core.Check
-	for _, c := range core.RegisteredChecks() {
+	var doChecks []compliancekit.Check
+	for _, c := range compliancekit.RegisteredChecks() {
 		if c.Provider == "digitalocean" {
 			doChecks = append(doChecks, c)
 		}

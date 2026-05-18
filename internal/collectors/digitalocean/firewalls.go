@@ -6,10 +6,10 @@ import (
 
 	"github.com/digitalocean/godo"
 
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
-// FirewallType is the core.Resource Type for firewall resources.
+// FirewallType is the compliancekit.Resource Type for firewall resources.
 const FirewallType = "digitalocean.firewall"
 
 // EdgeFirewall is the Relations key on a droplet pointing at its
@@ -18,9 +18,9 @@ const FirewallType = "digitalocean.firewall"
 const EdgeFirewall = "firewall"
 
 // collectFirewalls fetches every firewall in the authenticated account
-// and maps each to a typed core.Resource. Pagination is handled
+// and maps each to a typed compliancekit.Resource. Pagination is handled
 // internally; callers see a single flat slice.
-func (c *Collector) collectFirewalls(ctx context.Context) ([]core.Resource, error) {
+func (c *Collector) collectFirewalls(ctx context.Context) ([]compliancekit.Resource, error) {
 	var all []godo.Firewall
 	opt := &godo.ListOptions{PerPage: pageSize}
 
@@ -44,7 +44,7 @@ func (c *Collector) collectFirewalls(ctx context.Context) ([]core.Resource, erro
 		opt.Page = page + 1
 	}
 
-	out := make([]core.Resource, 0, len(all))
+	out := make([]compliancekit.Resource, 0, len(all))
 	for _, fw := range all {
 		r := firewallToResource(fw)
 		// Firewalls are account-scoped, no region.
@@ -54,12 +54,12 @@ func (c *Collector) collectFirewalls(ctx context.Context) ([]core.Resource, erro
 	return out, nil
 }
 
-// firewallToResource maps a godo.Firewall to a core.Resource.
+// firewallToResource maps a godo.Firewall to a compliancekit.Resource.
 //
 // Attribute keys are part of the check contract; renaming one breaks
 // every check that reads it.
-func firewallToResource(fw godo.Firewall) core.Resource {
-	return core.Resource{
+func firewallToResource(fw godo.Firewall) compliancekit.Resource {
+	return compliancekit.Resource{
 		ID:       fmt.Sprintf("%s.%s", FirewallType, fw.ID),
 		Type:     FirewallType,
 		Name:     fw.Name,
@@ -82,7 +82,7 @@ func firewallToResource(fw godo.Firewall) core.Resource {
 // starts being an actual graph: a check can now ask "which firewalls
 // protect this droplet?" via g.Related(droplet, EdgeFirewall) without
 // re-querying the API or re-shaping the data.
-func linkDropletsToFirewalls(droplets, firewalls []core.Resource) {
+func linkDropletsToFirewalls(droplets, firewalls []compliancekit.Resource) {
 	// Build droplet ID -> []firewall ID index from the firewall side.
 	dropletToFWs := map[string][]string{}
 	for _, fw := range firewalls {

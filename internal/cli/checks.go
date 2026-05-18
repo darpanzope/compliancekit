@@ -10,9 +10,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/frameworks"
 	"github.com/darpanzope/compliancekit/internal/policy"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // newChecksCmd builds the `compliancekit checks` parent command.
@@ -73,7 +73,7 @@ func newChecksListCmd() *cobra.Command {
 }
 
 func runChecksList(w io.Writer, opts checksListOptions) error {
-	checks := core.RegisteredChecks()
+	checks := compliancekit.RegisteredChecks()
 
 	if opts.framework != "" {
 		checks = filterChecksByFramework(checks, opts.framework)
@@ -82,7 +82,7 @@ func runChecksList(w io.Writer, opts checksListOptions) error {
 		checks = filterChecksByProvider(checks, opts.provider)
 	}
 	if opts.severity != "" {
-		threshold, err := core.ParseSeverity(opts.severity)
+		threshold, err := compliancekit.ParseSeverity(opts.severity)
 		if err != nil {
 			return fmt.Errorf("--severity: %w", err)
 		}
@@ -101,8 +101,8 @@ func runChecksList(w io.Writer, opts checksListOptions) error {
 	}
 }
 
-func filterChecksByFramework(checks []core.Check, framework string) []core.Check {
-	out := make([]core.Check, 0, len(checks))
+func filterChecksByFramework(checks []compliancekit.Check, framework string) []compliancekit.Check {
+	out := make([]compliancekit.Check, 0, len(checks))
 	for _, c := range checks {
 		if _, ok := c.Frameworks[framework]; ok {
 			out = append(out, c)
@@ -111,8 +111,8 @@ func filterChecksByFramework(checks []core.Check, framework string) []core.Check
 	return out
 }
 
-func filterChecksByProvider(checks []core.Check, provider string) []core.Check {
-	out := make([]core.Check, 0, len(checks))
+func filterChecksByProvider(checks []compliancekit.Check, provider string) []compliancekit.Check {
+	out := make([]compliancekit.Check, 0, len(checks))
 	for _, c := range checks {
 		if c.Provider == provider {
 			out = append(out, c)
@@ -124,8 +124,8 @@ func filterChecksByProvider(checks []core.Check, provider string) []core.Check {
 // filterChecksBySeverity keeps checks at the given severity or higher.
 // Severity is ordered ascending in core (Info < Low < ... < Critical),
 // so "at or above" is a single >= comparison.
-func filterChecksBySeverity(checks []core.Check, threshold core.Severity) []core.Check {
-	out := make([]core.Check, 0, len(checks))
+func filterChecksBySeverity(checks []compliancekit.Check, threshold compliancekit.Severity) []compliancekit.Check {
+	out := make([]compliancekit.Check, 0, len(checks))
 	for _, c := range checks {
 		if c.Severity >= threshold {
 			out = append(out, c)
@@ -134,7 +134,7 @@ func filterChecksBySeverity(checks []core.Check, threshold core.Severity) []core
 	return out
 }
 
-func renderChecksTable(w io.Writer, checks []core.Check) error {
+func renderChecksTable(w io.Writer, checks []compliancekit.Check) error {
 	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
 	fmt.Fprintln(tw, "ID\tSEVERITY\tPROVIDER\tSOURCE\tTITLE")
 	regoCount := 0
@@ -157,13 +157,13 @@ func renderChecksTable(w io.Writer, checks []core.Check) error {
 	return nil
 }
 
-func renderChecksJSON(w io.Writer, checks []core.Check) error {
+func renderChecksJSON(w io.Writer, checks []compliancekit.Check) error {
 	enc := json.NewEncoder(w)
 	enc.SetIndent("", "  ")
 	return enc.Encode(checks)
 }
 
-func renderChecksCSV(w io.Writer, checks []core.Check) error {
+func renderChecksCSV(w io.Writer, checks []compliancekit.Check) error {
 	cw := csv.NewWriter(w)
 	if err := cw.Write([]string{"id", "severity", "provider", "service", "title", "frameworks"}); err != nil {
 		return err
@@ -204,7 +204,7 @@ func newChecksShowCmd() *cobra.Command {
 }
 
 func runChecksShow(w io.Writer, id string) error {
-	check, ok := core.LookupCheck(id)
+	check, ok := compliancekit.LookupCheck(id)
 	if !ok {
 		return fmt.Errorf("check %q not registered", id)
 	}

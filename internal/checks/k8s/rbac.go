@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	k8scol "github.com/darpanzope/compliancekit/internal/collectors/k8s"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // rbacRoleTypes are the two role-bearing resource types in K8s RBAC.
@@ -18,10 +18,10 @@ var rbacBindingTypes = []string{k8scol.RoleBindingType, k8scol.ClusterRoleBindin
 
 // ----- Wildcard verbs --------------------------------------------
 
-var CheckRBACWildcardVerbs = core.Check{
+var CheckRBACWildcardVerbs = compliancekit.Check{
 	ID:           "k8s-rbac-wildcard-verbs",
 	Title:        "Roles should not grant wildcard verbs",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "kubernetes",
 	Service:      "rbac",
 	ResourceType: k8scol.ClusterRoleType,
@@ -43,16 +43,16 @@ var CheckRBACWildcardVerbs = core.Check{
 	Scanner: "rbac.WildcardVerbs",
 }
 
-func RBACWildcardVerbs(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func RBACWildcardVerbs(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	return ruleAttrCheck(g, CheckRBACWildcardVerbs, "verbs", "*"), nil
 }
 
 // ----- Wildcard resources ---------------------------------------
 
-var CheckRBACWildcardResources = core.Check{
+var CheckRBACWildcardResources = compliancekit.Check{
 	ID:           "k8s-rbac-wildcard-resources",
 	Title:        "Roles should not grant wildcard resources",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "kubernetes",
 	Service:      "rbac",
 	ResourceType: k8scol.ClusterRoleType,
@@ -70,16 +70,16 @@ var CheckRBACWildcardResources = core.Check{
 	Scanner: "rbac.WildcardResources",
 }
 
-func RBACWildcardResources(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func RBACWildcardResources(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	return ruleAttrCheck(g, CheckRBACWildcardResources, "resources", "*"), nil
 }
 
 // ----- Wildcard API groups ---------------------------------------
 
-var CheckRBACWildcardAPIGroups = core.Check{
+var CheckRBACWildcardAPIGroups = compliancekit.Check{
 	ID:           "k8s-rbac-wildcard-apigroups",
 	Title:        "Roles should not grant wildcard API groups",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "kubernetes",
 	Service:      "rbac",
 	ResourceType: k8scol.ClusterRoleType,
@@ -97,16 +97,16 @@ var CheckRBACWildcardAPIGroups = core.Check{
 	Scanner: "rbac.WildcardAPIGroups",
 }
 
-func RBACWildcardAPIGroups(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func RBACWildcardAPIGroups(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	return ruleAttrCheck(g, CheckRBACWildcardAPIGroups, "api_groups", "*"), nil
 }
 
 // ----- Full wildcard (cluster-admin-equivalent) ------------------
 
-var CheckRBACFullWildcard = core.Check{
+var CheckRBACFullWildcard = compliancekit.Check{
 	ID:           "k8s-rbac-full-wildcard",
 	Title:        "Roles should not grant * verbs * resources * api groups simultaneously",
-	Severity:     core.SeverityCritical,
+	Severity:     compliancekit.SeverityCritical,
 	Provider:     "kubernetes",
 	Service:      "rbac",
 	ResourceType: k8scol.ClusterRoleType,
@@ -129,8 +129,8 @@ var CheckRBACFullWildcard = core.Check{
 	Scanner: "rbac.FullWildcard",
 }
 
-func RBACFullWildcard(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func RBACFullWildcard(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, t := range rbacRoleTypes {
 		for _, role := range g.ByType(t) {
 			// cluster-admin itself is the only legitimate full-wildcard.
@@ -153,10 +153,10 @@ func RBACFullWildcard(_ context.Context, g *core.ResourceGraph) ([]core.Finding,
 			}
 			f := newRoleFinding(CheckRBACFullWildcard, role)
 			if hit {
-				f.Status = core.StatusFail
+				f.Status = compliancekit.StatusFail
 				f.Message = fmt.Sprintf("%s %q: rule grants * on all api groups / resources / verbs", roleKind(t), roleDesc(role))
 			} else {
-				f.Status = core.StatusPass
+				f.Status = compliancekit.StatusPass
 				f.Message = fmt.Sprintf("%s %q: no full-wildcard rule", roleKind(t), roleDesc(role))
 			}
 			findings = append(findings, f)
@@ -168,10 +168,10 @@ func RBACFullWildcard(_ context.Context, g *core.ResourceGraph) ([]core.Finding,
 // ----- shared helpers + init -------------------------------------
 
 func init() {
-	core.Register(CheckRBACWildcardVerbs, RBACWildcardVerbs)
-	core.Register(CheckRBACWildcardResources, RBACWildcardResources)
-	core.Register(CheckRBACWildcardAPIGroups, RBACWildcardAPIGroups)
-	core.Register(CheckRBACFullWildcard, RBACFullWildcard)
+	compliancekit.Register(CheckRBACWildcardVerbs, RBACWildcardVerbs)
+	compliancekit.Register(CheckRBACWildcardResources, RBACWildcardResources)
+	compliancekit.Register(CheckRBACWildcardAPIGroups, RBACWildcardAPIGroups)
+	compliancekit.Register(CheckRBACFullWildcard, RBACFullWildcard)
 	// v0.22 phase 1 — verb-based dangerous-action checks moved to
 	// rbac_roles.go; binding-level checks moved to rbac_bindings.go.
 	// Each split file owns its own init() registering its checks so
@@ -194,8 +194,8 @@ func listContains(v any, target string) bool {
 // ruleAttrCheck handles the wildcard-on-single-attribute cases
 // (verbs, resources, api_groups). It iterates roles + cluster roles
 // and flags any rule whose named attribute contains wildcard.
-func ruleAttrCheck(g *core.ResourceGraph, check core.Check, attr, wildcard string) []core.Finding {
-	findings := []core.Finding{}
+func ruleAttrCheck(g *compliancekit.ResourceGraph, check compliancekit.Check, attr, wildcard string) []compliancekit.Finding {
+	findings := []compliancekit.Finding{}
 	for _, t := range rbacRoleTypes {
 		for _, role := range g.ByType(t) {
 			if isSystemRole(t, role.Name) {
@@ -215,10 +215,10 @@ func ruleAttrCheck(g *core.ResourceGraph, check core.Check, attr, wildcard strin
 			}
 			f := newRoleFinding(check, role)
 			if hit {
-				f.Status = core.StatusFail
+				f.Status = compliancekit.StatusFail
 				f.Message = fmt.Sprintf("%s %q: rule contains wildcard %s", roleKind(t), roleDesc(role), attr)
 			} else {
-				f.Status = core.StatusPass
+				f.Status = compliancekit.StatusPass
 				f.Message = fmt.Sprintf("%s %q: no wildcard %s", roleKind(t), roleDesc(role), attr)
 			}
 			findings = append(findings, f)
@@ -233,9 +233,9 @@ func ruleAttrCheck(g *core.ResourceGraph, check core.Check, attr, wildcard strin
 //
 // If requireMatch is true, the rule's apiGroups must include ag.
 // If false, both "" core and "*" satisfy the apiGroups requirement.
-func verbResourceCheck(g *core.ResourceGraph, check core.Check, verbs []string,
-	ag, resource string, requireMatch bool) []core.Finding {
-	findings := []core.Finding{}
+func verbResourceCheck(g *compliancekit.ResourceGraph, check compliancekit.Check, verbs []string,
+	ag, resource string, requireMatch bool) []compliancekit.Finding {
+	findings := []compliancekit.Finding{}
 	for _, t := range rbacRoleTypes {
 		for _, role := range g.ByType(t) {
 			if isSystemRole(t, role.Name) {
@@ -258,11 +258,11 @@ func verbResourceCheck(g *core.ResourceGraph, check core.Check, verbs []string,
 			}
 			f := newRoleFinding(check, role)
 			if hit {
-				f.Status = core.StatusFail
+				f.Status = compliancekit.StatusFail
 				f.Message = fmt.Sprintf("%s %q: rule grants %s on %s", roleKind(t), roleDesc(role),
 					strings.Join(verbs, "/"), resourceLabel(ag, resource))
 			} else {
-				f.Status = core.StatusPass
+				f.Status = compliancekit.StatusPass
 				f.Message = fmt.Sprintf("%s %q: no %s on %s",
 					roleKind(t), roleDesc(role), strings.Join(verbs, "/"),
 					resourceLabel(ag, resource))
@@ -276,8 +276,8 @@ func verbResourceCheck(g *core.ResourceGraph, check core.Check, verbs []string,
 // ruleVerbCheck flags any role with any rule listing the target verb,
 // regardless of resource. impersonate has no resource gate; this is
 // the simpler primitive.
-func ruleVerbCheck(g *core.ResourceGraph, check core.Check, targetVerb string) []core.Finding {
-	findings := []core.Finding{}
+func ruleVerbCheck(g *compliancekit.ResourceGraph, check compliancekit.Check, targetVerb string) []compliancekit.Finding {
+	findings := []compliancekit.Finding{}
 	for _, t := range rbacRoleTypes {
 		for _, role := range g.ByType(t) {
 			if isSystemRole(t, role.Name) {
@@ -303,10 +303,10 @@ func ruleVerbCheck(g *core.ResourceGraph, check core.Check, targetVerb string) [
 			}
 			f := newRoleFinding(check, role)
 			if hit {
-				f.Status = core.StatusFail
+				f.Status = compliancekit.StatusFail
 				f.Message = fmt.Sprintf("%s %q: rule grants %q verb", roleKind(t), roleDesc(role), targetVerb)
 			} else {
-				f.Status = core.StatusPass
+				f.Status = compliancekit.StatusPass
 				f.Message = fmt.Sprintf("%s %q: no %q verb", roleKind(t), roleDesc(role), targetVerb)
 			}
 			findings = append(findings, f)
@@ -354,8 +354,8 @@ func anyVerbMatch(verbs any, targets []string) bool {
 	return false
 }
 
-func bindingSubjectCheck(g *core.ResourceGraph, check core.Check, targets []string) []core.Finding {
-	findings := []core.Finding{}
+func bindingSubjectCheck(g *compliancekit.ResourceGraph, check compliancekit.Check, targets []string) []compliancekit.Finding {
+	findings := []compliancekit.Finding{}
 	for _, t := range rbacBindingTypes {
 		for _, b := range g.ByType(t) {
 			subs, _ := b.Attributes["subjects"].([]any)
@@ -374,10 +374,10 @@ func bindingSubjectCheck(g *core.ResourceGraph, check core.Check, targets []stri
 			}
 			f := newBindingFinding(check, b)
 			if len(matched) > 0 {
-				f.Status = core.StatusFail
+				f.Status = compliancekit.StatusFail
 				f.Message = fmt.Sprintf("%s %q: targets %s", bindingKind(t), roleDesc(b), strings.Join(matched, ", "))
 			} else {
-				f.Status = core.StatusPass
+				f.Status = compliancekit.StatusPass
 				f.Message = fmt.Sprintf("%s %q: no sensitive subjects", bindingKind(t), roleDesc(b))
 			}
 			findings = append(findings, f)
@@ -386,8 +386,8 @@ func bindingSubjectCheck(g *core.ResourceGraph, check core.Check, targets []stri
 	return findings
 }
 
-func newRoleFinding(check core.Check, role core.Resource) core.Finding {
-	return core.Finding{
+func newRoleFinding(check compliancekit.Check, role compliancekit.Resource) compliancekit.Finding {
+	return compliancekit.Finding{
 		CheckID:  check.ID,
 		Severity: check.Severity,
 		Resource: role.Ref(),
@@ -395,8 +395,8 @@ func newRoleFinding(check core.Check, role core.Resource) core.Finding {
 	}
 }
 
-func newBindingFinding(check core.Check, binding core.Resource) core.Finding {
-	return core.Finding{
+func newBindingFinding(check compliancekit.Check, binding compliancekit.Resource) compliancekit.Finding {
+	return compliancekit.Finding{
 		CheckID:  check.ID,
 		Severity: check.Severity,
 		Resource: binding.Ref(),
@@ -422,7 +422,7 @@ func bindingKind(t string) string {
 
 // roleDesc renders "ns/name" for namespaced kinds or just name for
 // cluster-scoped kinds.
-func roleDesc(r core.Resource) string {
+func roleDesc(r compliancekit.Resource) string {
 	ns, _ := r.Attributes["namespace"].(string)
 	if ns == "" {
 		return r.Name
@@ -463,8 +463,8 @@ func resourceLabel(ag, resource string) string {
 }
 
 // indexNames builds a name->resource lookup for cluster-scoped roles.
-func indexNames(rs []core.Resource) map[string]core.Resource {
-	out := map[string]core.Resource{}
+func indexNames(rs []compliancekit.Resource) map[string]compliancekit.Resource {
+	out := map[string]compliancekit.Resource{}
 	for _, r := range rs {
 		out[r.Name] = r
 	}
@@ -473,12 +473,12 @@ func indexNames(rs []core.Resource) map[string]core.Resource {
 
 // indexByNamespace builds a ns->name->resource lookup for namespaced
 // roles.
-func indexByNamespace(rs []core.Resource) map[string]map[string]core.Resource {
-	out := map[string]map[string]core.Resource{}
+func indexByNamespace(rs []compliancekit.Resource) map[string]map[string]compliancekit.Resource {
+	out := map[string]map[string]compliancekit.Resource{}
 	for _, r := range rs {
 		ns, _ := r.Attributes["namespace"].(string)
 		if out[ns] == nil {
-			out[ns] = map[string]core.Resource{}
+			out[ns] = map[string]compliancekit.Resource{}
 		}
 		out[ns][r.Name] = r
 	}

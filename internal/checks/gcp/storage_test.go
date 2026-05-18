@@ -5,11 +5,11 @@ import (
 	"testing"
 
 	gcpcol "github.com/darpanzope/compliancekit/internal/collectors/gcp"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
-func mkBucket(name string, attrs map[string]any) core.Resource {
-	return core.Resource{
+func mkBucket(name string, attrs map[string]any) compliancekit.Resource {
+	return compliancekit.Resource{
 		ID: "gcp.storage.bucket." + name, Type: gcpcol.GCSBucketType, Name: name, Provider: "gcp",
 		Attributes: attrs,
 	}
@@ -19,10 +19,10 @@ func TestGCSUniformAccess(t *testing.T) {
 	cases := []struct {
 		name string
 		on   bool
-		want core.Status
+		want compliancekit.Status
 	}{
-		{"enabled", true, core.StatusPass},
-		{"disabled", false, core.StatusFail},
+		{"enabled", true, compliancekit.StatusPass},
+		{"disabled", false, compliancekit.StatusFail},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -38,11 +38,11 @@ func TestGCSUniformAccess(t *testing.T) {
 func TestGCSPAP(t *testing.T) {
 	cases := []struct {
 		pap  string
-		want core.Status
+		want compliancekit.Status
 	}{
-		{"enforced", core.StatusPass},
-		{"inherited", core.StatusFail},
-		{"", core.StatusFail},
+		{"enforced", compliancekit.StatusPass},
+		{"inherited", compliancekit.StatusFail},
+		{"", compliancekit.StatusFail},
 	}
 	for _, c := range cases {
 		t.Run(c.pap, func(t *testing.T) {
@@ -62,9 +62,9 @@ func TestGCSVersioning(t *testing.T) {
 	)
 	findings, _ := GCSVersioning(context.Background(), g)
 	for _, f := range findings {
-		want := core.StatusPass
+		want := compliancekit.StatusPass
 		if f.Resource.Name == "off" {
-			want = core.StatusFail
+			want = compliancekit.StatusFail
 		}
 		if f.Status != want {
 			t.Errorf("%s: got %v", f.Resource.Name, f.Status)
@@ -76,11 +76,11 @@ func TestGCSLogging(t *testing.T) {
 	cases := []struct {
 		name  string
 		attrs map[string]any
-		want  core.Status
+		want  compliancekit.Status
 	}{
-		{"disabled", map[string]any{"logging_enabled": false}, core.StatusFail},
-		{"enabled-other-target", map[string]any{"logging_enabled": true, "logging_target_bucket": "logs"}, core.StatusPass},
-		{"loop", map[string]any{"logging_enabled": true, "logging_target_bucket": "b"}, core.StatusFail},
+		{"disabled", map[string]any{"logging_enabled": false}, compliancekit.StatusFail},
+		{"enabled-other-target", map[string]any{"logging_enabled": true, "logging_target_bucket": "logs"}, compliancekit.StatusPass},
+		{"loop", map[string]any{"logging_enabled": true, "logging_target_bucket": "b"}, compliancekit.StatusFail},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {

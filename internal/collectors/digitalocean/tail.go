@@ -7,7 +7,7 @@ import (
 
 	"github.com/digitalocean/godo"
 
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // Resource types for the six remaining DO services that round out
@@ -22,8 +22,8 @@ const (
 	ProjectType     = "digitalocean.project"
 )
 
-func (c *Collector) collectCDN(ctx context.Context) ([]core.Resource, error) {
-	out := []core.Resource{}
+func (c *Collector) collectCDN(ctx context.Context) ([]compliancekit.Resource, error) {
+	out := []compliancekit.Resource{}
 	opt := &godo.ListOptions{PerPage: pageSize}
 	for {
 		if err := ctx.Err(); err != nil {
@@ -34,7 +34,7 @@ func (c *Collector) collectCDN(ctx context.Context) ([]core.Resource, error) {
 			return out, err
 		}
 		for _, cd := range cdns {
-			r := core.Resource{
+			r := compliancekit.Resource{
 				ID:       fmt.Sprintf("%s.%s", CDNType, cd.ID),
 				Type:     CDNType,
 				Name:     cd.Endpoint,
@@ -64,8 +64,8 @@ func (c *Collector) collectCDN(ctx context.Context) ([]core.Resource, error) {
 	return out, nil
 }
 
-func (c *Collector) collectReservedIPs(ctx context.Context) ([]core.Resource, error) {
-	out := []core.Resource{}
+func (c *Collector) collectReservedIPs(ctx context.Context) ([]compliancekit.Resource, error) {
+	out := []compliancekit.Resource{}
 	opt := &godo.ListOptions{PerPage: pageSize}
 	for {
 		if err := ctx.Err(); err != nil {
@@ -81,7 +81,7 @@ func (c *Collector) collectReservedIPs(ctx context.Context) ([]core.Resource, er
 				region = ip.Region.Slug
 			}
 			attached := ip.Droplet != nil
-			r := core.Resource{
+			r := compliancekit.Resource{
 				ID:       fmt.Sprintf("%s.%s", ReservedIPType, ip.IP),
 				Type:     ReservedIPType,
 				Name:     ip.IP,
@@ -108,8 +108,8 @@ func (c *Collector) collectReservedIPs(ctx context.Context) ([]core.Resource, er
 	return out, nil
 }
 
-func (c *Collector) collectSSHKeys(ctx context.Context) ([]core.Resource, error) {
-	out := []core.Resource{}
+func (c *Collector) collectSSHKeys(ctx context.Context) ([]compliancekit.Resource, error) {
+	out := []compliancekit.Resource{}
 	opt := &godo.ListOptions{PerPage: pageSize}
 	for {
 		if err := ctx.Err(); err != nil {
@@ -122,7 +122,7 @@ func (c *Collector) collectSSHKeys(ctx context.Context) ([]core.Resource, error)
 		for _, k := range keys {
 			algo := keyAlgorithm(k.PublicKey)
 			weak := isWeakKeyAlgo(algo, k.PublicKey)
-			r := core.Resource{
+			r := compliancekit.Resource{
 				ID:       fmt.Sprintf("%s.%d", SSHKeyType, k.ID),
 				Type:     SSHKeyType,
 				Name:     k.Name,
@@ -191,8 +191,8 @@ func isWeakKeyAlgo(algo, pub string) bool {
 	return true
 }
 
-func (c *Collector) collectImages(ctx context.Context) ([]core.Resource, error) {
-	out := []core.Resource{}
+func (c *Collector) collectImages(ctx context.Context) ([]compliancekit.Resource, error) {
+	out := []compliancekit.Resource{}
 	opt := &godo.ListOptions{PerPage: pageSize}
 	for {
 		if err := ctx.Err(); err != nil {
@@ -205,7 +205,7 @@ func (c *Collector) collectImages(ctx context.Context) ([]core.Resource, error) 
 			return out, err
 		}
 		for _, img := range images {
-			r := core.Resource{
+			r := compliancekit.Resource{
 				ID:       fmt.Sprintf("%s.%d", ImageType, img.ID),
 				Type:     ImageType,
 				Name:     img.Name,
@@ -235,8 +235,8 @@ func (c *Collector) collectImages(ctx context.Context) ([]core.Resource, error) 
 	return out, nil
 }
 
-func (c *Collector) collectAlerts(ctx context.Context) ([]core.Resource, error) {
-	out := []core.Resource{}
+func (c *Collector) collectAlerts(ctx context.Context) ([]compliancekit.Resource, error) {
+	out := []compliancekit.Resource{}
 	opt := &godo.ListOptions{PerPage: pageSize}
 	for {
 		if err := ctx.Err(); err != nil {
@@ -247,7 +247,7 @@ func (c *Collector) collectAlerts(ctx context.Context) ([]core.Resource, error) 
 			return out, err
 		}
 		for _, a := range alerts {
-			r := core.Resource{
+			r := compliancekit.Resource{
 				ID:       fmt.Sprintf("%s.%s", AlertPolicyType, a.UUID),
 				Type:     AlertPolicyType,
 				Name:     a.Description,
@@ -277,8 +277,8 @@ func (c *Collector) collectAlerts(ctx context.Context) ([]core.Resource, error) 
 	return out, nil
 }
 
-func (c *Collector) collectProjects(ctx context.Context) ([]core.Resource, error) {
-	out := []core.Resource{}
+func (c *Collector) collectProjects(ctx context.Context) ([]compliancekit.Resource, error) {
+	out := []compliancekit.Resource{}
 	opt := &godo.ListOptions{PerPage: pageSize}
 	for {
 		if err := ctx.Err(); err != nil {
@@ -289,7 +289,7 @@ func (c *Collector) collectProjects(ctx context.Context) ([]core.Resource, error
 			return out, err
 		}
 		for _, p := range projects {
-			r := core.Resource{
+			r := compliancekit.Resource{
 				ID:       fmt.Sprintf("%s.%s", ProjectType, p.ID),
 				Type:     ProjectType,
 				Name:     p.Name,

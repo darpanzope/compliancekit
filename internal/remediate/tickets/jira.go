@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // JiraConfig captures everything needed to create an issue in a Jira
@@ -83,15 +83,15 @@ func (j *Jira) Create(ctx context.Context, t Ticket) (Ref, error) {
 // names. Jira allows custom priorities — this only works for stock
 // instances; on customized Jira a strategy-level Priority override
 // would be the next step.
-func jiraPriority(s core.Severity) string {
+func jiraPriority(s compliancekit.Severity) string {
 	switch s {
-	case core.SeverityCritical:
+	case compliancekit.SeverityCritical:
 		return "Highest"
-	case core.SeverityHigh:
+	case compliancekit.SeverityHigh:
 		return "High"
-	case core.SeverityMedium:
+	case compliancekit.SeverityMedium:
 		return "Medium"
-	case core.SeverityLow:
+	case compliancekit.SeverityLow:
 		return "Low"
 	}
 	return "Medium"

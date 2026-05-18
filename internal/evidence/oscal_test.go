@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/frameworks"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // TestWriteAssessmentResultsOSCAL exercises the v0.13 OSCAL AR emit
@@ -22,25 +22,25 @@ import (
 func TestWriteAssessmentResultsOSCAL(t *testing.T) {
 	// Pick a real registered check so controlIDsForFinding returns
 	// at least one (framework, control) pair.
-	registered := core.RegisteredChecks()
+	registered := compliancekit.RegisteredChecks()
 	if len(registered) == 0 {
 		t.Skip("no checks registered, cannot test OSCAL AR projection")
 	}
 	check := registered[0]
 
-	findings := []core.Finding{
+	findings := []compliancekit.Finding{
 		{
 			CheckID:  check.ID,
-			Status:   core.StatusFail,
-			Severity: core.SeverityHigh,
-			Resource: core.ResourceRef{ID: "do://droplet/web-prod-3", Type: "do.droplet", Name: "web-prod-3"},
+			Status:   compliancekit.StatusFail,
+			Severity: compliancekit.SeverityHigh,
+			Resource: compliancekit.ResourceRef{ID: "do://droplet/web-prod-3", Type: "do.droplet", Name: "web-prod-3"},
 			Message:  "Droplet exposes ssh on public IPv4",
 		},
 		{
 			CheckID:  check.ID,
-			Status:   core.StatusPass, // pass findings must NOT appear in AR
-			Severity: core.SeverityLow,
-			Resource: core.ResourceRef{ID: "do://droplet/web-prod-4", Type: "do.droplet", Name: "web-prod-4"},
+			Status:   compliancekit.StatusPass, // pass findings must NOT appear in AR
+			Severity: compliancekit.SeverityLow,
+			Resource: compliancekit.ResourceRef{ID: "do://droplet/web-prod-4", Type: "do.droplet", Name: "web-prod-4"},
 		},
 	}
 
@@ -105,7 +105,7 @@ func TestWriteAssessmentResultsOSCAL(t *testing.T) {
 			if p.Name == "compliancekit-tailored" && p.Value == "true" {
 				sawTailoringFinding = true
 			}
-			if p.Name == "compliancekit-status" && p.Value == string(core.StatusFail) {
+			if p.Name == "compliancekit-status" && p.Value == string(compliancekit.StatusFail) {
 				sawActionableFinding = true
 			}
 		}

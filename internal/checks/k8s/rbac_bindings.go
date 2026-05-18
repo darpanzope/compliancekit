@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	k8scol "github.com/darpanzope/compliancekit/internal/collectors/k8s"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.22 phase 1 — binding-level RBAC checks split out of rbac.go
@@ -20,10 +20,10 @@ import (
 
 // ----- Binding-level checks --------------------------------------
 
-var CheckRBACClusterAdminBinding = core.Check{
+var CheckRBACClusterAdminBinding = compliancekit.Check{
 	ID:           "k8s-rbac-cluster-admin-non-system",
 	Title:        "ClusterRoleBindings to cluster-admin should target only system subjects",
-	Severity:     core.SeverityCritical,
+	Severity:     compliancekit.SeverityCritical,
 	Provider:     "kubernetes",
 	Service:      "rbac",
 	ResourceType: k8scol.ClusterRoleBindingType,
@@ -47,8 +47,8 @@ var CheckRBACClusterAdminBinding = core.Check{
 	Scanner: "rbac.ClusterAdminBinding",
 }
 
-func RBACClusterAdminBinding(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func RBACClusterAdminBinding(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, crb := range g.ByType(k8scol.ClusterRoleBindingType) {
 		roleName, _ := crb.Attributes["role_name"].(string)
 		if roleName != "cluster-admin" {
@@ -71,10 +71,10 @@ func RBACClusterAdminBinding(_ context.Context, g *core.ResourceGraph) ([]core.F
 		}
 		f := newBindingFinding(CheckRBACClusterAdminBinding, crb)
 		if len(nonSystem) == 0 {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("clusterrolebinding %q: cluster-admin bound only to system subjects", crb.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("clusterrolebinding %q: cluster-admin bound to non-system subjects: %s",
 				crb.Name, strings.Join(nonSystem, ", "))
 		}
@@ -83,10 +83,10 @@ func RBACClusterAdminBinding(_ context.Context, g *core.ResourceGraph) ([]core.F
 	return findings, nil
 }
 
-var CheckRBACAnonymousBind = core.Check{
+var CheckRBACAnonymousBind = compliancekit.Check{
 	ID:           "k8s-rbac-anonymous-bind",
 	Title:        "Bindings should not grant any role to system:anonymous",
-	Severity:     core.SeverityCritical,
+	Severity:     compliancekit.SeverityCritical,
 	Provider:     "kubernetes",
 	Service:      "rbac",
 	ResourceType: k8scol.ClusterRoleBindingType,
@@ -108,15 +108,15 @@ var CheckRBACAnonymousBind = core.Check{
 	Scanner: "rbac.AnonymousBind",
 }
 
-func RBACAnonymousBind(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func RBACAnonymousBind(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	return bindingSubjectCheck(g, CheckRBACAnonymousBind,
 		[]string{"system:anonymous", "system:unauthenticated"}), nil
 }
 
-var CheckRBACEmptySubjects = core.Check{
+var CheckRBACEmptySubjects = compliancekit.Check{
 	ID:           "k8s-rbac-empty-subjects",
 	Title:        "Bindings should have at least one subject",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "kubernetes",
 	Service:      "rbac",
 	ResourceType: k8scol.RoleBindingType,
@@ -136,17 +136,17 @@ var CheckRBACEmptySubjects = core.Check{
 	Scanner: "rbac.EmptySubjects",
 }
 
-func RBACEmptySubjects(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func RBACEmptySubjects(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, t := range rbacBindingTypes {
 		for _, b := range g.ByType(t) {
 			subs, _ := b.Attributes["subjects"].([]any)
 			f := newBindingFinding(CheckRBACEmptySubjects, b)
 			if len(subs) == 0 {
-				f.Status = core.StatusFail
+				f.Status = compliancekit.StatusFail
 				f.Message = fmt.Sprintf("%s %q: no subjects", bindingKind(t), roleDesc(b))
 			} else {
-				f.Status = core.StatusPass
+				f.Status = compliancekit.StatusPass
 				f.Message = fmt.Sprintf("%s %q: %d subject(s)", bindingKind(t), roleDesc(b), len(subs))
 			}
 			findings = append(findings, f)
@@ -155,10 +155,10 @@ func RBACEmptySubjects(_ context.Context, g *core.ResourceGraph) ([]core.Finding
 	return findings, nil
 }
 
-var CheckRBACStaleRoleRef = core.Check{
+var CheckRBACStaleRoleRef = compliancekit.Check{
 	ID:           "k8s-rbac-stale-role-ref",
 	Title:        "Bindings should reference an existing role",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "kubernetes",
 	Service:      "rbac",
 	ResourceType: k8scol.RoleBindingType,
@@ -178,8 +178,8 @@ var CheckRBACStaleRoleRef = core.Check{
 	Scanner: "rbac.StaleRoleRef",
 }
 
-func RBACStaleRoleRef(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func RBACStaleRoleRef(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	clusterRoles := indexNames(g.ByType(k8scol.ClusterRoleType))
 	rolesByNs := indexByNamespace(g.ByType(k8scol.RoleType))
 
@@ -196,10 +196,10 @@ func RBACStaleRoleRef(_ context.Context, g *core.ResourceGraph) ([]core.Finding,
 			_, found = rolesByNs[ns][name]
 		}
 		if found {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("rolebinding %q: roleRef resolves", roleDesc(b))
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("rolebinding %q: %s/%s does not resolve", roleDesc(b), kind, name)
 		}
 		findings = append(findings, f)
@@ -213,10 +213,10 @@ func RBACStaleRoleRef(_ context.Context, g *core.ResourceGraph) ([]core.Finding,
 			_, found = clusterRoles[name]
 		}
 		if found {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("clusterrolebinding %q: roleRef resolves", b.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("clusterrolebinding %q: %s/%s does not resolve", b.Name, kind, name)
 		}
 		findings = append(findings, f)
@@ -224,10 +224,10 @@ func RBACStaleRoleRef(_ context.Context, g *core.ResourceGraph) ([]core.Finding,
 	return findings, nil
 }
 
-var CheckRBACUserSubject = core.Check{
+var CheckRBACUserSubject = compliancekit.Check{
 	ID:           "k8s-rbac-user-subject",
 	Title:        "Bindings should target ServiceAccounts or Groups, not Users",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "kubernetes",
 	Service:      "rbac",
 	ResourceType: k8scol.RoleBindingType,
@@ -247,8 +247,8 @@ var CheckRBACUserSubject = core.Check{
 	Scanner: "rbac.UserSubject",
 }
 
-func RBACUserSubject(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func RBACUserSubject(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, t := range rbacBindingTypes {
 		for _, b := range g.ByType(t) {
 			subs, _ := b.Attributes["subjects"].([]any)
@@ -266,10 +266,10 @@ func RBACUserSubject(_ context.Context, g *core.ResourceGraph) ([]core.Finding, 
 			}
 			f := newBindingFinding(CheckRBACUserSubject, b)
 			if len(users) == 0 {
-				f.Status = core.StatusPass
+				f.Status = compliancekit.StatusPass
 				f.Message = fmt.Sprintf("%s %q: no User subjects", bindingKind(t), roleDesc(b))
 			} else {
-				f.Status = core.StatusFail
+				f.Status = compliancekit.StatusFail
 				f.Message = fmt.Sprintf("%s %q: User subjects: %s", bindingKind(t), roleDesc(b), strings.Join(users, ", "))
 			}
 			findings = append(findings, f)
@@ -279,9 +279,9 @@ func RBACUserSubject(_ context.Context, g *core.ResourceGraph) ([]core.Finding, 
 }
 
 func init() {
-	core.Register(CheckRBACClusterAdminBinding, RBACClusterAdminBinding)
-	core.Register(CheckRBACAnonymousBind, RBACAnonymousBind)
-	core.Register(CheckRBACEmptySubjects, RBACEmptySubjects)
-	core.Register(CheckRBACStaleRoleRef, RBACStaleRoleRef)
-	core.Register(CheckRBACUserSubject, RBACUserSubject)
+	compliancekit.Register(CheckRBACClusterAdminBinding, RBACClusterAdminBinding)
+	compliancekit.Register(CheckRBACAnonymousBind, RBACAnonymousBind)
+	compliancekit.Register(CheckRBACEmptySubjects, RBACEmptySubjects)
+	compliancekit.Register(CheckRBACStaleRoleRef, RBACStaleRoleRef)
+	compliancekit.Register(CheckRBACUserSubject, RBACUserSubject)
 }

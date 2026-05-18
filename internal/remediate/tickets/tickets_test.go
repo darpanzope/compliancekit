@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // stubProvider lets the FileManualFindings test exercise dispatch
@@ -38,7 +38,7 @@ func TestFileManualFindings_DispatchesOnlyManual(t *testing.T) {
 		{
 			CheckID:  "manual-1",
 			Risk:     remediate.RiskManual,
-			Resource: core.ResourceRef{ID: "r1", Name: "r1-name"},
+			Resource: compliancekit.ResourceRef{ID: "r1", Name: "r1-name"},
 			Notes:    "manual action required",
 		},
 	}
@@ -164,7 +164,7 @@ func TestLinear_Create(t *testing.T) {
 	})
 	ref, err := l.Create(context.Background(), Ticket{
 		Title:    "Test",
-		Severity: core.SeverityHigh,
+		Severity: compliancekit.SeverityHigh,
 	})
 	if err != nil {
 		t.Fatalf("Create: %v", err)

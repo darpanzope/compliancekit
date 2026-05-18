@@ -3,7 +3,7 @@ package k8s
 import (
 	"context"
 
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.21 phase 3 — RBAC depth. 10 new privilege-escalation-shaped
@@ -15,7 +15,7 @@ import (
 // Mirrors the v0.20 sysctlSpec / sshdSpec shape so adding a new
 // pattern is one struct literal.
 type rbacExtraEntry struct {
-	check        core.Check
+	check        compliancekit.Check
 	verbs        []string
 	apiGroup     string
 	resource     string
@@ -24,10 +24,10 @@ type rbacExtraEntry struct {
 
 var rbacExtraEntries = []rbacExtraEntry{
 	{
-		check: core.Check{
+		check: compliancekit.Check{
 			ID:           "k8s-rbac-no-update-clusterroles",
 			Title:        "Roles should not grant update on ClusterRoles (privilege escalation)",
-			Severity:     core.SeverityCritical,
+			Severity:     compliancekit.SeverityCritical,
 			Provider:     "kubernetes",
 			Service:      "rbac",
 			ResourceType: clusterRoleType,
@@ -50,10 +50,10 @@ var rbacExtraEntries = []rbacExtraEntry{
 		resource: "clusterroles", requireMatch: true,
 	},
 	{
-		check: core.Check{
+		check: compliancekit.Check{
 			ID:           "k8s-rbac-no-patch-nodes",
 			Title:        "Roles should not grant patch on Node objects",
-			Severity:     core.SeverityHigh,
+			Severity:     compliancekit.SeverityHigh,
 			Provider:     "kubernetes",
 			Service:      "rbac",
 			ResourceType: clusterRoleType,
@@ -73,10 +73,10 @@ var rbacExtraEntries = []rbacExtraEntry{
 		verbs: []string{"patch", "update"}, apiGroup: "", resource: "nodes", requireMatch: true,
 	},
 	{
-		check: core.Check{
+		check: compliancekit.Check{
 			ID:           "k8s-rbac-no-update-pods-status",
 			Title:        "Roles should not grant update on pods/status (liveness spoofing)",
-			Severity:     core.SeverityHigh,
+			Severity:     compliancekit.SeverityHigh,
 			Provider:     "kubernetes",
 			Service:      "rbac",
 			ResourceType: clusterRoleType,
@@ -96,10 +96,10 @@ var rbacExtraEntries = []rbacExtraEntry{
 		verbs: []string{"update", "patch"}, apiGroup: "", resource: "pods/status", requireMatch: true,
 	},
 	{
-		check: core.Check{
+		check: compliancekit.Check{
 			ID:           "k8s-rbac-no-csr-create",
 			Title:        "Roles should not grant create on CertificateSigningRequests",
-			Severity:     core.SeverityHigh,
+			Severity:     compliancekit.SeverityHigh,
 			Provider:     "kubernetes",
 			Service:      "rbac",
 			ResourceType: clusterRoleType,
@@ -121,10 +121,10 @@ var rbacExtraEntries = []rbacExtraEntry{
 		resource: "certificatesigningrequests", requireMatch: true,
 	},
 	{
-		check: core.Check{
+		check: compliancekit.Check{
 			ID:           "k8s-rbac-no-mutatingwebhook-write",
 			Title:        "Roles should not grant write on MutatingWebhookConfigurations",
-			Severity:     core.SeverityCritical,
+			Severity:     compliancekit.SeverityCritical,
 			Provider:     "kubernetes",
 			Service:      "rbac",
 			ResourceType: clusterRoleType,
@@ -146,10 +146,10 @@ var rbacExtraEntries = []rbacExtraEntry{
 		resource: "mutatingwebhookconfigurations", requireMatch: true,
 	},
 	{
-		check: core.Check{
+		check: compliancekit.Check{
 			ID:           "k8s-rbac-no-validatingwebhook-write",
 			Title:        "Roles should not grant write on ValidatingWebhookConfigurations",
-			Severity:     core.SeverityHigh,
+			Severity:     compliancekit.SeverityHigh,
 			Provider:     "kubernetes",
 			Service:      "rbac",
 			ResourceType: clusterRoleType,
@@ -171,10 +171,10 @@ var rbacExtraEntries = []rbacExtraEntry{
 		resource: "validatingwebhookconfigurations", requireMatch: true,
 	},
 	{
-		check: core.Check{
+		check: compliancekit.Check{
 			ID:           "k8s-rbac-no-namespaces-write",
 			Title:        "Roles should not grant write on namespaces",
-			Severity:     core.SeverityHigh,
+			Severity:     compliancekit.SeverityHigh,
 			Provider:     "kubernetes",
 			Service:      "rbac",
 			ResourceType: clusterRoleType,
@@ -195,10 +195,10 @@ var rbacExtraEntries = []rbacExtraEntry{
 		apiGroup: "", resource: "namespaces", requireMatch: true,
 	},
 	{
-		check: core.Check{
+		check: compliancekit.Check{
 			ID:           "k8s-rbac-no-deletecollection-pods",
 			Title:        "Roles should not grant deletecollection on pods",
-			Severity:     core.SeverityMedium,
+			Severity:     compliancekit.SeverityMedium,
 			Provider:     "kubernetes",
 			Service:      "rbac",
 			ResourceType: clusterRoleType,
@@ -218,10 +218,10 @@ var rbacExtraEntries = []rbacExtraEntry{
 		verbs: []string{"deletecollection"}, apiGroup: "", resource: "pods", requireMatch: true,
 	},
 	{
-		check: core.Check{
+		check: compliancekit.Check{
 			ID:           "k8s-rbac-no-create-pods-eviction",
 			Title:        "Roles should not grant create on pods/eviction (forced reschedule)",
-			Severity:     core.SeverityMedium,
+			Severity:     compliancekit.SeverityMedium,
 			Provider:     "kubernetes",
 			Service:      "rbac",
 			ResourceType: clusterRoleType,
@@ -242,10 +242,10 @@ var rbacExtraEntries = []rbacExtraEntry{
 		verbs: []string{"create"}, apiGroup: "", resource: "pods/eviction", requireMatch: true,
 	},
 	{
-		check: core.Check{
+		check: compliancekit.Check{
 			ID:           "k8s-rbac-no-update-pods-ephemeralcontainers",
 			Title:        "Roles should not grant write on pods/ephemeralcontainers (debug attach)",
-			Severity:     core.SeverityHigh,
+			Severity:     compliancekit.SeverityHigh,
 			Provider:     "kubernetes",
 			Service:      "rbac",
 			ResourceType: clusterRoleType,
@@ -277,7 +277,7 @@ const clusterRoleType = "k8s.cluster_role"
 func init() {
 	for _, e := range rbacExtraEntries {
 		e := e
-		core.Register(e.check, func(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+		compliancekit.Register(e.check, func(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 			return verbResourceCheck(g, e.check, e.verbs, e.apiGroup, e.resource, e.requireMatch), nil
 		})
 	}

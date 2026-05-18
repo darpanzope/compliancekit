@@ -6,23 +6,23 @@ import (
 	"strings"
 
 	docol "github.com/darpanzope/compliancekit/internal/collectors/digitalocean"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // fwdRulesOf returns the forwarding-rules slice extracted from
 // a load balancer resource. Returns an empty slice when missing
 // or the wrong type.
-func fwdRulesOf(lb core.Resource) []map[string]any {
+func fwdRulesOf(lb compliancekit.Resource) []map[string]any {
 	rules, _ := lb.Attributes["forwarding_rules"].([]map[string]any)
 	return rules
 }
 
 // CheckLBRedirectHTTPToHTTPS requires the load balancer redirect
 // http -> https when it terminates http on port 80.
-var CheckLBRedirectHTTPToHTTPS = core.Check{
+var CheckLBRedirectHTTPToHTTPS = compliancekit.Check{
 	ID:           "do-lb-redirect-http-to-https",
 	Title:        "Load balancers serving HTTP must redirect to HTTPS",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "digitalocean",
 	Service:      "load_balancers",
 	ResourceType: docol.LoadBalancerType,
@@ -46,10 +46,10 @@ var CheckLBRedirectHTTPToHTTPS = core.Check{
 	Scanner: "lb.RedirectHTTPToHTTPS",
 }
 
-func LBRedirectHTTPToHTTPS(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func LBRedirectHTTPToHTTPS(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, lb := range g.ByType(docol.LoadBalancerType) {
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckLBRedirectHTTPToHTTPS.ID,
 			Severity: CheckLBRedirectHTTPToHTTPS.Severity,
 			Resource: lb.Ref(),
@@ -63,17 +63,17 @@ func LBRedirectHTTPToHTTPS(_ context.Context, g *core.ResourceGraph) ([]core.Fin
 			}
 		}
 		if !hasHTTP {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("lb %q: no http listener", lb.Name)
 			findings = append(findings, f)
 			continue
 		}
 		redirect, _ := lb.Attributes["redirect_http_to_https"].(bool)
 		if redirect {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("lb %q: http -> https redirect enabled", lb.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("lb %q: http listener present but no https redirect", lb.Name)
 		}
 		findings = append(findings, f)
@@ -84,10 +84,10 @@ func LBRedirectHTTPToHTTPS(_ context.Context, g *core.ResourceGraph) ([]core.Fin
 // CheckLBHasHTTPS requires the load balancer terminate at least
 // one HTTPS listener. An HTTP-only LB is, in 2026, almost always
 // a misconfiguration.
-var CheckLBHasHTTPS = core.Check{
+var CheckLBHasHTTPS = compliancekit.Check{
 	ID:           "do-lb-no-https-listener",
 	Title:        "Load balancers must serve at least one HTTPS listener",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "digitalocean",
 	Service:      "load_balancers",
 	ResourceType: docol.LoadBalancerType,
@@ -109,10 +109,10 @@ var CheckLBHasHTTPS = core.Check{
 	Scanner: "lb.HasHTTPS",
 }
 
-func LBHasHTTPS(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func LBHasHTTPS(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, lb := range g.ByType(docol.LoadBalancerType) {
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckLBHasHTTPS.ID,
 			Severity: CheckLBHasHTTPS.Severity,
 			Resource: lb.Ref(),
@@ -127,10 +127,10 @@ func LBHasHTTPS(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error
 			}
 		}
 		if hasHTTPS {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("lb %q: https listener present", lb.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("lb %q: no https listener", lb.Name)
 		}
 		findings = append(findings, f)
@@ -142,10 +142,10 @@ func LBHasHTTPS(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error
 // (or TCP for non-http LBs). HTTP health checks against an HTTPS
 // LB are a common misconfiguration that silently degrades during
 // cert rotation.
-var CheckLBHealthCheckProtocol = core.Check{
+var CheckLBHealthCheckProtocol = compliancekit.Check{
 	ID:           "do-lb-health-check-cleartext",
 	Title:        "Load balancer health checks should not use cleartext HTTP",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "digitalocean",
 	Service:      "load_balancers",
 	ResourceType: docol.LoadBalancerType,
@@ -167,8 +167,8 @@ var CheckLBHealthCheckProtocol = core.Check{
 	Scanner: "lb.HealthCheckProtocol",
 }
 
-func LBHealthCheckProtocol(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func LBHealthCheckProtocol(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, lb := range g.ByType(docol.LoadBalancerType) {
 		hc, _ := lb.Attributes["health_check"].(map[string]any)
 		hcProto := strings.ToLower(asString(hc["protocol"]))
@@ -183,7 +183,7 @@ func LBHealthCheckProtocol(_ context.Context, g *core.ResourceGraph) ([]core.Fin
 			}
 		}
 
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckLBHealthCheckProtocol.ID,
 			Severity: CheckLBHealthCheckProtocol.Severity,
 			Resource: lb.Ref(),
@@ -191,13 +191,13 @@ func LBHealthCheckProtocol(_ context.Context, g *core.ResourceGraph) ([]core.Fin
 		}
 		switch {
 		case !hasHTTPSEntry:
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("lb %q: no https listener, healthcheck protocol not constrained", lb.Name)
 		case hcProto == "http":
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("lb %q: https listener with http healthcheck (use https or tcp)", lb.Name)
 		default:
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("lb %q: healthcheck protocol=%q", lb.Name, hcProto)
 		}
 		findings = append(findings, f)
@@ -206,10 +206,10 @@ func LBHealthCheckProtocol(_ context.Context, g *core.ResourceGraph) ([]core.Fin
 }
 
 // CheckLBInVPC requires every LB sit inside a VPC.
-var CheckLBInVPC = core.Check{
+var CheckLBInVPC = compliancekit.Check{
 	ID:           "do-lb-no-vpc",
 	Title:        "Load balancers must belong to a VPC",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "digitalocean",
 	Service:      "load_balancers",
 	ResourceType: docol.LoadBalancerType,
@@ -230,21 +230,21 @@ var CheckLBInVPC = core.Check{
 	Scanner: "lb.InVPC",
 }
 
-func LBInVPC(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func LBInVPC(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, lb := range g.ByType(docol.LoadBalancerType) {
 		vpc, _ := lb.Attributes["vpc_uuid"].(string)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckLBInVPC.ID,
 			Severity: CheckLBInVPC.Severity,
 			Resource: lb.Ref(),
 			Tags:     CheckLBInVPC.Tags,
 		}
 		if vpc != "" {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("lb %q: in VPC %s", lb.Name, vpc)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("lb %q: no VPC association", lb.Name)
 		}
 		findings = append(findings, f)
@@ -255,10 +255,10 @@ func LBInVPC(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
 // CheckLBOrphan flags LBs with no attached droplets AND no droplet
 // tag selector. Empty LBs answer 503 to everything; they should
 // be deleted or attached.
-var CheckLBOrphan = core.Check{
+var CheckLBOrphan = compliancekit.Check{
 	ID:           "do-lb-orphan",
 	Title:        "Load balancers should have at least one backend",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "digitalocean",
 	Service:      "load_balancers",
 	ResourceType: docol.LoadBalancerType,
@@ -280,22 +280,22 @@ var CheckLBOrphan = core.Check{
 	Scanner: "lb.Orphan",
 }
 
-func LBOrphan(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func LBOrphan(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, lb := range g.ByType(docol.LoadBalancerType) {
 		ids, _ := lb.Attributes["droplet_ids"].([]int)
 		tag, _ := lb.Attributes["droplet_tag"].(string)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckLBOrphan.ID,
 			Severity: CheckLBOrphan.Severity,
 			Resource: lb.Ref(),
 			Tags:     CheckLBOrphan.Tags,
 		}
 		if len(ids) == 0 && tag == "" {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("lb %q: no droplets and no tag selector", lb.Name)
 		} else {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("lb %q: %d droplet(s), tag=%q", lb.Name, len(ids), tag)
 		}
 		findings = append(findings, f)
@@ -312,9 +312,9 @@ func asString(v any) string {
 }
 
 func init() {
-	core.Register(CheckLBRedirectHTTPToHTTPS, LBRedirectHTTPToHTTPS)
-	core.Register(CheckLBHasHTTPS, LBHasHTTPS)
-	core.Register(CheckLBHealthCheckProtocol, LBHealthCheckProtocol)
-	core.Register(CheckLBInVPC, LBInVPC)
-	core.Register(CheckLBOrphan, LBOrphan)
+	compliancekit.Register(CheckLBRedirectHTTPToHTTPS, LBRedirectHTTPToHTTPS)
+	compliancekit.Register(CheckLBHasHTTPS, LBHasHTTPS)
+	compliancekit.Register(CheckLBHealthCheckProtocol, LBHealthCheckProtocol)
+	compliancekit.Register(CheckLBInVPC, LBInVPC)
+	compliancekit.Register(CheckLBOrphan, LBOrphan)
 }

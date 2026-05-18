@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	k8scol "github.com/darpanzope/compliancekit/internal/collectors/k8s"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.21 phase 7 — CIS Kubernetes Benchmark §1 (Control Plane
@@ -28,7 +28,7 @@ type cpvSpec struct {
 	id, title, group string
 	cis              []string
 	soc2, iso        []string
-	severity         core.Severity
+	severity         compliancekit.Severity
 	description      string
 	remediation      string
 	hint             string
@@ -40,7 +40,7 @@ var cpvSpecs = []cpvSpec{
 	// ----- apiserver §1.2 -----
 	{
 		id: "k8s-cp-apiserver-anonymous-auth", title: "kube-apiserver --anonymous-auth must be false",
-		group: "apiserver", cis: []string{"1.2.1"}, severity: core.SeverityHigh,
+		group: "apiserver", cis: []string{"1.2.1"}, severity: compliancekit.SeverityHigh,
 		soc2: []string{"CC6.1"}, iso: []string{"A.5.15"},
 		description: "AnonymousAuth lets system:anonymous reach the API. " +
 			"Even read-only endpoints can leak resource shape under enumeration. " +
@@ -56,7 +56,7 @@ var cpvSpecs = []cpvSpec{
 	},
 	{
 		id: "k8s-cp-apiserver-authorization-mode", title: "kube-apiserver --authorization-mode must include Node + RBAC",
-		group: "apiserver", cis: []string{"1.2.7", "1.2.8", "1.2.9"}, severity: core.SeverityCritical,
+		group: "apiserver", cis: []string{"1.2.7", "1.2.8", "1.2.9"}, severity: compliancekit.SeverityCritical,
 		soc2: []string{"CC6.1"}, iso: []string{"A.5.15"},
 		description: "AuthorizationMode=AlwaysAllow disables authorization entirely. " +
 			"Production-safe value is Node,RBAC — Node restricts kubelets to " +
@@ -69,7 +69,7 @@ var cpvSpecs = []cpvSpec{
 	},
 	{
 		id: "k8s-cp-apiserver-node-restriction-admission", title: "kube-apiserver admission-plugins must include NodeRestriction",
-		group: "apiserver", cis: []string{"1.2.16"}, severity: core.SeverityHigh,
+		group: "apiserver", cis: []string{"1.2.16"}, severity: compliancekit.SeverityHigh,
 		soc2: []string{"CC6.1"}, iso: []string{"A.5.15"},
 		description: "NodeRestriction limits kubelet writes to its own Node + Pod " +
 			"objects. Without it, a compromised kubelet token can modify cluster-" +
@@ -82,7 +82,7 @@ var cpvSpecs = []cpvSpec{
 	},
 	{
 		id: "k8s-cp-apiserver-audit-log-path", title: "kube-apiserver --audit-log-path must be set",
-		group: "apiserver", cis: []string{"1.2.18"}, severity: core.SeverityHigh,
+		group: "apiserver", cis: []string{"1.2.18"}, severity: compliancekit.SeverityHigh,
 		soc2: []string{"CC7.2"}, iso: []string{"A.8.15"},
 		description: "Without --audit-log-path the apiserver emits no audit log. " +
 			"SOC 2 + ISO 27001 require API audit trails; this is the " +
@@ -97,7 +97,7 @@ var cpvSpecs = []cpvSpec{
 	},
 	{
 		id: "k8s-cp-apiserver-audit-log-retention", title: "kube-apiserver --audit-log-maxage must be ≥30 days",
-		group: "apiserver", cis: []string{"1.2.19", "1.2.20", "1.2.21"}, severity: core.SeverityMedium,
+		group: "apiserver", cis: []string{"1.2.19", "1.2.20", "1.2.21"}, severity: compliancekit.SeverityMedium,
 		soc2: []string{"CC7.2"}, iso: []string{"A.8.15"},
 		description: "--audit-log-maxage (days), --audit-log-maxbackup (rotated " +
 			"files), --audit-log-maxsize (MB per file). Defaults are too small " +
@@ -112,7 +112,7 @@ var cpvSpecs = []cpvSpec{
 	},
 	{
 		id: "k8s-cp-apiserver-encryption-at-rest", title: "kube-apiserver --encryption-provider-config must be set (etcd encryption)",
-		group: "apiserver", cis: []string{"1.2.29", "1.2.30"}, severity: core.SeverityHigh,
+		group: "apiserver", cis: []string{"1.2.29", "1.2.30"}, severity: compliancekit.SeverityHigh,
 		soc2: []string{"CC6.1", "CC6.7"}, iso: []string{"A.8.24", "A.5.34"},
 		description: "Without --encryption-provider-config, every Secret in etcd " +
 			"is stored at-rest in plaintext. EncryptionConfiguration must use " +
@@ -130,7 +130,7 @@ var cpvSpecs = []cpvSpec{
 	},
 	{
 		id: "k8s-cp-apiserver-profiling-disabled", title: "kube-apiserver --profiling must be false",
-		group: "apiserver", cis: []string{"1.2.17"}, severity: core.SeverityMedium,
+		group: "apiserver", cis: []string{"1.2.17"}, severity: compliancekit.SeverityMedium,
 		soc2: []string{"CC6.6"}, iso: []string{"A.8.20"},
 		description: "--profiling enables /debug/pprof endpoints. Unauthenticated " +
 			"access to pprof leaks heap layout + can DoS the process. Default " +
@@ -145,7 +145,7 @@ var cpvSpecs = []cpvSpec{
 	// ----- etcd §1.3 -----
 	{
 		id: "k8s-cp-etcd-client-cert-auth", title: "etcd --client-cert-auth must be true",
-		group: "etcd", cis: []string{"1.3.3"}, severity: core.SeverityCritical,
+		group: "etcd", cis: []string{"1.3.3"}, severity: compliancekit.SeverityCritical,
 		soc2: []string{"CC6.1"}, iso: []string{"A.5.15"},
 		description: "Without --client-cert-auth=true any client reaching the etcd " +
 			"port can read + write the entire cluster state. The apiserver " +
@@ -159,7 +159,7 @@ var cpvSpecs = []cpvSpec{
 	},
 	{
 		id: "k8s-cp-etcd-peer-client-cert-auth", title: "etcd --peer-client-cert-auth must be true",
-		group: "etcd", cis: []string{"1.3.5"}, severity: core.SeverityCritical,
+		group: "etcd", cis: []string{"1.3.5"}, severity: compliancekit.SeverityCritical,
 		soc2: []string{"CC6.1"}, iso: []string{"A.5.15"},
 		description: "Peer authentication between etcd nodes prevents a rogue " +
 			"etcd-like server from joining the cluster + receiving the data " +
@@ -174,7 +174,7 @@ var cpvSpecs = []cpvSpec{
 	},
 	{
 		id: "k8s-cp-etcd-auto-tls-false", title: "etcd --auto-tls + --peer-auto-tls must be false",
-		group: "etcd", cis: []string{"1.3.1", "1.3.2"}, severity: core.SeverityHigh,
+		group: "etcd", cis: []string{"1.3.1", "1.3.2"}, severity: compliancekit.SeverityHigh,
 		soc2: []string{"CC6.1", "CC6.7"}, iso: []string{"A.8.24"},
 		description: "auto-tls / peer-auto-tls generate self-signed certs at " +
 			"startup. Self-signed = no path validation, no rotation, no audit. " +
@@ -188,7 +188,7 @@ var cpvSpecs = []cpvSpec{
 	// ----- controller-manager §1.4 -----
 	{
 		id: "k8s-cp-cm-use-service-account-credentials", title: "controller-manager --use-service-account-credentials must be true",
-		group: "controller-manager", cis: []string{"1.4.3"}, severity: core.SeverityHigh,
+		group: "controller-manager", cis: []string{"1.4.3"}, severity: compliancekit.SeverityHigh,
 		soc2: []string{"CC6.1"}, iso: []string{"A.5.15"},
 		description: "When true, each controller runs with its own ServiceAccount " +
 			"token rather than sharing the controller-manager's master token. " +
@@ -203,7 +203,7 @@ var cpvSpecs = []cpvSpec{
 	},
 	{
 		id: "k8s-cp-cm-bind-address-localhost", title: "controller-manager --bind-address must be 127.0.0.1",
-		group: "controller-manager", cis: []string{"1.4.7"}, severity: core.SeverityMedium,
+		group: "controller-manager", cis: []string{"1.4.7"}, severity: compliancekit.SeverityMedium,
 		soc2: []string{"CC6.6"}, iso: []string{"A.8.20"},
 		description: "controller-manager's healthz + metrics are unauthenticated. " +
 			"Binding only to 127.0.0.1 means only the kubelet on the same node " +
@@ -217,7 +217,7 @@ var cpvSpecs = []cpvSpec{
 	// ----- scheduler §1.5 -----
 	{
 		id: "k8s-cp-scheduler-bind-address-localhost", title: "scheduler --bind-address must be 127.0.0.1",
-		group: "scheduler", cis: []string{"1.5.2"}, severity: core.SeverityMedium,
+		group: "scheduler", cis: []string{"1.5.2"}, severity: compliancekit.SeverityMedium,
 		soc2: []string{"CC6.6"}, iso: []string{"A.8.20"},
 		description: "scheduler's healthz + metrics endpoints share the apiserver-" +
 			"adjacent risk profile of controller-manager. Loopback-only binding " +
@@ -230,7 +230,7 @@ var cpvSpecs = []cpvSpec{
 	// ----- kubelet §4.2 -----
 	{
 		id: "k8s-cp-kubelet-anonymous-auth-false", title: "kubelet --anonymous-auth must be false",
-		group: "kubelet", cis: []string{"4.2.1"}, severity: core.SeverityHigh,
+		group: "kubelet", cis: []string{"4.2.1"}, severity: compliancekit.SeverityHigh,
 		soc2: []string{"CC6.1"}, iso: []string{"A.5.15"},
 		description: "Anonymous kubelet access lets unauthenticated callers query " +
 			"/spec, /stats, /logs — all leaking workload secrets or facilitating " +
@@ -245,7 +245,7 @@ var cpvSpecs = []cpvSpec{
 	},
 	{
 		id: "k8s-cp-kubelet-read-only-port-zero", title: "kubelet --read-only-port must be 0 (disabled)",
-		group: "kubelet", cis: []string{"4.2.4"}, severity: core.SeverityHigh,
+		group: "kubelet", cis: []string{"4.2.4"}, severity: compliancekit.SeverityHigh,
 		soc2: []string{"CC6.1", "CC6.6"}, iso: []string{"A.5.15", "A.8.20"},
 		description: "The kubelet read-only port (default 10255, since-removed " +
 			"in upstream defaults but lingering in older configs) exposes pod " +
@@ -261,16 +261,16 @@ var cpvSpecs = []cpvSpec{
 func init() {
 	for _, spec := range cpvSpecs {
 		spec := spec
-		core.Register(cpvCheck(spec), cpvCheckFunc(spec))
+		compliancekit.Register(cpvCheck(spec), cpvCheckFunc(spec))
 	}
 }
 
-func cpvCheck(spec cpvSpec) core.Check {
+func cpvCheck(spec cpvSpec) compliancekit.Check {
 	cis := ""
 	if len(spec.cis) > 0 {
 		cis = spec.cis[0]
 	}
-	return core.Check{
+	return compliancekit.Check{
 		ID: spec.id, Title: spec.title, Severity: spec.severity,
 		Provider: "kubernetes", Service: spec.group,
 		ResourceType: k8scol.ClusterType,
@@ -287,18 +287,18 @@ func cpvCheck(spec cpvSpec) core.Check {
 	}
 }
 
-func cpvCheckFunc(spec cpvSpec) core.CheckFunc {
-	return func(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-		findings := []core.Finding{}
+func cpvCheckFunc(spec cpvSpec) compliancekit.CheckFunc {
+	return func(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+		findings := []compliancekit.Finding{}
 		ctxs := g.ByType(k8scol.ClusterType)
 		if len(ctxs) == 0 {
 			return findings, nil
 		}
 		for _, c := range ctxs {
-			findings = append(findings, core.Finding{
+			findings = append(findings, compliancekit.Finding{
 				CheckID: spec.id, Severity: spec.severity,
 				Resource: c.Ref(), Tags: spec.tags,
-				Status: core.StatusError,
+				Status: compliancekit.StatusError,
 				Message: fmt.Sprintf("cluster %q (CIS §%s): %s — hint: %s",
 					c.Name, strings.Join(spec.cis, ","), spec.title, spec.hint),
 			})

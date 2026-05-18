@@ -1,8 +1,8 @@
 package ansible
 
 import (
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.20 phase 1 — Ansible strategy for linux-distro-supported.
@@ -15,7 +15,7 @@ func init() {
 		[]string{"linux-distro-supported"}, renderDistroSupported)
 }
 
-func renderDistroSupported(_ core.Finding) (remediate.Snippet, error) {
+func renderDistroSupported(_ compliancekit.Finding) (remediate.Snippet, error) {
 	body := `# Pre-flight gate: refuse to run the hardening playbook on a distro
 # compliancekit doesn't model. Add to the top of your site.yml.
 - name: distro on the compliancekit-supported allowlist

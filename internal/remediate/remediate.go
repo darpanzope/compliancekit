@@ -35,7 +35,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // Format identifies one remediation output language. Operators select
@@ -176,7 +176,7 @@ func (r RiskClass) String() string { return string(r) }
 // verified is hard to trust.
 type Snippet struct {
 	// CheckID is the finding this snippet remediates. Mirrors
-	// core.Finding.CheckID exactly.
+	// compliancekit.Finding.CheckID exactly.
 	CheckID string `json:"check_id"`
 
 	// Format is the language of Content.
@@ -185,7 +185,7 @@ type Snippet struct {
 	// Resource is a copy of the originating finding's ResourceRef.
 	// Carried on the Snippet so downstream writers don't need to
 	// re-join against the findings slice.
-	Resource core.ResourceRef `json:"resource"`
+	Resource compliancekit.ResourceRef `json:"resource"`
 
 	// Risk classifies how aggressive the change is. Operators
 	// triage by risk before reading the body.
@@ -249,7 +249,7 @@ type Strategy interface {
 	// Formats(); returns a Snippet with Risk=RiskManual + empty
 	// Content for findings the strategy recognizes but cannot
 	// auto-remediate.
-	Render(f core.Finding, format Format) (Snippet, error)
+	Render(f compliancekit.Finding, format Format) (Snippet, error)
 }
 
 // Errors returned by the package + registry.

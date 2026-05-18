@@ -5,10 +5,10 @@ import (
 	"fmt"
 
 	linuxcol "github.com/darpanzope/compliancekit/internal/collectors/linux"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
-func kernelIntOf(host core.Resource, key string) (int, bool) {
+func kernelIntOf(host compliancekit.Resource, key string) (int, bool) {
 	if !host.AttrBool("reachable") {
 		return 0, false
 	}
@@ -24,11 +24,11 @@ func kernelIntOf(host core.Resource, key string) (int, bool) {
 	return v, ok
 }
 
-func kernelSkip(check core.Check, host core.Resource, sysctl string) core.Finding {
-	return core.Finding{
+func kernelSkip(check compliancekit.Check, host compliancekit.Resource, sysctl string) compliancekit.Finding {
+	return compliancekit.Finding{
 		CheckID:  check.ID,
 		Severity: check.Severity,
-		Status:   core.StatusSkip,
+		Status:   compliancekit.StatusSkip,
 		Resource: host.Ref(),
 		Message:  fmt.Sprintf("sysctl %s unavailable", sysctl),
 		Tags:     check.Tags,
@@ -40,10 +40,10 @@ func kernelSkip(check core.Check, host core.Resource, sysctl string) core.Findin
 // ============================================================
 
 // CheckASLREnabled requires kernel.randomize_va_space=2.
-var CheckASLREnabled = core.Check{
+var CheckASLREnabled = compliancekit.Check{
 	ID:           "linux-aslr-enabled",
 	Title:        "Address Space Layout Randomization must be fully enabled",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "linux",
 	Service:      "kernel",
 	ResourceType: linuxcol.HostType,
@@ -65,26 +65,26 @@ var CheckASLREnabled = core.Check{
 }
 
 // ASLREnabled is the CheckFunc for CheckASLREnabled.
-func ASLREnabled(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func ASLREnabled(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	hosts := g.ByType(linuxcol.HostType)
-	findings := make([]core.Finding, 0, len(hosts))
+	findings := make([]compliancekit.Finding, 0, len(hosts))
 	for _, h := range hosts {
 		v, ok := kernelIntOf(h, "randomize_va_space")
 		if !ok {
 			findings = append(findings, kernelSkip(CheckASLREnabled, h, "kernel.randomize_va_space"))
 			continue
 		}
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckASLREnabled.ID,
 			Severity: CheckASLREnabled.Severity,
 			Resource: h.Ref(),
 			Tags:     CheckASLREnabled.Tags,
 		}
 		if v == 2 {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("host %q: kernel.randomize_va_space=2", h.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("host %q: kernel.randomize_va_space=%d (want 2)", h.Name, v)
 		}
 		findings = append(findings, f)
@@ -97,10 +97,10 @@ func ASLREnabled(_ context.Context, g *core.ResourceGraph) ([]core.Finding, erro
 // ============================================================
 
 // CheckNoSourceRouting requires net.ipv4.conf.all.accept_source_route=0.
-var CheckNoSourceRouting = core.Check{
+var CheckNoSourceRouting = compliancekit.Check{
 	ID:           "linux-no-source-routing",
 	Title:        "Kernel must not accept source-routed packets",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "linux",
 	Service:      "kernel",
 	ResourceType: linuxcol.HostType,
@@ -121,26 +121,26 @@ var CheckNoSourceRouting = core.Check{
 }
 
 // NoSourceRouting is the CheckFunc for CheckNoSourceRouting.
-func NoSourceRouting(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func NoSourceRouting(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	hosts := g.ByType(linuxcol.HostType)
-	findings := make([]core.Finding, 0, len(hosts))
+	findings := make([]compliancekit.Finding, 0, len(hosts))
 	for _, h := range hosts {
 		v, ok := kernelIntOf(h, "accept_source_route_all")
 		if !ok {
 			findings = append(findings, kernelSkip(CheckNoSourceRouting, h, "net.ipv4.conf.all.accept_source_route"))
 			continue
 		}
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckNoSourceRouting.ID,
 			Severity: CheckNoSourceRouting.Severity,
 			Resource: h.Ref(),
 			Tags:     CheckNoSourceRouting.Tags,
 		}
 		if v == 0 {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("host %q: net.ipv4.conf.all.accept_source_route=0", h.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("host %q: net.ipv4.conf.all.accept_source_route=%d (want 0)", h.Name, v)
 		}
 		findings = append(findings, f)
@@ -149,6 +149,6 @@ func NoSourceRouting(_ context.Context, g *core.ResourceGraph) ([]core.Finding, 
 }
 
 func init() {
-	core.Register(CheckASLREnabled, ASLREnabled)
-	core.Register(CheckNoSourceRouting, NoSourceRouting)
+	compliancekit.Register(CheckASLREnabled, ASLREnabled)
+	compliancekit.Register(CheckNoSourceRouting, NoSourceRouting)
 }

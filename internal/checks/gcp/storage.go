@@ -5,15 +5,15 @@ import (
 	"fmt"
 
 	gcpcol "github.com/darpanzope/compliancekit/internal/collectors/gcp"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // CheckGCSUniformAccess requires Uniform Bucket-Level Access (UBLA)
 // on every bucket. CIS GCP 5.2.
-var CheckGCSUniformAccess = core.Check{
+var CheckGCSUniformAccess = compliancekit.Check{
 	ID:           "gcp-storage-uniform-bucket-level-access",
 	Title:        "GCS buckets must use Uniform Bucket-Level Access",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "gcp",
 	Service:      "storage",
 	ResourceType: gcpcol.GCSBucketType,
@@ -34,21 +34,21 @@ var CheckGCSUniformAccess = core.Check{
 	Scanner: "storage.UniformAccess",
 }
 
-func GCSUniformAccess(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func GCSUniformAccess(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, b := range g.ByType(gcpcol.GCSBucketType) {
 		on, _ := b.Attributes["uniform_bucket_level_access"].(bool)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckGCSUniformAccess.ID,
 			Severity: CheckGCSUniformAccess.Severity,
 			Resource: b.Ref(),
 			Tags:     CheckGCSUniformAccess.Tags,
 		}
 		if on {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("bucket %q: UBLA enabled", b.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("bucket %q: UBLA disabled (ACLs still active)", b.Name)
 		}
 		findings = append(findings, f)
@@ -58,10 +58,10 @@ func GCSUniformAccess(_ context.Context, g *core.ResourceGraph) ([]core.Finding,
 
 // CheckGCSPAP requires Public Access Prevention = enforced.
 // CIS GCP 5.1.
-var CheckGCSPAP = core.Check{
+var CheckGCSPAP = compliancekit.Check{
 	ID:           "gcp-storage-public-access-prevention",
 	Title:        "GCS buckets must have Public Access Prevention enforced",
-	Severity:     core.SeverityCritical,
+	Severity:     compliancekit.SeverityCritical,
 	Provider:     "gcp",
 	Service:      "storage",
 	ResourceType: gcpcol.GCSBucketType,
@@ -84,21 +84,21 @@ var CheckGCSPAP = core.Check{
 	Scanner: "storage.PAP",
 }
 
-func GCSPAP(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func GCSPAP(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, b := range g.ByType(gcpcol.GCSBucketType) {
 		pap, _ := b.Attributes["public_access_prevention"].(string)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckGCSPAP.ID,
 			Severity: CheckGCSPAP.Severity,
 			Resource: b.Ref(),
 			Tags:     CheckGCSPAP.Tags,
 		}
 		if pap == "enforced" {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("bucket %q: public access prevention enforced", b.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("bucket %q: public_access_prevention=%q (want enforced)", b.Name, pap)
 		}
 		findings = append(findings, f)
@@ -108,10 +108,10 @@ func GCSPAP(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
 
 // CheckGCSVersioning requires bucket versioning. Recovery from
 // ransomware / accidental delete.
-var CheckGCSVersioning = core.Check{
+var CheckGCSVersioning = compliancekit.Check{
 	ID:           "gcp-storage-versioning",
 	Title:        "GCS buckets must have versioning enabled",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "gcp",
 	Service:      "storage",
 	ResourceType: gcpcol.GCSBucketType,
@@ -132,21 +132,21 @@ var CheckGCSVersioning = core.Check{
 	Scanner: "storage.Versioning",
 }
 
-func GCSVersioning(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func GCSVersioning(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, b := range g.ByType(gcpcol.GCSBucketType) {
 		on, _ := b.Attributes["versioning_enabled"].(bool)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckGCSVersioning.ID,
 			Severity: CheckGCSVersioning.Severity,
 			Resource: b.Ref(),
 			Tags:     CheckGCSVersioning.Tags,
 		}
 		if on {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("bucket %q: versioning enabled", b.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("bucket %q: versioning disabled", b.Name)
 		}
 		findings = append(findings, f)
@@ -155,10 +155,10 @@ func GCSVersioning(_ context.Context, g *core.ResourceGraph) ([]core.Finding, er
 }
 
 // CheckGCSLogging requires server-access logging.
-var CheckGCSLogging = core.Check{
+var CheckGCSLogging = compliancekit.Check{
 	ID:           "gcp-storage-logging",
 	Title:        "GCS buckets must have access logging configured",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "gcp",
 	Service:      "storage",
 	ResourceType: gcpcol.GCSBucketType,
@@ -180,12 +180,12 @@ var CheckGCSLogging = core.Check{
 	Scanner: "storage.Logging",
 }
 
-func GCSLogging(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func GCSLogging(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, b := range g.ByType(gcpcol.GCSBucketType) {
 		enabled, _ := b.Attributes["logging_enabled"].(bool)
 		target, _ := b.Attributes["logging_target_bucket"].(string)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckGCSLogging.ID,
 			Severity: CheckGCSLogging.Severity,
 			Resource: b.Ref(),
@@ -193,13 +193,13 @@ func GCSLogging(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error
 		}
 		switch {
 		case !enabled:
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("bucket %q: access logging disabled", b.Name)
 		case target == b.Name:
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("bucket %q: logging target is the same bucket (loop)", b.Name)
 		default:
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("bucket %q: logging to %q", b.Name, target)
 		}
 		findings = append(findings, f)
@@ -208,8 +208,8 @@ func GCSLogging(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error
 }
 
 func init() {
-	core.Register(CheckGCSUniformAccess, GCSUniformAccess)
-	core.Register(CheckGCSPAP, GCSPAP)
-	core.Register(CheckGCSVersioning, GCSVersioning)
-	core.Register(CheckGCSLogging, GCSLogging)
+	compliancekit.Register(CheckGCSUniformAccess, GCSUniformAccess)
+	compliancekit.Register(CheckGCSPAP, GCSPAP)
+	compliancekit.Register(CheckGCSVersioning, GCSVersioning)
+	compliancekit.Register(CheckGCSLogging, GCSLogging)
 }

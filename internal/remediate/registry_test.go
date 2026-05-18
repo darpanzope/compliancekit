@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // stubStrategy is a minimal Strategy implementation tests use to
@@ -16,13 +16,13 @@ type stubStrategy struct {
 	name    string
 	ids     []string
 	formats []Format
-	render  func(core.Finding, Format) (Snippet, error)
+	render  func(compliancekit.Finding, Format) (Snippet, error)
 }
 
 func (s stubStrategy) Name() string       { return s.name }
 func (s stubStrategy) CheckIDs() []string { return s.ids }
 func (s stubStrategy) Formats() []Format  { return s.formats }
-func (s stubStrategy) Render(f core.Finding, format Format) (Snippet, error) {
+func (s stubStrategy) Render(f compliancekit.Finding, format Format) (Snippet, error) {
 	return s.render(f, format)
 }
 
@@ -64,14 +64,14 @@ func TestRegistry_ExactMatch(t *testing.T) {
 		name:    "test-exact",
 		ids:     []string{"aws-s3-public"},
 		formats: []Format{FormatTerraform},
-		render: func(f core.Finding, _ Format) (Snippet, error) {
+		render: func(f compliancekit.Finding, _ Format) (Snippet, error) {
 			return Snippet{Content: "resource " + f.Resource.ID, Risk: RiskSafe}, nil
 		},
 	})
 
-	got, err := r.Render(core.Finding{
+	got, err := r.Render(compliancekit.Finding{
 		CheckID:  "aws-s3-public",
-		Resource: core.ResourceRef{ID: "aws.s3.bucket.foo"},
+		Resource: compliancekit.ResourceRef{ID: "aws.s3.bucket.foo"},
 	}, FormatTerraform)
 	if err != nil {
 		t.Fatalf("Render: %v", err)
@@ -92,7 +92,7 @@ func TestRegistry_ExactMatch(t *testing.T) {
 
 func TestRegistry_NoStrategy(t *testing.T) {
 	r := NewRegistry()
-	_, err := r.Render(core.Finding{CheckID: "unknown"}, FormatTerraform)
+	_, err := r.Render(compliancekit.Finding{CheckID: "unknown"}, FormatTerraform)
 	if !errors.Is(err, ErrNoStrategy) {
 		t.Errorf("err = %v, want ErrNoStrategy wrapper", err)
 	}
@@ -105,28 +105,28 @@ func TestRegistry_FormatFallback(t *testing.T) {
 		name:    "s1",
 		ids:     []string{"check-x"},
 		formats: []Format{FormatTerraform},
-		render:  func(core.Finding, Format) (Snippet, error) { return Snippet{Content: "tf"}, nil },
+		render:  func(compliancekit.Finding, Format) (Snippet, error) { return Snippet{Content: "tf"}, nil },
 	})
 	// Strategy 2 supports AWS-CLI only for the SAME CheckID.
 	r.Register(stubStrategy{
 		name:    "s2",
 		ids:     []string{"check-x"},
 		formats: []Format{FormatAWSCLI},
-		render:  func(core.Finding, Format) (Snippet, error) { return Snippet{Content: "aws"}, nil },
+		render:  func(compliancekit.Finding, Format) (Snippet, error) { return Snippet{Content: "aws"}, nil },
 	})
 
 	// Asking for TF picks s1.
-	tf, err := r.Render(core.Finding{CheckID: "check-x"}, FormatTerraform)
+	tf, err := r.Render(compliancekit.Finding{CheckID: "check-x"}, FormatTerraform)
 	if err != nil || tf.Content != "tf" {
 		t.Errorf("TF render = (%q, %v); want (tf, nil)", tf.Content, err)
 	}
 	// Asking for AWS-CLI picks s2 — registry iterates past s1.
-	aws, err := r.Render(core.Finding{CheckID: "check-x"}, FormatAWSCLI)
+	aws, err := r.Render(compliancekit.Finding{CheckID: "check-x"}, FormatAWSCLI)
 	if err != nil || aws.Content != "aws" {
 		t.Errorf("AWS-CLI render = (%q, %v); want (aws, nil)", aws.Content, err)
 	}
 	// Asking for an unsupported format → ErrFormatUnsupported.
-	_, err = r.Render(core.Finding{CheckID: "check-x"}, FormatHelm)
+	_, err = r.Render(compliancekit.Finding{CheckID: "check-x"}, FormatHelm)
 	if !errors.Is(err, ErrFormatUnsupported) {
 		t.Errorf("Helm render err = %v, want ErrFormatUnsupported", err)
 	}
@@ -138,9 +138,9 @@ func TestRegistry_Wildcard(t *testing.T) {
 		name:    "fallback",
 		ids:     []string{"*"},
 		formats: []Format{FormatBash},
-		render:  func(core.Finding, Format) (Snippet, error) { return Snippet{Content: "# manual review"}, nil },
+		render:  func(compliancekit.Finding, Format) (Snippet, error) { return Snippet{Content: "# manual review"}, nil },
 	})
-	got, err := r.Render(core.Finding{CheckID: "anything"}, FormatBash)
+	got, err := r.Render(compliancekit.Finding{CheckID: "anything"}, FormatBash)
 	if err != nil {
 		t.Fatalf("wildcard render: %v", err)
 	}
@@ -157,9 +157,9 @@ func TestRegistry_DuplicateNamePanics(t *testing.T) {
 	}()
 	r := NewRegistry()
 	r.Register(stubStrategy{name: "dup", ids: []string{"a"}, formats: []Format{FormatBash},
-		render: func(core.Finding, Format) (Snippet, error) { return Snippet{}, nil }})
+		render: func(compliancekit.Finding, Format) (Snippet, error) { return Snippet{}, nil }})
 	r.Register(stubStrategy{name: "dup", ids: []string{"b"}, formats: []Format{FormatBash},
-		render: func(core.Finding, Format) (Snippet, error) { return Snippet{}, nil }})
+		render: func(compliancekit.Finding, Format) (Snippet, error) { return Snippet{}, nil }})
 }
 
 func TestRegistry_RenderAll(t *testing.T) {
@@ -168,12 +168,12 @@ func TestRegistry_RenderAll(t *testing.T) {
 		name:    "covers-tf-and-aws",
 		ids:     []string{"check-y"},
 		formats: []Format{FormatTerraform, FormatAWSCLI},
-		render: func(_ core.Finding, f Format) (Snippet, error) {
+		render: func(_ compliancekit.Finding, f Format) (Snippet, error) {
 			return Snippet{Content: string(f)}, nil
 		},
 	})
-	findings := []core.Finding{
-		{CheckID: "check-y", Resource: core.ResourceRef{ID: "x"}},
+	findings := []compliancekit.Finding{
+		{CheckID: "check-y", Resource: compliancekit.ResourceRef{ID: "x"}},
 		{CheckID: "unknown-check"},
 	}
 	snippets, unmatched := r.RenderAll(findings)
@@ -193,7 +193,7 @@ func TestRegistry_RegisterPanicsOnEmptyFormats(t *testing.T) {
 	}()
 	r := NewRegistry()
 	r.Register(stubStrategy{name: "no-formats", ids: []string{"a"}, formats: nil,
-		render: func(core.Finding, Format) (Snippet, error) { return Snippet{}, nil }})
+		render: func(compliancekit.Finding, Format) (Snippet, error) { return Snippet{}, nil }})
 }
 
 func TestRegistry_RegisteredCheckIDs(t *testing.T) {
@@ -202,7 +202,7 @@ func TestRegistry_RegisteredCheckIDs(t *testing.T) {
 		name:    "multi",
 		ids:     []string{"b", "a", "c"},
 		formats: []Format{FormatBash},
-		render:  func(core.Finding, Format) (Snippet, error) { return Snippet{}, nil },
+		render:  func(compliancekit.Finding, Format) (Snippet, error) { return Snippet{}, nil },
 	})
 	ids := r.RegisteredCheckIDs()
 	if len(ids) != 3 || ids[0] != "a" || ids[1] != "b" || ids[2] != "c" {

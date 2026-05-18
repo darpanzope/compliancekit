@@ -3,11 +3,11 @@ package cloudcommon
 import (
 	"testing"
 
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 func TestStamp_SetsBothFields(t *testing.T) {
-	r := core.Resource{ID: "test", Type: "test"}
+	r := compliancekit.Resource{ID: "test", Type: "test"}
 	Stamp(&r, ResourceCoord{AccountID: "123456789012", Region: "us-east-1"})
 
 	if r.Region != "us-east-1" {
@@ -22,7 +22,7 @@ func TestStamp_SetsBothFields(t *testing.T) {
 }
 
 func TestStamp_EmptyValuesSkipped(t *testing.T) {
-	r := core.Resource{
+	r := compliancekit.Resource{
 		ID:         "test",
 		Type:       "test",
 		Region:     "preset",
@@ -39,7 +39,7 @@ func TestStamp_EmptyValuesSkipped(t *testing.T) {
 }
 
 func TestStamp_Idempotent(t *testing.T) {
-	r := core.Resource{ID: "test", Type: "test"}
+	r := compliancekit.Resource{ID: "test", Type: "test"}
 	coord := ResourceCoord{AccountID: "acct", Region: "rgn"}
 	Stamp(&r, coord)
 	first := r
@@ -50,7 +50,7 @@ func TestStamp_Idempotent(t *testing.T) {
 }
 
 func TestCoordOf_ReadsBothFields(t *testing.T) {
-	r := core.Resource{
+	r := compliancekit.Resource{
 		ID:     "test",
 		Type:   "test",
 		Region: "us-west-2",
@@ -67,7 +67,7 @@ func TestCoordOf_ReadsBothFields(t *testing.T) {
 
 func TestCoordOf_FallsBackToAttrRegion(t *testing.T) {
 	// Resource without typed Region field but with attribute.
-	r := core.Resource{
+	r := compliancekit.Resource{
 		ID:         "test",
 		Type:       "test",
 		Attributes: map[string]any{AttrRegion: "eu-west-1"},
@@ -79,7 +79,7 @@ func TestCoordOf_FallsBackToAttrRegion(t *testing.T) {
 }
 
 func TestCoordOf_ZeroValueOnAbsence(t *testing.T) {
-	r := core.Resource{ID: "test", Type: "test"}
+	r := compliancekit.Resource{ID: "test", Type: "test"}
 	got := CoordOf(r)
 	if got.AccountID != "" || got.Region != "" {
 		t.Errorf("CoordOf on bare resource = %+v, want zero", got)

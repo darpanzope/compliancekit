@@ -39,7 +39,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // Notifier is the contract every channel implements. Implementations
@@ -59,9 +59,9 @@ type Notifier interface {
 	Configured() bool
 
 	// Threshold returns the per-sink severity floor below which
-	// notifications are dropped. core.SeverityInfo means "send
+	// notifications are dropped. compliancekit.SeverityInfo means "send
 	// everything". The CLI / config layer can override per-sink.
-	Threshold() core.Severity
+	Threshold() compliancekit.Severity
 
 	// Send dispatches the slice of Notification objects already
 	// filtered by the global severity gate. Returns a Result tally;
@@ -80,7 +80,7 @@ type Notification struct {
 	// Finding is the upstream finding. Sinks needing fields beyond
 	// title/body (severity color, CheckID, framework refs) pull
 	// them from here.
-	Finding core.Finding
+	Finding compliancekit.Finding
 
 	// Title is a single-line headline rendered for the sink (e.g.
 	// "[CRITICAL] aws-s3-public-access-block on prod-data-bucket").
@@ -212,7 +212,7 @@ func Register(n Notifier) { Default.Register(n) }
 // (Slack: all-medium-plus) and a high-threshold one (PagerDuty:
 // critical-only). Building once and gating per sink keeps the
 // rendering cost amortized.
-func BuildNotifications(findings []core.Finding, opts BuildOptions) []Notification {
+func BuildNotifications(findings []compliancekit.Finding, opts BuildOptions) []Notification {
 	out := make([]Notification, 0, len(findings))
 	for _, f := range findings {
 		if !f.Status.IsActionable() {
@@ -280,9 +280,9 @@ func Dispatch(ctx context.Context, r *Registry, notifications []Notification) (R
 }
 
 // gateBySeverity drops Notifications whose Finding.Severity is
-// below threshold. core.SeverityInfo as threshold means "everything
+// below threshold. compliancekit.SeverityInfo as threshold means "everything
 // actionable passes".
-func gateBySeverity(notifications []Notification, threshold core.Severity) []Notification {
+func gateBySeverity(notifications []Notification, threshold compliancekit.Severity) []Notification {
 	out := make([]Notification, 0, len(notifications))
 	for _, n := range notifications {
 		if n.Finding.Severity < threshold {
@@ -296,7 +296,7 @@ func gateBySeverity(notifications []Notification, threshold core.Severity) []Not
 // defaultTitle is the canonical one-line headline. Format:
 //
 //	[CRITICAL] aws-s3-public-access-block on prod-data
-func defaultTitle(f core.Finding) string {
+func defaultTitle(f compliancekit.Finding) string {
 	resName := f.Resource.Name
 	if resName == "" {
 		resName = f.Resource.ID
@@ -311,7 +311,7 @@ func defaultTitle(f core.Finding) string {
 // defaultBody is the canonical CommonMark body. Renders title,
 // optional message, optional resource detail block, and a footer
 // pointing at the deep-link URL (when present).
-func defaultBody(f core.Finding, opts BuildOptions) string {
+func defaultBody(f compliancekit.Finding, opts BuildOptions) string {
 	var sb strings.Builder
 	if f.Message != "" {
 		fmt.Fprintf(&sb, "%s\n\n", f.Message)
@@ -343,7 +343,7 @@ func defaultBody(f core.Finding, opts BuildOptions) string {
 // finding's CheckID + resource ID. Returns "" when no prefix is
 // configured. Operators with a hosted evidence pack point
 // URLPrefix at their dashboard.
-func defaultURL(f core.Finding, opts BuildOptions) string {
+func defaultURL(f compliancekit.Finding, opts BuildOptions) string {
 	if opts.URLPrefix == "" {
 		return ""
 	}

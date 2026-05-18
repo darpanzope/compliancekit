@@ -5,11 +5,11 @@ import (
 	"testing"
 
 	gcpcol "github.com/darpanzope/compliancekit/internal/collectors/gcp"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
-func mkProject(projectID string) core.Resource {
-	return core.Resource{
+func mkProject(projectID string) compliancekit.Resource {
+	return compliancekit.Resource{
 		ID:         "gcp.project." + projectID,
 		Type:       gcpcol.ProjectType,
 		Name:       projectID,
@@ -18,8 +18,8 @@ func mkProject(projectID string) core.Resource {
 	}
 }
 
-func mkSink(name, projectID, destType string, disabled bool) core.Resource {
-	return core.Resource{
+func mkSink(name, projectID, destType string, disabled bool) compliancekit.Resource {
+	return compliancekit.Resource{
 		ID:       "gcp.logging.sink." + projectID + "." + name,
 		Type:     gcpcol.LogSinkType,
 		Name:     name,
@@ -34,8 +34,8 @@ func mkSink(name, projectID, destType string, disabled bool) core.Resource {
 	}
 }
 
-func mkLogBucket(short, projectID string, retention int) core.Resource {
-	return core.Resource{
+func mkLogBucket(short, projectID string, retention int) compliancekit.Resource {
+	return compliancekit.Resource{
 		ID:       "gcp.logging.bucket." + projectID + ".global." + short,
 		Type:     gcpcol.LogBucketType,
 		Name:     short,
@@ -51,45 +51,45 @@ func mkLogBucket(short, projectID string, retention int) core.Resource {
 func TestLoggingSinkExists(t *testing.T) {
 	cases := []struct {
 		name      string
-		resources []core.Resource
-		want      core.Status
+		resources []compliancekit.Resource
+		want      compliancekit.Status
 	}{
 		{
 			"long-term-gcs",
-			[]core.Resource{
+			[]compliancekit.Resource{
 				mkProject("p1"),
 				mkSink("export", "p1", "gcs", false),
 			},
-			core.StatusPass,
+			compliancekit.StatusPass,
 		},
 		{
 			"long-term-bigquery",
-			[]core.Resource{
+			[]compliancekit.Resource{
 				mkProject("p1"),
 				mkSink("export", "p1", "bigquery", false),
 			},
-			core.StatusPass,
+			compliancekit.StatusPass,
 		},
 		{
 			"only-logging-bucket",
-			[]core.Resource{
+			[]compliancekit.Resource{
 				mkProject("p1"),
 				mkSink("back-to-bucket", "p1", "logging-bucket", false),
 			},
-			core.StatusFail,
+			compliancekit.StatusFail,
 		},
 		{
 			"disabled-sink",
-			[]core.Resource{
+			[]compliancekit.Resource{
 				mkProject("p1"),
 				mkSink("export", "p1", "gcs", true),
 			},
-			core.StatusFail,
+			compliancekit.StatusFail,
 		},
 		{
 			"no-sinks",
-			[]core.Resource{mkProject("p1")},
-			core.StatusFail,
+			[]compliancekit.Resource{mkProject("p1")},
+			compliancekit.StatusFail,
 		},
 	}
 	for _, c := range cases {
@@ -110,13 +110,13 @@ func TestLogBucketRetention(t *testing.T) {
 	cases := []struct {
 		short     string
 		retention int
-		want      core.Status
+		want      compliancekit.Status
 		skipped   bool
 	}{
-		{"_Default", 30, core.StatusFail, false},
-		{"_Default", 365, core.StatusPass, false},
-		{"custom", 400, core.StatusPass, false},
-		{"_Required", 0, core.StatusPass, true}, // _Required is skipped entirely; want unused
+		{"_Default", 30, compliancekit.StatusFail, false},
+		{"_Default", 365, compliancekit.StatusPass, false},
+		{"custom", 400, compliancekit.StatusPass, false},
+		{"_Required", 0, compliancekit.StatusPass, true}, // _Required is skipped entirely; want unused
 	}
 	for _, c := range cases {
 		t.Run(c.short, func(t *testing.T) {

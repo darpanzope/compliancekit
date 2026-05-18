@@ -3,8 +3,8 @@ package doctl
 import (
 	"fmt"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.19 phase 4 — doctl strategies for the 10 DOKS-depth checks.
@@ -36,14 +36,14 @@ func init() {
 		[]string{"k8s-doks-pod-security-standards-baseline"}, renderDoctlDOKSPSA)
 }
 
-func doctlDOKSCluster(f core.Finding) string {
+func doctlDOKSCluster(f compliancekit.Finding) string {
 	if f.Resource.Name != "" {
 		return f.Resource.Name
 	}
 	return "CLUSTER"
 }
 
-func renderDoctlDOKSVersion(f core.Finding) (remediate.Snippet, error) {
+func renderDoctlDOKSVersion(f compliancekit.Finding) (remediate.Snippet, error) {
 	c := doctlDOKSCluster(f)
 	body := fmt.Sprintf(`# 1. List supported versions.
 doctl kubernetes options versions list
@@ -57,7 +57,7 @@ doctl kubernetes cluster upgrade %s --version <newver>`, c)
 	}, nil
 }
 
-func renderDoctlDOKSTaints(f core.Finding) (remediate.Snippet, error) {
+func renderDoctlDOKSTaints(f compliancekit.Finding) (remediate.Snippet, error) {
 	pool := doctlDOKSCluster(f) // for node pool, Name is the pool
 	body := fmt.Sprintf(`# Taint the node pool. Existing pods on the pool are NOT evicted; new
 # pods without a matching toleration won't schedule onto it.
@@ -70,7 +70,7 @@ doctl kubernetes cluster node-pool update CLUSTER_ID %s \
 	}, nil
 }
 
-func renderDoctlDOKSEnvTag(f core.Finding) (remediate.Snippet, error) {
+func renderDoctlDOKSEnvTag(f compliancekit.Finding) (remediate.Snippet, error) {
 	pool := doctlDOKSCluster(f)
 	body := fmt.Sprintf(`# Tags on node pools are immutable after create on doctl; recreate
 # the pool to add the tag, or use the TF resource (which can mutate).
@@ -88,7 +88,7 @@ doctl kubernetes cluster node-pool delete CLUSTER_ID %s --force`, pool, pool, po
 	}, nil
 }
 
-func renderDoctlDOKSSize(f core.Finding) (remediate.Snippet, error) {
+func renderDoctlDOKSSize(f compliancekit.Finding) (remediate.Snippet, error) {
 	pool := doctlDOKSCluster(f)
 	body := fmt.Sprintf(`# Recreate the pool on a supported size.
 doctl kubernetes cluster node-pool create CLUSTER_ID \
@@ -103,7 +103,7 @@ doctl kubernetes cluster node-pool delete CLUSTER_ID %s --force`, pool, pool, po
 	}, nil
 }
 
-func renderDoctlDOKSMaintenance(f core.Finding) (remediate.Snippet, error) {
+func renderDoctlDOKSMaintenance(f compliancekit.Finding) (remediate.Snippet, error) {
 	c := doctlDOKSCluster(f)
 	body := fmt.Sprintf(`# Pick a low-traffic hour. UTC; convert from your primary timezone.
 doctl kubernetes cluster update %s --maintenance-window=sunday=04:00`, c)
@@ -113,7 +113,7 @@ doctl kubernetes cluster update %s --maintenance-window=sunday=04:00`, c)
 	}, nil
 }
 
-func renderDoctlDOKSLogging(f core.Finding) (remediate.Snippet, error) {
+func renderDoctlDOKSLogging(f compliancekit.Finding) (remediate.Snippet, error) {
 	c := doctlDOKSCluster(f)
 	body := fmt.Sprintf(`# 1. Save kubeconfig:
 doctl kubernetes cluster kubeconfig save %s
@@ -131,7 +131,7 @@ kubectl -n logging logs -l app.kubernetes.io/name=fluent-bit --tail=20`, c)
 	}, nil
 }
 
-func renderDoctlDOKSMetricsServer(f core.Finding) (remediate.Snippet, error) {
+func renderDoctlDOKSMetricsServer(f compliancekit.Finding) (remediate.Snippet, error) {
 	c := doctlDOKSCluster(f)
 	body := fmt.Sprintf(`doctl kubernetes cluster kubeconfig save %s
 
@@ -145,7 +145,7 @@ kubectl -n kube-system get deployment metrics-server || \
 	}, nil
 }
 
-func renderDoctlDOKSCertManager(f core.Finding) (remediate.Snippet, error) {
+func renderDoctlDOKSCertManager(f compliancekit.Finding) (remediate.Snippet, error) {
 	c := doctlDOKSCluster(f)
 	body := fmt.Sprintf(`doctl kubernetes cluster kubeconfig save %s
 
@@ -175,7 +175,7 @@ YAML`, c)
 	}, nil
 }
 
-func renderDoctlDOKSAutoscaler(f core.Finding) (remediate.Snippet, error) {
+func renderDoctlDOKSAutoscaler(f compliancekit.Finding) (remediate.Snippet, error) {
 	c := doctlDOKSCluster(f)
 	body := fmt.Sprintf(`# Enable native per-pool autoscaling (sufficient for most clusters).
 doctl kubernetes cluster node-pool update %s POOL_NAME \
@@ -186,7 +186,7 @@ doctl kubernetes cluster node-pool update %s POOL_NAME \
 	}, nil
 }
 
-func renderDoctlDOKSPSA(f core.Finding) (remediate.Snippet, error) {
+func renderDoctlDOKSPSA(f compliancekit.Finding) (remediate.Snippet, error) {
 	c := doctlDOKSCluster(f)
 	body := fmt.Sprintf(`doctl kubernetes cluster kubeconfig save %s
 

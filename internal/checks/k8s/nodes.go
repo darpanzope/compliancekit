@@ -6,17 +6,17 @@ import (
 	"strings"
 
 	k8scol "github.com/darpanzope/compliancekit/internal/collectors/k8s"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 const nodeOldAgeDays = 365
 
 // ----- Node Ready ------------------------------------------------
 
-var CheckNodeReady = core.Check{
+var CheckNodeReady = compliancekit.Check{
 	ID:           "k8s-node-not-ready",
 	Title:        "Nodes should be in Ready state",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "kubernetes",
 	Service:      "nodes",
 	ResourceType: k8scol.NodeType,
@@ -36,16 +36,16 @@ var CheckNodeReady = core.Check{
 	Scanner: "nodes.NodeReady",
 }
 
-func NodeReady(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func NodeReady(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	return nodeConditionCheck(g, CheckNodeReady, "Ready", "True", false), nil
 }
 
 // ----- Pressure conditions ---------------------------------------
 
-var CheckNodeDiskPressure = core.Check{
+var CheckNodeDiskPressure = compliancekit.Check{
 	ID:           "k8s-node-disk-pressure",
 	Title:        "Nodes should not report DiskPressure",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "kubernetes",
 	Service:      "nodes",
 	ResourceType: k8scol.NodeType,
@@ -64,14 +64,14 @@ var CheckNodeDiskPressure = core.Check{
 	Scanner: "nodes.NodeDiskPressure",
 }
 
-func NodeDiskPressure(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func NodeDiskPressure(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	return nodeConditionCheck(g, CheckNodeDiskPressure, "DiskPressure", "False", true), nil
 }
 
-var CheckNodeMemoryPressure = core.Check{
+var CheckNodeMemoryPressure = compliancekit.Check{
 	ID:           "k8s-node-memory-pressure",
 	Title:        "Nodes should not report MemoryPressure",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "kubernetes",
 	Service:      "nodes",
 	ResourceType: k8scol.NodeType,
@@ -89,14 +89,14 @@ var CheckNodeMemoryPressure = core.Check{
 	Scanner: "nodes.NodeMemoryPressure",
 }
 
-func NodeMemoryPressure(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func NodeMemoryPressure(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	return nodeConditionCheck(g, CheckNodeMemoryPressure, "MemoryPressure", "False", true), nil
 }
 
-var CheckNodePIDPressure = core.Check{
+var CheckNodePIDPressure = compliancekit.Check{
 	ID:           "k8s-node-pid-pressure",
 	Title:        "Nodes should not report PIDPressure",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "kubernetes",
 	Service:      "nodes",
 	ResourceType: k8scol.NodeType,
@@ -115,16 +115,16 @@ var CheckNodePIDPressure = core.Check{
 	Scanner: "nodes.NodePIDPressure",
 }
 
-func NodePIDPressure(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func NodePIDPressure(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	return nodeConditionCheck(g, CheckNodePIDPressure, "PIDPressure", "False", true), nil
 }
 
 // ----- Node Unschedulable ----------------------------------------
 
-var CheckNodeUnschedulable = core.Check{
+var CheckNodeUnschedulable = compliancekit.Check{
 	ID:           "k8s-node-unschedulable",
 	Title:        "Nodes should not stay cordoned indefinitely",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "kubernetes",
 	Service:      "nodes",
 	ResourceType: k8scol.NodeType,
@@ -144,21 +144,21 @@ var CheckNodeUnschedulable = core.Check{
 	Scanner: "nodes.NodeUnschedulable",
 }
 
-func NodeUnschedulable(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func NodeUnschedulable(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, n := range g.ByType(k8scol.NodeType) {
 		unsched, _ := n.Attributes["unschedulable"].(bool)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckNodeUnschedulable.ID,
 			Severity: CheckNodeUnschedulable.Severity,
 			Resource: n.Ref(),
 			Tags:     CheckNodeUnschedulable.Tags,
 		}
 		if unsched {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("node %q: cordoned", n.Name)
 		} else {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("node %q: schedulable", n.Name)
 		}
 		findings = append(findings, f)
@@ -168,10 +168,10 @@ func NodeUnschedulable(_ context.Context, g *core.ResourceGraph) ([]core.Finding
 
 // ----- Container runtime -----------------------------------------
 
-var CheckNodeContainerRuntime = core.Check{
+var CheckNodeContainerRuntime = compliancekit.Check{
 	ID:           "k8s-node-container-runtime",
 	Title:        "Nodes should use containerd or cri-o, not dockershim",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "kubernetes",
 	Service:      "nodes",
 	ResourceType: k8scol.NodeType,
@@ -191,11 +191,11 @@ var CheckNodeContainerRuntime = core.Check{
 	Scanner: "nodes.NodeContainerRuntime",
 }
 
-func NodeContainerRuntime(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func NodeContainerRuntime(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, n := range g.ByType(k8scol.NodeType) {
 		rt, _ := n.Attributes["container_runtime"].(string)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckNodeContainerRuntime.ID,
 			Severity: CheckNodeContainerRuntime.Severity,
 			Resource: n.Ref(),
@@ -203,13 +203,13 @@ func NodeContainerRuntime(_ context.Context, g *core.ResourceGraph) ([]core.Find
 		}
 		switch {
 		case strings.HasPrefix(rt, "containerd://"), strings.HasPrefix(rt, "cri-o://"):
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("node %q: runtime=%s", n.Name, rt)
 		case strings.HasPrefix(rt, "docker://"):
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("node %q: runtime=%s (dockershim removed in K8s 1.24)", n.Name, rt)
 		default:
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("node %q: runtime=%s (unrecognized)", n.Name, rt)
 		}
 		findings = append(findings, f)
@@ -219,10 +219,10 @@ func NodeContainerRuntime(_ context.Context, g *core.ResourceGraph) ([]core.Find
 
 // ----- Node OS image age -----------------------------------------
 
-var CheckNodeOSImageAge = core.Check{
+var CheckNodeOSImageAge = compliancekit.Check{
 	ID:           "k8s-node-old-image",
 	Title:        "Nodes should be replaced within 1 year of creation",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "kubernetes",
 	Service:      "nodes",
 	ResourceType: k8scol.NodeType,
@@ -243,21 +243,21 @@ var CheckNodeOSImageAge = core.Check{
 	Scanner: "nodes.NodeOSImageAge",
 }
 
-func NodeOSImageAge(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func NodeOSImageAge(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, n := range g.ByType(k8scol.NodeType) {
 		age, _ := n.Attributes["age_days"].(int)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckNodeOSImageAge.ID,
 			Severity: CheckNodeOSImageAge.Severity,
 			Resource: n.Ref(),
 			Tags:     CheckNodeOSImageAge.Tags,
 		}
 		if age > nodeOldAgeDays {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("node %q: %d days old (> %d)", n.Name, age, nodeOldAgeDays)
 		} else {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("node %q: %d days old", n.Name, age)
 		}
 		findings = append(findings, f)
@@ -267,10 +267,10 @@ func NodeOSImageAge(_ context.Context, g *core.ResourceGraph) ([]core.Finding, e
 
 // ----- Node zone label -------------------------------------------
 
-var CheckNodeZoneLabel = core.Check{
+var CheckNodeZoneLabel = compliancekit.Check{
 	ID:           "k8s-node-zone-label",
 	Title:        "Worker nodes should carry topology.kubernetes.io/zone",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "kubernetes",
 	Service:      "nodes",
 	ResourceType: k8scol.NodeType,
@@ -291,8 +291,8 @@ var CheckNodeZoneLabel = core.Check{
 	Scanner: "nodes.NodeZoneLabel",
 }
 
-func NodeZoneLabel(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func NodeZoneLabel(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, n := range g.ByType(k8scol.NodeType) {
 		// Skip control-plane nodes — they don't always carry zone
 		// labels in self-managed setups.
@@ -300,17 +300,17 @@ func NodeZoneLabel(_ context.Context, g *core.ResourceGraph) ([]core.Finding, er
 			continue
 		}
 		has, _ := n.Attributes["has_zone_label"].(bool)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckNodeZoneLabel.ID,
 			Severity: CheckNodeZoneLabel.Severity,
 			Resource: n.Ref(),
 			Tags:     CheckNodeZoneLabel.Tags,
 		}
 		if has {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("node %q: zone label set", n.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("node %q: no zone label (topology-aware scheduling unavailable)", n.Name)
 		}
 		findings = append(findings, f)
@@ -320,10 +320,10 @@ func NodeZoneLabel(_ context.Context, g *core.ResourceGraph) ([]core.Finding, er
 
 // ----- Node region label -----------------------------------------
 
-var CheckNodeRegionLabel = core.Check{
+var CheckNodeRegionLabel = compliancekit.Check{
 	ID:           "k8s-node-region-label",
 	Title:        "Worker nodes should carry topology.kubernetes.io/region",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "kubernetes",
 	Service:      "nodes",
 	ResourceType: k8scol.NodeType,
@@ -344,24 +344,24 @@ var CheckNodeRegionLabel = core.Check{
 	Scanner: "nodes.NodeRegionLabel",
 }
 
-func NodeRegionLabel(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func NodeRegionLabel(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, n := range g.ByType(k8scol.NodeType) {
 		if isCP, _ := n.Attributes["is_control_plane"].(bool); isCP {
 			continue
 		}
 		has, _ := n.Attributes["has_region_label"].(bool)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckNodeRegionLabel.ID,
 			Severity: CheckNodeRegionLabel.Severity,
 			Resource: n.Ref(),
 			Tags:     CheckNodeRegionLabel.Tags,
 		}
 		if has {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("node %q: region label set", n.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("node %q: no region label", n.Name)
 		}
 		findings = append(findings, f)
@@ -371,10 +371,10 @@ func NodeRegionLabel(_ context.Context, g *core.ResourceGraph) ([]core.Finding, 
 
 // ----- Node taints control plane --------------------------------
 
-var CheckNodeCPTaint = core.Check{
+var CheckNodeCPTaint = compliancekit.Check{
 	ID:           "k8s-node-control-plane-taint",
 	Title:        "Control-plane nodes should carry NoSchedule taint",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "kubernetes",
 	Service:      "nodes",
 	ResourceType: k8scol.NodeType,
@@ -396,8 +396,8 @@ var CheckNodeCPTaint = core.Check{
 	Scanner: "nodes.NodeCPTaint",
 }
 
-func NodeCPTaint(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func NodeCPTaint(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, n := range g.ByType(k8scol.NodeType) {
 		isCP, _ := n.Attributes["is_control_plane"].(bool)
 		if !isCP {
@@ -412,17 +412,17 @@ func NodeCPTaint(_ context.Context, g *core.ResourceGraph) ([]core.Finding, erro
 				break
 			}
 		}
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckNodeCPTaint.ID,
 			Severity: CheckNodeCPTaint.Severity,
 			Resource: n.Ref(),
 			Tags:     CheckNodeCPTaint.Tags,
 		}
 		if hasTaint {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("node %q: control-plane NoSchedule taint set", n.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("node %q: control-plane without NoSchedule taint", n.Name)
 		}
 		findings = append(findings, f)
@@ -433,27 +433,27 @@ func NodeCPTaint(_ context.Context, g *core.ResourceGraph) ([]core.Finding, erro
 // ----- init -----------------------------------------------------
 
 func init() {
-	core.Register(CheckNodeReady, NodeReady)
-	core.Register(CheckNodeDiskPressure, NodeDiskPressure)
-	core.Register(CheckNodeMemoryPressure, NodeMemoryPressure)
-	core.Register(CheckNodePIDPressure, NodePIDPressure)
-	core.Register(CheckNodeUnschedulable, NodeUnschedulable)
-	core.Register(CheckNodeContainerRuntime, NodeContainerRuntime)
-	core.Register(CheckNodeOSImageAge, NodeOSImageAge)
-	core.Register(CheckNodeZoneLabel, NodeZoneLabel)
-	core.Register(CheckNodeRegionLabel, NodeRegionLabel)
-	core.Register(CheckNodeCPTaint, NodeCPTaint)
+	compliancekit.Register(CheckNodeReady, NodeReady)
+	compliancekit.Register(CheckNodeDiskPressure, NodeDiskPressure)
+	compliancekit.Register(CheckNodeMemoryPressure, NodeMemoryPressure)
+	compliancekit.Register(CheckNodePIDPressure, NodePIDPressure)
+	compliancekit.Register(CheckNodeUnschedulable, NodeUnschedulable)
+	compliancekit.Register(CheckNodeContainerRuntime, NodeContainerRuntime)
+	compliancekit.Register(CheckNodeOSImageAge, NodeOSImageAge)
+	compliancekit.Register(CheckNodeZoneLabel, NodeZoneLabel)
+	compliancekit.Register(CheckNodeRegionLabel, NodeRegionLabel)
+	compliancekit.Register(CheckNodeCPTaint, NodeCPTaint)
 }
 
 // nodeConditionCheck flags nodes whose named condition does not equal
 // the expected value. inverted=true means "Fail when condition value
 // is `True` (presence indicates badness)."
-func nodeConditionCheck(g *core.ResourceGraph, check core.Check, condName, expected string, inverted bool) []core.Finding {
-	findings := []core.Finding{}
+func nodeConditionCheck(g *compliancekit.ResourceGraph, check compliancekit.Check, condName, expected string, inverted bool) []compliancekit.Finding {
+	findings := []compliancekit.Finding{}
 	for _, n := range g.ByType(k8scol.NodeType) {
 		conds, _ := n.Attributes["conditions"].(map[string]string)
 		val := conds[condName]
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  check.ID,
 			Severity: check.Severity,
 			Resource: n.Ref(),
@@ -464,10 +464,10 @@ func nodeConditionCheck(g *core.ResourceGraph, check core.Check, condName, expec
 			pass = val != "True"
 		}
 		if pass {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("node %q: %s=%s", n.Name, condName, val)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("node %q: %s=%s", n.Name, condName, val)
 		}
 		findings = append(findings, f)

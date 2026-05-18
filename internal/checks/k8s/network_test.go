@@ -4,10 +4,10 @@ import (
 	"testing"
 
 	k8scol "github.com/darpanzope/compliancekit/internal/collectors/k8s"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
-func mkService(name string, attrs map[string]any) core.Resource {
+func mkService(name string, attrs map[string]any) compliancekit.Resource {
 	base := map[string]any{
 		"namespace":                   "default",
 		"type":                        "ClusterIP",
@@ -18,7 +18,7 @@ func mkService(name string, attrs map[string]any) core.Resource {
 	for k, v := range attrs {
 		base[k] = v
 	}
-	return core.Resource{
+	return compliancekit.Resource{
 		ID:         "k8s.svc.prod.default." + name,
 		Type:       k8scol.ServiceType,
 		Name:       name,
@@ -27,7 +27,7 @@ func mkService(name string, attrs map[string]any) core.Resource {
 	}
 }
 
-func mkIngress(name string, attrs map[string]any) core.Resource {
+func mkIngress(name string, attrs map[string]any) compliancekit.Resource {
 	base := map[string]any{
 		"namespace":           "default",
 		"ingress_class":       "nginx",
@@ -38,7 +38,7 @@ func mkIngress(name string, attrs map[string]any) core.Resource {
 	for k, v := range attrs {
 		base[k] = v
 	}
-	return core.Resource{
+	return compliancekit.Resource{
 		ID:         "k8s.ing.prod.default." + name,
 		Type:       k8scol.IngressType,
 		Name:       name,
@@ -47,7 +47,7 @@ func mkIngress(name string, attrs map[string]any) core.Resource {
 	}
 }
 
-func mkNetworkPolicy(name string, attrs map[string]any) core.Resource {
+func mkNetworkPolicy(name string, attrs map[string]any) compliancekit.Resource {
 	base := map[string]any{
 		"namespace":               "default",
 		"matches_all_pods":        false,
@@ -61,7 +61,7 @@ func mkNetworkPolicy(name string, attrs map[string]any) core.Resource {
 	for k, v := range attrs {
 		base[k] = v
 	}
-	return core.Resource{
+	return compliancekit.Resource{
 		ID:         "k8s.np.prod.default." + name,
 		Type:       k8scol.NetworkPolicyType,
 		Name:       name,
@@ -80,7 +80,7 @@ func TestServiceLBPublic(t *testing.T) {
 	if _, ok := got["clusterip"]; ok {
 		t.Errorf("clusterip should be skipped")
 	}
-	if got["lb-locked"] != core.StatusPass || got["lb-open"] != core.StatusFail {
+	if got["lb-locked"] != compliancekit.StatusPass || got["lb-open"] != compliancekit.StatusFail {
 		t.Errorf("results: %v", got)
 	}
 }
@@ -101,10 +101,10 @@ func TestServiceLBPlainHTTP(t *testing.T) {
 		}),
 	)
 	got := runCheck(t, ServiceLBPlainHTTP, g)
-	if got["https"] != core.StatusPass || got["dual"] != core.StatusPass {
+	if got["https"] != compliancekit.StatusPass || got["dual"] != compliancekit.StatusPass {
 		t.Errorf("https/dual: %v / %v", got["https"], got["dual"])
 	}
-	if got["plain"] != core.StatusFail {
+	if got["plain"] != compliancekit.StatusFail {
 		t.Errorf("plain: %v", got["plain"])
 	}
 }
@@ -115,7 +115,7 @@ func TestServiceExternalIPs(t *testing.T) {
 		mkService("set", map[string]any{"external_ips": []string{"1.2.3.4"}}),
 	)
 	got := runCheck(t, ServiceExternalIPs, g)
-	if got["clean"] != core.StatusPass || got["set"] != core.StatusFail {
+	if got["clean"] != compliancekit.StatusPass || got["set"] != compliancekit.StatusFail {
 		t.Errorf("results: %v", got)
 	}
 }
@@ -126,7 +126,7 @@ func TestServiceNodePort(t *testing.T) {
 		mkService("nodeport", map[string]any{"type": "NodePort"}),
 	)
 	got := runCheck(t, ServiceNodePort, g)
-	if got["clusterip"] != core.StatusPass || got["nodeport"] != core.StatusFail {
+	if got["clusterip"] != compliancekit.StatusPass || got["nodeport"] != compliancekit.StatusFail {
 		t.Errorf("results: %v", got)
 	}
 }
@@ -138,7 +138,7 @@ func TestServicePublicNoNP(t *testing.T) {
 		mkService("lb-bare", map[string]any{"type": "LoadBalancer", "namespace": "noapp"}),
 	)
 	got := runCheck(t, ServicePublicNoNP, g)
-	if got["lb-covered"] != core.StatusPass || got["lb-bare"] != core.StatusFail {
+	if got["lb-covered"] != compliancekit.StatusPass || got["lb-bare"] != compliancekit.StatusFail {
 		t.Errorf("results: %v", got)
 	}
 }
@@ -149,7 +149,7 @@ func TestIngressTLS(t *testing.T) {
 		mkIngress("bare", map[string]any{"has_tls": false}),
 	)
 	got := runCheck(t, IngressTLS, g)
-	if got["good"] != core.StatusPass || got["bare"] != core.StatusFail {
+	if got["good"] != compliancekit.StatusPass || got["bare"] != compliancekit.StatusFail {
 		t.Errorf("results: %v", got)
 	}
 }
@@ -160,7 +160,7 @@ func TestIngressDefaultBackend(t *testing.T) {
 		mkIngress("catchall", map[string]any{"has_default_backend": true}),
 	)
 	got := runCheck(t, IngressDefaultBackend, g)
-	if got["good"] != core.StatusPass || got["catchall"] != core.StatusFail {
+	if got["good"] != compliancekit.StatusPass || got["catchall"] != compliancekit.StatusFail {
 		t.Errorf("results: %v", got)
 	}
 }
@@ -171,7 +171,7 @@ func TestIngressClass(t *testing.T) {
 		mkIngress("unset", map[string]any{"ingress_class": ""}),
 	)
 	got := runCheck(t, IngressClass, g)
-	if got["good"] != core.StatusPass || got["unset"] != core.StatusFail {
+	if got["good"] != compliancekit.StatusPass || got["unset"] != compliancekit.StatusFail {
 		t.Errorf("results: %v", got)
 	}
 }
@@ -182,7 +182,7 @@ func TestIngressAnnotations(t *testing.T) {
 		mkIngress("snippet", map[string]any{"annotations": map[string]string{"nginx.ingress.kubernetes.io/configuration-snippet": "..."}}),
 	)
 	got := runCheck(t, IngressAnnotations, g)
-	if got["good"] != core.StatusPass || got["snippet"] != core.StatusFail {
+	if got["good"] != compliancekit.StatusPass || got["snippet"] != compliancekit.StatusFail {
 		t.Errorf("results: %v", got)
 	}
 }
@@ -201,14 +201,14 @@ func TestNPDefaultDenyIngress(t *testing.T) {
 		mkPod("p2", map[string]any{"namespace": "noapp"}),
 	)
 	findings, _ := NPDefaultDenyIngress(t.Context(), g)
-	byNs := map[string]core.Status{}
+	byNs := map[string]compliancekit.Status{}
 	for _, f := range findings {
 		byNs[f.Resource.Name] = f.Status
 	}
-	if byNs["app"] != core.StatusPass {
+	if byNs["app"] != compliancekit.StatusPass {
 		t.Errorf("app: %v", byNs["app"])
 	}
-	if byNs["noapp"] != core.StatusFail {
+	if byNs["noapp"] != compliancekit.StatusFail {
 		t.Errorf("noapp: %v", byNs["noapp"])
 	}
 }
@@ -219,7 +219,7 @@ func TestNPAllowAllIngress(t *testing.T) {
 		mkNetworkPolicy("open", map[string]any{"has_allow_all_ingress": true}),
 	)
 	got := runCheck(t, NPAllowAllIngress, g)
-	if got["scoped"] != core.StatusPass || got["open"] != core.StatusFail {
+	if got["scoped"] != compliancekit.StatusPass || got["open"] != compliancekit.StatusFail {
 		t.Errorf("results: %v", got)
 	}
 }
@@ -230,7 +230,7 @@ func TestNPAllowAllEgress(t *testing.T) {
 		mkNetworkPolicy("open", map[string]any{"has_allow_all_egress": true}),
 	)
 	got := runCheck(t, NPAllowAllEgress, g)
-	if got["scoped"] != core.StatusPass || got["open"] != core.StatusFail {
+	if got["scoped"] != compliancekit.StatusPass || got["open"] != compliancekit.StatusFail {
 		t.Errorf("results: %v", got)
 	}
 }
@@ -241,7 +241,7 @@ func TestNPFromAllNamespaces(t *testing.T) {
 		mkNetworkPolicy("any-ns", map[string]any{"has_from_all_namespaces": true}),
 	)
 	got := runCheck(t, NPFromAllNamespaces, g)
-	if got["scoped"] != core.StatusPass || got["any-ns"] != core.StatusFail {
+	if got["scoped"] != compliancekit.StatusPass || got["any-ns"] != compliancekit.StatusFail {
 		t.Errorf("results: %v", got)
 	}
 }
@@ -260,10 +260,10 @@ func TestNPEmptySelector(t *testing.T) {
 		}),
 	)
 	got := runCheck(t, NPEmptySelector, g)
-	if got["scoped"] != core.StatusPass || got["default-deny"] != core.StatusPass {
+	if got["scoped"] != compliancekit.StatusPass || got["default-deny"] != compliancekit.StatusPass {
 		t.Errorf("pass cases: %v", got)
 	}
-	if got["all-pods-with-rules"] != core.StatusFail {
+	if got["all-pods-with-rules"] != compliancekit.StatusFail {
 		t.Errorf("all-pods-with-rules: %v", got["all-pods-with-rules"])
 	}
 }

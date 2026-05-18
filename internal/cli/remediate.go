@@ -12,11 +12,11 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate"
 	"github.com/darpanzope/compliancekit/internal/remediate/poam"
 	"github.com/darpanzope/compliancekit/internal/remediate/runbook"
 	"github.com/darpanzope/compliancekit/internal/remediate/tickets"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 
 	// Side-effect imports register each format adapter with
 	// remediate.Default. Adding a new format subpackage here is all
@@ -212,7 +212,7 @@ func runRemediateList(stdout io.Writer) error {
 // stdin. For paths, delegates to the shared loadFindings helper in
 // evidence.go which already handles both envelope + bare-array
 // shapes; we only own the stdin case here.
-func loadRemediateFindings(path string) ([]core.Finding, error) {
+func loadRemediateFindings(path string) ([]compliancekit.Finding, error) {
 	if path != "-" {
 		return loadFindings(path)
 	}
@@ -221,12 +221,12 @@ func loadRemediateFindings(path string) ([]core.Finding, error) {
 		return nil, err
 	}
 	var env struct {
-		Findings []core.Finding `json:"findings"`
+		Findings []compliancekit.Finding `json:"findings"`
 	}
 	if err := json.Unmarshal(body, &env); err == nil && env.Findings != nil {
 		return env.Findings, nil
 	}
-	var arr []core.Finding
+	var arr []compliancekit.Finding
 	if err := json.Unmarshal(body, &arr); err == nil {
 		return arr, nil
 	}

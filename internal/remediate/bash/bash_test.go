@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 func TestRegistryCoverage_Linux(t *testing.T) {
@@ -41,10 +41,10 @@ func TestRegistryCoverage_Linux(t *testing.T) {
 func TestWildcardFallback(t *testing.T) {
 	// An unregistered CheckID should resolve via the wildcard
 	// strategy in this package.
-	f := core.Finding{
+	f := compliancekit.Finding{
 		CheckID:  "completely-unknown-check",
-		Resource: core.ResourceRef{ID: "weird-resource"},
-		Severity: core.SeverityMedium,
+		Resource: compliancekit.ResourceRef{ID: "weird-resource"},
+		Severity: compliancekit.SeverityMedium,
 		Message:  "I am a finding without a strategy",
 	}
 	s, err := remediate.Default.Render(f, remediate.FormatBash)
@@ -67,7 +67,7 @@ func TestWildcardFallback(t *testing.T) {
 }
 
 func TestRenderSSHDRootLogin(t *testing.T) {
-	f := core.Finding{CheckID: "linux-sshd-no-root-login"}
+	f := compliancekit.Finding{CheckID: "linux-sshd-no-root-login"}
 	s, err := remediate.Default.Render(f, remediate.FormatBash)
 	if err != nil {
 		t.Fatalf("Render: %v", err)

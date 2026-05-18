@@ -7,8 +7,8 @@ import (
 	"sort"
 	"time"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/frameworks"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // writeControlMarkdown emits <control-dir>/control.md -- the auditor-
@@ -93,7 +93,7 @@ func renderControlMarkdown(w io.Writer, c ControlRef, opts Options) {
 // Markdown table. One row per check_id present in the findings slice;
 // columns are pass/fail/skip/error counts so the auditor can see at a
 // glance which checks are exercising this control.
-func writeCoverageTable(w io.Writer, findings []core.Finding) {
+func writeCoverageTable(w io.Writer, findings []compliancekit.Finding) {
 	type row struct {
 		CheckID                       string
 		Title                         string
@@ -104,19 +104,19 @@ func writeCoverageTable(w io.Writer, findings []core.Finding) {
 		r, ok := byCheck[f.CheckID]
 		if !ok {
 			r = &row{CheckID: f.CheckID}
-			if chk, found := core.LookupCheck(f.CheckID); found {
+			if chk, found := compliancekit.LookupCheck(f.CheckID); found {
 				r.Title = chk.Title
 			}
 			byCheck[f.CheckID] = r
 		}
 		switch f.Status {
-		case core.StatusPass:
+		case compliancekit.StatusPass:
 			r.Pass++
-		case core.StatusFail:
+		case compliancekit.StatusFail:
 			r.Fail++
-		case core.StatusSkip:
+		case compliancekit.StatusSkip:
 			r.Skip++
-		case core.StatusError:
+		case compliancekit.StatusError:
 			r.Errored++
 		default:
 			r.NA++
@@ -142,22 +142,22 @@ func writeCoverageTable(w io.Writer, findings []core.Finding) {
 //
 // The icons are unicode glyphs (✅ pass, ❌ fail, ⏭ skip,
 // ⚠️ error) chosen for legibility in dark + light themes.
-func writeFindingsList(w io.Writer, findings []core.Finding) {
+func writeFindingsList(w io.Writer, findings []compliancekit.Finding) {
 	for _, f := range findings {
 		fmt.Fprintf(w, "- %s [%s] `%s` — %s\n",
 			statusIcon(f.Status), f.Severity.String(), f.Resource.Name, f.Message)
 	}
 }
 
-func statusIcon(s core.Status) string {
+func statusIcon(s compliancekit.Status) string {
 	switch s {
-	case core.StatusPass:
+	case compliancekit.StatusPass:
 		return "✅"
-	case core.StatusFail:
+	case compliancekit.StatusFail:
 		return "❌"
-	case core.StatusSkip:
+	case compliancekit.StatusSkip:
 		return "⏭"
-	case core.StatusError:
+	case compliancekit.StatusError:
 		return "⚠️"
 	}
 	return "·"

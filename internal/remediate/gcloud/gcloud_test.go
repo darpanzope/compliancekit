@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 func TestRegistryCoverage(t *testing.T) {
@@ -43,9 +43,9 @@ func TestRegistryCoverage(t *testing.T) {
 }
 
 func TestRenderStoragePAP(t *testing.T) {
-	f := core.Finding{
+	f := compliancekit.Finding{
 		CheckID:  "gcp-storage-public-access-prevention",
-		Resource: core.ResourceRef{Name: "data-lake-prod"},
+		Resource: compliancekit.ResourceRef{Name: "data-lake-prod"},
 	}
 	s, err := remediate.Default.Render(f, remediate.FormatGCloud)
 	if err != nil {
@@ -70,7 +70,7 @@ func TestRenderManualSentinels(t *testing.T) {
 		"gcp-iam-sa-key-age",
 	}
 	for _, id := range manualIDs {
-		f := core.Finding{CheckID: id, Resource: core.ResourceRef{Name: "ex"}}
+		f := compliancekit.Finding{CheckID: id, Resource: compliancekit.ResourceRef{Name: "ex"}}
 		s, err := remediate.Default.Render(f, remediate.FormatGCloud)
 		if err != nil {
 			t.Errorf("%q: %v", id, err)
@@ -83,9 +83,9 @@ func TestRenderManualSentinels(t *testing.T) {
 }
 
 func TestRenderShieldedVMUsesZone(t *testing.T) {
-	f := core.Finding{
+	f := compliancekit.Finding{
 		CheckID:  "gcp-compute-shielded-vm",
-		Resource: core.ResourceRef{Name: "vm-1", Region: "europe-west1-b"},
+		Resource: compliancekit.ResourceRef{Name: "vm-1", Region: "europe-west1-b"},
 	}
 	s, err := remediate.Default.Render(f, remediate.FormatGCloud)
 	if err != nil {

@@ -5,17 +5,17 @@ import (
 	"fmt"
 
 	docol "github.com/darpanzope/compliancekit/internal/collectors/digitalocean"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // CheckAccountStatusActive flags any account whose status is not
 // "active". DO uses status to surface billing failures (warning),
 // ToS holds (locked), and account suspension (suspended). A non-
 // active account cannot reliably scale, snapshot, or recover.
-var CheckAccountStatusActive = core.Check{
+var CheckAccountStatusActive = compliancekit.Check{
 	ID:           "do-account-status-active",
 	Title:        "DigitalOcean account must be in 'active' status",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "digitalocean",
 	Service:      "account",
 	ResourceType: docol.AccountType,
@@ -39,22 +39,22 @@ var CheckAccountStatusActive = core.Check{
 	Scanner: "account.StatusActive",
 }
 
-func AccountStatusActive(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func AccountStatusActive(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, a := range g.ByType(docol.AccountType) {
 		status, _ := a.Attributes["status"].(string)
 		msg, _ := a.Attributes["status_message"].(string)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckAccountStatusActive.ID,
 			Severity: CheckAccountStatusActive.Severity,
 			Resource: a.Ref(),
 			Tags:     CheckAccountStatusActive.Tags,
 		}
 		if status == "active" {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("account %q: active", a.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			if msg != "" {
 				f.Message = fmt.Sprintf("account %q: status=%q (%s)", a.Name, status, msg)
 			} else {
@@ -69,10 +69,10 @@ func AccountStatusActive(_ context.Context, g *core.ResourceGraph) ([]core.Findi
 // CheckAccountEmailVerified requires the account's primary email be
 // verified with DO. An unverified email blocks billing alerts,
 // password reset, and 2FA recovery flows.
-var CheckAccountEmailVerified = core.Check{
+var CheckAccountEmailVerified = compliancekit.Check{
 	ID:           "do-account-email-verified",
 	Title:        "DigitalOcean account email must be verified",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "digitalocean",
 	Service:      "account",
 	ResourceType: docol.AccountType,
@@ -96,21 +96,21 @@ var CheckAccountEmailVerified = core.Check{
 	Scanner: "account.EmailVerified",
 }
 
-func AccountEmailVerified(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func AccountEmailVerified(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, a := range g.ByType(docol.AccountType) {
 		verified, _ := a.Attributes["email_verified"].(bool)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckAccountEmailVerified.ID,
 			Severity: CheckAccountEmailVerified.Severity,
 			Resource: a.Ref(),
 			Tags:     CheckAccountEmailVerified.Tags,
 		}
 		if verified {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("account %q: email verified", a.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("account %q: email NOT verified", a.Name)
 		}
 		findings = append(findings, f)
@@ -122,10 +122,10 @@ func AccountEmailVerified(_ context.Context, g *core.ResourceGraph) ([]core.Find
 // (i.e. multi-user) team rather than the implicit single-user
 // "Personal" team DO creates for new accounts. Single-user prod
 // accounts have no continuity if the human is unavailable.
-var CheckAccountUsesNamedTeam = core.Check{
+var CheckAccountUsesNamedTeam = compliancekit.Check{
 	ID:           "do-account-uses-named-team",
 	Title:        "Production DigitalOcean accounts should use a named team",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "digitalocean",
 	Service:      "account",
 	ResourceType: docol.AccountType,
@@ -151,11 +151,11 @@ var CheckAccountUsesNamedTeam = core.Check{
 	Scanner: "account.UsesNamedTeam",
 }
 
-func AccountUsesNamedTeam(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func AccountUsesNamedTeam(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, a := range g.ByType(docol.AccountType) {
 		teamName, _ := a.Attributes["team_name"].(string)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckAccountUsesNamedTeam.ID,
 			Severity: CheckAccountUsesNamedTeam.Severity,
 			Resource: a.Ref(),
@@ -165,10 +165,10 @@ func AccountUsesNamedTeam(_ context.Context, g *core.ResourceGraph) ([]core.Find
 		// accounts; an empty string means godo couldn't read the
 		// team relation, which is also a fail.
 		if teamName == "" || teamName == "Personal" {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("account %q: team=%q (default single-user team)", a.Name, teamName)
 		} else {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("account %q: named team %q", a.Name, teamName)
 		}
 		findings = append(findings, f)
@@ -177,7 +177,7 @@ func AccountUsesNamedTeam(_ context.Context, g *core.ResourceGraph) ([]core.Find
 }
 
 func init() {
-	core.Register(CheckAccountStatusActive, AccountStatusActive)
-	core.Register(CheckAccountEmailVerified, AccountEmailVerified)
-	core.Register(CheckAccountUsesNamedTeam, AccountUsesNamedTeam)
+	compliancekit.Register(CheckAccountStatusActive, AccountStatusActive)
+	compliancekit.Register(CheckAccountEmailVerified, AccountEmailVerified)
+	compliancekit.Register(CheckAccountUsesNamedTeam, AccountUsesNamedTeam)
 }

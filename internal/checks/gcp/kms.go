@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	gcpcol "github.com/darpanzope/compliancekit/internal/collectors/gcp"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // kmsMaxRotationDays is the threshold for CheckKMSKeyRotation.
@@ -33,10 +33,10 @@ var kmsEncrypterDecrypterRoles = map[string]bool{
 
 // CheckKMSKeyRotation requires symmetric encrypt/decrypt keys to
 // rotate at least every 90 days. CIS GCP Foundations 1.10.
-var CheckKMSKeyRotation = core.Check{
+var CheckKMSKeyRotation = compliancekit.Check{
 	ID:           "gcp-kms-key-rotation",
 	Title:        "KMS encrypt/decrypt keys must rotate at least every 90 days",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "gcp",
 	Service:      "kms",
 	ResourceType: gcpcol.KMSCryptoKeyType,
@@ -59,8 +59,8 @@ var CheckKMSKeyRotation = core.Check{
 	Scanner: "kms.KeyRotation",
 }
 
-func KMSKeyRotation(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func KMSKeyRotation(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, k := range g.ByType(gcpcol.KMSCryptoKeyType) {
 		isED, _ := k.Attributes["is_encrypt_decrypt"].(bool)
 		if !isED {
@@ -70,7 +70,7 @@ func KMSKeyRotation(_ context.Context, g *core.ResourceGraph) ([]core.Finding, e
 		}
 		hasSchedule, _ := k.Attributes["has_rotation_schedule"].(bool)
 		days, _ := k.Attributes["rotation_period_days"].(int)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckKMSKeyRotation.ID,
 			Severity: CheckKMSKeyRotation.Severity,
 			Resource: k.Ref(),
@@ -78,13 +78,13 @@ func KMSKeyRotation(_ context.Context, g *core.ResourceGraph) ([]core.Finding, e
 		}
 		switch {
 		case !hasSchedule:
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("key %q: no rotation schedule", k.Name)
 		case days > kmsMaxRotationDays:
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("key %q: rotation period %dd (> %dd max)", k.Name, days, kmsMaxRotationDays)
 		default:
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("key %q: rotates every %dd", k.Name, days)
 		}
 		findings = append(findings, f)
@@ -95,10 +95,10 @@ func KMSKeyRotation(_ context.Context, g *core.ResourceGraph) ([]core.Finding, e
 // CheckKMSAdminUserSeparation forbids the same principal from
 // holding cloudkms.admin AND any crypto-operation role on the
 // same key. CIS GCP Foundations 1.11.
-var CheckKMSAdminUserSeparation = core.Check{
+var CheckKMSAdminUserSeparation = compliancekit.Check{
 	ID:           "gcp-kms-admin-user-separation",
 	Title:        "KMS key admins must be separate from encrypters/decrypters",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "gcp",
 	Service:      "kms",
 	ResourceType: gcpcol.KMSCryptoKeyType,
@@ -122,8 +122,8 @@ var CheckKMSAdminUserSeparation = core.Check{
 	Scanner: "kms.AdminUserSeparation",
 }
 
-func KMSAdminUserSeparation(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func KMSAdminUserSeparation(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, k := range g.ByType(gcpcol.KMSCryptoKeyType) {
 		bindings, _ := k.Attributes["iam_bindings"].([]map[string]any)
 
@@ -152,17 +152,17 @@ func KMSAdminUserSeparation(_ context.Context, g *core.ResourceGraph) ([]core.Fi
 		}
 		sort.Strings(overlap)
 
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckKMSAdminUserSeparation.ID,
 			Severity: CheckKMSAdminUserSeparation.Severity,
 			Resource: k.Ref(),
 			Tags:     CheckKMSAdminUserSeparation.Tags,
 		}
 		if len(overlap) == 0 {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("key %q: no admin/user role overlap", k.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("key %q: %d principal(s) hold both admin + crypto role: %s",
 				k.Name, len(overlap), strings.Join(overlap, ", "))
 		}
@@ -172,6 +172,6 @@ func KMSAdminUserSeparation(_ context.Context, g *core.ResourceGraph) ([]core.Fi
 }
 
 func init() {
-	core.Register(CheckKMSKeyRotation, KMSKeyRotation)
-	core.Register(CheckKMSAdminUserSeparation, KMSAdminUserSeparation)
+	compliancekit.Register(CheckKMSKeyRotation, KMSKeyRotation)
+	compliancekit.Register(CheckKMSAdminUserSeparation, KMSAdminUserSeparation)
 }

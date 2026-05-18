@@ -67,7 +67,7 @@ func implHasTag(_ rego.BuiltinContext, resource, tagTerm *ast.Term) (*ast.Term, 
 
 // builtinAttrStr returns the string-typed attribute at the supplied
 // key, or "" if the attribute is missing or not a string. Mirrors
-// core.Resource.Attr in semantics so policy authors get the same
+// compliancekit.Resource.Attr in semantics so policy authors get the same
 // behavior as Go check authors.
 //
 //	compliancekit.attr_str(resource, "encryption")  →  "AES256" | ""

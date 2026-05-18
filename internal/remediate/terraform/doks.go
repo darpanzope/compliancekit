@@ -3,8 +3,8 @@ package terraform
 import (
 	"fmt"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.19 phase 4 — Terraform strategies for the 10 DOKS-depth checks
@@ -38,7 +38,7 @@ func init() {
 		[]string{"k8s-doks-pod-security-standards-baseline"}, renderTFDOKSPSA)
 }
 
-func renderTFDOKSVersion(f core.Finding) (remediate.Snippet, error) {
+func renderTFDOKSVersion(f compliancekit.Finding) (remediate.Snippet, error) {
 	name := tfNameOrFallback(f, "CLUSTER")
 	body := fmt.Sprintf(`resource "digitalocean_kubernetes_cluster" %q {
   name    = %q
@@ -58,7 +58,7 @@ func renderTFDOKSVersion(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderTFDOKSTaints(f core.Finding) (remediate.Snippet, error) {
+func renderTFDOKSTaints(f compliancekit.Finding) (remediate.Snippet, error) {
 	name := tfNameOrFallback(f, "POOL")
 	body := fmt.Sprintf(`resource "digitalocean_kubernetes_node_pool" %q {
   cluster_id = digitalocean_kubernetes_cluster.main.id
@@ -84,9 +84,11 @@ func renderTFDOKSTaints(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderTFDOKSEnvTag(f core.Finding) (remediate.Snippet, error) { return renderTFDOKSTaints(f) }
+func renderTFDOKSEnvTag(f compliancekit.Finding) (remediate.Snippet, error) {
+	return renderTFDOKSTaints(f)
+}
 
-func renderTFDOKSSize(f core.Finding) (remediate.Snippet, error) {
+func renderTFDOKSSize(f compliancekit.Finding) (remediate.Snippet, error) {
 	name := tfNameOrFallback(f, "POOL")
 	body := fmt.Sprintf(`resource "digitalocean_kubernetes_node_pool" %q {
   cluster_id = digitalocean_kubernetes_cluster.main.id
@@ -104,7 +106,7 @@ func renderTFDOKSSize(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderTFDOKSMaintenance(f core.Finding) (remediate.Snippet, error) {
+func renderTFDOKSMaintenance(f compliancekit.Finding) (remediate.Snippet, error) {
 	name := tfNameOrFallback(f, "CLUSTER")
 	body := fmt.Sprintf(`resource "digitalocean_kubernetes_cluster" %q {
   name   = %q
@@ -121,7 +123,7 @@ func renderTFDOKSMaintenance(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderTFDOKSLogging(_ core.Finding) (remediate.Snippet, error) {
+func renderTFDOKSLogging(_ compliancekit.Finding) (remediate.Snippet, error) {
 	body := `# Deploy a fluent-bit DaemonSet to forward control-plane + node logs.
 # Helm release shape (requires kubernetes/helm providers configured to
 # point at the DOKS cluster).
@@ -152,7 +154,7 @@ resource "helm_release" "fluent_bit" {
 	}, nil
 }
 
-func renderTFDOKSMetricsServer(_ core.Finding) (remediate.Snippet, error) {
+func renderTFDOKSMetricsServer(_ compliancekit.Finding) (remediate.Snippet, error) {
 	body := `resource "helm_release" "metrics_server" {
   name       = "metrics-server"
   repository = "https://kubernetes-sigs.github.io/metrics-server/"
@@ -173,7 +175,7 @@ func renderTFDOKSMetricsServer(_ core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderTFDOKSCertManager(_ core.Finding) (remediate.Snippet, error) {
+func renderTFDOKSCertManager(_ compliancekit.Finding) (remediate.Snippet, error) {
 	body := `resource "helm_release" "cert_manager" {
   name             = "cert-manager"
   repository       = "https://charts.jetstack.io"
@@ -216,12 +218,12 @@ resource "kubernetes_manifest" "letsencrypt_issuer" {
 	}, nil
 }
 
-func renderTFDOKSAutoscaler(f core.Finding) (remediate.Snippet, error) {
+func renderTFDOKSAutoscaler(f compliancekit.Finding) (remediate.Snippet, error) {
 	// Native per-pool path is the simpler default. Render that.
 	return renderTFDOKSTaints(f)
 }
 
-func renderTFDOKSPSA(_ core.Finding) (remediate.Snippet, error) {
+func renderTFDOKSPSA(_ compliancekit.Finding) (remediate.Snippet, error) {
 	body := `# Label production namespaces with Pod Security Admission policy.
 # kubernetes_labels works for in-place namespace patching.
 

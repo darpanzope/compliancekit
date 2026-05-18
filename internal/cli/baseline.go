@@ -11,7 +11,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/darpanzope/compliancekit/internal/baseline"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 type baselineOptions struct {
@@ -85,7 +85,7 @@ func runBaseline(_ context.Context, w io.Writer, opts baselineOptions) error {
 // loadFindingsForBaseline reads either the wrapped scan envelope or
 // a raw findings array. Same dual-shape support as the evidence
 // subcommand -- a jq-trimmed subset is a valid input.
-func loadFindingsForBaseline(path string) ([]core.Finding, error) {
+func loadFindingsForBaseline(path string) ([]compliancekit.Finding, error) {
 	// G304: path is operator-supplied; this is the documented input.
 	//nolint:gosec // operator-supplied input path
 	data, err := os.ReadFile(path)
@@ -100,14 +100,14 @@ func loadFindingsForBaseline(path string) ([]core.Finding, error) {
 		switch b {
 		case '{':
 			var env struct {
-				Findings []core.Finding `json:"findings"`
+				Findings []compliancekit.Finding `json:"findings"`
 			}
 			if err := json.Unmarshal(data, &env); err != nil {
 				return nil, fmt.Errorf("parse %s: %w", path, err)
 			}
 			return env.Findings, nil
 		case '[':
-			var raw []core.Finding
+			var raw []compliancekit.Finding
 			if err := json.Unmarshal(data, &raw); err != nil {
 				return nil, fmt.Errorf("parse %s: %w", path, err)
 			}

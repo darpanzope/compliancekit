@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.19 phase 5 — App Platform depth tests.
@@ -15,12 +15,12 @@ func TestAppServicesHealthcheck(t *testing.T) {
 		name  string
 		total int
 		cov   int
-		want  core.Status
+		want  compliancekit.Status
 	}{
 		{"no services", 0, 0, ""},
-		{"all covered", 3, 3, core.StatusPass},
-		{"partial", 3, 2, core.StatusFail},
-		{"none covered", 3, 0, core.StatusFail},
+		{"all covered", 3, 3, compliancekit.StatusPass},
+		{"partial", 3, 2, compliancekit.StatusFail},
+		{"none covered", 3, 0, compliancekit.StatusFail},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -46,12 +46,12 @@ func TestAppTierProdGrade(t *testing.T) {
 	cases := []struct {
 		name string
 		tier string
-		want core.Status
+		want compliancekit.Status
 	}{
-		{"basic-xxs fails", "basic-xxs", core.StatusFail},
-		{"basic-m fails", "basic-m", core.StatusFail},
-		{"professional-xs passes", "professional-xs", core.StatusPass},
-		{"professional-s passes", "professional-s", core.StatusPass},
+		{"basic-xxs fails", "basic-xxs", compliancekit.StatusFail},
+		{"basic-m fails", "basic-m", compliancekit.StatusFail},
+		{"professional-xs passes", "professional-xs", compliancekit.StatusPass},
+		{"professional-s passes", "professional-s", compliancekit.StatusPass},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -69,11 +69,11 @@ func TestAppDatabaseProduction(t *testing.T) {
 		name    string
 		total   int
 		managed int
-		want    core.Status
+		want    compliancekit.Status
 	}{
 		{"no dbs → skip", 0, 0, ""},
-		{"all managed", 2, 2, core.StatusPass},
-		{"mixed", 2, 1, core.StatusFail},
+		{"all managed", 2, 2, compliancekit.StatusPass},
+		{"mixed", 2, 1, compliancekit.StatusFail},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -100,11 +100,11 @@ func TestAppDomainTLS13(t *testing.T) {
 		name    string
 		domains []map[string]any
 		expectN int
-		want    core.Status
+		want    compliancekit.Status
 	}{
 		{"no domains", nil, 0, ""},
-		{"all 1.3", []map[string]any{{"domain": "a", "minimum_tls_version": "1.3"}}, 1, core.StatusPass},
-		{"mixed", []map[string]any{{"domain": "a", "minimum_tls_version": "1.2"}, {"domain": "b", "minimum_tls_version": "1.3"}}, 1, core.StatusFail},
+		{"all 1.3", []map[string]any{{"domain": "a", "minimum_tls_version": "1.3"}}, 1, compliancekit.StatusPass},
+		{"mixed", []map[string]any{{"domain": "a", "minimum_tls_version": "1.2"}, {"domain": "b", "minimum_tls_version": "1.3"}}, 1, compliancekit.StatusFail},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -131,17 +131,17 @@ func TestAppManualVerifyChecks(t *testing.T) {
 	cases := []struct {
 		name      string
 		attrs     map[string]any
-		fn        func(context.Context, *core.ResourceGraph) ([]core.Finding, error)
+		fn        func(context.Context, *compliancekit.ResourceGraph) ([]compliancekit.Finding, error)
 		expectN   int
 		urlMatch  string
-		wantClass core.Status
+		wantClass compliancekit.Status
 	}{
-		{"deploy-on-push fires when set", map[string]any{"services_deploy_on_push": 1}, AppDeployOnPushProtection, 1, "github.com", core.StatusError},
+		{"deploy-on-push fires when set", map[string]any{"services_deploy_on_push": 1}, AppDeployOnPushProtection, 1, "github.com", compliancekit.StatusError},
 		{"deploy-on-push skips when 0", map[string]any{"services_deploy_on_push": 0}, AppDeployOnPushProtection, 0, "", ""},
-		{"build secret scan always fires", nil, AppBuildSecretScan, 1, "gitleaks", core.StatusError},
+		{"build secret scan always fires", nil, AppBuildSecretScan, 1, "gitleaks", compliancekit.StatusError},
 		{"cert rotation skips no domains", map[string]any{"has_custom_domains": false}, AppDomainCertRotation, 0, "", ""},
-		{"cert rotation fires with domains", map[string]any{"has_custom_domains": true}, AppDomainCertRotation, 1, "digitalocean.com", core.StatusError},
-		{"cdn attachment always fires", nil, AppCDNAttachment, 1, "spaces", core.StatusError},
+		{"cert rotation fires with domains", map[string]any{"has_custom_domains": true}, AppDomainCertRotation, 1, "digitalocean.com", compliancekit.StatusError},
+		{"cdn attachment always fires", nil, AppCDNAttachment, 1, "spaces", compliancekit.StatusError},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -170,11 +170,11 @@ func TestAppServicesLogDestVariants(t *testing.T) {
 	cases := []struct {
 		name      string
 		total, ok int
-		want      core.Status
+		want      compliancekit.Status
 	}{
 		{"none", 0, 0, ""},
-		{"all", 3, 3, core.StatusPass},
-		{"partial", 3, 1, core.StatusFail},
+		{"all", 3, 3, compliancekit.StatusPass},
+		{"partial", 3, 1, compliancekit.StatusFail},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -200,11 +200,11 @@ func TestAppServicesAlertsVariants(t *testing.T) {
 	cases := []struct {
 		name      string
 		total, ok int
-		want      core.Status
+		want      compliancekit.Status
 	}{
 		{"none", 0, 0, ""},
-		{"all", 2, 2, core.StatusPass},
-		{"partial", 4, 2, core.StatusFail},
+		{"all", 2, 2, compliancekit.StatusPass},
+		{"partial", 4, 2, compliancekit.StatusFail},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {

@@ -7,7 +7,7 @@ import (
 
 	"github.com/digitalocean/godo"
 
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 const (
@@ -22,8 +22,8 @@ const (
 // collectDomains enumerates managed DNS zones and, for each zone,
 // summarizes the record set so DMARC/SPF/CAA checks can read the
 // presence flags without re-querying.
-func (c *Collector) collectDomains(ctx context.Context) ([]core.Resource, error) {
-	out := []core.Resource{}
+func (c *Collector) collectDomains(ctx context.Context) ([]compliancekit.Resource, error) {
+	out := []compliancekit.Resource{}
 	opt := &godo.ListOptions{PerPage: pageSize}
 	for {
 		if err := ctx.Err(); err != nil {
@@ -54,9 +54,9 @@ func (c *Collector) collectDomains(ctx context.Context) ([]core.Resource, error)
 	return out, nil
 }
 
-func (c *Collector) domainResource(ctx context.Context, d godo.Domain) (core.Resource, error) {
+func (c *Collector) domainResource(ctx context.Context, d godo.Domain) (compliancekit.Resource, error) {
 	records, err := c.fetchDomainRecords(ctx, d.Name)
-	r := core.Resource{
+	r := compliancekit.Resource{
 		ID:       fmt.Sprintf("%s.%s", DomainType, d.Name),
 		Type:     DomainType,
 		Name:     d.Name,
@@ -174,8 +174,8 @@ func summarizeTxt(rec godo.DomainRecord, sum *domainRecordSummary) {
 }
 
 // collectCertificates enumerates managed certificates.
-func (c *Collector) collectCertificates(ctx context.Context) ([]core.Resource, error) {
-	out := []core.Resource{}
+func (c *Collector) collectCertificates(ctx context.Context) ([]compliancekit.Resource, error) {
+	out := []compliancekit.Resource{}
 	opt := &godo.ListOptions{PerPage: pageSize}
 	for {
 		if err := ctx.Err(); err != nil {
@@ -200,9 +200,9 @@ func (c *Collector) collectCertificates(ctx context.Context) ([]core.Resource, e
 	return out, nil
 }
 
-func (c *Collector) certificateResource(ct godo.Certificate) core.Resource {
+func (c *Collector) certificateResource(ct godo.Certificate) compliancekit.Resource {
 	dnsNames := append([]string(nil), ct.DNSNames...)
-	r := core.Resource{
+	r := compliancekit.Resource{
 		ID:       fmt.Sprintf("%s.%s", CertificateType, ct.ID),
 		Type:     CertificateType,
 		Name:     ct.Name,

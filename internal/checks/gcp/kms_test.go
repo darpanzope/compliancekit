@@ -6,11 +6,11 @@ import (
 	"testing"
 
 	gcpcol "github.com/darpanzope/compliancekit/internal/collectors/gcp"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
-func mkCryptoKey(name string, attrs map[string]any) core.Resource {
-	return core.Resource{
+func mkCryptoKey(name string, attrs map[string]any) compliancekit.Resource {
+	return compliancekit.Resource{
 		ID:         "gcp.kms.crypto_key." + name,
 		Type:       gcpcol.KMSCryptoKeyType,
 		Name:       name,
@@ -23,33 +23,33 @@ func TestKMSKeyRotation(t *testing.T) {
 	cases := []struct {
 		name  string
 		attrs map[string]any
-		want  core.Status
+		want  compliancekit.Status
 		skip  bool
 	}{
 		{
 			"non-encrypt-decrypt-skipped",
 			map[string]any{"is_encrypt_decrypt": false, "has_rotation_schedule": false},
-			core.StatusPass, true, // want unused when skip=true
+			compliancekit.StatusPass, true, // want unused when skip=true
 		},
 		{
 			"no-schedule",
 			map[string]any{"is_encrypt_decrypt": true, "has_rotation_schedule": false, "rotation_period_days": 0},
-			core.StatusFail, false,
+			compliancekit.StatusFail, false,
 		},
 		{
 			"too-long",
 			map[string]any{"is_encrypt_decrypt": true, "has_rotation_schedule": true, "rotation_period_days": 180},
-			core.StatusFail, false,
+			compliancekit.StatusFail, false,
 		},
 		{
 			"at-max",
 			map[string]any{"is_encrypt_decrypt": true, "has_rotation_schedule": true, "rotation_period_days": 90},
-			core.StatusPass, false,
+			compliancekit.StatusPass, false,
 		},
 		{
 			"frequent",
 			map[string]any{"is_encrypt_decrypt": true, "has_rotation_schedule": true, "rotation_period_days": 30},
-			core.StatusPass, false,
+			compliancekit.StatusPass, false,
 		},
 	}
 	for _, c := range cases {
@@ -76,7 +76,7 @@ func TestKMSAdminUserSeparation(t *testing.T) {
 	cases := []struct {
 		name     string
 		bindings []map[string]any
-		want     core.Status
+		want     compliancekit.Status
 		wantSub  string
 	}{
 		{
@@ -85,7 +85,7 @@ func TestKMSAdminUserSeparation(t *testing.T) {
 				{"role": "roles/cloudkms.admin", "members": []string{"user:admin@x.com"}},
 				{"role": "roles/cloudkms.cryptoKeyEncrypterDecrypter", "members": []string{"serviceAccount:app@p.iam.gserviceaccount.com"}},
 			},
-			core.StatusPass, "",
+			compliancekit.StatusPass, "",
 		},
 		{
 			"same-principal-both-roles",
@@ -93,21 +93,21 @@ func TestKMSAdminUserSeparation(t *testing.T) {
 				{"role": "roles/cloudkms.admin", "members": []string{"user:dev@x.com", "user:admin@x.com"}},
 				{"role": "roles/cloudkms.cryptoKeyEncrypterDecrypter", "members": []string{"user:dev@x.com"}},
 			},
-			core.StatusFail, "user:dev@x.com",
+			compliancekit.StatusFail, "user:dev@x.com",
 		},
 		{
 			"only-admin",
 			[]map[string]any{
 				{"role": "roles/cloudkms.admin", "members": []string{"user:admin@x.com"}},
 			},
-			core.StatusPass, "",
+			compliancekit.StatusPass, "",
 		},
 		{
 			"encrypter-only",
 			[]map[string]any{
 				{"role": "roles/cloudkms.cryptoKeyEncrypter", "members": []string{"serviceAccount:enc@p.iam.gserviceaccount.com"}},
 			},
-			core.StatusPass, "",
+			compliancekit.StatusPass, "",
 		},
 	}
 	for _, c := range cases {

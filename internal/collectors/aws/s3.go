@@ -10,7 +10,7 @@ import (
 	s3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
 
 	"github.com/darpanzope/compliancekit/internal/collectors/cloudcommon"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // S3BucketType is the resource type emitted for each S3 bucket.
@@ -36,11 +36,11 @@ type s3Client interface {
 // Per-bucket Get* errors do not abort the entire collection -- one
 // inaccessible bucket lands as a partial resource with
 // collect_error rather than killing the scan of every bucket.
-func (c *Collector) collectS3(ctx context.Context, out []core.Resource) ([]core.Resource, error) {
+func (c *Collector) collectS3(ctx context.Context, out []compliancekit.Resource) ([]compliancekit.Resource, error) {
 	return c.collectS3WithClient(ctx, s3.NewFromConfig(c.cfg), out)
 }
 
-func (c *Collector) collectS3WithClient(ctx context.Context, client s3Client, out []core.Resource) ([]core.Resource, error) {
+func (c *Collector) collectS3WithClient(ctx context.Context, client s3Client, out []compliancekit.Resource) ([]compliancekit.Resource, error) {
 	buckets, err := client.ListBuckets(ctx, &s3.ListBucketsInput{})
 	if err != nil {
 		return nil, fmt.Errorf("aws: s3.ListBuckets: %w", err)
@@ -57,9 +57,9 @@ func (c *Collector) collectS3WithClient(ctx context.Context, client s3Client, ou
 // is not configured), which is a finding, not a collect error.
 // Per-fact work is split into small helpers below so the orchestrator
 // stays under gocyclo's 15-edge ceiling.
-func (c *Collector) buildBucketResource(ctx context.Context, client s3Client, b s3types.Bucket) core.Resource {
+func (c *Collector) buildBucketResource(ctx context.Context, client s3Client, b s3types.Bucket) compliancekit.Resource {
 	name := awssdk.ToString(b.Name)
-	r := core.Resource{
+	r := compliancekit.Resource{
 		ID:       fmt.Sprintf("aws.s3.bucket.%s", name),
 		Type:     S3BucketType,
 		Name:     name,
@@ -97,7 +97,7 @@ func fetchBucketRegion(ctx context.Context, client s3Client, name *string) strin
 	return "us-east-1"
 }
 
-func fetchBucketPAB(ctx context.Context, client s3Client, name *string, r *core.Resource) map[string]any {
+func fetchBucketPAB(ctx context.Context, client s3Client, name *string, r *compliancekit.Resource) map[string]any {
 	pab := map[string]any{
 		"block_public_acls":       false,
 		"ignore_public_acls":      false,
@@ -120,7 +120,7 @@ func fetchBucketPAB(ctx context.Context, client s3Client, name *string, r *core.
 	return pab
 }
 
-func fetchBucketEncryption(ctx context.Context, client s3Client, name *string, r *core.Resource) {
+func fetchBucketEncryption(ctx context.Context, client s3Client, name *string, r *compliancekit.Resource) {
 	enc, err := client.GetBucketEncryption(ctx, &s3.GetBucketEncryptionInput{Bucket: name})
 	switch {
 	case err == nil && enc.ServerSideEncryptionConfiguration != nil:
@@ -136,14 +136,14 @@ func fetchBucketEncryption(ctx context.Context, client s3Client, name *string, r
 	}
 }
 
-func fetchBucketVersioning(ctx context.Context, client s3Client, name *string, r *core.Resource) {
+func fetchBucketVersioning(ctx context.Context, client s3Client, name *string, r *compliancekit.Resource) {
 	ver, err := client.GetBucketVersioning(ctx, &s3.GetBucketVersioningInput{Bucket: name})
 	if err == nil {
 		r.Attributes["versioning_status"] = string(ver.Status)
 	}
 }
 
-func fetchBucketLogging(ctx context.Context, client s3Client, name *string, r *core.Resource) {
+func fetchBucketLogging(ctx context.Context, client s3Client, name *string, r *compliancekit.Resource) {
 	resp, err := client.GetBucketLogging(ctx, &s3.GetBucketLoggingInput{Bucket: name})
 	if err != nil {
 		return
@@ -154,7 +154,7 @@ func fetchBucketLogging(ctx context.Context, client s3Client, name *string, r *c
 	}
 }
 
-func fetchBucketACL(ctx context.Context, client s3Client, name *string, r *core.Resource) {
+func fetchBucketACL(ctx context.Context, client s3Client, name *string, r *compliancekit.Resource) {
 	resp, err := client.GetBucketAcl(ctx, &s3.GetBucketAclInput{Bucket: name})
 	if err == nil {
 		r.Attributes["public_acls"] = aclMakesPublic(resp.Grants)

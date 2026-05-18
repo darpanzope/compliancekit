@@ -1,7 +1,7 @@
 // Package k8s is the Kubernetes collector.
 //
 // It reads a kubeconfig file, fans out across the operator's selected
-// contexts, and emits typed core.Resource values for every supported
+// contexts, and emits typed compliancekit.Resource values for every supported
 // Kubernetes resource kind. v0.11 ships generic Kubernetes posture
 // across any cluster (kind/k3s/EKS/GKE/DOKS/on-prem) plus per-cloud
 // EKS/GKE/DOKS enrichment via sibling collectors.
@@ -26,7 +26,7 @@ import (
 	"k8s.io/client-go/rest"
 
 	"github.com/darpanzope/compliancekit/internal/collectors/cloudcommon"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 const (
@@ -113,7 +113,7 @@ type Options struct {
 }
 
 // Collector fans out across one or more kubeconfig contexts and emits
-// core.Resource values for every supported Kubernetes resource kind.
+// compliancekit.Resource values for every supported Kubernetes resource kind.
 type Collector struct {
 	contexts []*ContextScope
 }
@@ -162,13 +162,13 @@ func (c *Collector) Contexts() []string {
 //  3. After the per-context iteration completes, append everything
 //     to the result slice. Cross-context linking, when added in
 //     later phases, will happen here.
-func (c *Collector) Collect(ctx context.Context) ([]core.Resource, error) {
+func (c *Collector) Collect(ctx context.Context) ([]compliancekit.Resource, error) {
 	// Pre-allocate for the anchors; per-service collectors append.
-	out := make([]core.Resource, 0, len(c.contexts))
+	out := make([]compliancekit.Resource, 0, len(c.contexts))
 
 	type subCollector struct {
 		service string
-		run     func(context.Context, *ContextScope) ([]core.Resource, error)
+		run     func(context.Context, *ContextScope) ([]compliancekit.Resource, error)
 	}
 
 	for _, scope := range c.contexts {
@@ -200,8 +200,8 @@ func (c *Collector) Collect(ctx context.Context) ([]core.Resource, error) {
 }
 
 // clusterAnchor emits the singleton-per-context anchor resource.
-func (c *Collector) clusterAnchor(scope *ContextScope) core.Resource {
-	r := core.Resource{
+func (c *Collector) clusterAnchor(scope *ContextScope) compliancekit.Resource {
+	r := compliancekit.Resource{
 		ID:       fmt.Sprintf("%s.%s", ClusterType, scope.Name),
 		Type:     ClusterType,
 		Name:     scope.Name,
@@ -220,8 +220,8 @@ func (c *Collector) clusterAnchor(scope *ContextScope) core.Resource {
 
 // collectError emits a placeholder when a per-service sub-collector
 // fails outright.
-func (c *Collector) collectError(scope *ContextScope, service string, err error) core.Resource {
-	r := core.Resource{
+func (c *Collector) collectError(scope *ContextScope, service string, err error) compliancekit.Resource {
+	r := compliancekit.Resource{
 		ID:       fmt.Sprintf("%s.%s.%s", CollectErrorType, scope.Name, service),
 		Type:     CollectErrorType,
 		Name:     service,

@@ -3,9 +3,9 @@ package terraform
 import (
 	"fmt"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate"
 	"github.com/darpanzope/compliancekit/internal/remediate/render"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 func init() {
@@ -23,7 +23,7 @@ func init() {
 		renderHetznerServerBackups)
 }
 
-func renderHetznerFirewallTighten(f core.Finding) (remediate.Snippet, error) {
+func renderHetznerFirewallTighten(f compliancekit.Finding) (remediate.Snippet, error) {
 	name := f.Resource.Name
 	if name == "" {
 		name = f.Resource.ID
@@ -48,7 +48,7 @@ func renderHetznerFirewallTighten(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderHetznerServerNetwork(f core.Finding) (remediate.Snippet, error) {
+func renderHetznerServerNetwork(f compliancekit.Finding) (remediate.Snippet, error) {
 	name := f.Resource.Name
 	if name == "" {
 		name = f.Resource.ID
@@ -69,7 +69,7 @@ func renderHetznerServerNetwork(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderHetznerServerBackups(f core.Finding) (remediate.Snippet, error) {
+func renderHetznerServerBackups(f compliancekit.Finding) (remediate.Snippet, error) {
 	name := f.Resource.Name
 	if name == "" {
 		name = f.Resource.ID

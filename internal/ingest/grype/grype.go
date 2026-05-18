@@ -15,8 +15,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/ingest"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 type adapter struct{}
@@ -31,7 +31,7 @@ func (adapter) Description() string {
 
 // Ingest decodes a Grype v0.x JSON document and projects every
 // matches[] entry into a compliancekit Finding with a populated
-// core.Vulnerability block.
+// compliancekit.Vulnerability block.
 func (adapter) Ingest(ctx context.Context, r io.Reader, opts ingest.Options) (ingest.Result, error) {
 	var doc document
 	if err := json.NewDecoder(r).Decode(&doc); err != nil {
@@ -61,7 +61,7 @@ func (adapter) Ingest(ctx context.Context, r io.Reader, opts ingest.Options) (in
 	return out, nil
 }
 
-func buildVulnFinding(m match, imageName, imageSHA string, opts ingest.Options) (core.Finding, *core.Resource) {
+func buildVulnFinding(m match, imageName, imageSHA string, opts ingest.Options) (compliancekit.Finding, *compliancekit.Resource) {
 	v := m.Vulnerability
 	severity := severityFromGrype(v.Severity)
 	cvss := preferredCVSS(v.CVSS)
@@ -72,7 +72,7 @@ func buildVulnFinding(m match, imageName, imageSHA string, opts ingest.Options) 
 
 	subject, phantom := vulnSubject(m, imageName, imageSHA, opts)
 
-	vuln := &core.Vulnerability{
+	vuln := &compliancekit.Vulnerability{
 		ID:           v.ID,
 		Aliases:      v.Related, // related CVE/GHSA aliases
 		CVSSScore:    cvss.Metrics.BaseScore,
@@ -81,7 +81,7 @@ func buildVulnFinding(m match, imageName, imageSHA string, opts ingest.Options) 
 		Description:  v.Description,
 		PrimaryURL:   v.DataSource,
 		Image:        imageName,
-		Package: core.Package{
+		Package: compliancekit.Package{
 			Name:      m.Artifact.Name,
 			Version:   m.Artifact.Version,
 			Ecosystem: m.Artifact.Type,
@@ -89,16 +89,16 @@ func buildVulnFinding(m match, imageName, imageSHA string, opts ingest.Options) 
 		},
 	}
 
-	return core.Finding{
+	return compliancekit.Finding{
 		CheckID:       "ingest.grype." + v.ID,
-		Status:        core.StatusFail,
+		Status:        compliancekit.StatusFail,
 		Severity:      severity,
 		Resource:      subject,
 		Message:       composeMessage(m, fixedVersion),
 		Tags:          []string{"vulnerability", "cve", strings.ToLower(m.Artifact.Type)},
 		Vulnerability: vuln,
 		Timestamp:     opts.Provenance.IngestedAt,
-		Source: &core.Source{
+		Source: &compliancekit.Source{
 			Type:        "ingest",
 			Tool:        "grype",
 			ToolVersion: opts.Provenance.ToolVersion,
@@ -108,7 +108,7 @@ func buildVulnFinding(m match, imageName, imageSHA string, opts ingest.Options) 
 	}, phantom
 }
 
-func vulnSubject(m match, imageName, imageSHA string, opts ingest.Options) (core.ResourceRef, *core.Resource) {
+func vulnSubject(m match, imageName, imageSHA string, opts ingest.Options) (compliancekit.ResourceRef, *compliancekit.Resource) {
 	var (
 		id, kind, name string
 	)
@@ -123,13 +123,13 @@ func vulnSubject(m match, imageName, imageSHA string, opts ingest.Options) (core
 	}
 	if opts.Graph != nil {
 		if existing, ok := opts.Graph.ByID(id); ok {
-			return core.ResourceRef{
+			return compliancekit.ResourceRef{
 				ID: existing.ID, Type: existing.Type, Name: existing.Name,
 				Provider: existing.Provider, Region: existing.Region,
 			}, nil
 		}
 	}
-	phantom := core.Resource{
+	phantom := compliancekit.Resource{
 		ID:       id,
 		Type:     kind,
 		Name:     name,
@@ -141,7 +141,7 @@ func vulnSubject(m match, imageName, imageSHA string, opts ingest.Options) (core
 			"package_purl":  m.Artifact.PURL,
 		},
 	}
-	return core.ResourceRef{
+	return compliancekit.ResourceRef{
 		ID: phantom.ID, Type: phantom.Type, Name: phantom.Name, Provider: phantom.Provider,
 	}, &phantom
 }
@@ -163,20 +163,20 @@ func composeMessage(m match, fix string) string {
 // severityFromGrype maps Grype's severity strings to compliancekit's
 // scale. Grype uses Title-Case ("Critical" / "High" / ...) while
 // Trivy uses upper-case; both are normalized here.
-func severityFromGrype(s string) core.Severity {
+func severityFromGrype(s string) compliancekit.Severity {
 	switch strings.ToLower(strings.TrimSpace(s)) {
 	case "critical":
-		return core.SeverityCritical
+		return compliancekit.SeverityCritical
 	case "high":
-		return core.SeverityHigh
+		return compliancekit.SeverityHigh
 	case "medium":
-		return core.SeverityMedium
+		return compliancekit.SeverityMedium
 	case "low":
-		return core.SeverityLow
+		return compliancekit.SeverityLow
 	case "negligible":
-		return core.SeverityInfo
+		return compliancekit.SeverityInfo
 	}
-	return core.SeverityInfo
+	return compliancekit.SeverityInfo
 }
 
 // preferredCVSS picks the best CVSS scoring from a Grype-shape list.

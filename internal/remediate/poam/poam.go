@@ -26,9 +26,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/frameworks"
 	"github.com/darpanzope/compliancekit/internal/remediate"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // Write generates poam.oscal.json under root from the findings whose
@@ -42,7 +42,7 @@ import (
 // the POA&M list — Snippet-with-RiskManual entries carry the
 // strategy's Notes prose; unmatched-finding entries carry the
 // finding's Message.
-func Write(root string, manualSnippets []remediate.Snippet, unmatched []core.Finding, opts Options) (string, error) {
+func Write(root string, manualSnippets []remediate.Snippet, unmatched []compliancekit.Finding, opts Options) (string, error) {
 	if root == "" {
 		return "", fmt.Errorf("poam: empty root")
 	}
@@ -75,7 +75,7 @@ type Options struct {
 
 // build is the pure function the test suite exercises. It produces
 // the document structure; Write serializes it.
-func build(manualSnippets []remediate.Snippet, unmatched []core.Finding, opts Options) document {
+func build(manualSnippets []remediate.Snippet, unmatched []compliancekit.Finding, opts Options) document {
 	generated := opts.GeneratedAt
 	if generated.IsZero() {
 		generated = time.Now().UTC()
@@ -103,7 +103,7 @@ func build(manualSnippets []remediate.Snippet, unmatched []core.Finding, opts Op
 
 // itemsFor walks the inputs and produces sorted POA&M entries. Sort
 // is by (CheckID, Resource.ID) for deterministic ordering.
-func itemsFor(snippets []remediate.Snippet, unmatched []core.Finding, project, period string) []poamItem {
+func itemsFor(snippets []remediate.Snippet, unmatched []compliancekit.Finding, project, period string) []poamItem {
 	type seed struct {
 		checkID    string
 		resourceID string
@@ -190,9 +190,9 @@ func stringOr(s, fallback string) string {
 // controlIDsForCheck resolves the framework controls the check
 // satisfies, formatted as "framework:control". Returns an empty
 // slice when the check is not registered in the catalog (e.g.
-// ingest-only CheckIDs that don't appear in core.LookupCheck).
+// ingest-only CheckIDs that don't appear in compliancekit.LookupCheck).
 func controlIDsForCheck(checkID string) []string {
-	c, ok := core.LookupCheck(checkID)
+	c, ok := compliancekit.LookupCheck(checkID)
 	if !ok {
 		return nil
 	}

@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // LinearConfig captures everything needed to create a Linear issue
@@ -85,15 +85,15 @@ func (l *Linear) Create(ctx context.Context, t Ticket) (Ref, error) {
 
 // linearPriority maps compliancekit severity onto Linear's enum
 // (0 = none, 1 = urgent, 2 = high, 3 = medium, 4 = low).
-func linearPriority(s core.Severity) int {
+func linearPriority(s compliancekit.Severity) int {
 	switch s {
-	case core.SeverityCritical:
+	case compliancekit.SeverityCritical:
 		return 1
-	case core.SeverityHigh:
+	case compliancekit.SeverityHigh:
 		return 2
-	case core.SeverityMedium:
+	case compliancekit.SeverityMedium:
 		return 3
-	case core.SeverityLow:
+	case compliancekit.SeverityLow:
 		return 4
 	}
 	return 0

@@ -3,9 +3,9 @@ package kubectl
 import (
 	"fmt"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate"
 	"github.com/darpanzope/compliancekit/internal/remediate/render"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 func init() {
@@ -51,7 +51,7 @@ func init() {
 		renderNetworkPolicyDefaultDeny)
 }
 
-func renderPDBMissing(f core.Finding) (remediate.Snippet, error) {
+func renderPDBMissing(f compliancekit.Finding) (remediate.Snippet, error) {
 	_, ns, name := workloadFromResource(f)
 	manifest := fmt.Sprintf(`apiVersion: policy/v1
 kind: PodDisruptionBudget
@@ -77,7 +77,7 @@ spec:
 	}, nil
 }
 
-func renderMinReplicas(f core.Finding) (remediate.Snippet, error) {
+func renderMinReplicas(f compliancekit.Finding) (remediate.Snippet, error) {
 	kind, ns, name := workloadFromResource(f)
 	patch := `spec:
   replicas: 3`
@@ -90,7 +90,7 @@ func renderMinReplicas(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderAntiAffinity(f core.Finding) (remediate.Snippet, error) {
+func renderAntiAffinity(f compliancekit.Finding) (remediate.Snippet, error) {
 	kind, ns, name := workloadFromResource(f)
 	patch := fmt.Sprintf(`spec:
   template:
@@ -113,7 +113,7 @@ func renderAntiAffinity(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderRollingUpdate(f core.Finding) (remediate.Snippet, error) {
+func renderRollingUpdate(f compliancekit.Finding) (remediate.Snippet, error) {
 	kind, ns, name := workloadFromResource(f)
 	patch := `spec:
   strategy:
@@ -130,7 +130,7 @@ func renderRollingUpdate(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderLivenessProbe(f core.Finding) (remediate.Snippet, error) {
+func renderLivenessProbe(f compliancekit.Finding) (remediate.Snippet, error) {
 	kind, ns, name := workloadFromResource(f)
 	patch := `spec:
   template:
@@ -153,7 +153,7 @@ func renderLivenessProbe(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderResourceLimits(f core.Finding) (remediate.Snippet, error) {
+func renderResourceLimits(f compliancekit.Finding) (remediate.Snippet, error) {
 	kind, ns, name := workloadFromResource(f)
 	patch := `spec:
   template:
@@ -173,7 +173,7 @@ func renderResourceLimits(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderResourceRequests(f core.Finding) (remediate.Snippet, error) {
+func renderResourceRequests(f compliancekit.Finding) (remediate.Snippet, error) {
 	kind, ns, name := workloadFromResource(f)
 	patch := `spec:
   template:
@@ -193,7 +193,7 @@ func renderResourceRequests(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderIngressTLS(f core.Finding) (remediate.Snippet, error) {
+func renderIngressTLS(f compliancekit.Finding) (remediate.Snippet, error) {
 	_, ns, name := workloadFromResource(f)
 	manifest := fmt.Sprintf(`apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -232,7 +232,7 @@ spec:
 	}, nil
 }
 
-func renderIngressClass(f core.Finding) (remediate.Snippet, error) {
+func renderIngressClass(f compliancekit.Finding) (remediate.Snippet, error) {
 	_, ns, name := workloadFromResource(f)
 	patch := `spec:
   ingressClassName: nginx     # or alb / traefik / your-ingress-class`
@@ -246,7 +246,7 @@ func renderIngressClass(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderServiceSourceRanges(f core.Finding) (remediate.Snippet, error) {
+func renderServiceSourceRanges(f compliancekit.Finding) (remediate.Snippet, error) {
 	_, ns, name := workloadFromResource(f)
 	patch := `spec:
   loadBalancerSourceRanges:
@@ -262,7 +262,7 @@ func renderServiceSourceRanges(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderServiceExternalIPs(f core.Finding) (remediate.Snippet, error) {
+func renderServiceExternalIPs(f compliancekit.Finding) (remediate.Snippet, error) {
 	_, ns, name := workloadFromResource(f)
 	// JSON Patch operation to remove the externalIPs field entirely.
 	jsonPatch := `[{"op":"remove","path":"/spec/externalIPs"}]`
@@ -279,7 +279,7 @@ func renderServiceExternalIPs(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderNetworkPolicyDefaultDeny(f core.Finding) (remediate.Snippet, error) {
+func renderNetworkPolicyDefaultDeny(f compliancekit.Finding) (remediate.Snippet, error) {
 	_, ns, _ := workloadFromResource(f)
 	manifest := fmt.Sprintf(`# Default-deny ingress and egress for namespace %q. Apply, then add
 # allow-rules per workload as needed. CAUTION: applying this in a

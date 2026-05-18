@@ -4,10 +4,10 @@ import (
 	"testing"
 
 	k8scol "github.com/darpanzope/compliancekit/internal/collectors/k8s"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
-func mkDeployment(name string, attrs map[string]any) core.Resource {
+func mkDeployment(name string, attrs map[string]any) compliancekit.Resource {
 	base := map[string]any{
 		"namespace":             "default",
 		"replicas":              3,
@@ -20,7 +20,7 @@ func mkDeployment(name string, attrs map[string]any) core.Resource {
 	for k, v := range attrs {
 		base[k] = v
 	}
-	return core.Resource{
+	return compliancekit.Resource{
 		ID:         "k8s.deployment.prod.default." + name,
 		Type:       k8scol.DeploymentType,
 		Name:       name,
@@ -29,7 +29,7 @@ func mkDeployment(name string, attrs map[string]any) core.Resource {
 	}
 }
 
-func mkStatefulSet(name string, attrs map[string]any) core.Resource {
+func mkStatefulSet(name string, attrs map[string]any) compliancekit.Resource {
 	base := map[string]any{
 		"namespace":             "default",
 		"replicas":              3,
@@ -39,7 +39,7 @@ func mkStatefulSet(name string, attrs map[string]any) core.Resource {
 	for k, v := range attrs {
 		base[k] = v
 	}
-	return core.Resource{
+	return compliancekit.Resource{
 		ID:         "k8s.statefulset.prod.default." + name,
 		Type:       k8scol.StatefulSetType,
 		Name:       name,
@@ -48,7 +48,7 @@ func mkStatefulSet(name string, attrs map[string]any) core.Resource {
 	}
 }
 
-func mkDaemonSet(name string, attrs map[string]any) core.Resource {
+func mkDaemonSet(name string, attrs map[string]any) compliancekit.Resource {
 	base := map[string]any{
 		"namespace":               "default",
 		"selector_labels":         map[string]string{"app": name},
@@ -57,7 +57,7 @@ func mkDaemonSet(name string, attrs map[string]any) core.Resource {
 	for k, v := range attrs {
 		base[k] = v
 	}
-	return core.Resource{
+	return compliancekit.Resource{
 		ID:         "k8s.daemonset.prod.default." + name,
 		Type:       k8scol.DaemonSetType,
 		Name:       name,
@@ -66,7 +66,7 @@ func mkDaemonSet(name string, attrs map[string]any) core.Resource {
 	}
 }
 
-func mkPDB(name string, attrs map[string]any) core.Resource {
+func mkPDB(name string, attrs map[string]any) compliancekit.Resource {
 	base := map[string]any{
 		"namespace":       "default",
 		"selector_labels": map[string]string{"app": name},
@@ -75,7 +75,7 @@ func mkPDB(name string, attrs map[string]any) core.Resource {
 	for k, v := range attrs {
 		base[k] = v
 	}
-	return core.Resource{
+	return compliancekit.Resource{
 		ID:         "k8s.pdb.prod.default." + name,
 		Type:       k8scol.PodDisruptionBudgetType,
 		Name:       name,
@@ -90,7 +90,7 @@ func TestDeploymentMinReplicas(t *testing.T) {
 		mkDeployment("single", map[string]any{"replicas": 1}),
 	)
 	got := runCheck(t, DeploymentMinReplicas, g)
-	if got["ha"] != core.StatusPass || got["single"] != core.StatusFail {
+	if got["ha"] != compliancekit.StatusPass || got["single"] != compliancekit.StatusFail {
 		t.Errorf("results: %v", got)
 	}
 }
@@ -102,10 +102,10 @@ func TestDeploymentRollingUpdate(t *testing.T) {
 		mkDeployment("recreate", map[string]any{"strategy_type": "Recreate"}),
 	)
 	got := runCheck(t, DeploymentRollingUpdate, g)
-	if got["good"] != core.StatusPass || got["default-empty"] != core.StatusPass {
+	if got["good"] != compliancekit.StatusPass || got["default-empty"] != compliancekit.StatusPass {
 		t.Errorf("good/empty: %v / %v", got["good"], got["default-empty"])
 	}
-	if got["recreate"] != core.StatusFail {
+	if got["recreate"] != compliancekit.StatusFail {
 		t.Errorf("recreate: %v", got["recreate"])
 	}
 }
@@ -118,13 +118,13 @@ func TestDeploymentPDB(t *testing.T) {
 		mkDeployment("single", map[string]any{"replicas": 1, "selector_labels": map[string]string{"app": "x"}}),
 	)
 	got := runCheck(t, DeploymentPDB, g)
-	if got["covered"] != core.StatusPass {
+	if got["covered"] != compliancekit.StatusPass {
 		t.Errorf("covered: %v", got["covered"])
 	}
-	if got["uncovered"] != core.StatusFail {
+	if got["uncovered"] != compliancekit.StatusFail {
 		t.Errorf("uncovered: %v", got["uncovered"])
 	}
-	if got["single"] != core.StatusSkip {
+	if got["single"] != compliancekit.StatusSkip {
 		t.Errorf("single: %v (want skip)", got["single"])
 	}
 }
@@ -136,7 +136,7 @@ func TestStatefulSetPDB(t *testing.T) {
 		mkStatefulSet("uncovered", map[string]any{"selector_labels": map[string]string{"app": "cache"}}),
 	)
 	got := runCheck(t, StatefulSetPDB, g)
-	if got["covered"] != core.StatusPass || got["uncovered"] != core.StatusFail {
+	if got["covered"] != compliancekit.StatusPass || got["uncovered"] != compliancekit.StatusFail {
 		t.Errorf("results: %v", got)
 	}
 }
@@ -148,13 +148,13 @@ func TestDeploymentAntiAffinity(t *testing.T) {
 		mkDeployment("single", map[string]any{"replicas": 1, "has_pod_anti_affinity": false}),
 	)
 	got := runCheck(t, DeploymentAntiAffinity, g)
-	if got["good"] != core.StatusPass {
+	if got["good"] != compliancekit.StatusPass {
 		t.Errorf("good: %v", got["good"])
 	}
-	if got["no-affinity"] != core.StatusFail {
+	if got["no-affinity"] != compliancekit.StatusFail {
 		t.Errorf("no-affinity: %v", got["no-affinity"])
 	}
-	if got["single"] != core.StatusSkip {
+	if got["single"] != compliancekit.StatusSkip {
 		t.Errorf("single: %v (want skip)", got["single"])
 	}
 }
@@ -166,10 +166,10 @@ func TestDaemonSetControlPlane(t *testing.T) {
 		mkDaemonSet("cni", map[string]any{"namespace": "kube-system", "tolerates_control_plane": true}),
 	)
 	got := runCheck(t, DaemonSetControlPlane, g)
-	if got["app"] != core.StatusPass || got["cni"] != core.StatusPass {
+	if got["app"] != compliancekit.StatusPass || got["cni"] != compliancekit.StatusPass {
 		t.Errorf("app/cni: %v / %v", got["app"], got["cni"])
 	}
-	if got["rogue"] != core.StatusFail {
+	if got["rogue"] != compliancekit.StatusFail {
 		t.Errorf("rogue: %v", got["rogue"])
 	}
 }

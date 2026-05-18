@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	awscol "github.com/darpanzope/compliancekit/internal/collectors/aws"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // EKS enrichment checks. EKS resources come from the AWS collector
@@ -15,10 +15,10 @@ import (
 
 // ----- Public endpoint with open CIDR ---------------------------
 
-var CheckEKSPublicEndpoint = core.Check{
+var CheckEKSPublicEndpoint = compliancekit.Check{
 	ID:           "k8s-eks-public-endpoint-open",
 	Title:        "EKS API endpoint should not be publicly reachable without CIDR restriction",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "kubernetes",
 	Service:      "eks",
 	ResourceType: awscol.EKSClusterType,
@@ -41,12 +41,12 @@ var CheckEKSPublicEndpoint = core.Check{
 	Scanner: "eks.PublicEndpoint",
 }
 
-func EKSPublicEndpoint(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func EKSPublicEndpoint(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, c := range g.ByType(awscol.EKSClusterType) {
 		pub, _ := c.Attributes["endpoint_public"].(bool)
 		cidrs, _ := c.Attributes["public_access_cidrs"].([]string)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckEKSPublicEndpoint.ID,
 			Severity: CheckEKSPublicEndpoint.Severity,
 			Resource: c.Ref(),
@@ -54,16 +54,16 @@ func EKSPublicEndpoint(_ context.Context, g *core.ResourceGraph) ([]core.Finding
 		}
 		switch {
 		case !pub:
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("eks cluster %q: endpoint private only", c.Name)
 		case containsString(cidrs, "0.0.0.0/0"):
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("eks cluster %q: public endpoint open to 0.0.0.0/0", c.Name)
 		case len(cidrs) == 0:
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("eks cluster %q: public endpoint without publicAccessCidrs", c.Name)
 		default:
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("eks cluster %q: public endpoint restricted to %v", c.Name, cidrs)
 		}
 		findings = append(findings, f)
@@ -73,10 +73,10 @@ func EKSPublicEndpoint(_ context.Context, g *core.ResourceGraph) ([]core.Finding
 
 // ----- Private endpoint ------------------------------------------
 
-var CheckEKSPrivateEndpoint = core.Check{
+var CheckEKSPrivateEndpoint = compliancekit.Check{
 	ID:           "k8s-eks-private-endpoint",
 	Title:        "EKS clusters should enable the private API endpoint",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "kubernetes",
 	Service:      "eks",
 	ResourceType: awscol.EKSClusterType,
@@ -97,17 +97,17 @@ var CheckEKSPrivateEndpoint = core.Check{
 	Scanner: "eks.PrivateEndpoint",
 }
 
-func EKSPrivateEndpoint(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func EKSPrivateEndpoint(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	return eksBoolCheck(g, CheckEKSPrivateEndpoint, "endpoint_private",
 		"private endpoint enabled", "private endpoint disabled"), nil
 }
 
 // ----- Secrets KMS encryption ----------------------------------
 
-var CheckEKSSecretsKMS = core.Check{
+var CheckEKSSecretsKMS = compliancekit.Check{
 	ID:           "k8s-eks-secrets-encryption",
 	Title:        "EKS clusters should encrypt secrets with KMS",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "kubernetes",
 	Service:      "eks",
 	ResourceType: awscol.EKSClusterType,
@@ -128,17 +128,17 @@ var CheckEKSSecretsKMS = core.Check{
 	Scanner: "eks.SecretsKMS",
 }
 
-func EKSSecretsKMS(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func EKSSecretsKMS(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	return eksBoolCheck(g, CheckEKSSecretsKMS, "has_secrets_kms",
 		"secrets KMS encryption enabled", "no secrets KMS encryption"), nil
 }
 
 // ----- Control plane logging -----------------------------------
 
-var CheckEKSControlPlaneLogging = core.Check{
+var CheckEKSControlPlaneLogging = compliancekit.Check{
 	ID:           "k8s-eks-control-plane-logging",
 	Title:        "EKS clusters should enable all control-plane log types",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "kubernetes",
 	Service:      "eks",
 	ResourceType: awscol.EKSClusterType,
@@ -159,9 +159,9 @@ var CheckEKSControlPlaneLogging = core.Check{
 	Scanner: "eks.ControlPlaneLogging",
 }
 
-func EKSControlPlaneLogging(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func EKSControlPlaneLogging(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	required := []string{"api", "audit", "authenticator", "controllerManager", "scheduler"}
-	findings := []core.Finding{}
+	findings := []compliancekit.Finding{}
 	for _, c := range g.ByType(awscol.EKSClusterType) {
 		enabled, _ := c.Attributes["log_types_enabled"].([]string)
 		missing := []string{}
@@ -170,17 +170,17 @@ func EKSControlPlaneLogging(_ context.Context, g *core.ResourceGraph) ([]core.Fi
 				missing = append(missing, t)
 			}
 		}
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckEKSControlPlaneLogging.ID,
 			Severity: CheckEKSControlPlaneLogging.Severity,
 			Resource: c.Ref(),
 			Tags:     CheckEKSControlPlaneLogging.Tags,
 		}
 		if len(missing) == 0 {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("eks cluster %q: all 5 control-plane log types enabled", c.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("eks cluster %q: missing log types: %s", c.Name, strings.Join(missing, ", "))
 		}
 		findings = append(findings, f)
@@ -190,10 +190,10 @@ func EKSControlPlaneLogging(_ context.Context, g *core.ResourceGraph) ([]core.Fi
 
 // ----- OIDC provider (IRSA) -----------------------------------
 
-var CheckEKSIRSA = core.Check{
+var CheckEKSIRSA = compliancekit.Check{
 	ID:           "k8s-eks-irsa-enabled",
 	Title:        "EKS clusters should expose an OIDC provider for IRSA",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "kubernetes",
 	Service:      "eks",
 	ResourceType: awscol.EKSClusterType,
@@ -213,17 +213,17 @@ var CheckEKSIRSA = core.Check{
 	Scanner: "eks.IRSA",
 }
 
-func EKSIRSA(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func EKSIRSA(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	return eksBoolCheck(g, CheckEKSIRSA, "has_oidc",
 		"OIDC provider exposed (IRSA available)", "no OIDC provider"), nil
 }
 
 // ----- Authentication mode --------------------------------------
 
-var CheckEKSAuthMode = core.Check{
+var CheckEKSAuthMode = compliancekit.Check{
 	ID:           "k8s-eks-authentication-mode",
 	Title:        "EKS clusters should use API access entries (not aws-auth ConfigMap)",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "kubernetes",
 	Service:      "eks",
 	ResourceType: awscol.EKSClusterType,
@@ -244,11 +244,11 @@ var CheckEKSAuthMode = core.Check{
 	Scanner: "eks.AuthMode",
 }
 
-func EKSAuthMode(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func EKSAuthMode(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, c := range g.ByType(awscol.EKSClusterType) {
 		mode, _ := c.Attributes["authentication_mode"].(string)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckEKSAuthMode.ID,
 			Severity: CheckEKSAuthMode.Severity,
 			Resource: c.Ref(),
@@ -256,10 +256,10 @@ func EKSAuthMode(_ context.Context, g *core.ResourceGraph) ([]core.Finding, erro
 		}
 		switch mode {
 		case "API", "API_AND_CONFIG_MAP":
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("eks cluster %q: authenticationMode=%s", c.Name, mode)
 		default:
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("eks cluster %q: authenticationMode=%s (legacy aws-auth only)", c.Name, mode)
 		}
 		findings = append(findings, f)
@@ -269,10 +269,10 @@ func EKSAuthMode(_ context.Context, g *core.ResourceGraph) ([]core.Finding, erro
 
 // ----- Cluster status --------------------------------------------
 
-var CheckEKSStatus = core.Check{
+var CheckEKSStatus = compliancekit.Check{
 	ID:           "k8s-eks-cluster-active",
 	Title:        "EKS clusters should be in ACTIVE status",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "kubernetes",
 	Service:      "eks",
 	ResourceType: awscol.EKSClusterType,
@@ -292,21 +292,21 @@ var CheckEKSStatus = core.Check{
 	Scanner: "eks.Status",
 }
 
-func EKSStatus(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func EKSStatus(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, c := range g.ByType(awscol.EKSClusterType) {
 		status, _ := c.Attributes["status"].(string)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckEKSStatus.ID,
 			Severity: CheckEKSStatus.Severity,
 			Resource: c.Ref(),
 			Tags:     CheckEKSStatus.Tags,
 		}
 		if status == "ACTIVE" {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("eks cluster %q: ACTIVE", c.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("eks cluster %q: status=%s", c.Name, status)
 		}
 		findings = append(findings, f)
@@ -316,10 +316,10 @@ func EKSStatus(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error)
 
 // ----- Nodegroup AMI type ---------------------------------------
 
-var CheckEKSVersion = core.Check{
+var CheckEKSVersion = compliancekit.Check{
 	ID:           "k8s-eks-version-supported",
 	Title:        "EKS clusters should run a supported K8s version",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "kubernetes",
 	Service:      "eks",
 	ResourceType: awscol.EKSClusterType,
@@ -343,21 +343,21 @@ var CheckEKSVersion = core.Check{
 // (2026-05). Bump per AWS support window changes.
 const eksMinVersion = "1.28"
 
-func EKSVersion(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func EKSVersion(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, c := range g.ByType(awscol.EKSClusterType) {
 		v, _ := c.Attributes["version"].(string)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckEKSVersion.ID,
 			Severity: CheckEKSVersion.Severity,
 			Resource: c.Ref(),
 			Tags:     CheckEKSVersion.Tags,
 		}
 		if compareMinor(v, eksMinVersion) >= 0 {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("eks cluster %q: version=%s (min %s)", c.Name, v, eksMinVersion)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("eks cluster %q: version=%s below minimum %s", c.Name, v, eksMinVersion)
 		}
 		findings = append(findings, f)
@@ -368,32 +368,32 @@ func EKSVersion(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error
 // ----- helpers + init -------------------------------------------
 
 func init() {
-	core.Register(CheckEKSPublicEndpoint, EKSPublicEndpoint)
-	core.Register(CheckEKSPrivateEndpoint, EKSPrivateEndpoint)
-	core.Register(CheckEKSSecretsKMS, EKSSecretsKMS)
-	core.Register(CheckEKSControlPlaneLogging, EKSControlPlaneLogging)
-	core.Register(CheckEKSIRSA, EKSIRSA)
-	core.Register(CheckEKSAuthMode, EKSAuthMode)
-	core.Register(CheckEKSStatus, EKSStatus)
+	compliancekit.Register(CheckEKSPublicEndpoint, EKSPublicEndpoint)
+	compliancekit.Register(CheckEKSPrivateEndpoint, EKSPrivateEndpoint)
+	compliancekit.Register(CheckEKSSecretsKMS, EKSSecretsKMS)
+	compliancekit.Register(CheckEKSControlPlaneLogging, EKSControlPlaneLogging)
+	compliancekit.Register(CheckEKSIRSA, EKSIRSA)
+	compliancekit.Register(CheckEKSAuthMode, EKSAuthMode)
+	compliancekit.Register(CheckEKSStatus, EKSStatus)
 	// v0.22 phase 4 — NodeGroup checks moved to eks_nodegroups.go.
-	core.Register(CheckEKSVersion, EKSVersion)
+	compliancekit.Register(CheckEKSVersion, EKSVersion)
 }
 
-func eksBoolCheck(g *core.ResourceGraph, check core.Check, attr, passMsg, failMsg string) []core.Finding {
-	findings := []core.Finding{}
+func eksBoolCheck(g *compliancekit.ResourceGraph, check compliancekit.Check, attr, passMsg, failMsg string) []compliancekit.Finding {
+	findings := []compliancekit.Finding{}
 	for _, c := range g.ByType(awscol.EKSClusterType) {
 		v, _ := c.Attributes[attr].(bool)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  check.ID,
 			Severity: check.Severity,
 			Resource: c.Ref(),
 			Tags:     check.Tags,
 		}
 		if v {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("eks cluster %q: %s", c.Name, passMsg)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("eks cluster %q: %s", c.Name, failMsg)
 		}
 		findings = append(findings, f)

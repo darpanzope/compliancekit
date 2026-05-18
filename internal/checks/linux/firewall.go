@@ -5,12 +5,12 @@ import (
 	"fmt"
 
 	linuxcol "github.com/darpanzope/compliancekit/internal/collectors/linux"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // firewallOf returns the firewall sub-map on a host Resource, or
 // (nil, false) when unavailable.
-func firewallOf(host core.Resource) (map[string]any, bool) {
+func firewallOf(host compliancekit.Resource) (map[string]any, bool) {
 	if !host.AttrBool("reachable") {
 		return nil, false
 	}
@@ -26,11 +26,11 @@ func firewallOf(host core.Resource) (map[string]any, bool) {
 }
 
 // firewallSkip is the shared StatusSkip builder for the firewall checks.
-func firewallSkip(check core.Check, host core.Resource) core.Finding {
-	return core.Finding{
+func firewallSkip(check compliancekit.Check, host compliancekit.Resource) compliancekit.Finding {
+	return compliancekit.Finding{
 		CheckID:  check.ID,
 		Severity: check.Severity,
-		Status:   core.StatusSkip,
+		Status:   compliancekit.StatusSkip,
 		Resource: host.Ref(),
 		Message:  "firewall state unavailable",
 		Tags:     check.Tags,
@@ -42,10 +42,10 @@ func firewallSkip(check core.Check, host core.Resource) core.Finding {
 // ============================================================
 
 // CheckFirewallActive requires ufw or nftables to be active.
-var CheckFirewallActive = core.Check{
+var CheckFirewallActive = compliancekit.Check{
 	ID:           "linux-firewall-active",
 	Title:        "A host firewall must be active",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "linux",
 	Service:      "firewall",
 	ResourceType: linuxcol.HostType,
@@ -67,9 +67,9 @@ var CheckFirewallActive = core.Check{
 }
 
 // FirewallActive is the CheckFunc for CheckFirewallActive.
-func FirewallActive(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func FirewallActive(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	hosts := g.ByType(linuxcol.HostType)
-	findings := make([]core.Finding, 0, len(hosts))
+	findings := make([]compliancekit.Finding, 0, len(hosts))
 	for _, h := range hosts {
 		fw, ok := firewallOf(h)
 		if !ok {
@@ -78,7 +78,7 @@ func FirewallActive(_ context.Context, g *core.ResourceGraph) ([]core.Finding, e
 		}
 		ufw, _ := fw["ufw_active"].(bool)
 		nft, _ := fw["nftables_active"].(bool)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckFirewallActive.ID,
 			Severity: CheckFirewallActive.Severity,
 			Resource: h.Ref(),
@@ -86,16 +86,16 @@ func FirewallActive(_ context.Context, g *core.ResourceGraph) ([]core.Finding, e
 		}
 		switch {
 		case ufw && nft:
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("host %q: ufw and nftables both active", h.Name)
 		case ufw:
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("host %q: ufw active", h.Name)
 		case nft:
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("host %q: nftables active", h.Name)
 		default:
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("host %q: neither ufw nor nftables is active", h.Name)
 		}
 		findings = append(findings, f)
@@ -110,10 +110,10 @@ func FirewallActive(_ context.Context, g *core.ResourceGraph) ([]core.Finding, e
 // CheckFirewallDefaultDeny requires ufw's default-incoming policy to
 // be "deny". This is a ufw-specific check; nftables-only hosts are
 // Skipped because the equivalent assertion requires parsing nft rules.
-var CheckFirewallDefaultDeny = core.Check{
+var CheckFirewallDefaultDeny = compliancekit.Check{
 	ID:           "linux-firewall-default-deny",
 	Title:        "Firewall default-incoming policy must be deny",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "linux",
 	Service:      "firewall",
 	ResourceType: linuxcol.HostType,
@@ -142,9 +142,9 @@ var CheckFirewallDefaultDeny = core.Check{
 //   - nftables active but no ufw -> Skip (we don't parse nft rules yet)
 //   - neither active -> Fail (covered better by FirewallActive, but
 //     this check also fires for completeness)
-func FirewallDefaultDeny(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func FirewallDefaultDeny(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	hosts := g.ByType(linuxcol.HostType)
-	findings := make([]core.Finding, 0, len(hosts))
+	findings := make([]compliancekit.Finding, 0, len(hosts))
 	for _, h := range hosts {
 		fw, ok := firewallOf(h)
 		if !ok {
@@ -153,7 +153,7 @@ func FirewallDefaultDeny(_ context.Context, g *core.ResourceGraph) ([]core.Findi
 		}
 		ufw, _ := fw["ufw_active"].(bool)
 		nft, _ := fw["nftables_active"].(bool)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckFirewallDefaultDeny.ID,
 			Severity: CheckFirewallDefaultDeny.Severity,
 			Resource: h.Ref(),
@@ -163,17 +163,17 @@ func FirewallDefaultDeny(_ context.Context, g *core.ResourceGraph) ([]core.Findi
 		case ufw:
 			policy, _ := fw["ufw_default_incoming"].(string)
 			if policy == "deny" {
-				f.Status = core.StatusPass
+				f.Status = compliancekit.StatusPass
 				f.Message = fmt.Sprintf("host %q: ufw default-incoming=deny", h.Name)
 			} else {
-				f.Status = core.StatusFail
+				f.Status = compliancekit.StatusFail
 				f.Message = fmt.Sprintf("host %q: ufw default-incoming=%q (want deny)", h.Name, policy)
 			}
 		case nft:
-			f.Status = core.StatusSkip
+			f.Status = compliancekit.StatusSkip
 			f.Message = fmt.Sprintf("host %q: nftables active; nft policy parsing lands later", h.Name)
 		default:
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("host %q: no active firewall to enforce a default policy", h.Name)
 		}
 		findings = append(findings, f)
@@ -182,6 +182,6 @@ func FirewallDefaultDeny(_ context.Context, g *core.ResourceGraph) ([]core.Findi
 }
 
 func init() {
-	core.Register(CheckFirewallActive, FirewallActive)
-	core.Register(CheckFirewallDefaultDeny, FirewallDefaultDeny)
+	compliancekit.Register(CheckFirewallActive, FirewallActive)
+	compliancekit.Register(CheckFirewallDefaultDeny, FirewallDefaultDeny)
 }

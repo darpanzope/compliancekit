@@ -1,7 +1,7 @@
 // Package score computes the 0-100 hardening score the v0.6 milestone
 // adds as the headline metric.
 //
-// Inputs: a slice of core.Finding.
+// Inputs: a slice of compliancekit.Finding.
 // Outputs: a deterministic, monotonic Result with the score, the
 // coverage fraction, and the per-status weighted counts.
 //
@@ -27,7 +27,7 @@
 package score
 
 import (
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // severityWeight maps a severity tier to its contribution to the score
@@ -35,12 +35,12 @@ import (
 // purpose: a single critical finding dominates several low ones,
 // matching how operators triage. Fixed at v0.6; configurability is
 // rejected by ADR-008 so cross-fleet comparisons stay meaningful.
-var severityWeight = map[core.Severity]int{
-	core.SeverityCritical: 50,
-	core.SeverityHigh:     20,
-	core.SeverityMedium:   8,
-	core.SeverityLow:      3,
-	core.SeverityInfo:     1,
+var severityWeight = map[compliancekit.Severity]int{
+	compliancekit.SeverityCritical: 50,
+	compliancekit.SeverityHigh:     20,
+	compliancekit.SeverityMedium:   8,
+	compliancekit.SeverityLow:      3,
+	compliancekit.SeverityInfo:     1,
 }
 
 // Result is the score package's contract. It carries the headline
@@ -88,21 +88,21 @@ type Result struct {
 // Compute returns the Result for the given findings. Safe to call
 // with a nil or empty slice -- returns Score=100, Coverage=100,
 // everything else zero (the "nothing to evaluate, no problems" state).
-func Compute(findings []core.Finding) Result {
+func Compute(findings []compliancekit.Finding) Result {
 	var r Result
 	for _, f := range findings {
 		w := severityWeight[f.Severity]
 		switch f.Status {
-		case core.StatusPass:
+		case compliancekit.StatusPass:
 			r.Passing += w
 			r.Total += w
-		case core.StatusFail:
+		case compliancekit.StatusFail:
 			r.Failing += w
 			r.Total += w
-		case core.StatusError:
+		case compliancekit.StatusError:
 			r.Errored += w
 			r.Total += w
-		case core.StatusSkip:
+		case compliancekit.StatusSkip:
 			r.Skipped += w
 		}
 	}

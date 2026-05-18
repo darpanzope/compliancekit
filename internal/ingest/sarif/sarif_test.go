@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/ingest"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 func mustOpen(t *testing.T, name string) *os.File {
@@ -68,7 +68,7 @@ func TestIngest_Trivy(t *testing.T) {
 	if first.CheckID != "ingest.trivy.AVD-AWS-0107" {
 		t.Errorf("CheckID = %q", first.CheckID)
 	}
-	if first.Severity != core.SeverityCritical {
+	if first.Severity != compliancekit.SeverityCritical {
 		t.Errorf("Severity = %v, want critical", first.Severity)
 	}
 	if first.Source == nil || first.Source.Tool != "trivy" || first.Source.Format != "sarif" {
@@ -83,7 +83,7 @@ func TestIngest_Trivy(t *testing.T) {
 	// CVE finding: v0.14+ gives it the default vuln-mgmt mapping
 	// (SOC 2 CC7.1, NIST SI-2, ISO A.8.8, PCI 6.3, CIS 7.1) and a
 	// populated Vulnerability block. No "unmapped" warning expected.
-	var cveFinding *core.Finding
+	var cveFinding *compliancekit.Finding
 	for i := range r.Findings {
 		if strings.Contains(r.Findings[i].CheckID, "CVE-") {
 			cveFinding = &r.Findings[i]
@@ -129,7 +129,7 @@ func TestIngest_Checkov(t *testing.T) {
 	}
 
 	// First finding: SG SSH world-open → critical via mapping override.
-	if r.Findings[0].Severity != core.SeverityCritical {
+	if r.Findings[0].Severity != compliancekit.SeverityCritical {
 		t.Errorf("CKV_AWS_24 Severity = %v, want critical", r.Findings[0].Severity)
 	}
 	// Resource name should come from fullyQualifiedName.
@@ -192,16 +192,16 @@ func TestCanonicalTool(t *testing.T) {
 func TestCVSSToSeverity(t *testing.T) {
 	cases := []struct {
 		v    any
-		want core.Severity
+		want compliancekit.Severity
 	}{
-		{"9.8", core.SeverityCritical},
-		{"7.5", core.SeverityHigh},
-		{"5.0", core.SeverityMedium},
-		{"2.0", core.SeverityLow},
-		{"0", core.SeverityInfo},
-		{8.1, core.SeverityHigh},
-		{"garbage", core.SeverityInfo},
-		{nil, core.SeverityInfo},
+		{"9.8", compliancekit.SeverityCritical},
+		{"7.5", compliancekit.SeverityHigh},
+		{"5.0", compliancekit.SeverityMedium},
+		{"2.0", compliancekit.SeverityLow},
+		{"0", compliancekit.SeverityInfo},
+		{8.1, compliancekit.SeverityHigh},
+		{"garbage", compliancekit.SeverityInfo},
+		{nil, compliancekit.SeverityInfo},
 	}
 	for _, c := range cases {
 		got := cvssToSeverity(c.v)

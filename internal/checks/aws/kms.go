@@ -5,15 +5,15 @@ import (
 	"fmt"
 
 	awscol "github.com/darpanzope/compliancekit/internal/collectors/aws"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // CheckKMSCMKRotation requires customer-managed symmetric CMKs to
 // have key rotation enabled. CIS AWS Foundations 3.8.
-var CheckKMSCMKRotation = core.Check{
+var CheckKMSCMKRotation = compliancekit.Check{
 	ID:           "aws-kms-cmk-rotation",
 	Title:        "Customer-managed symmetric KMS keys must have rotation enabled",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "aws",
 	Service:      "kms",
 	ResourceType: awscol.KMSKeyType,
@@ -36,10 +36,10 @@ var CheckKMSCMKRotation = core.Check{
 	Scanner: "kms.CMKRotation",
 }
 
-func KMSCMKRotation(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func KMSCMKRotation(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, k := range g.ByType(awscol.KMSKeyType) {
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckKMSCMKRotation.ID,
 			Severity: CheckKMSCMKRotation.Severity,
 			Resource: k.Ref(),
@@ -49,17 +49,17 @@ func KMSCMKRotation(_ context.Context, g *core.ResourceGraph) ([]core.Finding, e
 		// or pending-deletion); skip those.
 		rot, present := k.Attributes["rotation_enabled"]
 		if !present || rot == nil {
-			f.Status = core.StatusSkip
+			f.Status = compliancekit.StatusSkip
 			f.Message = fmt.Sprintf("key %q: rotation not applicable", k.Name)
 			findings = append(findings, f)
 			continue
 		}
 		enabled, _ := rot.(bool)
 		if enabled {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("key %q: rotation enabled", k.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("key %q: rotation NOT enabled", k.Name)
 		}
 		findings = append(findings, f)
@@ -71,10 +71,10 @@ func KMSCMKRotation(_ context.Context, g *core.ResourceGraph) ([]core.Finding, e
 // PendingDeletion state. Keys cannot be undeleted after the window
 // closes; this catches an in-flight catastrophic delete before it
 // is irreversible.
-var CheckKMSNoPendingDeletion = core.Check{
+var CheckKMSNoPendingDeletion = compliancekit.Check{
 	ID:           "aws-kms-no-pending-deletion",
 	Title:        "Customer-managed KMS keys must not be pending deletion",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "aws",
 	Service:      "kms",
 	ResourceType: awscol.KMSKeyType,
@@ -96,28 +96,28 @@ var CheckKMSNoPendingDeletion = core.Check{
 	Scanner: "kms.NoPendingDeletion",
 }
 
-func KMSNoPendingDeletion(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func KMSNoPendingDeletion(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, k := range g.ByType(awscol.KMSKeyType) {
 		state, _ := k.Attributes["key_state"].(string)
 		manager, _ := k.Attributes["key_manager"].(string)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckKMSNoPendingDeletion.ID,
 			Severity: CheckKMSNoPendingDeletion.Severity,
 			Resource: k.Ref(),
 			Tags:     CheckKMSNoPendingDeletion.Tags,
 		}
 		if manager != "CUSTOMER" {
-			f.Status = core.StatusSkip
+			f.Status = compliancekit.StatusSkip
 			f.Message = fmt.Sprintf("key %q: AWS-managed (skip)", k.Name)
 			findings = append(findings, f)
 			continue
 		}
 		if state == "PendingDeletion" {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("key %q: PENDING DELETION (cancel before window closes)", k.Name)
 		} else {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("key %q: state=%s", k.Name, state)
 		}
 		findings = append(findings, f)
@@ -126,6 +126,6 @@ func KMSNoPendingDeletion(_ context.Context, g *core.ResourceGraph) ([]core.Find
 }
 
 func init() {
-	core.Register(CheckKMSCMKRotation, KMSCMKRotation)
-	core.Register(CheckKMSNoPendingDeletion, KMSNoPendingDeletion)
+	compliancekit.Register(CheckKMSCMKRotation, KMSCMKRotation)
+	compliancekit.Register(CheckKMSNoPendingDeletion, KMSNoPendingDeletion)
 }

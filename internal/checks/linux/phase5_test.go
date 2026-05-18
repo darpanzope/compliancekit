@@ -5,14 +5,14 @@ import (
 	"testing"
 
 	linuxcol "github.com/darpanzope/compliancekit/internal/collectors/linux"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // ============================================================
 // filesystem checks
 // ============================================================
 
-func hostWithFS(name string, fs map[string]any) core.Resource {
+func hostWithFS(name string, fs map[string]any) compliancekit.Resource {
 	return hostWithAttrs(name, map[string]any{"filesystem": fs})
 }
 
@@ -33,15 +33,15 @@ func TestShadowPerms(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ShadowPerms: %v", err)
 	}
-	byHost := map[string]core.Status{}
+	byHost := map[string]compliancekit.Status{}
 	for _, f := range findings {
 		byHost[f.Resource.Name] = f.Status
 	}
-	want := map[string]core.Status{
-		"good":        core.StatusPass,
-		"loose-mode":  core.StatusFail,
-		"wrong-group": core.StatusFail,
-		"missing":     core.StatusSkip,
+	want := map[string]compliancekit.Status{
+		"good":        compliancekit.StatusPass,
+		"loose-mode":  compliancekit.StatusFail,
+		"wrong-group": compliancekit.StatusFail,
+		"missing":     compliancekit.StatusSkip,
 	}
 	for h, w := range want {
 		if byHost[h] != w {
@@ -69,20 +69,20 @@ func TestPasswdPerms(t *testing.T) {
 	if err != nil {
 		t.Fatalf("PasswdPerms: %v", err)
 	}
-	byHost := map[string]core.Status{}
+	byHost := map[string]compliancekit.Status{}
 	for _, f := range findings {
 		byHost[f.Resource.Name] = f.Status
 	}
-	if byHost["0644"] != core.StatusPass {
+	if byHost["0644"] != compliancekit.StatusPass {
 		t.Errorf("0644: %s, want pass", byHost["0644"])
 	}
-	if byHost["0640-stricter"] != core.StatusPass {
+	if byHost["0640-stricter"] != compliancekit.StatusPass {
 		t.Errorf("0640: %s, want pass (stricter than 0644)", byHost["0640-stricter"])
 	}
-	if byHost["group-writable"] != core.StatusFail {
+	if byHost["group-writable"] != compliancekit.StatusFail {
 		t.Errorf("group-writable: %s, want fail", byHost["group-writable"])
 	}
-	if byHost["wrong-owner"] != core.StatusFail {
+	if byHost["wrong-owner"] != compliancekit.StatusFail {
 		t.Errorf("wrong-owner: %s, want fail", byHost["wrong-owner"])
 	}
 }
@@ -91,7 +91,7 @@ func TestPasswdPerms(t *testing.T) {
 // user checks
 // ============================================================
 
-func hostWithUsers(name string, accounts []linuxcol.UserAccount, shadowReadable bool) core.Resource {
+func hostWithUsers(name string, accounts []linuxcol.UserAccount, shadowReadable bool) compliancekit.Resource {
 	return hostWithAttrs(name, map[string]any{
 		"users": map[string]any{
 			"accounts":        accounts,
@@ -115,14 +115,14 @@ func TestUIDZeroOnlyRoot(t *testing.T) {
 	if err != nil {
 		t.Fatalf("UIDZeroOnlyRoot: %v", err)
 	}
-	byHost := map[string]core.Status{}
+	byHost := map[string]compliancekit.Status{}
 	for _, f := range findings {
 		byHost[f.Resource.Name] = f.Status
 	}
-	if byHost["clean"] != core.StatusPass {
+	if byHost["clean"] != compliancekit.StatusPass {
 		t.Errorf("clean: %s, want pass", byHost["clean"])
 	}
-	if byHost["backdoor"] != core.StatusFail {
+	if byHost["backdoor"] != compliancekit.StatusFail {
 		t.Errorf("backdoor: %s, want fail", byHost["backdoor"])
 	}
 }
@@ -144,17 +144,17 @@ func TestNoEmptyPasswords(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NoEmptyPasswords: %v", err)
 	}
-	byHost := map[string]core.Status{}
+	byHost := map[string]compliancekit.Status{}
 	for _, f := range findings {
 		byHost[f.Resource.Name] = f.Status
 	}
-	if byHost["good"] != core.StatusPass {
+	if byHost["good"] != compliancekit.StatusPass {
 		t.Errorf("good: %s, want pass", byHost["good"])
 	}
-	if byHost["bad"] != core.StatusFail {
+	if byHost["bad"] != compliancekit.StatusFail {
 		t.Errorf("bad: %s, want fail", byHost["bad"])
 	}
-	if byHost["shadow-locked"] != core.StatusSkip {
+	if byHost["shadow-locked"] != compliancekit.StatusSkip {
 		t.Errorf("shadow-locked: %s, want skip (cannot confirm without shadow)", byHost["shadow-locked"])
 	}
 }
@@ -163,7 +163,7 @@ func TestNoEmptyPasswords(t *testing.T) {
 // kernel checks
 // ============================================================
 
-func hostWithKernel(name string, k map[string]any) core.Resource {
+func hostWithKernel(name string, k map[string]any) compliancekit.Resource {
 	return hostWithAttrs(name, map[string]any{"kernel": k})
 }
 
@@ -178,15 +178,15 @@ func TestASLREnabled(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ASLREnabled: %v", err)
 	}
-	byHost := map[string]core.Status{}
+	byHost := map[string]compliancekit.Status{}
 	for _, f := range findings {
 		byHost[f.Resource.Name] = f.Status
 	}
-	want := map[string]core.Status{
-		"good":    core.StatusPass,
-		"weak":    core.StatusFail,
-		"off":     core.StatusFail,
-		"missing": core.StatusSkip,
+	want := map[string]compliancekit.Status{
+		"good":    compliancekit.StatusPass,
+		"weak":    compliancekit.StatusFail,
+		"off":     compliancekit.StatusFail,
+		"missing": compliancekit.StatusSkip,
 	}
 	for h, w := range want {
 		if byHost[h] != w {
@@ -204,14 +204,14 @@ func TestNoSourceRouting(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NoSourceRouting: %v", err)
 	}
-	byHost := map[string]core.Status{}
+	byHost := map[string]compliancekit.Status{}
 	for _, f := range findings {
 		byHost[f.Resource.Name] = f.Status
 	}
-	if byHost["good"] != core.StatusPass {
+	if byHost["good"] != compliancekit.StatusPass {
 		t.Errorf("good: %s, want pass", byHost["good"])
 	}
-	if byHost["bad"] != core.StatusFail {
+	if byHost["bad"] != compliancekit.StatusFail {
 		t.Errorf("bad: %s, want fail", byHost["bad"])
 	}
 }
@@ -225,7 +225,7 @@ func TestPhase5Checks_RegisterIntoDefaultRegistry(t *testing.T) {
 		CheckASLREnabled.ID,
 		CheckNoSourceRouting.ID,
 	} {
-		if _, ok := core.Lookup(id); !ok {
+		if _, ok := compliancekit.Lookup(id); !ok {
 			t.Errorf("check %q not registered", id)
 		}
 	}

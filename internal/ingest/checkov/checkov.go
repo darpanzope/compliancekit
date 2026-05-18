@@ -22,8 +22,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/ingest"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 type adapter struct{}
@@ -52,14 +52,14 @@ func (adapter) Ingest(ctx context.Context, r io.Reader, opts ingest.Options) (in
 			return ingest.Result{}, err
 		}
 		for _, c := range rep.Results.FailedChecks {
-			f, phantom := buildFinding(c, rep.CheckType, core.StatusFail, opts)
+			f, phantom := buildFinding(c, rep.CheckType, compliancekit.StatusFail, opts)
 			out.Findings = append(out.Findings, f)
 			if phantom != nil {
 				out.Resources = append(out.Resources, *phantom)
 			}
 		}
 		for _, c := range rep.Results.SkippedChecks {
-			f, phantom := buildFinding(c, rep.CheckType, core.StatusSkip, opts)
+			f, phantom := buildFinding(c, rep.CheckType, compliancekit.StatusSkip, opts)
 			out.Findings = append(out.Findings, f)
 			if phantom != nil {
 				out.Resources = append(out.Resources, *phantom)
@@ -100,7 +100,7 @@ func firstNonWhitespace(body []byte) byte {
 	return 0
 }
 
-func buildFinding(c failedCheck, checkType string, status core.Status, opts ingest.Options) (core.Finding, *core.Resource) {
+func buildFinding(c failedCheck, checkType string, status compliancekit.Status, opts ingest.Options) (compliancekit.Finding, *compliancekit.Resource) {
 	severity := severityFromCheckov(c.Severity)
 	subject, phantom := resolveSubject(c, checkType, opts)
 
@@ -111,7 +111,7 @@ func buildFinding(c failedCheck, checkType string, status core.Status, opts inge
 
 	tags := []string{"misconfiguration", strings.ToLower(checkType)}
 
-	return core.Finding{
+	return compliancekit.Finding{
 		CheckID:   "ingest.checkov." + c.CheckID,
 		Status:    status,
 		Severity:  severity,
@@ -119,7 +119,7 @@ func buildFinding(c failedCheck, checkType string, status core.Status, opts inge
 		Message:   msg,
 		Tags:      tags,
 		Timestamp: opts.Provenance.IngestedAt,
-		Source: &core.Source{
+		Source: &compliancekit.Source{
 			Type:        "ingest",
 			Tool:        "checkov",
 			ToolVersion: opts.Provenance.ToolVersion,
@@ -129,14 +129,14 @@ func buildFinding(c failedCheck, checkType string, status core.Status, opts inge
 	}, phantom
 }
 
-func resolveSubject(c failedCheck, checkType string, opts ingest.Options) (core.ResourceRef, *core.Resource) {
+func resolveSubject(c failedCheck, checkType string, opts ingest.Options) (compliancekit.ResourceRef, *compliancekit.Resource) {
 	id := "ingest://checkov/" + c.FilePath
 	if c.Resource != "" {
 		id += "#" + c.Resource
 	}
 	if opts.Graph != nil {
 		if existing, ok := opts.Graph.ByID(id); ok {
-			return core.ResourceRef{
+			return compliancekit.ResourceRef{
 				ID: existing.ID, Type: existing.Type, Name: existing.Name, Provider: existing.Provider,
 			}, nil
 		}
@@ -152,7 +152,7 @@ func resolveSubject(c failedCheck, checkType string, opts ingest.Options) (core.
 		startLine = c.FileLineRange[0]
 		endLine = c.FileLineRange[1]
 	}
-	phantom := core.Resource{
+	phantom := compliancekit.Resource{
 		ID:       id,
 		Type:     kind,
 		Name:     name,
@@ -167,7 +167,7 @@ func resolveSubject(c failedCheck, checkType string, opts ingest.Options) (core.
 			"check_type":       checkType,
 		},
 	}
-	return core.ResourceRef{
+	return compliancekit.ResourceRef{
 		ID: phantom.ID, Type: phantom.Type, Name: phantom.Name, Provider: phantom.Provider,
 	}, &phantom
 }
@@ -176,20 +176,20 @@ func resolveSubject(c failedCheck, checkType string, opts ingest.Options) (core.
 // severities. Checkov uses CRITICAL/HIGH/MEDIUM/LOW/INFO (sometimes
 // blank, in which case we fall through to MEDIUM since these are
 // failed checks).
-func severityFromCheckov(s string) core.Severity {
+func severityFromCheckov(s string) compliancekit.Severity {
 	switch strings.ToUpper(strings.TrimSpace(s)) {
 	case "CRITICAL":
-		return core.SeverityCritical
+		return compliancekit.SeverityCritical
 	case "HIGH":
-		return core.SeverityHigh
+		return compliancekit.SeverityHigh
 	case "MEDIUM":
-		return core.SeverityMedium
+		return compliancekit.SeverityMedium
 	case "LOW":
-		return core.SeverityLow
+		return compliancekit.SeverityLow
 	case "INFO":
-		return core.SeverityInfo
+		return compliancekit.SeverityInfo
 	}
-	return core.SeverityMedium
+	return compliancekit.SeverityMedium
 }
 
 func init() {

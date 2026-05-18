@@ -5,13 +5,13 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
-func builtinFixtureGraph() *core.ResourceGraph {
-	g := core.NewResourceGraph()
+func builtinFixtureGraph() *compliancekit.ResourceGraph {
+	g := compliancekit.NewResourceGraph()
 	// Tagged "prod", not public.
-	g.Add(core.Resource{
+	g.Add(compliancekit.Resource{
 		ID:       "test.x.prod-only",
 		Type:     "test.x",
 		Name:     "prod-only",
@@ -23,7 +23,7 @@ func builtinFixtureGraph() *core.ResourceGraph {
 		},
 	})
 	// Public + has prod tag + AES256.
-	g.Add(core.Resource{
+	g.Add(compliancekit.Resource{
 		ID:       "test.x.both",
 		Type:     "test.x",
 		Name:     "both",
@@ -35,7 +35,7 @@ func builtinFixtureGraph() *core.ResourceGraph {
 		},
 	})
 	// Public, no prod tag, no encryption attr.
-	g.Add(core.Resource{
+	g.Add(compliancekit.Resource{
 		ID:       "test.x.public-only",
 		Type:     "test.x",
 		Name:     "public-only",
@@ -74,7 +74,7 @@ func TestBuiltins_ResolveAndEval(t *testing.T) {
 		t.Fatalf("findings = %d, want 4 (2 tag matches + 2 attr matches)\n%+v", len(findings), findings)
 	}
 
-	bySeverity := map[string][]core.Finding{}
+	bySeverity := map[string][]compliancekit.Finding{}
 	for _, f := range findings {
 		bySeverity[f.Severity.String()] = append(bySeverity[f.Severity.String()], f)
 	}
@@ -104,8 +104,8 @@ findings := [f |
 	if err != nil {
 		t.Fatalf("Compile: %v", err)
 	}
-	g := core.NewResourceGraph()
-	g.Add(core.Resource{ID: "no-tags", Type: "test", Provider: "test"}) // no Tags field
+	g := compliancekit.NewResourceGraph()
+	g.Add(compliancekit.Resource{ID: "no-tags", Type: "test", Provider: "test"}) // no Tags field
 	findings, err := m.Evaluate(context.Background(), g)
 	if err != nil {
 		t.Fatalf("Evaluate: %v", err)
@@ -130,8 +130,8 @@ findings := [f |
 	if err != nil {
 		t.Fatalf("Compile: %v", err)
 	}
-	g := core.NewResourceGraph()
-	g.Add(core.Resource{ID: "no-attrs", Type: "test", Provider: "test"})
+	g := compliancekit.NewResourceGraph()
+	g.Add(compliancekit.Resource{ID: "no-attrs", Type: "test", Provider: "test"})
 	findings, err := m.Evaluate(context.Background(), g)
 	if err != nil {
 		t.Fatalf("Evaluate: %v", err)
@@ -168,7 +168,7 @@ findings := [{"resource_id": "fixed", "status": "fail", "severity": sev}]
 			t.Errorf("score=%v Compile: %v", c.score, err)
 			continue
 		}
-		g := core.NewResourceGraph()
+		g := compliancekit.NewResourceGraph()
 		findings, err := m.Evaluate(context.Background(), g)
 		if err != nil {
 			t.Errorf("score=%v Evaluate: %v", c.score, err)

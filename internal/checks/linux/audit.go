@@ -5,12 +5,12 @@ import (
 	"fmt"
 
 	linuxcol "github.com/darpanzope/compliancekit/internal/collectors/linux"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // auditOf returns the audit sub-map on a host Resource, or (nil, false)
 // when unavailable.
-func auditOf(host core.Resource) (map[string]any, bool) {
+func auditOf(host compliancekit.Resource) (map[string]any, bool) {
 	if !host.AttrBool("reachable") {
 		return nil, false
 	}
@@ -25,11 +25,11 @@ func auditOf(host core.Resource) (map[string]any, bool) {
 	return a, true
 }
 
-func auditSkip(check core.Check, host core.Resource) core.Finding {
-	return core.Finding{
+func auditSkip(check compliancekit.Check, host compliancekit.Resource) compliancekit.Finding {
+	return compliancekit.Finding{
 		CheckID:  check.ID,
 		Severity: check.Severity,
-		Status:   core.StatusSkip,
+		Status:   compliancekit.StatusSkip,
 		Resource: host.Ref(),
 		Message:  "audit state unavailable",
 		Tags:     check.Tags,
@@ -41,10 +41,10 @@ func auditSkip(check core.Check, host core.Resource) core.Finding {
 // ============================================================
 
 // CheckAuditdRunning requires auditd to be active.
-var CheckAuditdRunning = core.Check{
+var CheckAuditdRunning = compliancekit.Check{
 	ID:           "linux-auditd-running",
 	Title:        "auditd must be running",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "linux",
 	Service:      "audit",
 	ResourceType: linuxcol.HostType,
@@ -65,9 +65,9 @@ var CheckAuditdRunning = core.Check{
 }
 
 // AuditdRunning is the CheckFunc for CheckAuditdRunning.
-func AuditdRunning(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func AuditdRunning(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	hosts := g.ByType(linuxcol.HostType)
-	findings := make([]core.Finding, 0, len(hosts))
+	findings := make([]compliancekit.Finding, 0, len(hosts))
 	for _, h := range hosts {
 		a, ok := auditOf(h)
 		if !ok {
@@ -75,17 +75,17 @@ func AuditdRunning(_ context.Context, g *core.ResourceGraph) ([]core.Finding, er
 			continue
 		}
 		active, _ := a["auditd_active"].(bool)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckAuditdRunning.ID,
 			Severity: CheckAuditdRunning.Severity,
 			Resource: h.Ref(),
 			Tags:     CheckAuditdRunning.Tags,
 		}
 		if active {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("host %q: auditd active", h.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("host %q: auditd not active", h.Name)
 		}
 		findings = append(findings, f)
@@ -99,10 +99,10 @@ func AuditdRunning(_ context.Context, g *core.ResourceGraph) ([]core.Finding, er
 
 // CheckJournaldPersistent requires journald Storage=persistent so logs
 // survive reboots and produce auditor-acceptable evidence.
-var CheckJournaldPersistent = core.Check{
+var CheckJournaldPersistent = compliancekit.Check{
 	ID:           "linux-journald-persistent",
 	Title:        "journald must use persistent storage",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "linux",
 	Service:      "audit",
 	ResourceType: linuxcol.HostType,
@@ -124,9 +124,9 @@ var CheckJournaldPersistent = core.Check{
 }
 
 // JournaldPersistent is the CheckFunc for CheckJournaldPersistent.
-func JournaldPersistent(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func JournaldPersistent(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	hosts := g.ByType(linuxcol.HostType)
-	findings := make([]core.Finding, 0, len(hosts))
+	findings := make([]compliancekit.Finding, 0, len(hosts))
 	for _, h := range hosts {
 		a, ok := auditOf(h)
 		if !ok {
@@ -134,17 +134,17 @@ func JournaldPersistent(_ context.Context, g *core.ResourceGraph) ([]core.Findin
 			continue
 		}
 		storage, _ := a["journald_storage"].(string)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckJournaldPersistent.ID,
 			Severity: CheckJournaldPersistent.Severity,
 			Resource: h.Ref(),
 			Tags:     CheckJournaldPersistent.Tags,
 		}
 		if storage == "persistent" {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("host %q: journald Storage=persistent", h.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("host %q: journald Storage=%q (want persistent)", h.Name, storage)
 		}
 		findings = append(findings, f)
@@ -153,6 +153,6 @@ func JournaldPersistent(_ context.Context, g *core.ResourceGraph) ([]core.Findin
 }
 
 func init() {
-	core.Register(CheckAuditdRunning, AuditdRunning)
-	core.Register(CheckJournaldPersistent, JournaldPersistent)
+	compliancekit.Register(CheckAuditdRunning, AuditdRunning)
+	compliancekit.Register(CheckJournaldPersistent, JournaldPersistent)
 }

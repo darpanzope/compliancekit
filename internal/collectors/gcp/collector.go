@@ -7,7 +7,7 @@ import (
 	"golang.org/x/oauth2/google"
 
 	"github.com/darpanzope/compliancekit/internal/collectors/cloudcommon"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 const providerName = "gcp"
@@ -69,19 +69,19 @@ func New(ctx context.Context, opts Options) (*Collector, error) {
 	}, nil
 }
 
-// Name implements core.Collector. Stable across versions.
+// Name implements compliancekit.Collector. Stable across versions.
 func (c *Collector) Name() string { return providerName }
 
 // Projects returns the resolved project list. Public so the doctor
 // command + tests can read it.
 func (c *Collector) Projects() []string { return c.projects }
 
-// Collect implements core.Collector. Emits per-project anchors
+// Collect implements compliancekit.Collector. Emits per-project anchors
 // plus everything the per-service collectors produce. Per-project
 // errors surface as collect-error placeholders inside each service
 // helper rather than aborting the entire scan.
-func (c *Collector) Collect(ctx context.Context) ([]core.Resource, error) {
-	out := []core.Resource{}
+func (c *Collector) Collect(ctx context.Context) ([]compliancekit.Resource, error) {
+	out := []compliancekit.Resource{}
 	for _, projectID := range c.projects {
 		out = append(out, c.projectResource(projectID))
 	}
@@ -103,8 +103,8 @@ func (c *Collector) Collect(ctx context.Context) ([]core.Resource, error) {
 // projectResource builds the synthetic per-project anchor. Carries
 // the project ID stamped via cloudcommon (which sets account_id =
 // projectID; for GCP the project IS the billing/scope identity).
-func (c *Collector) projectResource(projectID string) core.Resource {
-	r := core.Resource{
+func (c *Collector) projectResource(projectID string) compliancekit.Resource {
+	r := compliancekit.Resource{
 		ID:       fmt.Sprintf("gcp.project.%s", projectID),
 		Type:     ProjectType,
 		Name:     projectID,

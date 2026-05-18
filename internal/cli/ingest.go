@@ -13,8 +13,8 @@ import (
 	"github.com/spf13/cobra"
 	"go.yaml.in/yaml/v3"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/ingest"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 
 	// Side-effect imports register each format adapter with
 	// ingest.Default. Adding a new format here is all it takes to
@@ -122,7 +122,7 @@ func runIngest(ctx context.Context, w io.Writer, opts ingestOptions) error {
 	}
 	defer closeFn()
 
-	defaultSev, err := core.ParseSeverity(opts.defaultSeverity)
+	defaultSev, err := compliancekit.ParseSeverity(opts.defaultSeverity)
 	if err != nil {
 		return fmt.Errorf("--default-severity: %w", err)
 	}
@@ -193,12 +193,12 @@ func loadMappingTable(path string) (*ingest.MappingTable, error) {
 // and diff tooling consume ingested + native findings uniformly.
 func writeIngestResult(w io.Writer, outPath string, r ingest.Result) error {
 	envelope := struct {
-		Schema    string         `json:"schema"`
-		Source    string         `json:"source"`
-		Timestamp time.Time      `json:"timestamp"`
-		Summary   ingestSummary  `json:"summary"`
-		Findings  []core.Finding `json:"findings"`
-		Warnings  []string       `json:"warnings,omitempty"`
+		Schema    string                  `json:"schema"`
+		Source    string                  `json:"source"`
+		Timestamp time.Time               `json:"timestamp"`
+		Summary   ingestSummary           `json:"summary"`
+		Findings  []compliancekit.Finding `json:"findings"`
+		Warnings  []string                `json:"warnings,omitempty"`
 	}{
 		Schema:    "compliancekit.ingest.v1",
 		Source:    "compliancekit ingest",

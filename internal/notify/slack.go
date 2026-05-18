@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // SlackConfig configures the Slack sink. Two delivery paths, both
@@ -34,7 +34,7 @@ type SlackConfig struct {
 	// SeverityFloor is the per-sink threshold. Notifications below
 	// this severity are dropped. Defaults to SeverityInfo (everything
 	// actionable passes) when zero-value.
-	SeverityFloor core.Severity
+	SeverityFloor compliancekit.Severity
 
 	// HTTPClient overrides the package HTTPClient. Tests set this.
 	HTTPClient *http.Client
@@ -63,7 +63,7 @@ func (s *Slack) Configured() bool {
 }
 
 // Threshold returns the per-sink severity floor.
-func (s *Slack) Threshold() core.Severity { return s.cfg.SeverityFloor }
+func (s *Slack) Threshold() compliancekit.Severity { return s.cfg.SeverityFloor }
 
 // Send dispatches the notifications. Per-notification failures
 // accumulate in Result.Errors + Result.Messages; the call returns
@@ -211,15 +211,15 @@ func (s *Slack) checkSlackResponse(body []byte) error {
 
 // severityEmoji maps severity to a one-glyph indicator. Slack
 // renders emoji via shortcodes; we keep the lookup small + universal.
-func severityEmoji(s core.Severity) string {
+func severityEmoji(s compliancekit.Severity) string {
 	switch s {
-	case core.SeverityCritical:
+	case compliancekit.SeverityCritical:
 		return ":rotating_light:"
-	case core.SeverityHigh:
+	case compliancekit.SeverityHigh:
 		return ":warning:"
-	case core.SeverityMedium:
+	case compliancekit.SeverityMedium:
 		return ":small_orange_diamond:"
-	case core.SeverityLow:
+	case compliancekit.SeverityLow:
 		return ":information_source:"
 	}
 	return ":speech_balloon:"
@@ -235,7 +235,7 @@ func init() {
 		Channel:    os.Getenv("SLACK_CHANNEL"),
 	}
 	if t := os.Getenv("SLACK_THRESHOLD"); t != "" {
-		if sev, err := core.ParseSeverity(t); err == nil {
+		if sev, err := compliancekit.ParseSeverity(t); err == nil {
 			cfg.SeverityFloor = sev
 		}
 	}

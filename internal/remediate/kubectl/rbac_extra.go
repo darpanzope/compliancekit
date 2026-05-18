@@ -3,8 +3,8 @@ package kubectl
 import (
 	"fmt"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.21 phase 3 — kubectl strategies for the 10 RBAC-depth checks.
@@ -36,7 +36,7 @@ func init() {
 	for id, s := range rbacExtraStrategies {
 		id := id
 		s := s
-		register("kubectl-"+id, []string{id}, func(_ core.Finding) (remediate.Snippet, error) {
+		register("kubectl-"+id, []string{id}, func(_ compliancekit.Finding) (remediate.Snippet, error) {
 			ag := s.apiGroup
 			if ag == "" {
 				ag = `""   # core API group`

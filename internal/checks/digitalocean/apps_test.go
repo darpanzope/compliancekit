@@ -5,11 +5,11 @@ import (
 	"testing"
 
 	docol "github.com/darpanzope/compliancekit/internal/collectors/digitalocean"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
-func mkApp(name string, attrs map[string]any) core.Resource {
-	return core.Resource{
+func mkApp(name string, attrs map[string]any) compliancekit.Resource {
+	return compliancekit.Resource{
 		ID:         "digitalocean.app." + name,
 		Type:       docol.AppType,
 		Name:       name,
@@ -25,9 +25,9 @@ func TestAppNoPlainEnvs(t *testing.T) {
 	)
 	findings, _ := AppNoPlainEnvs(context.Background(), g)
 	for _, f := range findings {
-		want := core.StatusPass
+		want := compliancekit.StatusPass
 		if f.Resource.Name == "messy" {
-			want = core.StatusFail
+			want = compliancekit.StatusFail
 		}
 		if f.Status != want {
 			t.Errorf("%s: got %v", f.Resource.Name, f.Status)
@@ -42,9 +42,9 @@ func TestAppCustomDomain(t *testing.T) {
 	)
 	findings, _ := AppCustomDomain(context.Background(), g)
 	for _, f := range findings {
-		want := core.StatusPass
+		want := compliancekit.StatusPass
 		if f.Resource.Name == "without" {
-			want = core.StatusFail
+			want = compliancekit.StatusFail
 		}
 		if f.Status != want {
 			t.Errorf("%s: got %v", f.Resource.Name, f.Status)
@@ -63,9 +63,9 @@ func TestAppDomainTLSVersion(t *testing.T) {
 	)
 	findings, _ := AppDomainTLSVersion(context.Background(), g)
 	for _, f := range findings {
-		want := core.StatusPass
+		want := compliancekit.StatusPass
 		if f.Resource.Name == "weak" {
-			want = core.StatusFail
+			want = compliancekit.StatusFail
 		}
 		if f.Status != want {
 			t.Errorf("%s: got %v", f.Resource.Name, f.Status)
@@ -80,9 +80,9 @@ func TestAppHasAlerts(t *testing.T) {
 	)
 	findings, _ := AppHasAlerts(context.Background(), g)
 	for _, f := range findings {
-		want := core.StatusPass
+		want := compliancekit.StatusPass
 		if f.Resource.Name == "no-alerts" {
-			want = core.StatusFail
+			want = compliancekit.StatusFail
 		}
 		if f.Status != want {
 			t.Errorf("%s: got %v", f.Resource.Name, f.Status)
@@ -97,9 +97,9 @@ func TestAppInVPC(t *testing.T) {
 	)
 	findings, _ := AppInVPC(context.Background(), g)
 	for _, f := range findings {
-		want := core.StatusPass
+		want := compliancekit.StatusPass
 		if f.Resource.Name == "no-vpc" {
-			want = core.StatusFail
+			want = compliancekit.StatusFail
 		}
 		if f.Status != want {
 			t.Errorf("%s: got %v", f.Resource.Name, f.Status)

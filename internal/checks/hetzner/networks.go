@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	hetznercol "github.com/darpanzope/compliancekit/internal/collectors/hetzner"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // rfc1918Prefixes are the IPv4 private-range prefixes per
@@ -17,10 +17,10 @@ var rfc1918Prefixes = []string{"10.", "172.16.", "172.17.", "172.18.", "172.19."
 
 // CheckNetworkOrphan flags private networks with zero attached
 // servers and zero attached load balancers. They're dead weight.
-var CheckNetworkOrphan = core.Check{
+var CheckNetworkOrphan = compliancekit.Check{
 	ID:           "hetzner-network-orphan",
 	Title:        "Hetzner private networks should have at least one member",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "hetzner",
 	Service:      "networks",
 	ResourceType: hetznercol.NetworkType,
@@ -41,21 +41,21 @@ var CheckNetworkOrphan = core.Check{
 	Scanner: "networks.Orphan",
 }
 
-func NetworkOrphan(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func NetworkOrphan(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, n := range g.ByType(hetznercol.NetworkType) {
 		count, _ := n.Attributes["member_count"].(int)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckNetworkOrphan.ID,
 			Severity: CheckNetworkOrphan.Severity,
 			Resource: n.Ref(),
 			Tags:     CheckNetworkOrphan.Tags,
 		}
 		if count > 0 {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("network %q: %d member(s)", n.Name, count)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("network %q: no servers or LBs attached", n.Name)
 		}
 		findings = append(findings, f)
@@ -67,10 +67,10 @@ func NetworkOrphan(_ context.Context, g *core.ResourceGraph) ([]core.Finding, er
 // an RFC1918 private range. A network using a public IPv4 range
 // for its internal traffic surfaces "private" data over IPs that
 // can route on the broader internet — almost never intentional.
-var CheckNetworkRFC1918 = core.Check{
+var CheckNetworkRFC1918 = compliancekit.Check{
 	ID:           "hetzner-network-non-rfc1918",
 	Title:        "Hetzner private networks should use RFC1918 address space",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "hetzner",
 	Service:      "networks",
 	ResourceType: hetznercol.NetworkType,
@@ -94,11 +94,11 @@ var CheckNetworkRFC1918 = core.Check{
 	Scanner: "networks.RFC1918",
 }
 
-func NetworkRFC1918(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func NetworkRFC1918(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, n := range g.ByType(hetznercol.NetworkType) {
 		cidr, _ := n.Attributes["ip_range"].(string)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckNetworkRFC1918.ID,
 			Severity: CheckNetworkRFC1918.Severity,
 			Resource: n.Ref(),
@@ -106,13 +106,13 @@ func NetworkRFC1918(_ context.Context, g *core.ResourceGraph) ([]core.Finding, e
 		}
 		switch {
 		case cidr == "":
-			f.Status = core.StatusSkip
+			f.Status = compliancekit.StatusSkip
 			f.Message = fmt.Sprintf("network %q: no IP range available", n.Name)
 		case isRFC1918(cidr):
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("network %q: %s (RFC1918)", n.Name, cidr)
 		default:
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("network %q: %s is outside RFC1918 private space", n.Name, cidr)
 		}
 		findings = append(findings, f)
@@ -133,6 +133,6 @@ func isRFC1918(cidr string) bool {
 }
 
 func init() {
-	core.Register(CheckNetworkOrphan, NetworkOrphan)
-	core.Register(CheckNetworkRFC1918, NetworkRFC1918)
+	compliancekit.Register(CheckNetworkOrphan, NetworkOrphan)
+	compliancekit.Register(CheckNetworkRFC1918, NetworkRFC1918)
 }

@@ -3,8 +3,8 @@ package doctl
 import (
 	"fmt"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.19 phase 1 — doctl strategies for the 10 account-governance
@@ -39,7 +39,7 @@ func init() {
 		[]string{"do-account-owner-delegation-policy"}, renderDoctlAccountOwnerDelegation)
 }
 
-func renderDoctlAccountStatusMessage(_ core.Finding) (remediate.Snippet, error) {
+func renderDoctlAccountStatusMessage(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return remediate.Snippet{
 		Risk: remediate.RiskManual, Idempotent: false,
 		Content: "# Inspect the account flag set by DigitalOcean:\n" +
@@ -52,7 +52,7 @@ func renderDoctlAccountStatusMessage(_ core.Finding) (remediate.Snippet, error) 
 	}, nil
 }
 
-func renderDoctlAccountDropletQuota(_ core.Finding) (remediate.Snippet, error) {
+func renderDoctlAccountDropletQuota(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return remediate.Snippet{
 		Risk: remediate.RiskReview, Idempotent: false,
 		Content: "# 1. Show current limit + usage:\n" +
@@ -67,7 +67,7 @@ func renderDoctlAccountDropletQuota(_ core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderDoctlAccountVolumeQuota(_ core.Finding) (remediate.Snippet, error) {
+func renderDoctlAccountVolumeQuota(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return remediate.Snippet{
 		Risk: remediate.RiskReview, Idempotent: false,
 		Content: "# 1. Show current limit + usage:\n" +
@@ -82,7 +82,7 @@ func renderDoctlAccountVolumeQuota(_ core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderDoctlAccountReservedIPQuota(_ core.Finding) (remediate.Snippet, error) {
+func renderDoctlAccountReservedIPQuota(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return remediate.Snippet{
 		Risk: remediate.RiskReview, Idempotent: false,
 		Content: "# 1. Show current limit + usage:\n" +
@@ -97,7 +97,7 @@ func renderDoctlAccountReservedIPQuota(_ core.Finding) (remediate.Snippet, error
 	}, nil
 }
 
-func renderDoctlAccountAlertCoverage(_ core.Finding) (remediate.Snippet, error) {
+func renderDoctlAccountAlertCoverage(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return remediate.Snippet{
 		Risk: remediate.RiskSafe, Idempotent: true,
 		Content: `# Add the four basics. Replace ops@example.com with your real list.
@@ -134,35 +134,35 @@ doctl monitoring alert create \
 	}, nil
 }
 
-func renderDoctlAccountMFA(_ core.Finding) (remediate.Snippet, error) {
+func renderDoctlAccountMFA(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return renderDoctlManualOnly(
 		"MFA enforcement",
 		"https://cloud.digitalocean.com/account/security",
 		"Settings → Security → 'Require two-factor authentication'")
 }
 
-func renderDoctlAccountTokenRotation(_ core.Finding) (remediate.Snippet, error) {
+func renderDoctlAccountTokenRotation(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return renderDoctlManualOnly(
 		"API token rotation",
 		"https://cloud.digitalocean.com/account/api/tokens",
 		"API → Tokens → revoke > 90-day-old tokens, reissue, rotate consumers")
 }
 
-func renderDoctlAccountAuditLog(_ core.Finding) (remediate.Snippet, error) {
+func renderDoctlAccountAuditLog(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return renderDoctlManualOnly(
 		"audit-log retention",
 		"https://cloud.digitalocean.com/account/audit-logs",
 		"Settings → Audit Logs → enable export to extend retention to ≥90d")
 }
 
-func renderDoctlAccountBillingAlerts(_ core.Finding) (remediate.Snippet, error) {
+func renderDoctlAccountBillingAlerts(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return renderDoctlManualOnly(
 		"billing alert thresholds",
 		"https://cloud.digitalocean.com/account/billing",
 		"Settings → Billing → Alerts → set 80% + 100% monthly thresholds")
 }
 
-func renderDoctlAccountOwnerDelegation(_ core.Finding) (remediate.Snippet, error) {
+func renderDoctlAccountOwnerDelegation(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return renderDoctlManualOnly(
 		"owner-delegation policy",
 		"https://cloud.digitalocean.com/account/team",

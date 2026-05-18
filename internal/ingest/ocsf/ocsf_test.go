@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/ingest"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 func mustOpen(t *testing.T, name string) *os.File {
@@ -46,7 +46,7 @@ func TestIngest_SecurityHubArray(t *testing.T) {
 	if f.CheckID != "ingest.aws-security-hub.S3.5" {
 		t.Errorf("CheckID = %q", f.CheckID)
 	}
-	if f.Severity != core.SeverityHigh {
+	if f.Severity != compliancekit.SeverityHigh {
 		t.Errorf("Severity = %v, want high", f.Severity)
 	}
 	if f.Source == nil || f.Source.Tool != "aws-security-hub" {
@@ -60,7 +60,7 @@ func TestIngest_SecurityHubArray(t *testing.T) {
 	}
 
 	// Second finding: EC2.19 → critical
-	if r.Findings[1].Severity != core.SeverityCritical {
+	if r.Findings[1].Severity != compliancekit.SeverityCritical {
 		t.Errorf("EC2.19 Severity = %v, want critical", r.Findings[1].Severity)
 	}
 }
@@ -77,7 +77,7 @@ func TestIngest_SCCJSONL(t *testing.T) {
 	if r.Findings[0].CheckID != "ingest.gcp-scc.PUBLIC_BUCKET_ACL" {
 		t.Errorf("CheckID = %q", r.Findings[0].CheckID)
 	}
-	if r.Findings[0].Severity != core.SeverityCritical {
+	if r.Findings[0].Severity != compliancekit.SeverityCritical {
 		t.Errorf("Severity = %v", r.Findings[0].Severity)
 	}
 }
@@ -94,7 +94,7 @@ func TestIngest_DefenderSingleObject(t *testing.T) {
 	if !strings.Contains(r.Findings[0].CheckID, "NSG_RULE_ALLOW_ALL_INBOUND") {
 		t.Errorf("CheckID = %q", r.Findings[0].CheckID)
 	}
-	if r.Findings[0].Severity != core.SeverityCritical {
+	if r.Findings[0].Severity != compliancekit.SeverityCritical {
 		t.Errorf("Severity = %v", r.Findings[0].Severity)
 	}
 }
@@ -126,14 +126,14 @@ func TestCanonicalProduct(t *testing.T) {
 func TestResolveStatus(t *testing.T) {
 	cases := []struct {
 		ev   event
-		want core.Status
+		want compliancekit.Status
 	}{
-		{event{StatusID: 4}, core.StatusPass},
-		{event{StatusID: 3}, core.StatusSkip},
-		{event{StatusID: 1}, core.StatusFail},
-		{event{Compliance: &complianceObj{StatusID: 1}}, core.StatusPass},
-		{event{Compliance: &complianceObj{StatusID: 2}}, core.StatusFail},
-		{event{Compliance: &complianceObj{StatusID: 3}}, core.StatusSkip},
+		{event{StatusID: 4}, compliancekit.StatusPass},
+		{event{StatusID: 3}, compliancekit.StatusSkip},
+		{event{StatusID: 1}, compliancekit.StatusFail},
+		{event{Compliance: &complianceObj{StatusID: 1}}, compliancekit.StatusPass},
+		{event{Compliance: &complianceObj{StatusID: 2}}, compliancekit.StatusFail},
+		{event{Compliance: &complianceObj{StatusID: 3}}, compliancekit.StatusSkip},
 	}
 	for _, c := range cases {
 		got := resolveStatus(c.ev)

@@ -6,17 +6,17 @@ import (
 	"time"
 
 	docol "github.com/darpanzope/compliancekit/internal/collectors/digitalocean"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 const spacesKeyMaxAgeDays = 365
 
 // --- Spaces bucket checks ---
 
-var CheckSpacesNotPublic = core.Check{
+var CheckSpacesNotPublic = compliancekit.Check{
 	ID:           "do-spaces-bucket-public-acl",
 	Title:        "Spaces buckets must not grant public ACLs",
-	Severity:     core.SeverityCritical,
+	Severity:     compliancekit.SeverityCritical,
 	Provider:     "digitalocean",
 	Service:      "spaces",
 	ResourceType: docol.SpacesBucketType,
@@ -38,21 +38,21 @@ var CheckSpacesNotPublic = core.Check{
 	Scanner: "spaces.NotPublic",
 }
 
-func SpacesNotPublic(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func SpacesNotPublic(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, b := range g.ByType(docol.SpacesBucketType) {
 		pub, _ := b.Attributes["acl_has_public_grant"].(bool)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckSpacesNotPublic.ID,
 			Severity: CheckSpacesNotPublic.Severity,
 			Resource: b.Ref(),
 			Tags:     CheckSpacesNotPublic.Tags,
 		}
 		if pub {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("bucket %q: public ACL grant present", b.Name)
 		} else {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("bucket %q: no public ACL", b.Name)
 		}
 		findings = append(findings, f)
@@ -60,10 +60,10 @@ func SpacesNotPublic(_ context.Context, g *core.ResourceGraph) ([]core.Finding, 
 	return findings, nil
 }
 
-var CheckSpacesVersioning = core.Check{
+var CheckSpacesVersioning = compliancekit.Check{
 	ID:           "do-spaces-bucket-no-versioning",
 	Title:        "Spaces buckets should have versioning enabled",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "digitalocean",
 	Service:      "spaces",
 	ResourceType: docol.SpacesBucketType,
@@ -86,21 +86,21 @@ var CheckSpacesVersioning = core.Check{
 	Scanner: "spaces.Versioning",
 }
 
-func SpacesVersioning(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func SpacesVersioning(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, b := range g.ByType(docol.SpacesBucketType) {
 		on, _ := b.Attributes["versioning_enabled"].(bool)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckSpacesVersioning.ID,
 			Severity: CheckSpacesVersioning.Severity,
 			Resource: b.Ref(),
 			Tags:     CheckSpacesVersioning.Tags,
 		}
 		if on {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("bucket %q: versioning enabled", b.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("bucket %q: versioning disabled", b.Name)
 		}
 		findings = append(findings, f)
@@ -108,10 +108,10 @@ func SpacesVersioning(_ context.Context, g *core.ResourceGraph) ([]core.Finding,
 	return findings, nil
 }
 
-var CheckSpacesEncryption = core.Check{
+var CheckSpacesEncryption = compliancekit.Check{
 	ID:           "do-spaces-bucket-no-encryption",
 	Title:        "Spaces buckets should have default encryption configured",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "digitalocean",
 	Service:      "spaces",
 	ResourceType: docol.SpacesBucketType,
@@ -135,21 +135,21 @@ var CheckSpacesEncryption = core.Check{
 	Scanner: "spaces.Encryption",
 }
 
-func SpacesEncryption(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func SpacesEncryption(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, b := range g.ByType(docol.SpacesBucketType) {
 		on, _ := b.Attributes["encryption_configured"].(bool)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckSpacesEncryption.ID,
 			Severity: CheckSpacesEncryption.Severity,
 			Resource: b.Ref(),
 			Tags:     CheckSpacesEncryption.Tags,
 		}
 		if on {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("bucket %q: default encryption configured", b.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("bucket %q: no default encryption header", b.Name)
 		}
 		findings = append(findings, f)
@@ -157,10 +157,10 @@ func SpacesEncryption(_ context.Context, g *core.ResourceGraph) ([]core.Finding,
 	return findings, nil
 }
 
-var CheckSpacesLifecycle = core.Check{
+var CheckSpacesLifecycle = compliancekit.Check{
 	ID:           "do-spaces-bucket-no-lifecycle",
 	Title:        "Spaces buckets should have lifecycle rules configured",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "digitalocean",
 	Service:      "spaces",
 	ResourceType: docol.SpacesBucketType,
@@ -182,21 +182,21 @@ var CheckSpacesLifecycle = core.Check{
 	Scanner: "spaces.Lifecycle",
 }
 
-func SpacesLifecycle(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func SpacesLifecycle(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, b := range g.ByType(docol.SpacesBucketType) {
 		on, _ := b.Attributes["lifecycle_configured"].(bool)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckSpacesLifecycle.ID,
 			Severity: CheckSpacesLifecycle.Severity,
 			Resource: b.Ref(),
 			Tags:     CheckSpacesLifecycle.Tags,
 		}
 		if on {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("bucket %q: lifecycle configured", b.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("bucket %q: no lifecycle rules", b.Name)
 		}
 		findings = append(findings, f)
@@ -204,10 +204,10 @@ func SpacesLifecycle(_ context.Context, g *core.ResourceGraph) ([]core.Finding, 
 	return findings, nil
 }
 
-var CheckSpacesCORSWildcard = core.Check{
+var CheckSpacesCORSWildcard = compliancekit.Check{
 	ID:           "do-spaces-bucket-cors-wildcard",
 	Title:        "Spaces buckets must not use wildcard CORS origins",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "digitalocean",
 	Service:      "spaces",
 	ResourceType: docol.SpacesBucketType,
@@ -230,21 +230,21 @@ var CheckSpacesCORSWildcard = core.Check{
 	Scanner: "spaces.CORSWildcard",
 }
 
-func SpacesCORSWildcard(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func SpacesCORSWildcard(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, b := range g.ByType(docol.SpacesBucketType) {
 		wildcard, _ := b.Attributes["cors_wildcard_origin"].(bool)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckSpacesCORSWildcard.ID,
 			Severity: CheckSpacesCORSWildcard.Severity,
 			Resource: b.Ref(),
 			Tags:     CheckSpacesCORSWildcard.Tags,
 		}
 		if wildcard {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("bucket %q: CORS allows '*' origin", b.Name)
 		} else {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("bucket %q: no wildcard CORS", b.Name)
 		}
 		findings = append(findings, f)
@@ -252,10 +252,10 @@ func SpacesCORSWildcard(_ context.Context, g *core.ResourceGraph) ([]core.Findin
 	return findings, nil
 }
 
-var CheckSpacesLogging = core.Check{
+var CheckSpacesLogging = compliancekit.Check{
 	ID:           "do-spaces-bucket-no-logging",
 	Title:        "Spaces buckets should have access logging configured",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "digitalocean",
 	Service:      "spaces",
 	ResourceType: docol.SpacesBucketType,
@@ -276,21 +276,21 @@ var CheckSpacesLogging = core.Check{
 	Scanner: "spaces.Logging",
 }
 
-func SpacesLogging(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func SpacesLogging(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, b := range g.ByType(docol.SpacesBucketType) {
 		on, _ := b.Attributes["logging_enabled"].(bool)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckSpacesLogging.ID,
 			Severity: CheckSpacesLogging.Severity,
 			Resource: b.Ref(),
 			Tags:     CheckSpacesLogging.Tags,
 		}
 		if on {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("bucket %q: access logging enabled", b.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("bucket %q: access logging disabled", b.Name)
 		}
 		findings = append(findings, f)
@@ -300,10 +300,10 @@ func SpacesLogging(_ context.Context, g *core.ResourceGraph) ([]core.Finding, er
 
 // --- Spaces key checks ---
 
-var CheckSpacesKeyNotFullAccess = core.Check{
+var CheckSpacesKeyNotFullAccess = compliancekit.Check{
 	ID:           "do-spaces-key-fullaccess",
 	Title:        "Spaces keys should be scoped, not fullaccess",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "digitalocean",
 	Service:      "spaces",
 	ResourceType: docol.SpacesKeyType,
@@ -324,22 +324,22 @@ var CheckSpacesKeyNotFullAccess = core.Check{
 	Scanner: "spaces.KeyNotFullAccess",
 }
 
-func SpacesKeyNotFullAccess(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func SpacesKeyNotFullAccess(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, k := range g.ByType(docol.SpacesKeyType) {
 		full, _ := k.Attributes["is_full_access"].(bool)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckSpacesKeyNotFullAccess.ID,
 			Severity: CheckSpacesKeyNotFullAccess.Severity,
 			Resource: k.Ref(),
 			Tags:     CheckSpacesKeyNotFullAccess.Tags,
 		}
 		if full {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("spaces key %q: full-access or unscoped", k.Name)
 		} else {
 			grants, _ := k.Attributes["grant_count"].(int)
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("spaces key %q: scoped (%d grant(s))", k.Name, grants)
 		}
 		findings = append(findings, f)
@@ -347,10 +347,10 @@ func SpacesKeyNotFullAccess(_ context.Context, g *core.ResourceGraph) ([]core.Fi
 	return findings, nil
 }
 
-var CheckSpacesKeyAge = core.Check{
+var CheckSpacesKeyAge = compliancekit.Check{
 	ID:           "do-spaces-key-too-old",
 	Title:        "Spaces keys should be rotated at least once a year",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "digitalocean",
 	Service:      "spaces",
 	ResourceType: docol.SpacesKeyType,
@@ -371,13 +371,13 @@ var CheckSpacesKeyAge = core.Check{
 	Scanner: "spaces.KeyAge",
 }
 
-func SpacesKeyAge(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func SpacesKeyAge(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	now := time.Now().UTC()
 	threshold := now.Add(-spacesKeyMaxAgeDays * 24 * time.Hour)
 	for _, k := range g.ByType(docol.SpacesKeyType) {
 		created, _ := k.Attributes["created_at"].(string)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckSpacesKeyAge.ID,
 			Severity: CheckSpacesKeyAge.Severity,
 			Resource: k.Ref(),
@@ -386,14 +386,14 @@ func SpacesKeyAge(_ context.Context, g *core.ResourceGraph) ([]core.Finding, err
 		t, err := time.Parse(time.RFC3339, created)
 		switch {
 		case err != nil:
-			f.Status = core.StatusSkip
+			f.Status = compliancekit.StatusSkip
 			f.Message = fmt.Sprintf("spaces key %q: unparsable created_at=%q", k.Name, created)
 		case t.Before(threshold):
 			days := int(now.Sub(t).Hours() / 24)
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("spaces key %q: %d days old (> %d)", k.Name, days, spacesKeyMaxAgeDays)
 		default:
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("spaces key %q: created %s", k.Name, created)
 		}
 		findings = append(findings, f)
@@ -402,12 +402,12 @@ func SpacesKeyAge(_ context.Context, g *core.ResourceGraph) ([]core.Finding, err
 }
 
 func init() {
-	core.Register(CheckSpacesNotPublic, SpacesNotPublic)
-	core.Register(CheckSpacesVersioning, SpacesVersioning)
-	core.Register(CheckSpacesEncryption, SpacesEncryption)
-	core.Register(CheckSpacesLifecycle, SpacesLifecycle)
-	core.Register(CheckSpacesCORSWildcard, SpacesCORSWildcard)
-	core.Register(CheckSpacesLogging, SpacesLogging)
-	core.Register(CheckSpacesKeyNotFullAccess, SpacesKeyNotFullAccess)
-	core.Register(CheckSpacesKeyAge, SpacesKeyAge)
+	compliancekit.Register(CheckSpacesNotPublic, SpacesNotPublic)
+	compliancekit.Register(CheckSpacesVersioning, SpacesVersioning)
+	compliancekit.Register(CheckSpacesEncryption, SpacesEncryption)
+	compliancekit.Register(CheckSpacesLifecycle, SpacesLifecycle)
+	compliancekit.Register(CheckSpacesCORSWildcard, SpacesCORSWildcard)
+	compliancekit.Register(CheckSpacesLogging, SpacesLogging)
+	compliancekit.Register(CheckSpacesKeyNotFullAccess, SpacesKeyNotFullAccess)
+	compliancekit.Register(CheckSpacesKeyAge, SpacesKeyAge)
 }

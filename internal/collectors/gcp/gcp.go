@@ -2,7 +2,7 @@
 //
 // At v0.8 it fetches the resources needed by the 25 highest-leverage
 // GCP checks (IAM / Compute Engine / GCS / Cloud SQL / Cloud Logging
-// / KMS / BigQuery) and emits typed core.Resource values into the
+// / KMS / BigQuery) and emits typed compliancekit.Resource values into the
 // engine's ResourceGraph.
 //
 // Per ADR-007 the GCP provider builds on the cloud-common abstractions

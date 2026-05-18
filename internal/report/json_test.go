@@ -8,11 +8,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
-// Compile-time assertion that *JSONReporter satisfies core.Reporter.
-var _ core.Reporter = (*JSONReporter)(nil)
+// Compile-time assertion that *JSONReporter satisfies compliancekit.Reporter.
+var _ compliancekit.Reporter = (*JSONReporter)(nil)
 
 func TestJSON_Format(t *testing.T) {
 	r := NewJSON()
@@ -49,26 +49,26 @@ func TestJSON_RenderEmpty(t *testing.T) {
 }
 
 func TestJSON_RenderFindings(t *testing.T) {
-	findings := []core.Finding{
+	findings := []compliancekit.Finding{
 		{
 			CheckID:   "do-test-1",
-			Status:    core.StatusFail,
-			Severity:  core.SeverityHigh,
-			Resource:  core.ResourceRef{ID: "do.droplet.1", Type: "do.droplet", Name: "web", Provider: "digitalocean"},
+			Status:    compliancekit.StatusFail,
+			Severity:  compliancekit.SeverityHigh,
+			Resource:  compliancekit.ResourceRef{ID: "do.droplet.1", Type: "do.droplet", Name: "web", Provider: "digitalocean"},
 			Message:   "test message",
 			Timestamp: time.Date(2026, 5, 13, 0, 0, 0, 0, time.UTC),
 		},
 		{
 			CheckID:  "do-test-2",
-			Status:   core.StatusPass,
-			Severity: core.SeverityLow,
-			Resource: core.ResourceRef{ID: "do.droplet.2"},
+			Status:   compliancekit.StatusPass,
+			Severity: compliancekit.SeverityLow,
+			Resource: compliancekit.ResourceRef{ID: "do.droplet.2"},
 		},
 		{
 			CheckID:  "do-test-3",
-			Status:   core.StatusFail,
-			Severity: core.SeverityCritical,
-			Resource: core.ResourceRef{ID: "do.droplet.3"},
+			Status:   compliancekit.StatusFail,
+			Severity: compliancekit.SeverityCritical,
+			Resource: compliancekit.ResourceRef{ID: "do.droplet.3"},
 		},
 	}
 
@@ -79,8 +79,8 @@ func TestJSON_RenderFindings(t *testing.T) {
 	}
 
 	var decoded struct {
-		Findings []core.Finding `json:"findings"`
-		Summary  summary        `json:"summary"`
+		Findings []compliancekit.Finding `json:"findings"`
+		Summary  summary                 `json:"summary"`
 	}
 	if err := json.Unmarshal(buf.Bytes(), &decoded); err != nil {
 		t.Fatalf("decode: %v\n%s", err, buf.String())

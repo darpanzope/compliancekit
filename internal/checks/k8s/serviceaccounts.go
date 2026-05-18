@@ -5,15 +5,15 @@ import (
 	"fmt"
 
 	k8scol "github.com/darpanzope/compliancekit/internal/collectors/k8s"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // ----- Default SA token automount --------------------------------
 
-var CheckSADefaultAutomount = core.Check{
+var CheckSADefaultAutomount = compliancekit.Check{
 	ID:           "k8s-sa-default-automount",
 	Title:        "Default ServiceAccounts should disable token automount",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "kubernetes",
 	Service:      "rbac",
 	ResourceType: k8scol.ServiceAccountType,
@@ -36,24 +36,24 @@ var CheckSADefaultAutomount = core.Check{
 	Scanner: "rbac.SADefaultAutomount",
 }
 
-func SADefaultAutomount(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func SADefaultAutomount(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, sa := range g.ByType(k8scol.ServiceAccountType) {
 		if sa.Name != "default" {
 			continue
 		}
 		mount, _ := sa.Attributes["automount_token"].(string)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckSADefaultAutomount.ID,
 			Severity: CheckSADefaultAutomount.Severity,
 			Resource: sa.Ref(),
 			Tags:     CheckSADefaultAutomount.Tags,
 		}
 		if mount == "false" {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("default sa %q: automount=false", roleDesc(sa))
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("default sa %q: automount=%s (should be false)", roleDesc(sa), mount)
 		}
 		findings = append(findings, f)
@@ -63,10 +63,10 @@ func SADefaultAutomount(_ context.Context, g *core.ResourceGraph) ([]core.Findin
 
 // ----- Default SA used by workloads ------------------------------
 
-var CheckSADefaultUsed = core.Check{
+var CheckSADefaultUsed = compliancekit.Check{
 	ID:           "k8s-sa-default-used",
 	Title:        "Pods should not run as the default ServiceAccount",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "kubernetes",
 	Service:      "rbac",
 	ResourceType: k8scol.PodType,
@@ -87,8 +87,8 @@ var CheckSADefaultUsed = core.Check{
 	Scanner: "rbac.SADefaultUsed",
 }
 
-func SADefaultUsed(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func SADefaultUsed(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, p := range g.ByType(k8scol.PodType) {
 		sa, _ := p.Attributes["service_account"].(string)
 		// Empty defaults to "default" per the K8s API.
@@ -96,17 +96,17 @@ func SADefaultUsed(_ context.Context, g *core.ResourceGraph) ([]core.Finding, er
 		if using == "" {
 			using = "default"
 		}
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckSADefaultUsed.ID,
 			Severity: CheckSADefaultUsed.Severity,
 			Resource: p.Ref(),
 			Tags:     CheckSADefaultUsed.Tags,
 		}
 		if using == "default" {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("pod %q: uses default ServiceAccount", podDesc(p))
 		} else {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("pod %q: uses dedicated SA %q", podDesc(p), using)
 		}
 		findings = append(findings, f)
@@ -116,10 +116,10 @@ func SADefaultUsed(_ context.Context, g *core.ResourceGraph) ([]core.Finding, er
 
 // ----- SA orphan -------------------------------------------------
 
-var CheckSAOrphan = core.Check{
+var CheckSAOrphan = compliancekit.Check{
 	ID:           "k8s-sa-orphan",
 	Title:        "Custom ServiceAccounts should be used by at least one pod",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "kubernetes",
 	Service:      "rbac",
 	ResourceType: k8scol.ServiceAccountType,
@@ -141,7 +141,7 @@ var CheckSAOrphan = core.Check{
 	Scanner: "rbac.SAOrphan",
 }
 
-func SAOrphan(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func SAOrphan(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	used := map[string]struct{}{}
 	for _, p := range g.ByType(k8scol.PodType) {
 		ns, _ := p.Attributes["namespace"].(string)
@@ -151,7 +151,7 @@ func SAOrphan(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) 
 		}
 		used[ns+"/"+sa] = struct{}{}
 	}
-	findings := []core.Finding{}
+	findings := []compliancekit.Finding{}
 	for _, sa := range g.ByType(k8scol.ServiceAccountType) {
 		// Built-ins always pass — they are managed by the cluster.
 		if sa.Name == "default" || isSystemServiceAccount(sa.Name) {
@@ -159,17 +159,17 @@ func SAOrphan(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) 
 		}
 		ns, _ := sa.Attributes["namespace"].(string)
 		_, inUse := used[ns+"/"+sa.Name]
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckSAOrphan.ID,
 			Severity: CheckSAOrphan.Severity,
 			Resource: sa.Ref(),
 			Tags:     CheckSAOrphan.Tags,
 		}
 		if inUse {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("sa %q: used by at least one pod", roleDesc(sa))
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("sa %q: not used by any pod", roleDesc(sa))
 		}
 		findings = append(findings, f)
@@ -179,10 +179,10 @@ func SAOrphan(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) 
 
 // ----- SA image pull secrets -------------------------------------
 
-var CheckSAImagePullSecrets = core.Check{
+var CheckSAImagePullSecrets = compliancekit.Check{
 	ID:           "k8s-sa-imagepull-secrets-set",
 	Title:        "ServiceAccounts pulling from private registries should declare imagePullSecrets",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "kubernetes",
 	Service:      "rbac",
 	ResourceType: k8scol.ServiceAccountType,
@@ -205,8 +205,8 @@ var CheckSAImagePullSecrets = core.Check{
 	Scanner: "rbac.SAImagePullSecrets",
 }
 
-func SAImagePullSecrets(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func SAImagePullSecrets(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	// Build map: ns/sa -> []private-registry-images-pulled.
 	registries := map[string]map[string]struct{}{}
 	for _, p := range g.ByType(k8scol.PodType) {
@@ -236,14 +236,14 @@ func SAImagePullSecrets(_ context.Context, g *core.ResourceGraph) ([]core.Findin
 		ns, _ := sa.Attributes["namespace"].(string)
 		key := ns + "/" + sa.Name
 		usedImages, hasPrivate := registries[key]
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckSAImagePullSecrets.ID,
 			Severity: CheckSAImagePullSecrets.Severity,
 			Resource: sa.Ref(),
 			Tags:     CheckSAImagePullSecrets.Tags,
 		}
 		if !hasPrivate {
-			f.Status = core.StatusSkip
+			f.Status = compliancekit.StatusSkip
 			f.Message = fmt.Sprintf("sa %q: no pods pulling from private registries", roleDesc(sa))
 			findings = append(findings, f)
 			continue
@@ -253,10 +253,10 @@ func SAImagePullSecrets(_ context.Context, g *core.ResourceGraph) ([]core.Findin
 			count = c
 		}
 		if count > 0 {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("sa %q: %d imagePullSecret(s) attached (%d private image(s))", roleDesc(sa), count, len(usedImages))
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("sa %q: pulls private images %v but no imagePullSecrets attached", roleDesc(sa), keysOf(usedImages))
 		}
 		findings = append(findings, f)
@@ -267,10 +267,10 @@ func SAImagePullSecrets(_ context.Context, g *core.ResourceGraph) ([]core.Findin
 // ----- helpers + init --------------------------------------------
 
 func init() {
-	core.Register(CheckSADefaultAutomount, SADefaultAutomount)
-	core.Register(CheckSADefaultUsed, SADefaultUsed)
-	core.Register(CheckSAOrphan, SAOrphan)
-	core.Register(CheckSAImagePullSecrets, SAImagePullSecrets)
+	compliancekit.Register(CheckSADefaultAutomount, SADefaultAutomount)
+	compliancekit.Register(CheckSADefaultUsed, SADefaultUsed)
+	compliancekit.Register(CheckSAOrphan, SAOrphan)
+	compliancekit.Register(CheckSAImagePullSecrets, SAImagePullSecrets)
 }
 
 func isSystemServiceAccount(name string) bool {

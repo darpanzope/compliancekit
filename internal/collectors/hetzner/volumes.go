@@ -7,26 +7,26 @@ import (
 	"github.com/hetznercloud/hcloud-go/v2/hcloud"
 
 	"github.com/darpanzope/compliancekit/internal/collectors/cloudcommon"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // VolumeType is the resource type for Hetzner Cloud Block
 // Storage Volumes.
 const VolumeType = "hetzner.volume"
 
-func (c *Collector) collectVolumes(ctx context.Context) ([]core.Resource, error) {
+func (c *Collector) collectVolumes(ctx context.Context) ([]compliancekit.Resource, error) {
 	vols, err := c.client.Volume.All(ctx)
 	if err != nil {
 		return nil, err
 	}
-	out := make([]core.Resource, 0, len(vols))
+	out := make([]compliancekit.Resource, 0, len(vols))
 	for _, v := range vols {
 		out = append(out, c.volumeResource(v))
 	}
 	return out, nil
 }
 
-func (c *Collector) volumeResource(v *hcloud.Volume) core.Resource {
+func (c *Collector) volumeResource(v *hcloud.Volume) compliancekit.Resource {
 	region := ""
 	if v.Location != nil {
 		region = v.Location.Name
@@ -35,7 +35,7 @@ func (c *Collector) volumeResource(v *hcloud.Volume) core.Resource {
 	if v.Format != nil {
 		format = *v.Format
 	}
-	r := core.Resource{
+	r := compliancekit.Resource{
 		ID:       fmt.Sprintf("%s.%d", VolumeType, v.ID),
 		Type:     VolumeType,
 		Name:     v.Name,

@@ -14,18 +14,18 @@ import (
 	// cmd/compliancekit/main.go.
 	_ "github.com/darpanzope/compliancekit/internal/checks/digitalocean"
 	_ "github.com/darpanzope/compliancekit/internal/checks/linux"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // scanEnvelopeForTest matches the JSON shape internal/report.JSONReporter
 // emits, narrowed to the fields runEvidence reads. Tests synthesize this
 // directly so they do not need to invoke a full scan run.
 type scanEnvelopeForTest struct {
-	Schema   string         `json:"schema"`
-	Findings []core.Finding `json:"findings"`
+	Schema   string                  `json:"schema"`
+	Findings []compliancekit.Finding `json:"findings"`
 }
 
-func writeFindingsFile(t *testing.T, path string, findings []core.Finding) {
+func writeFindingsFile(t *testing.T, path string, findings []compliancekit.Finding) {
 	t.Helper()
 	envelope := scanEnvelopeForTest{
 		Schema:   "compliancekit.v1",
@@ -40,12 +40,12 @@ func writeFindingsFile(t *testing.T, path string, findings []core.Finding) {
 	}
 }
 
-func mkCLIFinding(checkID, resourceID string) core.Finding {
-	return core.Finding{
+func mkCLIFinding(checkID, resourceID string) compliancekit.Finding {
+	return compliancekit.Finding{
 		CheckID:  checkID,
-		Status:   core.StatusFail,
-		Severity: core.SeverityHigh,
-		Resource: core.ResourceRef{
+		Status:   compliancekit.StatusFail,
+		Severity: compliancekit.SeverityHigh,
+		Resource: compliancekit.ResourceRef{
 			ID:       resourceID,
 			Type:     "digitalocean.droplet",
 			Name:     resourceID,
@@ -59,7 +59,7 @@ func TestRunEvidence_EndToEnd(t *testing.T) {
 	dir := t.TempDir()
 	in := filepath.Join(dir, "findings.json")
 	out := filepath.Join(dir, "pack")
-	writeFindingsFile(t, in, []core.Finding{
+	writeFindingsFile(t, in, []compliancekit.Finding{
 		mkCLIFinding("do-droplet-no-firewall", "droplet-1"),
 	})
 
@@ -125,7 +125,7 @@ func TestRunEvidence_AcceptsRawArray(t *testing.T) {
 	in := filepath.Join(dir, "findings.json")
 
 	// Raw array form (jq -r '.findings' produces this).
-	arr := []core.Finding{mkCLIFinding("do-droplet-no-firewall", "droplet-1")}
+	arr := []compliancekit.Finding{mkCLIFinding("do-droplet-no-firewall", "droplet-1")}
 	data, err := json.Marshal(arr)
 	if err != nil {
 		t.Fatal(err)

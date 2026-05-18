@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	linuxcol "github.com/darpanzope/compliancekit/internal/collectors/linux"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.20 phase 2 — table-driven test for the sysctl framework. One
@@ -14,8 +14,8 @@ import (
 // every sysctl-shaped check by induction; per-key coverage comes
 // from per-distro fixtures in Phase 11.
 
-func sysctlHost(name string, sysctls map[string]int) core.Resource {
-	return core.Resource{
+func sysctlHost(name string, sysctls map[string]int) compliancekit.Resource {
+	return compliancekit.Resource{
 		ID:       "linux.host." + name,
 		Type:     linuxcol.HostType,
 		Name:     name,
@@ -39,20 +39,20 @@ func TestSysctlChecks_PassFailSkip(t *testing.T) {
 		id   string
 		key  string
 		val  int
-		want core.Status
+		want compliancekit.Status
 	}{
-		{"tcp_syncookies=1 → pass", "linux-sysctl-tcp-syncookies", "net.ipv4.tcp_syncookies", 1, core.StatusPass},
-		{"tcp_syncookies=0 → fail", "linux-sysctl-tcp-syncookies", "net.ipv4.tcp_syncookies", 0, core.StatusFail},
-		{"ip_forward=0 → pass", "linux-sysctl-ip-forward-disabled", "net.ipv4.ip_forward", 0, core.StatusPass},
-		{"ip_forward=1 → fail", "linux-sysctl-ip-forward-disabled", "net.ipv4.ip_forward", 1, core.StatusFail},
-		{"kptr_restrict=2 → pass (gte)", "linux-sysctl-kptr-restrict", "kernel.kptr_restrict", 2, core.StatusPass},
-		{"kptr_restrict=1 → pass (gte boundary)", "linux-sysctl-kptr-restrict", "kernel.kptr_restrict", 1, core.StatusPass},
-		{"kptr_restrict=0 → fail", "linux-sysctl-kptr-restrict", "kernel.kptr_restrict", 0, core.StatusFail},
+		{"tcp_syncookies=1 → pass", "linux-sysctl-tcp-syncookies", "net.ipv4.tcp_syncookies", 1, compliancekit.StatusPass},
+		{"tcp_syncookies=0 → fail", "linux-sysctl-tcp-syncookies", "net.ipv4.tcp_syncookies", 0, compliancekit.StatusFail},
+		{"ip_forward=0 → pass", "linux-sysctl-ip-forward-disabled", "net.ipv4.ip_forward", 0, compliancekit.StatusPass},
+		{"ip_forward=1 → fail", "linux-sysctl-ip-forward-disabled", "net.ipv4.ip_forward", 1, compliancekit.StatusFail},
+		{"kptr_restrict=2 → pass (gte)", "linux-sysctl-kptr-restrict", "kernel.kptr_restrict", 2, compliancekit.StatusPass},
+		{"kptr_restrict=1 → pass (gte boundary)", "linux-sysctl-kptr-restrict", "kernel.kptr_restrict", 1, compliancekit.StatusPass},
+		{"kptr_restrict=0 → fail", "linux-sysctl-kptr-restrict", "kernel.kptr_restrict", 0, compliancekit.StatusFail},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			g := newGraph(t, sysctlHost("h", map[string]int{c.key: c.val}))
-			fn, ok := core.Lookup(c.id)
+			fn, ok := compliancekit.Lookup(c.id)
 			if !ok {
 				t.Fatalf("check %q not registered", c.id)
 			}
@@ -66,9 +66,9 @@ func TestSysctlChecks_PassFailSkip(t *testing.T) {
 
 func TestSysctlChecks_SkipsWhenKeyAbsent(t *testing.T) {
 	g := newGraph(t, sysctlHost("h", map[string]int{"some.other.key": 1}))
-	fn, _ := core.Lookup("linux-sysctl-tcp-syncookies")
+	fn, _ := compliancekit.Lookup("linux-sysctl-tcp-syncookies")
 	findings, _ := fn(context.Background(), g)
-	if findings[0].Status != core.StatusSkip {
+	if findings[0].Status != compliancekit.StatusSkip {
 		t.Errorf("status=%v want StatusSkip when sysctl key not surfaced", findings[0].Status)
 	}
 	if !strings.Contains(findings[0].Message, "unavailable") {
@@ -77,14 +77,14 @@ func TestSysctlChecks_SkipsWhenKeyAbsent(t *testing.T) {
 }
 
 func TestSysctlChecks_ErrorWhenKernelMissing(t *testing.T) {
-	hostNoKernel := core.Resource{
+	hostNoKernel := compliancekit.Resource{
 		ID: "linux.host.h", Type: linuxcol.HostType, Name: "h", Provider: "linux",
 		Attributes: map[string]any{"reachable": true},
 	}
 	g := newGraph(t, hostNoKernel)
-	fn, _ := core.Lookup("linux-sysctl-tcp-syncookies")
+	fn, _ := compliancekit.Lookup("linux-sysctl-tcp-syncookies")
 	findings, _ := fn(context.Background(), g)
-	if findings[0].Status != core.StatusError {
+	if findings[0].Status != compliancekit.StatusError {
 		t.Errorf("status=%v want StatusError when kernel attr missing", findings[0].Status)
 	}
 }

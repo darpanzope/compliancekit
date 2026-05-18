@@ -7,12 +7,12 @@ package doctl
 import (
 	"fmt"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate"
 	"github.com/darpanzope/compliancekit/internal/remediate/render"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
-type strategyFunc func(core.Finding) (remediate.Snippet, error)
+type strategyFunc func(compliancekit.Finding) (remediate.Snippet, error)
 
 type strategy struct {
 	name string
@@ -23,7 +23,7 @@ type strategy struct {
 func (s *strategy) Name() string                { return s.name }
 func (s *strategy) CheckIDs() []string          { return s.ids }
 func (s *strategy) Formats() []remediate.Format { return []remediate.Format{remediate.FormatDoctl} }
-func (s *strategy) Render(f core.Finding, format remediate.Format) (remediate.Snippet, error) {
+func (s *strategy) Render(f compliancekit.Finding, format remediate.Format) (remediate.Snippet, error) {
 	if format != remediate.FormatDoctl {
 		return remediate.Snippet{}, remediate.ErrFormatUnsupported
 	}
@@ -52,7 +52,7 @@ func init() {
 		[]string{"do-app-no-alerts"}, renderAppAlertsManual)
 }
 
-func renderDBFirewall(f core.Finding) (remediate.Snippet, error) {
+func renderDBFirewall(f compliancekit.Finding) (remediate.Snippet, error) {
 	id := f.Resource.Name
 	if id == "" {
 		id = "DB_CLUSTER_ID"
@@ -71,7 +71,7 @@ doctl databases firewalls list %s
 	}, nil
 }
 
-func renderDBMaintenance(f core.Finding) (remediate.Snippet, error) {
+func renderDBMaintenance(f compliancekit.Finding) (remediate.Snippet, error) {
 	id := f.Resource.Name
 	if id == "" {
 		id = "DB_CLUSTER_ID"
@@ -85,7 +85,7 @@ func renderDBMaintenance(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderFirewallListInspect(f core.Finding) (remediate.Snippet, error) {
+func renderFirewallListInspect(f compliancekit.Finding) (remediate.Snippet, error) {
 	id := f.Resource.Name
 	if id == "" {
 		id = "FIREWALL_ID"
@@ -104,7 +104,7 @@ doctl compute firewall get %s
 	}, nil
 }
 
-func renderDropletInspect(f core.Finding) (remediate.Snippet, error) {
+func renderDropletInspect(f compliancekit.Finding) (remediate.Snippet, error) {
 	name := f.Resource.Name
 	if name == "" {
 		name = "DROPLET_NAME"
@@ -122,7 +122,7 @@ func renderDropletInspect(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderCertificateReissue(f core.Finding) (remediate.Snippet, error) {
+func renderCertificateReissue(f compliancekit.Finding) (remediate.Snippet, error) {
 	id := f.Resource.Name
 	if id == "" {
 		id = "CERT_ID"
@@ -139,7 +139,7 @@ func renderCertificateReissue(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderSpacesACLManual(f core.Finding) (remediate.Snippet, error) {
+func renderSpacesACLManual(f compliancekit.Finding) (remediate.Snippet, error) {
 	bucket := f.Resource.Name
 	region := f.Resource.Region
 	if region == "" {
@@ -159,7 +159,7 @@ func renderSpacesACLManual(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderAppAlertsManual(f core.Finding) (remediate.Snippet, error) {
+func renderAppAlertsManual(f compliancekit.Finding) (remediate.Snippet, error) {
 	return remediate.Snippet{
 		Risk: remediate.RiskReview, Idempotent: false,
 		Content: fmt.Sprintf(

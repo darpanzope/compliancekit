@@ -7,7 +7,7 @@ import (
 	"github.com/digitalocean/godo"
 
 	"github.com/darpanzope/compliancekit/internal/collectors/cloudcommon"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // AccountType is the singleton account/team anchor resource. Every
@@ -22,25 +22,25 @@ const AccountType = "digitalocean.account"
 // anchor resource. Stored on the Collector so subsequent
 // per-service collectors can read the team UUID without
 // re-issuing the API call.
-func (c *Collector) fetchAccount(ctx context.Context) (godo.Account, core.Resource, error) {
+func (c *Collector) fetchAccount(ctx context.Context) (godo.Account, compliancekit.Resource, error) {
 	resp, _, err := c.client.Account.Get(ctx)
 	if err != nil {
-		return godo.Account{}, core.Resource{}, fmt.Errorf("account: %w", err)
+		return godo.Account{}, compliancekit.Resource{}, fmt.Errorf("account: %w", err)
 	}
 	if resp == nil {
-		return godo.Account{}, core.Resource{}, fmt.Errorf("account: nil response")
+		return godo.Account{}, compliancekit.Resource{}, fmt.Errorf("account: nil response")
 	}
 	return *resp, accountToResource(*resp), nil
 }
 
-func accountToResource(a godo.Account) core.Resource {
+func accountToResource(a godo.Account) compliancekit.Resource {
 	teamUUID := ""
 	teamName := ""
 	if a.Team != nil {
 		teamUUID = a.Team.UUID
 		teamName = a.Team.Name
 	}
-	r := core.Resource{
+	r := compliancekit.Resource{
 		ID:       fmt.Sprintf("%s.%s", AccountType, a.UUID),
 		Type:     AccountType,
 		Name:     a.Email,

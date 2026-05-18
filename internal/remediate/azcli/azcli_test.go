@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 func TestRegistryCoverage(t *testing.T) {
@@ -25,9 +25,9 @@ func TestRegistryCoverage(t *testing.T) {
 }
 
 func TestRenderStorageNoPublic(t *testing.T) {
-	f := core.Finding{
+	f := compliancekit.Finding{
 		CheckID:  "ingest.defender-for-cloud.STORAGE_ACCOUNT_PUBLIC_ACCESS",
-		Resource: core.ResourceRef{Name: "prodstore01"},
+		Resource: compliancekit.ResourceRef{Name: "prodstore01"},
 	}
 	s, err := remediate.Default.Render(f, remediate.FormatAzureCLI)
 	if err != nil {
@@ -45,9 +45,9 @@ func TestRenderStorageNoPublic(t *testing.T) {
 }
 
 func TestRenderSQLFirewallTightenIsManual(t *testing.T) {
-	f := core.Finding{
+	f := compliancekit.Finding{
 		CheckID:  "ingest.defender-for-cloud.SQL_FIREWALL_ALLOW_ALL",
-		Resource: core.ResourceRef{Name: "sql-prod-01"},
+		Resource: compliancekit.ResourceRef{Name: "sql-prod-01"},
 	}
 	s, err := remediate.Default.Render(f, remediate.FormatAzureCLI)
 	if err != nil {

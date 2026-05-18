@@ -6,19 +6,19 @@ import (
 	"time"
 
 	gcpcol "github.com/darpanzope/compliancekit/internal/collectors/gcp"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
-func newGraphWith(resources ...core.Resource) *core.ResourceGraph {
-	g := core.NewResourceGraph()
+func newGraphWith(resources ...compliancekit.Resource) *compliancekit.ResourceGraph {
+	g := compliancekit.NewResourceGraph()
 	for _, r := range resources {
 		g.Add(r)
 	}
 	return g
 }
 
-func mkPolicy(name string, bindings []map[string]any, auditConfigs []map[string]any) core.Resource {
-	return core.Resource{
+func mkPolicy(name string, bindings []map[string]any, auditConfigs []map[string]any) compliancekit.Resource {
+	return compliancekit.Resource{
 		ID:       "gcp.iam.policy." + name,
 		Type:     gcpcol.IAMPolicyType,
 		Name:     name,
@@ -30,8 +30,8 @@ func mkPolicy(name string, bindings []map[string]any, auditConfigs []map[string]
 	}
 }
 
-func mkSA(email string, isDefault, disabled bool, userKeyCount int, keys []map[string]any) core.Resource {
-	return core.Resource{
+func mkSA(email string, isDefault, disabled bool, userKeyCount int, keys []map[string]any) compliancekit.Resource {
+	return compliancekit.Resource{
 		ID:       "gcp.iam.service_account." + email,
 		Type:     gcpcol.ServiceAccountType,
 		Name:     email,
@@ -53,7 +53,7 @@ func TestNoPrimitiveRoles(t *testing.T) {
 			{"role": "roles/storage.objectAdmin", "members": []string{"user:alice@x.com"}},
 		}, nil)
 		findings, _ := NoPrimitiveRoles(context.Background(), newGraphWith(policy))
-		if findings[0].Status != core.StatusPass {
+		if findings[0].Status != compliancekit.StatusPass {
 			t.Errorf("got %v", findings[0].Status)
 		}
 	})
@@ -62,7 +62,7 @@ func TestNoPrimitiveRoles(t *testing.T) {
 			{"role": "roles/editor", "members": []string{"user:bob@x.com"}},
 		}, nil)
 		findings, _ := NoPrimitiveRoles(context.Background(), newGraphWith(policy))
-		if findings[0].Status != core.StatusFail {
+		if findings[0].Status != compliancekit.StatusFail {
 			t.Errorf("got %v: %s", findings[0].Status, findings[0].Message)
 		}
 	})
@@ -76,7 +76,7 @@ func TestNoBroadTokenCreator(t *testing.T) {
 			{"role": "roles/viewer", "members": []string{"user:alice@x.com"}},
 		}, nil)
 		findings, _ := NoBroadTokenCreator(context.Background(), newGraphWith(policy))
-		if findings[0].Status != core.StatusPass {
+		if findings[0].Status != compliancekit.StatusPass {
 			t.Errorf("got %v", findings[0].Status)
 		}
 	})
@@ -85,7 +85,7 @@ func TestNoBroadTokenCreator(t *testing.T) {
 			{"role": "roles/iam.serviceAccountTokenCreator", "members": []string{"user:bob@x.com"}},
 		}, nil)
 		findings, _ := NoBroadTokenCreator(context.Background(), newGraphWith(policy))
-		if findings[0].Status != core.StatusFail {
+		if findings[0].Status != compliancekit.StatusFail {
 			t.Errorf("got %v", findings[0].Status)
 		}
 	})
@@ -97,7 +97,7 @@ func TestCloudAuditLogging(t *testing.T) {
 	t.Run("no config", func(t *testing.T) {
 		policy := mkPolicy("p1", nil, nil)
 		findings, _ := CloudAuditLogging(context.Background(), newGraphWith(policy))
-		if findings[0].Status != core.StatusFail {
+		if findings[0].Status != compliancekit.StatusFail {
 			t.Errorf("got %v", findings[0].Status)
 		}
 	})
@@ -109,7 +109,7 @@ func TestCloudAuditLogging(t *testing.T) {
 			}},
 		})
 		findings, _ := CloudAuditLogging(context.Background(), newGraphWith(policy))
-		if findings[0].Status != core.StatusFail {
+		if findings[0].Status != compliancekit.StatusFail {
 			t.Errorf("got %v: %s", findings[0].Status, findings[0].Message)
 		}
 	})
@@ -122,7 +122,7 @@ func TestCloudAuditLogging(t *testing.T) {
 			}},
 		})
 		findings, _ := CloudAuditLogging(context.Background(), newGraphWith(policy))
-		if findings[0].Status != core.StatusPass {
+		if findings[0].Status != compliancekit.StatusPass {
 			t.Errorf("got %v: %s", findings[0].Status, findings[0].Message)
 		}
 	})
@@ -135,7 +135,7 @@ func TestSAKeyAge(t *testing.T) {
 	t.Run("no keys", func(t *testing.T) {
 		sa := mkSA("svc@x.iam.gserviceaccount.com", false, false, 0, nil)
 		findings, _ := SAKeyAge(context.Background(), newGraphWith(sa))
-		if findings[0].Status != core.StatusPass {
+		if findings[0].Status != compliancekit.StatusPass {
 			t.Errorf("got %v", findings[0].Status)
 		}
 	})
@@ -144,7 +144,7 @@ func TestSAKeyAge(t *testing.T) {
 			{"key_type": "USER_MANAGED", "valid_after_time": now.Add(-10 * 24 * time.Hour), "name": "p/k/foo"},
 		})
 		findings, _ := SAKeyAge(context.Background(), newGraphWith(sa))
-		if findings[0].Status != core.StatusPass {
+		if findings[0].Status != compliancekit.StatusPass {
 			t.Errorf("got %v: %s", findings[0].Status, findings[0].Message)
 		}
 	})
@@ -153,7 +153,7 @@ func TestSAKeyAge(t *testing.T) {
 			{"key_type": "USER_MANAGED", "valid_after_time": now.Add(-180 * 24 * time.Hour), "name": "p/k/bar"},
 		})
 		findings, _ := SAKeyAge(context.Background(), newGraphWith(sa))
-		if findings[0].Status != core.StatusFail {
+		if findings[0].Status != compliancekit.StatusFail {
 			t.Errorf("got %v: %s", findings[0].Status, findings[0].Message)
 		}
 	})
@@ -162,7 +162,7 @@ func TestSAKeyAge(t *testing.T) {
 			{"key_type": "SYSTEM_MANAGED", "valid_after_time": now.Add(-1000 * 24 * time.Hour), "name": "p/k/sys"},
 		})
 		findings, _ := SAKeyAge(context.Background(), newGraphWith(sa))
-		if findings[0].Status != core.StatusPass {
+		if findings[0].Status != compliancekit.StatusPass {
 			t.Errorf("got %v", findings[0].Status)
 		}
 	})
@@ -174,14 +174,14 @@ func TestNoUserManagedSAKeys(t *testing.T) {
 	t.Run("no user-managed keys", func(t *testing.T) {
 		sa := mkSA("svc@x.iam.gserviceaccount.com", false, false, 0, nil)
 		findings, _ := NoUserManagedSAKeys(context.Background(), newGraphWith(sa))
-		if findings[0].Status != core.StatusPass {
+		if findings[0].Status != compliancekit.StatusPass {
 			t.Errorf("got %v", findings[0].Status)
 		}
 	})
 	t.Run("one user-managed key", func(t *testing.T) {
 		sa := mkSA("svc@x.iam.gserviceaccount.com", false, false, 1, nil)
 		findings, _ := NoUserManagedSAKeys(context.Background(), newGraphWith(sa))
-		if findings[0].Status != core.StatusFail {
+		if findings[0].Status != compliancekit.StatusFail {
 			t.Errorf("got %v", findings[0].Status)
 		}
 	})
@@ -193,21 +193,21 @@ func TestNoDefaultSAInUse(t *testing.T) {
 	t.Run("custom SA passes", func(t *testing.T) {
 		sa := mkSA("svc@x.iam.gserviceaccount.com", false, false, 0, nil)
 		findings, _ := NoDefaultSAInUse(context.Background(), newGraphWith(sa))
-		if findings[0].Status != core.StatusPass {
+		if findings[0].Status != compliancekit.StatusPass {
 			t.Errorf("got %v", findings[0].Status)
 		}
 	})
 	t.Run("default compute SA fails when active", func(t *testing.T) {
 		sa := mkSA("123-compute@developer.gserviceaccount.com", true, false, 0, nil)
 		findings, _ := NoDefaultSAInUse(context.Background(), newGraphWith(sa))
-		if findings[0].Status != core.StatusFail {
+		if findings[0].Status != compliancekit.StatusFail {
 			t.Errorf("got %v: %s", findings[0].Status, findings[0].Message)
 		}
 	})
 	t.Run("default SA disabled passes", func(t *testing.T) {
 		sa := mkSA("123-compute@developer.gserviceaccount.com", true, true, 0, nil)
 		findings, _ := NoDefaultSAInUse(context.Background(), newGraphWith(sa))
-		if findings[0].Status != core.StatusPass {
+		if findings[0].Status != compliancekit.StatusPass {
 			t.Errorf("got %v", findings[0].Status)
 		}
 	})

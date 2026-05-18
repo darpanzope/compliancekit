@@ -4,10 +4,10 @@ import (
 	"testing"
 
 	k8scol "github.com/darpanzope/compliancekit/internal/collectors/k8s"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
-func mkServiceAccount(ns, name string, attrs map[string]any) core.Resource {
+func mkServiceAccount(ns, name string, attrs map[string]any) compliancekit.Resource {
 	base := map[string]any{
 		"namespace":               ns,
 		"automount_token":         "unset",
@@ -17,7 +17,7 @@ func mkServiceAccount(ns, name string, attrs map[string]any) core.Resource {
 	for k, v := range attrs {
 		base[k] = v
 	}
-	return core.Resource{
+	return compliancekit.Resource{
 		ID:         "k8s.sa.prod." + ns + "." + name,
 		Type:       k8scol.ServiceAccountType,
 		Name:       name,
@@ -44,9 +44,9 @@ func TestSADefaultAutomount(t *testing.T) {
 			t.Errorf("custom SA should not be checked")
 		}
 		switch f.Status {
-		case core.StatusPass:
+		case compliancekit.StatusPass:
 			pass++
-		case core.StatusFail:
+		case compliancekit.StatusFail:
 			fail++
 		}
 	}
@@ -62,10 +62,10 @@ func TestSADefaultUsed(t *testing.T) {
 		mkPod("uses-custom", map[string]any{"service_account": "web-sa"}),
 	)
 	got := runCheck(t, SADefaultUsed, g)
-	if got["uses-default"] != core.StatusFail || got["uses-explicit-default"] != core.StatusFail {
+	if got["uses-default"] != compliancekit.StatusFail || got["uses-explicit-default"] != compliancekit.StatusFail {
 		t.Errorf("default uses: %v", got)
 	}
-	if got["uses-custom"] != core.StatusPass {
+	if got["uses-custom"] != compliancekit.StatusPass {
 		t.Errorf("custom: %v", got["uses-custom"])
 	}
 }
@@ -78,10 +78,10 @@ func TestSAOrphan(t *testing.T) {
 		mkPod("p1", map[string]any{"service_account": "used"}),
 	)
 	got := runCheck(t, SAOrphan, g)
-	if got["used"] != core.StatusPass {
+	if got["used"] != compliancekit.StatusPass {
 		t.Errorf("used: %v", got["used"])
 	}
-	if got["orphan"] != core.StatusFail {
+	if got["orphan"] != compliancekit.StatusFail {
 		t.Errorf("orphan: %v", got["orphan"])
 	}
 	if _, ok := got["default"]; ok {
@@ -99,19 +99,19 @@ func TestSAImagePullSecrets(t *testing.T) {
 		mkPodWithContainer("public-pod", map[string]any{"image": "docker.io/nginx:1.21"}),
 	)
 	// Wire up service_account names on the pods.
-	g.Add(func() core.Resource {
+	g.Add(func() compliancekit.Resource {
 		p := mkPod("priv1", map[string]any{"service_account": "private"})
 		c := p.Attributes["containers"].([]any)[0].(map[string]any)
 		c["image"] = "registry.acme.invalid/x:v1"
 		return p
 	}())
-	g.Add(func() core.Resource {
+	g.Add(func() compliancekit.Resource {
 		p := mkPod("priv2", map[string]any{"service_account": "private-noips"})
 		c := p.Attributes["containers"].([]any)[0].(map[string]any)
 		c["image"] = "registry.acme.invalid/y:v1"
 		return p
 	}())
-	g.Add(func() core.Resource {
+	g.Add(func() compliancekit.Resource {
 		p := mkPod("pub", map[string]any{"service_account": "public"})
 		c := p.Attributes["containers"].([]any)[0].(map[string]any)
 		c["image"] = "docker.io/nginx:1.21"
@@ -119,13 +119,13 @@ func TestSAImagePullSecrets(t *testing.T) {
 	}())
 
 	got := runCheck(t, SAImagePullSecrets, g)
-	if got["private"] != core.StatusPass {
+	if got["private"] != compliancekit.StatusPass {
 		t.Errorf("private: %v", got["private"])
 	}
-	if got["private-noips"] != core.StatusFail {
+	if got["private-noips"] != compliancekit.StatusFail {
 		t.Errorf("private-noips: %v", got["private-noips"])
 	}
-	if got["public"] != core.StatusSkip {
+	if got["public"] != compliancekit.StatusSkip {
 		t.Errorf("public: %v (want skip)", got["public"])
 	}
 }

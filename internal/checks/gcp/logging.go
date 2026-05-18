@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	gcpcol "github.com/darpanzope/compliancekit/internal/collectors/gcp"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // minLogRetentionDays is the threshold used by CheckLogBucketRetention.
@@ -28,10 +28,10 @@ var longTermSinkDestinations = map[string]bool{
 // least one enabled, non-empty-filter (or catch-all) sink that
 // exports log entries to a long-term destination. CIS GCP
 // Foundations 2.2.
-var CheckLoggingSinkExists = core.Check{
+var CheckLoggingSinkExists = compliancekit.Check{
 	ID:           "gcp-logging-sink-exists",
 	Title:        "Each project must export logs to a long-term sink",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "gcp",
 	Service:      "logging",
 	ResourceType: gcpcol.ProjectType,
@@ -54,11 +54,11 @@ var CheckLoggingSinkExists = core.Check{
 	Scanner: "logging.SinkExists",
 }
 
-func LoggingSinkExists(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func LoggingSinkExists(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	// Group sinks by project so the check renders one finding per
 	// project regardless of how many sinks exist.
-	sinksByProject := map[string][]core.Resource{}
+	sinksByProject := map[string][]compliancekit.Resource{}
 	for _, s := range g.ByType(gcpcol.LogSinkType) {
 		projectID, _ := s.Attributes["account_id"].(string)
 		sinksByProject[projectID] = append(sinksByProject[projectID], s)
@@ -66,7 +66,7 @@ func LoggingSinkExists(_ context.Context, g *core.ResourceGraph) ([]core.Finding
 
 	for _, proj := range g.ByType(gcpcol.ProjectType) {
 		projectID, _ := proj.Attributes["project_id"].(string)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckLoggingSinkExists.ID,
 			Severity: CheckLoggingSinkExists.Severity,
 			Resource: proj.Ref(),
@@ -84,10 +84,10 @@ func LoggingSinkExists(_ context.Context, g *core.ResourceGraph) ([]core.Finding
 			}
 		}
 		if len(qualifying) > 0 {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("project %q: %d long-term sink(s): %v", projectID, len(qualifying), qualifying)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("project %q: no enabled sink exports to GCS/BigQuery/Pub-Sub", projectID)
 		}
 		findings = append(findings, f)
@@ -99,10 +99,10 @@ func LoggingSinkExists(_ context.Context, g *core.ResourceGraph) ([]core.Finding
 // entries for at least minLogRetentionDays. Other (user-created)
 // buckets are also checked; _Required is skipped because its
 // retention is fixed at 400 days by Google and cannot be changed.
-var CheckLogBucketRetention = core.Check{
+var CheckLogBucketRetention = compliancekit.Check{
 	ID:           "gcp-logging-bucket-retention",
 	Title:        "Cloud Logging buckets must retain entries for at least 365 days",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "gcp",
 	Service:      "logging",
 	ResourceType: gcpcol.LogBucketType,
@@ -123,8 +123,8 @@ var CheckLogBucketRetention = core.Check{
 	Scanner: "logging.BucketRetention",
 }
 
-func LogBucketRetention(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func LogBucketRetention(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, b := range g.ByType(gcpcol.LogBucketType) {
 		// _Required is Google-managed (fixed 400-day retention).
 		// Skip rather than emit a misleading pass/fail.
@@ -132,17 +132,17 @@ func LogBucketRetention(_ context.Context, g *core.ResourceGraph) ([]core.Findin
 			continue
 		}
 		days, _ := b.Attributes["retention_days"].(int)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckLogBucketRetention.ID,
 			Severity: CheckLogBucketRetention.Severity,
 			Resource: b.Ref(),
 			Tags:     CheckLogBucketRetention.Tags,
 		}
 		if days >= minLogRetentionDays {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("bucket %q: retention %dd", b.Name, days)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("bucket %q: retention %dd (want >= %dd)", b.Name, days, minLogRetentionDays)
 		}
 		findings = append(findings, f)
@@ -151,6 +151,6 @@ func LogBucketRetention(_ context.Context, g *core.ResourceGraph) ([]core.Findin
 }
 
 func init() {
-	core.Register(CheckLoggingSinkExists, LoggingSinkExists)
-	core.Register(CheckLogBucketRetention, LogBucketRetention)
+	compliancekit.Register(CheckLoggingSinkExists, LoggingSinkExists)
+	compliancekit.Register(CheckLogBucketRetention, LogBucketRetention)
 }

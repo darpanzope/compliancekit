@@ -10,7 +10,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // TeamsConfig configures the Microsoft Teams sink. Microsoft has
@@ -28,7 +28,7 @@ import (
 // Env: TEAMS_WEBHOOK_URL, TEAMS_THRESHOLD.
 type TeamsConfig struct {
 	WebhookURL    string
-	SeverityFloor core.Severity
+	SeverityFloor compliancekit.Severity
 	HTTPClient    *http.Client
 }
 
@@ -46,7 +46,7 @@ func (t *Teams) Name() string { return "teams" }
 func (t *Teams) Configured() bool { return t.cfg.WebhookURL != "" }
 
 // Threshold returns the per-sink severity floor.
-func (t *Teams) Threshold() core.Severity { return t.cfg.SeverityFloor }
+func (t *Teams) Threshold() compliancekit.Severity { return t.cfg.SeverityFloor }
 
 // Send dispatches the notifications. Per-notification failures
 // accumulate; top-level error only when every send failed.
@@ -145,15 +145,15 @@ func (t *Teams) postJSON(ctx context.Context, body map[string]any) error {
 // teamsSeverityColor returns the hex string Teams' themeColor field
 // expects (no leading '#'). Same palette as Discord, restated for
 // portability since the two sinks may diverge later.
-func teamsSeverityColor(s core.Severity) string {
+func teamsSeverityColor(s compliancekit.Severity) string {
 	switch s {
-	case core.SeverityCritical:
+	case compliancekit.SeverityCritical:
 		return "D7263D"
-	case core.SeverityHigh:
+	case compliancekit.SeverityHigh:
 		return "F46036"
-	case core.SeverityMedium:
+	case compliancekit.SeverityMedium:
 		return "F7B538"
-	case core.SeverityLow:
+	case compliancekit.SeverityLow:
 		return "2E86AB"
 	}
 	return "808080"
@@ -162,7 +162,7 @@ func teamsSeverityColor(s core.Severity) string {
 func init() {
 	cfg := TeamsConfig{WebhookURL: os.Getenv("TEAMS_WEBHOOK_URL")}
 	if t := os.Getenv("TEAMS_THRESHOLD"); t != "" {
-		if sev, err := core.ParseSeverity(t); err == nil {
+		if sev, err := compliancekit.ParseSeverity(t); err == nil {
 			cfg.SeverityFloor = sev
 		}
 	}

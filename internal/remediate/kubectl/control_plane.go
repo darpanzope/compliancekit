@@ -3,8 +3,8 @@ package kubectl
 import (
 	"fmt"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.21 phase 7 — kubectl strategies for the 15 control-plane manual-
@@ -34,7 +34,7 @@ func init() {
 	for id, body := range controlPlaneStrategies {
 		id := id
 		body := body
-		register("kubectl-"+id, []string{id}, func(_ core.Finding) (remediate.Snippet, error) {
+		register("kubectl-"+id, []string{id}, func(_ compliancekit.Finding) (remediate.Snippet, error) {
 			content := fmt.Sprintf("# Manual remediation — control-plane configuration lives on the node, not in the apiserver.\n# %s\n\n%s\n",
 				id, body)
 			return remediate.Snippet{

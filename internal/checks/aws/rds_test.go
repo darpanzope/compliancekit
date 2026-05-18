@@ -5,11 +5,11 @@ import (
 	"testing"
 
 	awscol "github.com/darpanzope/compliancekit/internal/collectors/aws"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
-func newDB(name string, attrs map[string]any) core.Resource {
-	return core.Resource{
+func newDB(name string, attrs map[string]any) compliancekit.Resource {
+	return compliancekit.Resource{
 		ID: "aws.rds.instance.test." + name, Type: awscol.RDSInstanceType, Name: name, Provider: "aws", Region: "us-east-1",
 		Attributes: attrs,
 	}
@@ -21,9 +21,9 @@ func TestRDSEncrypted(t *testing.T) {
 	g := newGraphWith(enc, unenc)
 	findings, _ := RDSEncrypted(context.Background(), g)
 	for _, f := range findings {
-		want := core.StatusPass
+		want := compliancekit.StatusPass
 		if f.Resource.Name == "db2" {
-			want = core.StatusFail
+			want = compliancekit.StatusFail
 		}
 		if f.Status != want {
 			t.Errorf("%s: got %v, want %v", f.Resource.Name, f.Status, want)
@@ -37,9 +37,9 @@ func TestRDSNotPublic(t *testing.T) {
 	g := newGraphWith(priv, pub)
 	findings, _ := RDSNotPublic(context.Background(), g)
 	for _, f := range findings {
-		want := core.StatusPass
+		want := compliancekit.StatusPass
 		if f.Resource.Name == "db-pub" {
-			want = core.StatusFail
+			want = compliancekit.StatusFail
 		}
 		if f.Status != want {
 			t.Errorf("%s: got %v", f.Resource.Name, f.Status)
@@ -50,12 +50,12 @@ func TestRDSNotPublic(t *testing.T) {
 func TestRDSBackupRetention(t *testing.T) {
 	cases := []struct {
 		days int
-		want core.Status
+		want compliancekit.Status
 	}{
-		{0, core.StatusFail},
-		{6, core.StatusFail},
-		{7, core.StatusPass},
-		{30, core.StatusPass},
+		{0, compliancekit.StatusFail},
+		{6, compliancekit.StatusFail},
+		{7, compliancekit.StatusPass},
+		{30, compliancekit.StatusPass},
 	}
 	for _, c := range cases {
 		g := newGraphWith(newDB("db", map[string]any{"backup_retention_period": c.days}))
@@ -72,9 +72,9 @@ func TestRDSDeletionProtection(t *testing.T) {
 	g := newGraphWith(protected, unprotected)
 	findings, _ := RDSDeletionProtection(context.Background(), g)
 	for _, f := range findings {
-		want := core.StatusPass
+		want := compliancekit.StatusPass
 		if f.Resource.Name == "db-u" {
-			want = core.StatusFail
+			want = compliancekit.StatusFail
 		}
 		if f.Status != want {
 			t.Errorf("%s: got %v", f.Resource.Name, f.Status)

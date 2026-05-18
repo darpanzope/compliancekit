@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 func TestDropletStoppedTooLong(t *testing.T) {
@@ -24,11 +24,11 @@ func TestDropletStoppedTooLong(t *testing.T) {
 	})
 	g := newAccountGraph(old, young, active)
 	findings, _ := DropletStoppedTooLong(context.Background(), g)
-	by := map[string]core.Status{}
+	by := map[string]compliancekit.Status{}
 	for _, f := range findings {
 		by[f.Resource.Name] = f.Status
 	}
-	if by["old"] != core.StatusFail || by["young"] != core.StatusPass {
+	if by["old"] != compliancekit.StatusFail || by["young"] != compliancekit.StatusPass {
 		t.Errorf("statuses=%+v", by)
 	}
 	if _, exists := by["active"]; exists {
@@ -42,11 +42,11 @@ func TestProjectPurpose(t *testing.T) {
 	custom := mkProj("c", map[string]any{"purpose": "Web Application"})
 	g := newAccountGraph(default1, empty, custom)
 	findings, _ := ProjectPurpose(context.Background(), g)
-	by := map[string]core.Status{}
+	by := map[string]compliancekit.Status{}
 	for _, f := range findings {
 		by[f.Resource.Name] = f.Status
 	}
-	if by["d"] != core.StatusFail || by["e"] != core.StatusFail || by["c"] != core.StatusPass {
+	if by["d"] != compliancekit.StatusFail || by["e"] != compliancekit.StatusFail || by["c"] != compliancekit.StatusPass {
 		t.Errorf("statuses=%+v", by)
 	}
 }
@@ -55,7 +55,7 @@ func TestBillingManualVerifyChecks(t *testing.T) {
 	g := newAccountGraph(mkAccount("acct", nil))
 	cases := []struct {
 		name string
-		fn   func(context.Context, *core.ResourceGraph) ([]core.Finding, error)
+		fn   func(context.Context, *compliancekit.ResourceGraph) ([]compliancekit.Finding, error)
 		hint string
 	}{
 		{"alert review", checkFnFromID(t, "do-billing-monthly-alert-review"), "billing"},
@@ -68,7 +68,7 @@ func TestBillingManualVerifyChecks(t *testing.T) {
 			if len(findings) == 0 {
 				t.Fatal("expected finding")
 			}
-			if findings[0].Status != core.StatusError {
+			if findings[0].Status != compliancekit.StatusError {
 				t.Errorf("status=%v want StatusError", findings[0].Status)
 			}
 			if !strings.Contains(strings.ToLower(findings[0].Message), c.hint) {
@@ -80,9 +80,9 @@ func TestBillingManualVerifyChecks(t *testing.T) {
 
 // checkFnFromID looks up the registered CheckFunc by ID so the test
 // table doesn't need to import each closure individually.
-func checkFnFromID(t *testing.T, id string) func(context.Context, *core.ResourceGraph) ([]core.Finding, error) {
+func checkFnFromID(t *testing.T, id string) func(context.Context, *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	t.Helper()
-	fn, ok := core.Lookup(id)
+	fn, ok := compliancekit.Lookup(id)
 	if !ok {
 		t.Fatalf("no registered check %q", id)
 	}
@@ -94,11 +94,11 @@ func TestDropletAgedOversized(t *testing.T) {
 	young := mkDroplet("young", map[string]any{"created_at": time.Now().Add(-30 * 24 * time.Hour).UTC()})
 	g := newAccountGraph(aged, young)
 	findings, _ := DropletAgedOversized(context.Background(), g)
-	by := map[string]core.Status{}
+	by := map[string]compliancekit.Status{}
 	for _, f := range findings {
 		by[f.Resource.Name] = f.Status
 	}
-	if by["aged"] != core.StatusFail || by["young"] != core.StatusPass {
+	if by["aged"] != compliancekit.StatusFail || by["young"] != compliancekit.StatusPass {
 		t.Errorf("statuses=%+v", by)
 	}
 }

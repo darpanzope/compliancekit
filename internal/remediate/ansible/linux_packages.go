@@ -1,8 +1,8 @@
 package ansible
 
 import (
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.20 phase 9 — Ansible strategies for the 10 packages/MAC checks.
@@ -10,7 +10,7 @@ import (
 func init() {
 	register("ansible-linux-mac-selinux-enforcing",
 		[]string{"linux-mac-selinux-enforcing"},
-		func(_ core.Finding) (remediate.Snippet, error) {
+		func(_ compliancekit.Finding) (remediate.Snippet, error) {
 			body := `- name: SELinux enforcing — live + persistent
   block:
     - ansible.builtin.command: setenforce 1
@@ -28,7 +28,7 @@ func init() {
 
 	register("ansible-linux-mac-apparmor-active",
 		[]string{"linux-mac-apparmor-active"},
-		func(_ core.Finding) (remediate.Snippet, error) {
+		func(_ compliancekit.Finding) (remediate.Snippet, error) {
 			body := `- name: AppArmor — install + enable + enforce profiles
   block:
     - ansible.builtin.apt:
@@ -60,7 +60,7 @@ func init() {
 	for id, hint := range manualHints {
 		id := id
 		hint := hint
-		register("ansible-"+id, []string{id}, func(_ core.Finding) (remediate.Snippet, error) {
+		register("ansible-"+id, []string{id}, func(_ compliancekit.Finding) (remediate.Snippet, error) {
 			body := "- name: " + id + " — inspect (manual-verify)\n  ansible.builtin.command:\n    cmd: " + hint + "\n  register: out\n  changed_when: false\n  failed_when: false\n  become: true\n- ansible.builtin.debug:\n    var: out.stdout_lines\n"
 			return remediate.Snippet{
 				Risk: remediate.RiskManual, Idempotent: true, Content: body,

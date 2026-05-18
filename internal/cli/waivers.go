@@ -12,8 +12,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/waivers"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // newWaiversCmd builds `compliancekit waivers` with four subcommands:
@@ -234,7 +234,7 @@ func runWaiversCheck(_ context.Context, stdout io.Writer, file, in string) error
 // loadCheckFindings reads findings JSON from path / stdin. Reuses
 // the canonical loadFindings helper from evidence.go for the path
 // case; only owns the stdin branch.
-func loadCheckFindings(path string) ([]core.Finding, error) {
+func loadCheckFindings(path string) ([]compliancekit.Finding, error) {
 	if path != "-" {
 		return loadFindings(path)
 	}
@@ -243,19 +243,19 @@ func loadCheckFindings(path string) ([]core.Finding, error) {
 		return nil, err
 	}
 	var env struct {
-		Findings []core.Finding `json:"findings"`
+		Findings []compliancekit.Finding `json:"findings"`
 	}
 	if err := json.Unmarshal(body, &env); err == nil && env.Findings != nil {
 		return env.Findings, nil
 	}
-	var arr []core.Finding
+	var arr []compliancekit.Finding
 	if err := json.Unmarshal(body, &arr); err == nil {
 		return arr, nil
 	}
 	return nil, fmt.Errorf("unrecognized findings JSON shape on stdin")
 }
 
-func countActionable(findings []core.Finding) int {
+func countActionable(findings []compliancekit.Finding) int {
 	n := 0
 	for _, f := range findings {
 		if f.Status.IsActionable() {

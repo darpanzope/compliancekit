@@ -11,7 +11,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // Engine runs a scan end-to-end. It is constructed via New and invoked
@@ -20,14 +20,14 @@ import (
 // At v0.1 collection and evaluation are sequential. v0.6 will introduce
 // bounded parallelism for both phases (max_parallel from config).
 type Engine struct {
-	collectors []core.Collector
-	registry   *core.Registry
+	collectors []compliancekit.Collector
+	registry   *compliancekit.Registry
 }
 
 // New returns an Engine configured with the given collectors and check
-// registry. Pass core.DefaultRegistry() for production scans; pass a
-// fresh core.NewRegistry() for isolated tests.
-func New(collectors []core.Collector, registry *core.Registry) *Engine {
+// registry. Pass compliancekit.DefaultRegistry() for production scans; pass a
+// fresh compliancekit.NewRegistry() for isolated tests.
+func New(collectors []compliancekit.Collector, registry *compliancekit.Registry) *Engine {
 	return &Engine{
 		collectors: collectors,
 		registry:   registry,
@@ -44,8 +44,8 @@ func New(collectors []core.Collector, registry *core.Registry) *Engine {
 // Reporters that need raw resource detail (the evidence pack reporter
 // at v0.4) read from it.
 type Result struct {
-	Findings []core.Finding
-	Graph    *core.ResourceGraph
+	Findings []compliancekit.Finding
+	Graph    *compliancekit.ResourceGraph
 }
 
 // Run executes the scan.
@@ -62,7 +62,7 @@ type Result struct {
 // All findings produced in one scan share a single Timestamp (engine
 // end-of-scan time) for stable diff correlation across runs.
 func (e *Engine) Run(ctx context.Context) (Result, error) {
-	graph := core.NewResourceGraph()
+	graph := compliancekit.NewResourceGraph()
 
 	for _, c := range e.collectors {
 		if err := ctx.Err(); err != nil {
@@ -77,7 +77,7 @@ func (e *Engine) Run(ctx context.Context) (Result, error) {
 		}
 	}
 
-	var findings []core.Finding
+	var findings []compliancekit.Finding
 	timestamp := time.Now().UTC()
 
 	for _, id := range e.registry.IDs() {
@@ -90,10 +90,10 @@ func (e *Engine) Run(ctx context.Context) (Result, error) {
 		}
 		produced, err := fn(ctx, graph)
 		if err != nil {
-			findings = append(findings, core.Finding{
+			findings = append(findings, compliancekit.Finding{
 				CheckID:   id,
-				Status:    core.StatusError,
-				Severity:  core.SeverityInfo,
+				Status:    compliancekit.StatusError,
+				Severity:  compliancekit.SeverityInfo,
 				Message:   fmt.Sprintf("check failed: %v", err),
 				Timestamp: timestamp,
 			})

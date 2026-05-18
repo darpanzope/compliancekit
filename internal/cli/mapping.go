@@ -11,9 +11,9 @@ import (
 	"github.com/spf13/cobra"
 	"go.yaml.in/yaml/v3"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/frameworks"
 	"github.com/darpanzope/compliancekit/internal/ingest"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // newMappingCmd builds `compliancekit mapping`, a parent for managing
@@ -124,7 +124,7 @@ func newMappingValidateCmd() *cobra.Command {
   - every rule maps to at least one (framework, control) pair
   - every framework id is known (embedded or runtime-registered)
   - every control id exists within its named framework
-  - severity values (if set) parse via core.ParseSeverity
+  - severity values (if set) parse via compliancekit.ParseSeverity
 
 Reports problems one per line; exits non-zero if any are found.`,
 		Args: cobra.ExactArgs(1),
@@ -171,7 +171,7 @@ func validateMappingTable(tab *ingest.MappingTable) []string {
 			}
 		}
 		if rule.Severity != "" {
-			if _, err := core.ParseSeverity(rule.Severity); err != nil {
+			if _, err := compliancekit.ParseSeverity(rule.Severity); err != nil {
 				problems = append(problems, fmt.Sprintf("rule %q: bad severity %q (%v)", ruleID, rule.Severity, err))
 			}
 		}

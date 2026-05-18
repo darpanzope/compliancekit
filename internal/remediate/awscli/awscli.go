@@ -24,11 +24,11 @@
 package awscli
 
 import (
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
-type strategyFunc func(core.Finding) (remediate.Snippet, error)
+type strategyFunc func(compliancekit.Finding) (remediate.Snippet, error)
 
 type strategy struct {
 	name string
@@ -39,7 +39,7 @@ type strategy struct {
 func (s *strategy) Name() string                { return s.name }
 func (s *strategy) CheckIDs() []string          { return s.ids }
 func (s *strategy) Formats() []remediate.Format { return []remediate.Format{remediate.FormatAWSCLI} }
-func (s *strategy) Render(f core.Finding, format remediate.Format) (remediate.Snippet, error) {
+func (s *strategy) Render(f compliancekit.Finding, format remediate.Format) (remediate.Snippet, error) {
 	if format != remediate.FormatAWSCLI {
 		return remediate.Snippet{}, remediate.ErrFormatUnsupported
 	}
@@ -53,7 +53,7 @@ func register(name string, ids []string, fn strategyFunc) {
 // regionOf returns the AWS region from the finding's ResourceRef,
 // falling back to "us-east-1" when not set. Most CLI commands need
 // --region; this lets strategies stay terse.
-func regionOf(f core.Finding) string {
+func regionOf(f compliancekit.Finding) string {
 	if f.Resource.Region != "" {
 		return f.Resource.Region
 	}

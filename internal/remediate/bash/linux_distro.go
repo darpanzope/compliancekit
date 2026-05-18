@@ -1,8 +1,8 @@
 package bash
 
 import (
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.20 phase 1 — bash strategy for linux-distro-supported.
@@ -14,7 +14,7 @@ func init() {
 		[]string{"linux-distro-supported"}, renderDistroSupportedBash)
 }
 
-func renderDistroSupportedBash(_ core.Finding) (remediate.Snippet, error) {
+func renderDistroSupportedBash(_ compliancekit.Finding) (remediate.Snippet, error) {
 	body := `# Pre-flight gate: refuse to run the hardening script on a distro
 # compliancekit doesn't model.
 . /etc/os-release

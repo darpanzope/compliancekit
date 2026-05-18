@@ -12,7 +12,7 @@ import (
 	locationpb "google.golang.org/genproto/googleapis/cloud/location"
 
 	"github.com/darpanzope/compliancekit/internal/collectors/cloudcommon"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // KMSCryptoKeyType holds GCP KMS CryptoKey resources. Rotation
@@ -23,7 +23,7 @@ const KMSCryptoKeyType = "gcp.kms.crypto_key"
 // collectKMS enumerates KMS CryptoKeys per project. Walks
 // locations -> keyrings -> keys and attaches each key's IAM
 // policy. Per-project errors emit a placeholder and continue.
-func (c *Collector) collectKMS(ctx context.Context, out []core.Resource) []core.Resource {
+func (c *Collector) collectKMS(ctx context.Context, out []compliancekit.Resource) []compliancekit.Resource {
 	for _, projectID := range c.projects {
 		updated, err := c.collectKMSForProject(ctx, projectID, out)
 		if err != nil {
@@ -35,7 +35,7 @@ func (c *Collector) collectKMS(ctx context.Context, out []core.Resource) []core.
 	return out
 }
 
-func (c *Collector) collectKMSForProject(ctx context.Context, projectID string, out []core.Resource) ([]core.Resource, error) {
+func (c *Collector) collectKMSForProject(ctx context.Context, projectID string, out []compliancekit.Resource) ([]compliancekit.Resource, error) {
 	client, err := kms.NewKeyManagementClient(ctx, c.clientOption())
 	if err != nil {
 		return out, fmt.Errorf("new kms client: %w", err)
@@ -84,7 +84,7 @@ func (c *Collector) collectKMSForProject(ctx context.Context, projectID string, 
 	return out, nil
 }
 
-func (c *Collector) kmsKeyResource(ctx context.Context, client *kms.KeyManagementClient, projectID, locationID string, ring *kmspb.KeyRing, key *kmspb.CryptoKey) core.Resource {
+func (c *Collector) kmsKeyResource(ctx context.Context, client *kms.KeyManagementClient, projectID, locationID string, ring *kmspb.KeyRing, key *kmspb.CryptoKey) compliancekit.Resource {
 	keyShort := lastPathSegment(key.Name)
 	ringShort := lastPathSegment(ring.Name)
 
@@ -94,7 +94,7 @@ func (c *Collector) kmsKeyResource(ctx context.Context, client *kms.KeyManagemen
 	}
 	rotationDays := rotationSeconds / 86400
 
-	r := core.Resource{
+	r := compliancekit.Resource{
 		ID:       fmt.Sprintf("gcp.kms.crypto_key.%s.%s.%s.%s", projectID, locationID, ringShort, keyShort),
 		Type:     KMSCryptoKeyType,
 		Name:     keyShort,

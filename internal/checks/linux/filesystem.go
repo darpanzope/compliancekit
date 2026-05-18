@@ -5,12 +5,12 @@ import (
 	"fmt"
 
 	linuxcol "github.com/darpanzope/compliancekit/internal/collectors/linux"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // filesystemOf returns the filesystem sub-map and FileFacts for path
 // on a host Resource, or (zero, false) when unavailable.
-func filesystemFactsOf(host core.Resource, path string) (linuxcol.FileFacts, bool) {
+func filesystemFactsOf(host compliancekit.Resource, path string) (linuxcol.FileFacts, bool) {
 	if !host.AttrBool("reachable") {
 		return linuxcol.FileFacts{}, false
 	}
@@ -30,11 +30,11 @@ func filesystemFactsOf(host core.Resource, path string) (linuxcol.FileFacts, boo
 	return facts, ok
 }
 
-func fsSkip(check core.Check, host core.Resource, path string) core.Finding {
-	return core.Finding{
+func fsSkip(check compliancekit.Check, host compliancekit.Resource, path string) compliancekit.Finding {
+	return compliancekit.Finding{
 		CheckID:  check.ID,
 		Severity: check.Severity,
-		Status:   core.StatusSkip,
+		Status:   compliancekit.StatusSkip,
 		Resource: host.Ref(),
 		Message:  fmt.Sprintf("%s metadata unavailable", path),
 		Tags:     check.Tags,
@@ -47,10 +47,10 @@ func fsSkip(check core.Check, host core.Resource, path string) core.Finding {
 
 // CheckShadowPerms requires /etc/shadow to be mode 0640 and owned
 // root:shadow (CIS Ubuntu 22.04 benchmark 7.1.3).
-var CheckShadowPerms = core.Check{
+var CheckShadowPerms = compliancekit.Check{
 	ID:           "linux-shadow-perms",
 	Title:        "/etc/shadow must be 0640 root:shadow",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "linux",
 	Service:      "filesystem",
 	ResourceType: linuxcol.HostType,
@@ -69,16 +69,16 @@ var CheckShadowPerms = core.Check{
 }
 
 // ShadowPerms is the CheckFunc for CheckShadowPerms.
-func ShadowPerms(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func ShadowPerms(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	hosts := g.ByType(linuxcol.HostType)
-	findings := make([]core.Finding, 0, len(hosts))
+	findings := make([]compliancekit.Finding, 0, len(hosts))
 	for _, h := range hosts {
 		facts, ok := filesystemFactsOf(h, "/etc/shadow")
 		if !ok {
 			findings = append(findings, fsSkip(CheckShadowPerms, h, "/etc/shadow"))
 			continue
 		}
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckShadowPerms.ID,
 			Severity: CheckShadowPerms.Severity,
 			Resource: h.Ref(),
@@ -87,10 +87,10 @@ func ShadowPerms(_ context.Context, g *core.ResourceGraph) ([]core.Finding, erro
 		modeOK := facts.Mode == 0o640
 		ownerOK := facts.User == "root" && facts.Group == "shadow"
 		if modeOK && ownerOK {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("host %q: /etc/shadow mode=0640 owner=root:shadow", h.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("host %q: /etc/shadow mode=0%o owner=%s:%s (want 0640 root:shadow)",
 				h.Name, facts.Mode, facts.User, facts.Group)
 		}
@@ -104,10 +104,10 @@ func ShadowPerms(_ context.Context, g *core.ResourceGraph) ([]core.Finding, erro
 // ============================================================
 
 // CheckPasswdPerms requires /etc/passwd to be mode 0644 or stricter.
-var CheckPasswdPerms = core.Check{
+var CheckPasswdPerms = compliancekit.Check{
 	ID:           "linux-passwd-perms",
 	Title:        "/etc/passwd must be 0644 or stricter",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "linux",
 	Service:      "filesystem",
 	ResourceType: linuxcol.HostType,
@@ -126,16 +126,16 @@ var CheckPasswdPerms = core.Check{
 }
 
 // PasswdPerms is the CheckFunc for CheckPasswdPerms.
-func PasswdPerms(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func PasswdPerms(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	hosts := g.ByType(linuxcol.HostType)
-	findings := make([]core.Finding, 0, len(hosts))
+	findings := make([]compliancekit.Finding, 0, len(hosts))
 	for _, h := range hosts {
 		facts, ok := filesystemFactsOf(h, "/etc/passwd")
 		if !ok {
 			findings = append(findings, fsSkip(CheckPasswdPerms, h, "/etc/passwd"))
 			continue
 		}
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckPasswdPerms.ID,
 			Severity: CheckPasswdPerms.Severity,
 			Resource: h.Ref(),
@@ -145,10 +145,10 @@ func PasswdPerms(_ context.Context, g *core.ResourceGraph) ([]core.Finding, erro
 		// Stricter (e.g. 0640, 0600) passes.
 		// 0644 in octal is rw-r--r--. The forbidden bits are 0022 (group + other write).
 		if facts.Mode&0o022 == 0 && facts.User == "root" {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("host %q: /etc/passwd mode=0%o owner=%s", h.Name, facts.Mode, facts.User)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("host %q: /etc/passwd mode=0%o owner=%s (want 0644 or stricter, owner root)",
 				h.Name, facts.Mode, facts.User)
 		}
@@ -158,6 +158,6 @@ func PasswdPerms(_ context.Context, g *core.ResourceGraph) ([]core.Finding, erro
 }
 
 func init() {
-	core.Register(CheckShadowPerms, ShadowPerms)
-	core.Register(CheckPasswdPerms, PasswdPerms)
+	compliancekit.Register(CheckShadowPerms, ShadowPerms)
+	compliancekit.Register(CheckPasswdPerms, PasswdPerms)
 }

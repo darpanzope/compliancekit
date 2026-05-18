@@ -3,8 +3,8 @@ package bash
 import (
 	"fmt"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.20 phase 3 — bash strategies for the 15 filesystem-hardening
@@ -26,7 +26,7 @@ var mountSepBashCheckIDs = []string{
 func init() {
 	for _, id := range mountSepBashCheckIDs {
 		id := id
-		register("bash-"+id, []string{id}, func(_ core.Finding) (remediate.Snippet, error) {
+		register("bash-"+id, []string{id}, func(_ compliancekit.Finding) (remediate.Snippet, error) {
 			target := mountTargetFromID(id)
 			body := fmt.Sprintf(`# Re-partitioning %s requires a maintenance window.
 # Sketch of the procedure for an LVM-backed host:
@@ -67,7 +67,7 @@ func init() {
 	for id, s := range mountOptBashSpecs {
 		id := id
 		s := s
-		register("bash-"+id, []string{id}, func(_ core.Finding) (remediate.Snippet, error) {
+		register("bash-"+id, []string{id}, func(_ compliancekit.Finding) (remediate.Snippet, error) {
 			body := fmt.Sprintf(`# Apply at runtime + persist via fstab edit.
 # 1. Live remount (no reboot needed):
 sudo mount -o remount,%s %s

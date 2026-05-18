@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 func TestRegistryCoverage(t *testing.T) {
@@ -43,7 +43,7 @@ func TestRegistryCoverage(t *testing.T) {
 }
 
 func TestRenderSSHDHardening(t *testing.T) {
-	f := core.Finding{CheckID: "linux-sshd-no-root-login"}
+	f := compliancekit.Finding{CheckID: "linux-sshd-no-root-login"}
 	s, err := remediate.Default.Render(f, remediate.FormatAnsible)
 	if err != nil {
 		t.Fatalf("Render: %v", err)
@@ -62,7 +62,7 @@ func TestRenderSSHDHardening(t *testing.T) {
 }
 
 func TestRenderUIDZeroManual(t *testing.T) {
-	f := core.Finding{CheckID: "linux-uid-zero-only-root"}
+	f := compliancekit.Finding{CheckID: "linux-uid-zero-only-root"}
 	s, err := remediate.Default.Render(f, remediate.FormatAnsible)
 	if err != nil {
 		t.Fatalf("Render: %v", err)

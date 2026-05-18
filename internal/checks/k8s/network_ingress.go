@@ -6,17 +6,17 @@ import (
 	"strings"
 
 	k8scol "github.com/darpanzope/compliancekit/internal/collectors/k8s"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.22 phase 3 — Ingress checks split out of network.go.
 
 // ----- Ingress TLS --------------------------------------------
 
-var CheckIngressTLS = core.Check{
+var CheckIngressTLS = compliancekit.Check{
 	ID:           "k8s-ingress-tls-missing",
 	Title:        "Ingresses should configure TLS",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "kubernetes",
 	Service:      "network",
 	ResourceType: k8scol.IngressType,
@@ -36,16 +36,16 @@ var CheckIngressTLS = core.Check{
 	Scanner: "network.IngressTLS",
 }
 
-func IngressTLS(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func IngressTLS(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, ing := range g.ByType(k8scol.IngressType) {
 		hasTLS, _ := ing.Attributes["has_tls"].(bool)
 		f := ingressFinding(CheckIngressTLS, ing)
 		if hasTLS {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("ingress %q: TLS configured", networkDesc(ing))
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("ingress %q: no TLS section", networkDesc(ing))
 		}
 		findings = append(findings, f)
@@ -55,10 +55,10 @@ func IngressTLS(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error
 
 // ----- Ingress default backend ----------------------------------
 
-var CheckIngressDefaultBackend = core.Check{
+var CheckIngressDefaultBackend = compliancekit.Check{
 	ID:           "k8s-ingress-default-backend",
 	Title:        "Ingresses should not declare a default backend",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "kubernetes",
 	Service:      "network",
 	ResourceType: k8scol.IngressType,
@@ -78,16 +78,16 @@ var CheckIngressDefaultBackend = core.Check{
 	Scanner: "network.IngressDefaultBackend",
 }
 
-func IngressDefaultBackend(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func IngressDefaultBackend(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, ing := range g.ByType(k8scol.IngressType) {
 		def, _ := ing.Attributes["has_default_backend"].(bool)
 		f := ingressFinding(CheckIngressDefaultBackend, ing)
 		if def {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("ingress %q: has default backend (catches every unmatched request)", networkDesc(ing))
 		} else {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("ingress %q: no default backend", networkDesc(ing))
 		}
 		findings = append(findings, f)
@@ -97,10 +97,10 @@ func IngressDefaultBackend(_ context.Context, g *core.ResourceGraph) ([]core.Fin
 
 // ----- Ingress class set ----------------------------------------
 
-var CheckIngressClass = core.Check{
+var CheckIngressClass = compliancekit.Check{
 	ID:           "k8s-ingress-class-set",
 	Title:        "Ingresses should set ingressClassName explicitly",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "kubernetes",
 	Service:      "network",
 	ResourceType: k8scol.IngressType,
@@ -120,16 +120,16 @@ var CheckIngressClass = core.Check{
 	Scanner: "network.IngressClass",
 }
 
-func IngressClass(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func IngressClass(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, ing := range g.ByType(k8scol.IngressType) {
 		class, _ := ing.Attributes["ingress_class"].(string)
 		f := ingressFinding(CheckIngressClass, ing)
 		if class != "" {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("ingress %q: ingressClassName=%q", networkDesc(ing), class)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("ingress %q: ingressClassName not set", networkDesc(ing))
 		}
 		findings = append(findings, f)
@@ -139,10 +139,10 @@ func IngressClass(_ context.Context, g *core.ResourceGraph) ([]core.Finding, err
 
 // ----- Ingress dangerous annotations ----------------------------
 
-var CheckIngressAnnotations = core.Check{
+var CheckIngressAnnotations = compliancekit.Check{
 	ID:           "k8s-ingress-dangerous-annotations",
 	Title:        "Ingresses should not use snippet annotations (RCE risk)",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "kubernetes",
 	Service:      "network",
 	ResourceType: k8scol.IngressType,
@@ -166,8 +166,8 @@ var CheckIngressAnnotations = core.Check{
 	Scanner: "network.IngressAnnotations",
 }
 
-func IngressAnnotations(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func IngressAnnotations(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, ing := range g.ByType(k8scol.IngressType) {
 		annos, _ := ing.Attributes["annotations"].(map[string]string)
 		f := ingressFinding(CheckIngressAnnotations, ing)
@@ -176,10 +176,10 @@ func IngressAnnotations(_ context.Context, g *core.ResourceGraph) ([]core.Findin
 			matched = append(matched, k)
 		}
 		if len(matched) > 0 {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("ingress %q: dangerous annotations: %s", networkDesc(ing), strings.Join(matched, ", "))
 		} else {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("ingress %q: no snippet annotations", networkDesc(ing))
 		}
 		findings = append(findings, f)
@@ -188,8 +188,8 @@ func IngressAnnotations(_ context.Context, g *core.ResourceGraph) ([]core.Findin
 }
 
 func init() {
-	core.Register(CheckIngressTLS, IngressTLS)
-	core.Register(CheckIngressDefaultBackend, IngressDefaultBackend)
-	core.Register(CheckIngressClass, IngressClass)
-	core.Register(CheckIngressAnnotations, IngressAnnotations)
+	compliancekit.Register(CheckIngressTLS, IngressTLS)
+	compliancekit.Register(CheckIngressDefaultBackend, IngressDefaultBackend)
+	compliancekit.Register(CheckIngressClass, IngressClass)
+	compliancekit.Register(CheckIngressAnnotations, IngressAnnotations)
 }

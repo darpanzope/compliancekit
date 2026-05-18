@@ -15,7 +15,7 @@ import (
 // v0.19 phase 10 — pure-helper tests targeting the 0% lines in
 // internal/collectors/digitalocean/. Each test exercises a single
 // helper or *Resource conversion function with godo / s3 fixture
-// values + asserts the produced core.Resource attributes match the
+// values + asserts the produced compliancekit.Resource attributes match the
 // downstream check contract.
 //
 // These tests deliberately avoid the live API path; the

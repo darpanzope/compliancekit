@@ -5,13 +5,13 @@ import (
 	"fmt"
 
 	docol "github.com/darpanzope/compliancekit/internal/collectors/digitalocean"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
-var CheckFunctionsHasAccessKey = core.Check{
+var CheckFunctionsHasAccessKey = compliancekit.Check{
 	ID:           "do-functions-no-access-keys",
 	Title:        "Functions namespaces should have at least one access key",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "digitalocean",
 	Service:      "functions",
 	ResourceType: docol.FunctionsNamespaceType,
@@ -32,21 +32,21 @@ var CheckFunctionsHasAccessKey = core.Check{
 	Scanner: "functions.HasAccessKey",
 }
 
-func FunctionsHasAccessKey(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func FunctionsHasAccessKey(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, ns := range g.ByType(docol.FunctionsNamespaceType) {
 		n, _ := ns.Attributes["access_key_count"].(int)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckFunctionsHasAccessKey.ID,
 			Severity: CheckFunctionsHasAccessKey.Severity,
 			Resource: ns.Ref(),
 			Tags:     CheckFunctionsHasAccessKey.Tags,
 		}
 		if n > 0 {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("ns %q: %d access key(s)", ns.Name, n)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("ns %q: no access keys (relying on owner key only)", ns.Name)
 		}
 		findings = append(findings, f)
@@ -54,10 +54,10 @@ func FunctionsHasAccessKey(_ context.Context, g *core.ResourceGraph) ([]core.Fin
 	return findings, nil
 }
 
-var CheckFunctionsOrphan = core.Check{
+var CheckFunctionsOrphan = compliancekit.Check{
 	ID:           "do-functions-namespace-empty",
 	Title:        "Functions namespaces should host at least one trigger",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "digitalocean",
 	Service:      "functions",
 	ResourceType: docol.FunctionsNamespaceType,
@@ -76,21 +76,21 @@ var CheckFunctionsOrphan = core.Check{
 	Scanner: "functions.Orphan",
 }
 
-func FunctionsOrphan(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func FunctionsOrphan(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, ns := range g.ByType(docol.FunctionsNamespaceType) {
 		n, _ := ns.Attributes["trigger_count"].(int)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckFunctionsOrphan.ID,
 			Severity: CheckFunctionsOrphan.Severity,
 			Resource: ns.Ref(),
 			Tags:     CheckFunctionsOrphan.Tags,
 		}
 		if n > 0 {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("ns %q: %d trigger(s)", ns.Name, n)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("ns %q: empty (no triggers)", ns.Name)
 		}
 		findings = append(findings, f)
@@ -98,10 +98,10 @@ func FunctionsOrphan(_ context.Context, g *core.ResourceGraph) ([]core.Finding, 
 	return findings, nil
 }
 
-var CheckFunctionsAllTriggersEnabled = core.Check{
+var CheckFunctionsAllTriggersEnabled = compliancekit.Check{
 	ID:           "do-functions-disabled-triggers",
 	Title:        "Functions namespaces should not have disabled triggers",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "digitalocean",
 	Service:      "functions",
 	ResourceType: docol.FunctionsNamespaceType,
@@ -120,22 +120,22 @@ var CheckFunctionsAllTriggersEnabled = core.Check{
 	Scanner: "functions.AllTriggersEnabled",
 }
 
-func FunctionsAllTriggersEnabled(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func FunctionsAllTriggersEnabled(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, ns := range g.ByType(docol.FunctionsNamespaceType) {
 		total, _ := ns.Attributes["trigger_count"].(int)
 		enabled, _ := ns.Attributes["enabled_trigger_count"].(int)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckFunctionsAllTriggersEnabled.ID,
 			Severity: CheckFunctionsAllTriggersEnabled.Severity,
 			Resource: ns.Ref(),
 			Tags:     CheckFunctionsAllTriggersEnabled.Tags,
 		}
 		if total == 0 || enabled == total {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("ns %q: %d/%d triggers enabled", ns.Name, enabled, total)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("ns %q: %d/%d triggers enabled (%d disabled)", ns.Name, enabled, total, total-enabled)
 		}
 		findings = append(findings, f)
@@ -144,7 +144,7 @@ func FunctionsAllTriggersEnabled(_ context.Context, g *core.ResourceGraph) ([]co
 }
 
 func init() {
-	core.Register(CheckFunctionsHasAccessKey, FunctionsHasAccessKey)
-	core.Register(CheckFunctionsOrphan, FunctionsOrphan)
-	core.Register(CheckFunctionsAllTriggersEnabled, FunctionsAllTriggersEnabled)
+	compliancekit.Register(CheckFunctionsHasAccessKey, FunctionsHasAccessKey)
+	compliancekit.Register(CheckFunctionsOrphan, FunctionsOrphan)
+	compliancekit.Register(CheckFunctionsAllTriggersEnabled, FunctionsAllTriggersEnabled)
 }

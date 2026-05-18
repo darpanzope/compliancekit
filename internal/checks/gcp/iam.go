@@ -14,7 +14,7 @@ import (
 	"time"
 
 	gcpcol "github.com/darpanzope/compliancekit/internal/collectors/gcp"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // ========================================================================
@@ -32,10 +32,10 @@ var primitiveRoles = map[string]bool{
 
 // CheckNoPrimitiveRoles forbids primitive roles at project IAM
 // policy. CIS GCP 1.4 + 1.8.
-var CheckNoPrimitiveRoles = core.Check{
+var CheckNoPrimitiveRoles = compliancekit.Check{
 	ID:           "gcp-iam-no-primitive-roles",
 	Title:        "GCP project IAM must not grant primitive roles (Owner/Editor/Viewer)",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "gcp",
 	Service:      "iam",
 	ResourceType: gcpcol.IAMPolicyType,
@@ -58,8 +58,8 @@ var CheckNoPrimitiveRoles = core.Check{
 	Scanner: "iam.NoPrimitiveRoles",
 }
 
-func NoPrimitiveRoles(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func NoPrimitiveRoles(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, p := range g.ByType(gcpcol.IAMPolicyType) {
 		bindings, _ := p.Attributes["bindings"].([]map[string]any)
 		violators := map[string][]string{} // role -> members
@@ -73,17 +73,17 @@ func NoPrimitiveRoles(_ context.Context, g *core.ResourceGraph) ([]core.Finding,
 				violators[role] = members
 			}
 		}
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckNoPrimitiveRoles.ID,
 			Severity: CheckNoPrimitiveRoles.Severity,
 			Resource: p.Ref(),
 			Tags:     CheckNoPrimitiveRoles.Tags,
 		}
 		if len(violators) == 0 {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("project %q: no primitive role bindings", p.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("project %q: primitive role bindings present (%s)",
 				p.Name, summarizeBindings(violators))
 		}
@@ -105,10 +105,10 @@ func summarizeBindings(m map[string][]string) string {
 // or roles/iam.serviceAccountUser at the project level. These let
 // the holder impersonate any SA in the project -- CIS GCP 1.6
 // (separation of duties for SA management).
-var CheckNoBroadTokenCreator = core.Check{
+var CheckNoBroadTokenCreator = compliancekit.Check{
 	ID:           "gcp-iam-no-broad-token-creator",
 	Title:        "GCP project must not grant broad service-account impersonation",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "gcp",
 	Service:      "iam",
 	ResourceType: gcpcol.IAMPolicyType,
@@ -137,8 +137,8 @@ var dangerousProjectRoles = map[string]bool{
 	"roles/iam.serviceAccountUser":         true,
 }
 
-func NoBroadTokenCreator(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func NoBroadTokenCreator(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, p := range g.ByType(gcpcol.IAMPolicyType) {
 		bindings, _ := p.Attributes["bindings"].([]map[string]any)
 		violators := map[string][]string{}
@@ -152,17 +152,17 @@ func NoBroadTokenCreator(_ context.Context, g *core.ResourceGraph) ([]core.Findi
 				violators[role] = members
 			}
 		}
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckNoBroadTokenCreator.ID,
 			Severity: CheckNoBroadTokenCreator.Severity,
 			Resource: p.Ref(),
 			Tags:     CheckNoBroadTokenCreator.Tags,
 		}
 		if len(violators) == 0 {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("project %q: no project-level SA impersonation grants", p.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("project %q: project-level SA impersonation grants present (%s)",
 				p.Name, summarizeBindings(violators))
 		}
@@ -173,10 +173,10 @@ func NoBroadTokenCreator(_ context.Context, g *core.ResourceGraph) ([]core.Findi
 
 // CheckCloudAuditLogging requires audit log configuration for all
 // services with ALL three log types (admin/read/write). CIS GCP 2.1.
-var CheckCloudAuditLogging = core.Check{
+var CheckCloudAuditLogging = compliancekit.Check{
 	ID:           "gcp-iam-cloudaudit-logging",
 	Title:        "GCP project audit logging must cover admin/read/write activity for allServices",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "gcp",
 	Service:      "iam",
 	ResourceType: gcpcol.IAMPolicyType,
@@ -201,8 +201,8 @@ var CheckCloudAuditLogging = core.Check{
 
 var requiredLogTypes = []string{"ADMIN_READ", "DATA_READ", "DATA_WRITE"}
 
-func CloudAuditLogging(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func CloudAuditLogging(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, p := range g.ByType(gcpcol.IAMPolicyType) {
 		configs, _ := p.Attributes["audit_configs"].([]map[string]any)
 		var allServicesConfig map[string]any
@@ -212,14 +212,14 @@ func CloudAuditLogging(_ context.Context, g *core.ResourceGraph) ([]core.Finding
 				break
 			}
 		}
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckCloudAuditLogging.ID,
 			Severity: CheckCloudAuditLogging.Severity,
 			Resource: p.Ref(),
 			Tags:     CheckCloudAuditLogging.Tags,
 		}
 		if allServicesConfig == nil {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("project %q: no audit config for allServices", p.Name)
 			findings = append(findings, f)
 			continue
@@ -238,10 +238,10 @@ func CloudAuditLogging(_ context.Context, g *core.ResourceGraph) ([]core.Finding
 			}
 		}
 		if len(missing) == 0 {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("project %q: audit log types ADMIN_READ/DATA_READ/DATA_WRITE all configured", p.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("project %q: audit config missing log types: %s",
 				p.Name, strings.Join(missing, ", "))
 		}
@@ -259,10 +259,10 @@ const saKeyMaxAge = 90 * 24 * time.Hour
 
 // CheckSAKeyAge requires user-managed SA keys to be rotated every
 // 90 days. CIS GCP 1.7.
-var CheckSAKeyAge = core.Check{
+var CheckSAKeyAge = compliancekit.Check{
 	ID:           "gcp-iam-sa-key-age",
 	Title:        "GCP service-account user-managed keys must be rotated within 90 days",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "gcp",
 	Service:      "iam",
 	ResourceType: gcpcol.ServiceAccountType,
@@ -285,8 +285,8 @@ var CheckSAKeyAge = core.Check{
 	Scanner: "iam.SAKeyAge",
 }
 
-func SAKeyAge(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func SAKeyAge(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	now := time.Now().UTC()
 	for _, sa := range g.ByType(gcpcol.ServiceAccountType) {
 		keys, _ := sa.Attributes["keys"].([]map[string]any)
@@ -309,7 +309,7 @@ func SAKeyAge(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) 
 				violators = append(violators, fmt.Sprintf("%s (%d days)", lastPathSegment(name), int(age.Hours()/24)))
 			}
 		}
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckSAKeyAge.ID,
 			Severity: CheckSAKeyAge.Severity,
 			Resource: sa.Ref(),
@@ -317,13 +317,13 @@ func SAKeyAge(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) 
 		}
 		switch {
 		case oldest == 0:
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("SA %q: no user-managed keys", sa.Name)
 		case len(violators) == 0:
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("SA %q: oldest user-managed key is %d days", sa.Name, int(oldest.Hours()/24))
 		default:
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("SA %q: stale user-managed keys: %s", sa.Name, strings.Join(violators, ", "))
 		}
 		findings = append(findings, f)
@@ -342,10 +342,10 @@ func lastPathSegment(s string) string {
 // Workload Identity Federation + short-lived tokens replace the
 // use case in nearly every modern setup; long-lived keys are the
 // canonical credential-leak path. CIS GCP 1.4.
-var CheckNoUserManagedSAKeys = core.Check{
+var CheckNoUserManagedSAKeys = compliancekit.Check{
 	ID:           "gcp-iam-no-user-managed-sa-keys",
 	Title:        "GCP service accounts should not have user-managed keys",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "gcp",
 	Service:      "iam",
 	ResourceType: gcpcol.ServiceAccountType,
@@ -371,21 +371,21 @@ var CheckNoUserManagedSAKeys = core.Check{
 	Scanner: "iam.NoUserManagedSAKeys",
 }
 
-func NoUserManagedSAKeys(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func NoUserManagedSAKeys(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, sa := range g.ByType(gcpcol.ServiceAccountType) {
 		count, _ := sa.Attributes["user_managed_key_count"].(int)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckNoUserManagedSAKeys.ID,
 			Severity: CheckNoUserManagedSAKeys.Severity,
 			Resource: sa.Ref(),
 			Tags:     CheckNoUserManagedSAKeys.Tags,
 		}
 		if count == 0 {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("SA %q: no user-managed keys", sa.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("SA %q: %d user-managed key(s) present", sa.Name, count)
 		}
 		findings = append(findings, f)
@@ -397,10 +397,10 @@ func NoUserManagedSAKeys(_ context.Context, g *core.ResourceGraph) ([]core.Findi
 // service accounts as a finding when they exist with broad project
 // roles. CIS GCP 1.5 prescribes against using them; replacing them
 // with purpose-built SAs is the correct fix.
-var CheckNoDefaultSAInUse = core.Check{
+var CheckNoDefaultSAInUse = compliancekit.Check{
 	ID:           "gcp-iam-no-default-sa-in-use",
 	Title:        "GCP default Compute / App Engine service accounts must not be used",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "gcp",
 	Service:      "iam",
 	ResourceType: gcpcol.ServiceAccountType,
@@ -425,12 +425,12 @@ var CheckNoDefaultSAInUse = core.Check{
 	Scanner: "iam.NoDefaultSAInUse",
 }
 
-func NoDefaultSAInUse(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func NoDefaultSAInUse(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, sa := range g.ByType(gcpcol.ServiceAccountType) {
 		isDefault, _ := sa.Attributes["is_default"].(bool)
 		disabled, _ := sa.Attributes["disabled"].(bool)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckNoDefaultSAInUse.ID,
 			Severity: CheckNoDefaultSAInUse.Severity,
 			Resource: sa.Ref(),
@@ -439,13 +439,13 @@ func NoDefaultSAInUse(_ context.Context, g *core.ResourceGraph) ([]core.Finding,
 		switch {
 		case !isDefault:
 			// Purpose-built SAs pass by definition.
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("SA %q: purpose-built (not a default)", sa.Name)
 		case disabled:
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("SA %q: default but disabled (skip)", sa.Name)
 		default:
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("SA %q: default GCP service account is active (replace with a purpose-built SA)", sa.Name)
 		}
 		findings = append(findings, f)
@@ -454,10 +454,10 @@ func NoDefaultSAInUse(_ context.Context, g *core.ResourceGraph) ([]core.Finding,
 }
 
 func init() {
-	core.Register(CheckNoPrimitiveRoles, NoPrimitiveRoles)
-	core.Register(CheckNoBroadTokenCreator, NoBroadTokenCreator)
-	core.Register(CheckCloudAuditLogging, CloudAuditLogging)
-	core.Register(CheckSAKeyAge, SAKeyAge)
-	core.Register(CheckNoUserManagedSAKeys, NoUserManagedSAKeys)
-	core.Register(CheckNoDefaultSAInUse, NoDefaultSAInUse)
+	compliancekit.Register(CheckNoPrimitiveRoles, NoPrimitiveRoles)
+	compliancekit.Register(CheckNoBroadTokenCreator, NoBroadTokenCreator)
+	compliancekit.Register(CheckCloudAuditLogging, CloudAuditLogging)
+	compliancekit.Register(CheckSAKeyAge, SAKeyAge)
+	compliancekit.Register(CheckNoUserManagedSAKeys, NoUserManagedSAKeys)
+	compliancekit.Register(CheckNoDefaultSAInUse, NoDefaultSAInUse)
 }

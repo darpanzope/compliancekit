@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	docol "github.com/darpanzope/compliancekit/internal/collectors/linux"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.20 phase 6 — sshd hardening deepening. 10 new sshd_config-shaped
@@ -29,7 +29,7 @@ type sshdSpec struct {
 	cmp                     sshdCmp
 	wantInt                 int
 	wantString              string
-	severity                core.Severity
+	severity                compliancekit.Severity
 	soc2, iso, cis          []string
 	tags                    []string
 	descSuffix              string
@@ -37,69 +37,69 @@ type sshdSpec struct {
 
 var sshdSpecs = []sshdSpec{
 	{id: "linux-sshd-permit-empty-passwords", title: "sshd_config PermitEmptyPasswords must be no",
-		key: "permitemptypasswords", cmp: sshdCmpEqNo, severity: core.SeverityHigh,
+		key: "permitemptypasswords", cmp: sshdCmpEqNo, severity: compliancekit.SeverityHigh,
 		soc2: []string{"CC6.1"}, iso: []string{"A.5.16"}, cis: []string{"5.2.10"},
 		tags:       []string{"sshd", "auth"},
 		descSuffix: "Empty passwords are an open door. The CIS default is no; verify even if you've never seen this misconfigured.",
 		scanner:    "linux.sshd.PermitEmptyPasswords"},
 	{id: "linux-sshd-x11-forwarding-disabled", title: "sshd_config X11Forwarding must be no",
-		key: "x11forwarding", cmp: sshdCmpEqNo, severity: core.SeverityMedium,
+		key: "x11forwarding", cmp: sshdCmpEqNo, severity: compliancekit.SeverityMedium,
 		soc2: []string{"CC6.6"}, iso: []string{"A.8.20"}, cis: []string{"5.2.6"},
 		tags:       []string{"sshd", "x11"},
 		descSuffix: "X11 forwarding exposes the local DISPLAY through the SSH tunnel — historically a vector for keystroke capture. Production servers don't need it.",
 		scanner:    "linux.sshd.X11Forwarding"},
 	{id: "linux-sshd-permit-user-environment", title: "sshd_config PermitUserEnvironment must be no",
-		key: "permituserenvironment", cmp: sshdCmpEqNo, severity: core.SeverityMedium,
+		key: "permituserenvironment", cmp: sshdCmpEqNo, severity: compliancekit.SeverityMedium,
 		soc2: []string{"CC6.6"}, iso: []string{"A.8.7"}, cis: []string{"5.2.11"},
 		tags:       []string{"sshd"},
 		descSuffix: "PermitUserEnvironment=yes lets ~/.ssh/environment override LD_PRELOAD, PATH, etc. — sufficient for any local privilege escalation that needs an envvar.",
 		scanner:    "linux.sshd.PermitUserEnvironment"},
 	{id: "linux-sshd-ignore-rhosts", title: "sshd_config IgnoreRhosts must be yes",
-		key: "ignorerhosts", cmp: sshdCmpEqYes, severity: core.SeverityMedium,
+		key: "ignorerhosts", cmp: sshdCmpEqYes, severity: compliancekit.SeverityMedium,
 		soc2: []string{"CC6.1"}, iso: []string{"A.5.16"}, cis: []string{"5.2.7"},
 		tags:       []string{"sshd", "rhosts"},
 		descSuffix: ".rhosts is rsh-era trust; IgnoreRhosts=yes (the default) tells sshd not to honor the file.",
 		scanner:    "linux.sshd.IgnoreRhosts"},
 	{id: "linux-sshd-hostbased-auth-disabled", title: "sshd_config HostbasedAuthentication must be no",
-		key: "hostbasedauthentication", cmp: sshdCmpEqNo, severity: core.SeverityMedium,
+		key: "hostbasedauthentication", cmp: sshdCmpEqNo, severity: compliancekit.SeverityMedium,
 		soc2: []string{"CC6.1"}, iso: []string{"A.5.16"}, cis: []string{"5.2.8"},
 		tags:       []string{"sshd"},
 		descSuffix: "Host-based authentication trusts the client host's hostkey — a per-host trust model that's hard to revoke and easy to mismanage.",
 		scanner:    "linux.sshd.HostbasedAuth"},
 	{id: "linux-sshd-client-alive-interval", title: "sshd_config ClientAliveInterval must be > 0 and ≤ 300",
-		key: "clientaliveinterval", cmp: sshdCmpLteInt, wantInt: 300, severity: core.SeverityLow,
+		key: "clientaliveinterval", cmp: sshdCmpLteInt, wantInt: 300, severity: compliancekit.SeverityLow,
 		soc2: []string{"CC6.1"}, iso: []string{"A.5.16"}, cis: []string{"5.2.14"},
 		tags:       []string{"sshd", "session"},
 		descSuffix: "Idle SSH sessions get reaped after ClientAliveInterval × ClientAliveCountMax seconds. ≤300s caps abandoned tmux/screen sessions.",
 		scanner:    "linux.sshd.ClientAliveInterval"},
 	{id: "linux-sshd-client-alive-count-max", title: "sshd_config ClientAliveCountMax must be ≤ 3",
-		key: "clientalivecountmax", cmp: sshdCmpLteInt, wantInt: 3, severity: core.SeverityLow,
+		key: "clientalivecountmax", cmp: sshdCmpLteInt, wantInt: 3, severity: compliancekit.SeverityLow,
 		soc2: []string{"CC6.1"}, iso: []string{"A.5.16"}, cis: []string{"5.2.15"},
 		tags:       []string{"sshd", "session"},
 		descSuffix: "ClientAliveCountMax × ClientAliveInterval is the idle ceiling. ≤3 (CIS recommended) keeps the total under ~15 min when paired with the recommended interval.",
 		scanner:    "linux.sshd.ClientAliveCountMax"},
 	{id: "linux-sshd-max-sessions", title: "sshd_config MaxSessions must be ≤ 10",
-		key: "maxsessions", cmp: sshdCmpLteInt, wantInt: 10, severity: core.SeverityLow,
+		key: "maxsessions", cmp: sshdCmpLteInt, wantInt: 10, severity: compliancekit.SeverityLow,
 		soc2: []string{"CC6.6"}, iso: []string{"A.8.20"}, cis: []string{"5.2.21"},
 		tags:       []string{"sshd"},
 		descSuffix: "MaxSessions caps the concurrent sessions one auth'd user may open. ≤10 (CIS) constrains a compromised key's blast radius.",
 		scanner:    "linux.sshd.MaxSessions"},
 	{id: "linux-sshd-banner-set", title: "sshd_config Banner must be set (typically /etc/issue.net)",
-		key: "banner", cmp: sshdCmpEqString, wantString: "/etc/issue.net", severity: core.SeverityLow,
+		key: "banner", cmp: sshdCmpEqString, wantString: "/etc/issue.net", severity: compliancekit.SeverityLow,
 		soc2: []string{"CC1.4"}, iso: []string{"A.5.10"}, cis: []string{"5.2.13"},
 		tags:       []string{"sshd", "banner"},
 		descSuffix: "Login banner is the audit-evidence point for legal-notice display. /etc/issue.net is the CIS-conventional path.",
 		scanner:    "linux.sshd.Banner"},
 	{id: "linux-sshd-loglevel-info-or-verbose", title: "sshd_config LogLevel must be INFO or VERBOSE",
-		key: "loglevel", cmp: sshdCmpEqString, wantString: "VERBOSE", severity: core.SeverityMedium,
+		key: "loglevel", cmp: sshdCmpEqString, wantString: "VERBOSE", severity: compliancekit.SeverityMedium,
 		soc2: []string{"CC7.2"}, iso: []string{"A.8.15"}, cis: []string{"5.2.5"},
 		tags:       []string{"sshd", "logging"},
 		descSuffix: "VERBOSE logs key fingerprints for every login (essential for audit). INFO is the upstream default and acceptable; QUIET drops too much detail.",
 		scanner:    "linux.sshd.LogLevel"},
 }
 
-func sshdCheck(spec sshdSpec) core.Check {
-	return core.Check{
+func sshdCheck(spec sshdSpec) compliancekit.Check {
+	return compliancekit.Check{
 		ID: spec.id, Title: spec.title, Severity: spec.severity,
 		Provider: "linux", Service: "sshd", ResourceType: docol.HostType,
 		Description: fmt.Sprintf("%s; CIS Linux Server v8 §%s. %s",
@@ -127,11 +127,11 @@ func renderSshdRemediation(spec sshdSpec) string {
 	return ""
 }
 
-func sshdCheckFunc(spec sshdSpec) core.CheckFunc {
-	return func(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-		findings := []core.Finding{}
+func sshdCheckFunc(spec sshdSpec) compliancekit.CheckFunc {
+	return func(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+		findings := []compliancekit.Finding{}
 		for _, h := range g.ByType(docol.HostType) {
-			f := core.Finding{
+			f := compliancekit.Finding{
 				CheckID:  spec.id,
 				Severity: spec.severity,
 				Resource: h.Ref(),
@@ -139,7 +139,7 @@ func sshdCheckFunc(spec sshdSpec) core.CheckFunc {
 			}
 			cfg, ok := sshdConfigOf(h)
 			if !ok {
-				f.Status = core.StatusSkip
+				f.Status = compliancekit.StatusSkip
 				f.Message = fmt.Sprintf("host %q: sshd_config unavailable", h.Name)
 				findings = append(findings, f)
 				continue
@@ -147,9 +147,9 @@ func sshdCheckFunc(spec sshdSpec) core.CheckFunc {
 			val := cfg[spec.key]
 			pass, msg := sshdEvaluate(spec, val, h.Name)
 			if pass {
-				f.Status = core.StatusPass
+				f.Status = compliancekit.StatusPass
 			} else {
-				f.Status = core.StatusFail
+				f.Status = compliancekit.StatusFail
 			}
 			f.Message = msg
 			findings = append(findings, f)
@@ -196,6 +196,6 @@ func sshdEvaluate(spec sshdSpec, value, host string) (pass bool, msg string) {
 func init() {
 	for _, spec := range sshdSpecs {
 		spec := spec
-		core.Register(sshdCheck(spec), sshdCheckFunc(spec))
+		compliancekit.Register(sshdCheck(spec), sshdCheckFunc(spec))
 	}
 }

@@ -9,13 +9,13 @@ import (
 	"google.golang.org/api/iterator"
 
 	"github.com/darpanzope/compliancekit/internal/collectors/cloudcommon"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 const GCSBucketType = "gcp.storage.bucket"
 
 // collectStorage enumerates Cloud Storage buckets per project.
-func (c *Collector) collectStorage(ctx context.Context, out []core.Resource) []core.Resource {
+func (c *Collector) collectStorage(ctx context.Context, out []compliancekit.Resource) []compliancekit.Resource {
 	for _, projectID := range c.projects {
 		updated, err := c.collectStorageForProject(ctx, projectID, out)
 		if err != nil {
@@ -27,7 +27,7 @@ func (c *Collector) collectStorage(ctx context.Context, out []core.Resource) []c
 	return out
 }
 
-func (c *Collector) collectStorageForProject(ctx context.Context, projectID string, out []core.Resource) ([]core.Resource, error) {
+func (c *Collector) collectStorageForProject(ctx context.Context, projectID string, out []compliancekit.Resource) ([]compliancekit.Resource, error) {
 	client, err := storage.NewClient(ctx, c.clientOption())
 	if err != nil {
 		return out, fmt.Errorf("new storage client: %w", err)
@@ -48,8 +48,8 @@ func (c *Collector) collectStorageForProject(ctx context.Context, projectID stri
 	return out, nil
 }
 
-func (c *Collector) bucketResource(projectID string, attrs *storage.BucketAttrs) core.Resource {
-	r := core.Resource{
+func (c *Collector) bucketResource(projectID string, attrs *storage.BucketAttrs) compliancekit.Resource {
+	r := compliancekit.Resource{
 		ID:       fmt.Sprintf("gcp.storage.bucket.%s.%s", projectID, attrs.Name),
 		Type:     GCSBucketType,
 		Name:     attrs.Name,

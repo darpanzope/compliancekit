@@ -11,7 +11,7 @@
 //     decisions. ADR-013 (DECISIONS.md) spells the difference.
 //   - It is not a check skip. A waived finding still RUNS through
 //     the engine; the matcher swaps StatusFail → StatusSkip and
-//     attaches a core.WaiverRef so the auditor sees both the
+//     attaches a compliancekit.WaiverRef so the auditor sees both the
 //     finding and the acknowledgement. Reports render the waiver
 //     inline.
 //   - It is not auto-renewing. Every waiver MUST have an explicit
@@ -37,7 +37,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // Waiver is the parsed entry from waivers.yaml (or from an in-code
@@ -109,14 +109,14 @@ func (w *Waiver) Validate() error {
 	return nil
 }
 
-// ToRef materializes the lightweight core.WaiverRef block attached
+// ToRef materializes the lightweight compliancekit.WaiverRef block attached
 // to a muted Finding. Reporters consume the Ref; the Waiver itself
 // stays inside the waivers package.
-func (w *Waiver) ToRef() *core.WaiverRef {
+func (w *Waiver) ToRef() *compliancekit.WaiverRef {
 	if w == nil {
 		return nil
 	}
-	return &core.WaiverRef{
+	return &compliancekit.WaiverRef{
 		CheckID:    w.CheckID,
 		ResourceID: w.ResourceID,
 		Reason:     w.Reason,

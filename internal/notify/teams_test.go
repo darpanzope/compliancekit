@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 func TestTeams_NotConfigured(t *testing.T) {
@@ -29,10 +29,10 @@ func TestTeams_MessageCardShape(t *testing.T) {
 
 	sink := NewTeams(TeamsConfig{
 		WebhookURL:    srv.URL,
-		SeverityFloor: core.SeverityInfo,
+		SeverityFloor: compliancekit.SeverityInfo,
 		HTTPClient:    srv.Client(),
 	})
-	notifications := BuildNotifications([]core.Finding{
+	notifications := BuildNotifications([]compliancekit.Finding{
 		sampleFinding("aws-iam-root-mfa", "critical"),
 	}, BuildOptions{URLPrefix: "https://x"})
 

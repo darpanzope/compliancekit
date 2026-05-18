@@ -5,15 +5,15 @@ import (
 	"fmt"
 
 	hetznercol "github.com/darpanzope/compliancekit/internal/collectors/hetzner"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // CheckFloatingIPOrphan flags Floating IPs not attached to any
 // server. They bill regardless of attachment status.
-var CheckFloatingIPOrphan = core.Check{
+var CheckFloatingIPOrphan = compliancekit.Check{
 	ID:           "hetzner-floating-ip-orphan",
 	Title:        "Hetzner Floating IPs should be attached to a server",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "hetzner",
 	Service:      "floating_ips",
 	ResourceType: hetznercol.FloatingIPType,
@@ -32,22 +32,22 @@ var CheckFloatingIPOrphan = core.Check{
 	Scanner: "floating_ips.Orphan",
 }
 
-func FloatingIPOrphan(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func FloatingIPOrphan(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, ip := range g.ByType(hetznercol.FloatingIPType) {
 		attached, _ := ip.Attributes["attached"].(bool)
 		addr, _ := ip.Attributes["address"].(string)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckFloatingIPOrphan.ID,
 			Severity: CheckFloatingIPOrphan.Severity,
 			Resource: ip.Ref(),
 			Tags:     CheckFloatingIPOrphan.Tags,
 		}
 		if attached {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("floating IP %q (%s): attached", ip.Name, addr)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("floating IP %q (%s): orphan (unattached)", ip.Name, addr)
 		}
 		findings = append(findings, f)
@@ -56,5 +56,5 @@ func FloatingIPOrphan(_ context.Context, g *core.ResourceGraph) ([]core.Finding,
 }
 
 func init() {
-	core.Register(CheckFloatingIPOrphan, FloatingIPOrphan)
+	compliancekit.Register(CheckFloatingIPOrphan, FloatingIPOrphan)
 }

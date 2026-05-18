@@ -3,8 +3,8 @@ package bash
 import (
 	"fmt"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.19 phase 6 — bash strategies for the 10 Functions-depth checks.
@@ -32,14 +32,14 @@ func init() {
 		[]string{"do-functions-namespace-no-environment-tag"}, renderBashFnEnvTag)
 }
 
-func bashFnNS(f core.Finding) string {
+func bashFnNS(f compliancekit.Finding) string {
 	if f.Resource.Name != "" {
 		return f.Resource.Name
 	}
 	return "NAMESPACE"
 }
 
-func renderBashFnNamespaceRegion(f core.Finding) (remediate.Snippet, error) {
+func renderBashFnNamespaceRegion(f compliancekit.Finding) (remediate.Snippet, error) {
 	ns := bashFnNS(f)
 	body := fmt.Sprintf(`label=%q
 doctl serverless namespaces create --label "$label" --region nyc1`, ns)
@@ -49,7 +49,7 @@ doctl serverless namespaces create --label "$label" --region nyc1`, ns)
 	}, nil
 }
 
-func renderBashFnTriggerRatio(f core.Finding) (remediate.Snippet, error) {
+func renderBashFnTriggerRatio(f compliancekit.Finding) (remediate.Snippet, error) {
 	ns := bashFnNS(f)
 	body := fmt.Sprintf(`ns=%q
 # Find disabled triggers + prompt to delete (interactive).
@@ -66,7 +66,7 @@ done`, ns)
 	}, nil
 }
 
-func renderBashFnAccessKey(f core.Finding) (remediate.Snippet, error) {
+func renderBashFnAccessKey(f compliancekit.Finding) (remediate.Snippet, error) {
 	ns := bashFnNS(f)
 	body := fmt.Sprintf(`ns=%q
 doctl serverless namespace add-key "$ns" --label "ci-key-$(date +%%Y%%m%%d)"`, ns)
@@ -76,7 +76,7 @@ doctl serverless namespace add-key "$ns" --label "ci-key-$(date +%%Y%%m%%d)"`, n
 	}, nil
 }
 
-func renderBashFnKeyRotation(f core.Finding) (remediate.Snippet, error) {
+func renderBashFnKeyRotation(f compliancekit.Finding) (remediate.Snippet, error) {
 	ns := bashFnNS(f)
 	body := fmt.Sprintf(`ns=%q
 # List keys + flag any that look stale (>90d via Label-encoded date if available).
@@ -87,14 +87,14 @@ doctl serverless namespace list-keys "$ns" --format Label,Created
 	}, nil
 }
 
-func renderBashFnRuntime(_ core.Finding) (remediate.Snippet, error) {
+func renderBashFnRuntime(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return renderBashManualOnly(
 		"Functions runtime versions",
 		"https://docs.digitalocean.com/products/functions/reference/runtimes/",
 		"Update project.yml `runtime:` to a supported version, then `doctl serverless deploy`")
 }
 
-func renderBashFnEnvVars(_ core.Finding) (remediate.Snippet, error) {
+func renderBashFnEnvVars(_ compliancekit.Finding) (remediate.Snippet, error) {
 	body := `# Re-deploy current source with encrypted env vars.
 doctl serverless deploy --env-file .env --encrypted`
 	return remediate.Snippet{
@@ -102,7 +102,7 @@ doctl serverless deploy --env-file .env --encrypted`
 	}, nil
 }
 
-func renderBashFnSecretScan(_ core.Finding) (remediate.Snippet, error) {
+func renderBashFnSecretScan(_ compliancekit.Finding) (remediate.Snippet, error) {
 	body := `# Pre-deploy gate. Add to CI BEFORE doctl serverless deploy.
 gitleaks detect --source . --no-banner --redact || {
   echo "secret scan failed; aborting deploy" >&2
@@ -115,7 +115,7 @@ doctl serverless deploy`
 	}, nil
 }
 
-func renderBashFnLogExport(_ core.Finding) (remediate.Snippet, error) {
+func renderBashFnLogExport(_ compliancekit.Finding) (remediate.Snippet, error) {
 	body := `# Cron-style poll: ship invocation logs to Datadog.
 while sleep 300; do
   doctl serverless activations list -o json --last 5m \
@@ -130,7 +130,7 @@ done`
 	}, nil
 }
 
-func renderBashFnColdStart(f core.Finding) (remediate.Snippet, error) {
+func renderBashFnColdStart(f compliancekit.Finding) (remediate.Snippet, error) {
 	ns := bashFnNS(f)
 	body := fmt.Sprintf(`doctl serverless trigger create %s \
   --type SCHEDULED --cron '*/5 * * * *' \
@@ -140,7 +140,7 @@ func renderBashFnColdStart(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderBashFnEnvTag(_ core.Finding) (remediate.Snippet, error) {
+func renderBashFnEnvTag(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return renderBashManualOnly(
 		"Functions namespace environment-naming convention",
 		"https://docs.digitalocean.com/products/functions/",

@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // OSCAL Assessment Results v1.1.2 schema constants. Pinned so a
@@ -45,7 +45,7 @@ const (
 // UUIDs are derived deterministically from content so two runs of
 // the same findings produce byte-identical AR documents. Helps the
 // diff engine and tamper-evident manifest stay coherent.
-func writeAssessmentResultsOSCAL(root string, findings []core.Finding, opts Options) (string, error) {
+func writeAssessmentResultsOSCAL(root string, findings []compliancekit.Finding, opts Options) (string, error) {
 	doc := buildAssessmentResults(findings, opts)
 
 	path := filepath.Join(root, arFileName)
@@ -67,7 +67,7 @@ func writeAssessmentResultsOSCAL(root string, findings []core.Finding, opts Opti
 	return abs, nil
 }
 
-func buildAssessmentResults(findings []core.Finding, opts Options) arDocument {
+func buildAssessmentResults(findings []compliancekit.Finding, opts Options) arDocument {
 	generated := opts.Generated
 	if generated.IsZero() {
 		generated = time.Now().UTC()
@@ -149,9 +149,9 @@ func buildAssessmentResults(findings []core.Finding, opts Options) arDocument {
 // frameworks registry. Returns an empty set when the check isn't in
 // the registry (typical for ingested findings whose mapping table
 // did not match).
-func controlIDsForFinding(f core.Finding) map[string]struct{} {
+func controlIDsForFinding(f compliancekit.Finding) map[string]struct{} {
 	out := map[string]struct{}{}
-	check, ok := core.LookupCheck(f.CheckID)
+	check, ok := compliancekit.LookupCheck(f.CheckID)
 	if !ok {
 		return out
 	}
@@ -168,7 +168,7 @@ func controlIDsForFinding(f core.Finding) map[string]struct{} {
 // specific metadata (severity, status, resource id) under the
 // `compliancekit-*` name convention so consumers can filter without
 // schema collision.
-func oscalFindingFor(f core.Finding, ctrlID string) arFinding {
+func oscalFindingFor(f compliancekit.Finding, ctrlID string) arFinding {
 	return arFinding{
 		UUID:        uuidFromContent("finding", f.CheckID, f.Resource.ID, ctrlID),
 		Title:       f.CheckID,

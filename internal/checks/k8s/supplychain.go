@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	k8scol "github.com/darpanzope/compliancekit/internal/collectors/k8s"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.21 phase 5 — supply chain. 10 checks covering the dimensions
@@ -18,10 +18,10 @@ import (
 
 // ----- 1. image tag mutable (latest / floating tags) ---------------
 
-var CheckImageMutableTag = core.Check{
+var CheckImageMutableTag = compliancekit.Check{
 	ID:           "k8s-pod-image-tag-not-mutable",
 	Title:        "Container images should not use mutable tags (latest, master, develop)",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "kubernetes",
 	Service:      "supply-chain",
 	ResourceType: k8scol.PodType,
@@ -51,8 +51,8 @@ var mutableTagNames = map[string]bool{
 	"dev": true, "stable": true, "edge": true, "nightly": true,
 }
 
-func ImageMutableTag(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func ImageMutableTag(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, p := range g.ByType(k8scol.PodType) {
 		bad := violatingContainers(p, func(c map[string]any) bool {
 			tag, _ := c["image_tag"].(string)
@@ -67,10 +67,10 @@ func ImageMutableTag(_ context.Context, g *core.ResourceGraph) ([]core.Finding, 
 
 // ----- 2. image tag empty -----------------------------------------
 
-var CheckImageEmptyTag = core.Check{
+var CheckImageEmptyTag = compliancekit.Check{
 	ID:           "k8s-pod-image-tag-not-empty",
 	Title:        "Container images must specify an explicit tag (no implicit :latest)",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "kubernetes",
 	Service:      "supply-chain",
 	ResourceType: k8scol.PodType,
@@ -91,8 +91,8 @@ var CheckImageEmptyTag = core.Check{
 	Scanner: "supplychain.ImageEmptyTag",
 }
 
-func ImageEmptyTag(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func ImageEmptyTag(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, p := range g.ByType(k8scol.PodType) {
 		bad := violatingContainers(p, func(c map[string]any) bool {
 			tag, _ := c["image_tag"].(string)
@@ -107,10 +107,10 @@ func ImageEmptyTag(_ context.Context, g *core.ResourceGraph) ([]core.Finding, er
 
 // ----- 3. image from trusted registry (manual-verify allowlist) ---
 
-var CheckImageTrustedRegistry = core.Check{
+var CheckImageTrustedRegistry = compliancekit.Check{
 	ID:           "k8s-pod-image-from-trusted-registry",
 	Title:        "Container images should be pulled only from allow-listed registries",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "kubernetes",
 	Service:      "supply-chain",
 	ResourceType: k8scol.PodType,
@@ -132,14 +132,14 @@ var CheckImageTrustedRegistry = core.Check{
 	Scanner: "supplychain.ImageTrustedRegistry",
 }
 
-func ImageTrustedRegistry(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func ImageTrustedRegistry(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, p := range g.ByType(k8scol.PodType) {
 		regs := imageRegistries(p)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID: CheckImageTrustedRegistry.ID, Severity: CheckImageTrustedRegistry.Severity,
 			Resource: p.Ref(), Tags: CheckImageTrustedRegistry.Tags,
-			Status:  core.StatusError,
+			Status:  compliancekit.StatusError,
 			Message: fmt.Sprintf("pod %q: audit registry origins against your allowlist: %s", podDesc(p), strings.Join(regs, ", ")),
 		}
 		findings = append(findings, f)
@@ -149,10 +149,10 @@ func ImageTrustedRegistry(_ context.Context, g *core.ResourceGraph) ([]core.Find
 
 // ----- 4. cosign signature verified (manual-verify) ----------------
 
-var CheckImageCosignSignature = core.Check{
+var CheckImageCosignSignature = compliancekit.Check{
 	ID:           "k8s-pod-image-cosign-signature-verified",
 	Title:        "Container images should be cosign-verified at admission",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "kubernetes",
 	Service:      "supply-chain",
 	ResourceType: k8scol.PodType,
@@ -178,17 +178,17 @@ var CheckImageCosignSignature = core.Check{
 	Scanner: "supplychain.ImageCosignSignature",
 }
 
-func ImageCosignSignature(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func ImageCosignSignature(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	return clusterManualVerify(g, CheckImageCosignSignature,
 		"audit whether an admission-side cosign verifier is installed: `kubectl get clusterpolicy,validatingwebhookconfiguration | grep -iE 'kyverno|policy-controller|ratify'`")
 }
 
 // ----- 5. in-toto attestation present (manual-verify) --------------
 
-var CheckImageAttestation = core.Check{
+var CheckImageAttestation = compliancekit.Check{
 	ID:           "k8s-pod-image-attestation-required",
 	Title:        "Container images should ship in-toto SLSA attestations",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "kubernetes",
 	Service:      "supply-chain",
 	ResourceType: k8scol.PodType,
@@ -210,17 +210,17 @@ var CheckImageAttestation = core.Check{
 	Scanner: "supplychain.ImageAttestation",
 }
 
-func ImageAttestation(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func ImageAttestation(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	return clusterManualVerify(g, CheckImageAttestation,
 		"audit whether admission verifies SLSA / in-toto attestations: `cosign verify-attestation --type=slsaprovenance --certificate-identity=... <image>`")
 }
 
 // ----- 6. image pull secret (private-registry usage) --------------
 
-var CheckImagePullSecretPresent = core.Check{
+var CheckImagePullSecretPresent = compliancekit.Check{
 	ID:           "k8s-pod-image-pull-secret-set",
 	Title:        "Pods pulling from private registries should reference an imagePullSecret",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "kubernetes",
 	Service:      "supply-chain",
 	ResourceType: k8scol.PodType,
@@ -243,13 +243,13 @@ var CheckImagePullSecretPresent = core.Check{
 	Scanner: "supplychain.ImagePullSecret",
 }
 
-func ImagePullSecretPresent(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func ImagePullSecretPresent(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, p := range g.ByType(k8scol.PodType) {
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID: CheckImagePullSecretPresent.ID, Severity: CheckImagePullSecretPresent.Severity,
 			Resource: p.Ref(), Tags: CheckImagePullSecretPresent.Tags,
-			Status:  core.StatusError,
+			Status:  compliancekit.StatusError,
 			Message: fmt.Sprintf("pod %q: audit imagePullSecrets vs implicit node-level credentials (`kubectl get pod -n <ns> %s -o jsonpath='{.spec.imagePullSecrets}'`)", podDesc(p), p.Name),
 		}
 		findings = append(findings, f)
@@ -259,10 +259,10 @@ func ImagePullSecretPresent(_ context.Context, g *core.ResourceGraph) ([]core.Fi
 
 // ----- 7. image pull policy = Always for mutable, Pinned for digest
 
-var CheckImagePullPolicyConsistent = core.Check{
+var CheckImagePullPolicyConsistent = compliancekit.Check{
 	ID:           "k8s-pod-image-pull-policy-consistent",
 	Title:        "imagePullPolicy must be consistent with the tag pinning level",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "kubernetes",
 	Service:      "supply-chain",
 	ResourceType: k8scol.PodType,
@@ -285,8 +285,8 @@ var CheckImagePullPolicyConsistent = core.Check{
 	Scanner: "supplychain.ImagePullPolicyConsistent",
 }
 
-func ImagePullPolicyConsistent(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func ImagePullPolicyConsistent(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, p := range g.ByType(k8scol.PodType) {
 		bad := violatingContainers(p, func(c map[string]any) bool {
 			pinned, _ := c["image_digest_pinned"].(bool)
@@ -312,10 +312,10 @@ func ImagePullPolicyConsistent(_ context.Context, g *core.ResourceGraph) ([]core
 
 // ----- 8. image base-OS EOL (manual-verify) -----------------------
 
-var CheckImageBaseEOL = core.Check{
+var CheckImageBaseEOL = compliancekit.Check{
 	ID:           "k8s-pod-image-base-os-not-eol",
 	Title:        "Container images should not be built on EOL base OS",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "kubernetes",
 	Service:      "supply-chain",
 	ResourceType: k8scol.PodType,
@@ -338,17 +338,17 @@ var CheckImageBaseEOL = core.Check{
 	Scanner: "supplychain.ImageBaseEOL",
 }
 
-func ImageBaseEOL(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func ImageBaseEOL(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	return clusterManualVerify(g, CheckImageBaseEOL,
 		"audit base-OS support windows: `crane manifest <image> | jq '.config.Labels'` + cross-reference https://endoflife.date — or wire Trivy via compliancekit ingest")
 }
 
 // ----- 9. image registry reachable via TLS only (cluster-level) ---
 
-var CheckRegistryTLSOnly = core.Check{
+var CheckRegistryTLSOnly = compliancekit.Check{
 	ID:           "k8s-cluster-registry-tls-only",
 	Title:        "All image registries used by the cluster should require TLS",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "kubernetes",
 	Service:      "supply-chain",
 	ResourceType: k8scol.ClusterType,
@@ -370,17 +370,17 @@ var CheckRegistryTLSOnly = core.Check{
 	Scanner: "supplychain.RegistryTLSOnly",
 }
 
-func RegistryTLSOnly(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func RegistryTLSOnly(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	return clusterManualVerify(g, CheckRegistryTLSOnly,
 		"on self-managed nodes: `ssh <node> 'grep -A 5 insecure_registries /etc/containerd/config.toml'` should return nothing")
 }
 
 // ----- 10. CIS image scan freshness (manual-verify) ---------------
 
-var CheckImageScanFresh = core.Check{
+var CheckImageScanFresh = compliancekit.Check{
 	ID:           "k8s-pod-image-vuln-scan-fresh",
 	Title:        "Images should have a Trivy / Grype scan within the last 7 days",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "kubernetes",
 	Service:      "supply-chain",
 	ResourceType: k8scol.PodType,
@@ -403,7 +403,7 @@ var CheckImageScanFresh = core.Check{
 	Scanner: "supplychain.ImageScanFresh",
 }
 
-func ImageScanFresh(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func ImageScanFresh(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	return clusterManualVerify(g, CheckImageScanFresh,
 		"audit per-image scan freshness — wire Trivy or Grype via compliancekit ingest for automated coverage")
 }
@@ -413,17 +413,17 @@ func ImageScanFresh(_ context.Context, g *core.ResourceGraph) ([]core.Finding, e
 // clusterManualVerify emits one StatusError finding per cluster
 // context resource — the canonical manual-verify shape from v0.20
 // adapted for k8s where the "per-host" unit is the cluster context.
-func clusterManualVerify(g *core.ResourceGraph, check core.Check, hint string) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func clusterManualVerify(g *compliancekit.ResourceGraph, check compliancekit.Check, hint string) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	ctxs := g.ByType(k8scol.ClusterType)
 	if len(ctxs) == 0 {
 		return findings, nil
 	}
 	for _, c := range ctxs {
-		findings = append(findings, core.Finding{
+		findings = append(findings, compliancekit.Finding{
 			CheckID: check.ID, Severity: check.Severity,
 			Resource: c.Ref(), Tags: check.Tags,
-			Status:  core.StatusError,
+			Status:  compliancekit.StatusError,
 			Message: fmt.Sprintf("cluster %q: %s", c.Name, hint),
 		})
 	}
@@ -434,7 +434,7 @@ func clusterManualVerify(g *core.ResourceGraph, check core.Check, hint string) (
 // by every container in the pod. "docker.io" is implied for refs
 // without an explicit registry; "library/" path-prefix for unqualified
 // repos is normalized away.
-func imageRegistries(p core.Resource) []string {
+func imageRegistries(p compliancekit.Resource) []string {
 	seen := map[string]bool{}
 	cs, _ := p.Attributes["containers"].([]any)
 	for _, ci := range cs {
@@ -479,14 +479,14 @@ func registryFromImage(image string) string {
 }
 
 func init() {
-	core.Register(CheckImageMutableTag, ImageMutableTag)
-	core.Register(CheckImageEmptyTag, ImageEmptyTag)
-	core.Register(CheckImageTrustedRegistry, ImageTrustedRegistry)
-	core.Register(CheckImageCosignSignature, ImageCosignSignature)
-	core.Register(CheckImageAttestation, ImageAttestation)
-	core.Register(CheckImagePullSecretPresent, ImagePullSecretPresent)
-	core.Register(CheckImagePullPolicyConsistent, ImagePullPolicyConsistent)
-	core.Register(CheckImageBaseEOL, ImageBaseEOL)
-	core.Register(CheckRegistryTLSOnly, RegistryTLSOnly)
-	core.Register(CheckImageScanFresh, ImageScanFresh)
+	compliancekit.Register(CheckImageMutableTag, ImageMutableTag)
+	compliancekit.Register(CheckImageEmptyTag, ImageEmptyTag)
+	compliancekit.Register(CheckImageTrustedRegistry, ImageTrustedRegistry)
+	compliancekit.Register(CheckImageCosignSignature, ImageCosignSignature)
+	compliancekit.Register(CheckImageAttestation, ImageAttestation)
+	compliancekit.Register(CheckImagePullSecretPresent, ImagePullSecretPresent)
+	compliancekit.Register(CheckImagePullPolicyConsistent, ImagePullPolicyConsistent)
+	compliancekit.Register(CheckImageBaseEOL, ImageBaseEOL)
+	compliancekit.Register(CheckRegistryTLSOnly, RegistryTLSOnly)
+	compliancekit.Register(CheckImageScanFresh, ImageScanFresh)
 }

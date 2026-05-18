@@ -5,11 +5,11 @@ import (
 	"testing"
 
 	gcpcol "github.com/darpanzope/compliancekit/internal/collectors/gcp"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
-func mkSQLInstance(name string, attrs map[string]any) core.Resource {
-	return core.Resource{
+func mkSQLInstance(name string, attrs map[string]any) compliancekit.Resource {
+	return compliancekit.Resource{
 		ID:         "gcp.sql.instance." + name,
 		Type:       gcpcol.SQLInstanceType,
 		Name:       name,
@@ -22,10 +22,10 @@ func TestSQLNoPublicIP(t *testing.T) {
 	cases := []struct {
 		name string
 		ipv4 bool
-		want core.Status
+		want compliancekit.Status
 	}{
-		{"private", false, core.StatusPass},
-		{"public", true, core.StatusFail},
+		{"private", false, compliancekit.StatusPass},
+		{"public", true, compliancekit.StatusFail},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -45,9 +45,9 @@ func TestSQLAutomatedBackups(t *testing.T) {
 	)
 	findings, _ := SQLAutomatedBackups(context.Background(), g)
 	for _, f := range findings {
-		want := core.StatusPass
+		want := compliancekit.StatusPass
 		if f.Resource.Name == "off" {
-			want = core.StatusFail
+			want = compliancekit.StatusFail
 		}
 		if f.Status != want {
 			t.Errorf("%s: got %v", f.Resource.Name, f.Status)
@@ -62,9 +62,9 @@ func TestSQLDeletionProtection(t *testing.T) {
 	)
 	findings, _ := SQLDeletionProtection(context.Background(), g)
 	for _, f := range findings {
-		want := core.StatusPass
+		want := compliancekit.StatusPass
 		if f.Resource.Name == "off" {
-			want = core.StatusFail
+			want = compliancekit.StatusFail
 		}
 		if f.Status != want {
 			t.Errorf("%s: got %v", f.Resource.Name, f.Status)

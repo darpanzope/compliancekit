@@ -7,7 +7,7 @@ import (
 	sqladmin "google.golang.org/api/sqladmin/v1"
 
 	"github.com/darpanzope/compliancekit/internal/collectors/cloudcommon"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // SQLInstanceType is the resource type emitted per Cloud SQL
@@ -19,7 +19,7 @@ const SQLInstanceType = "gcp.sql.instance"
 
 // collectSQL enumerates Cloud SQL DatabaseInstances per project.
 // Per-project errors emit a placeholder and continue.
-func (c *Collector) collectSQL(ctx context.Context, out []core.Resource) []core.Resource {
+func (c *Collector) collectSQL(ctx context.Context, out []compliancekit.Resource) []compliancekit.Resource {
 	for _, projectID := range c.projects {
 		updated, err := c.collectSQLForProject(ctx, projectID, out)
 		if err != nil {
@@ -31,7 +31,7 @@ func (c *Collector) collectSQL(ctx context.Context, out []core.Resource) []core.
 	return out
 }
 
-func (c *Collector) collectSQLForProject(ctx context.Context, projectID string, out []core.Resource) ([]core.Resource, error) {
+func (c *Collector) collectSQLForProject(ctx context.Context, projectID string, out []compliancekit.Resource) ([]compliancekit.Resource, error) {
 	svc, err := sqladmin.NewService(ctx, c.clientOption())
 	if err != nil {
 		return out, fmt.Errorf("new sql admin service: %w", err)
@@ -49,7 +49,7 @@ func (c *Collector) collectSQLForProject(ctx context.Context, projectID string, 
 	return out, nil
 }
 
-func (c *Collector) sqlInstanceResource(projectID string, inst *sqladmin.DatabaseInstance) core.Resource {
+func (c *Collector) sqlInstanceResource(projectID string, inst *sqladmin.DatabaseInstance) compliancekit.Resource {
 	ipv4Enabled := false
 	requireSSL := false
 	if inst.Settings != nil && inst.Settings.IpConfiguration != nil {
@@ -68,7 +68,7 @@ func (c *Collector) sqlInstanceResource(projectID string, inst *sqladmin.Databas
 	if inst.Settings != nil {
 		deletionProtection = inst.Settings.DeletionProtectionEnabled
 	}
-	r := core.Resource{
+	r := compliancekit.Resource{
 		ID:       fmt.Sprintf("gcp.sql.instance.%s.%s", projectID, inst.Name),
 		Type:     SQLInstanceType,
 		Name:     inst.Name,

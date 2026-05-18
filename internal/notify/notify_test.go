@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // stubSink is a minimal Notifier used to exercise the registry +
@@ -14,27 +14,27 @@ import (
 type stubSink struct {
 	name       string
 	configured bool
-	threshold  core.Severity
+	threshold  compliancekit.Severity
 	received   []Notification
 	sendErr    error
 	sendResult Result
 }
 
-func (s *stubSink) Name() string             { return s.name }
-func (s *stubSink) Configured() bool         { return s.configured }
-func (s *stubSink) Threshold() core.Severity { return s.threshold }
+func (s *stubSink) Name() string                      { return s.name }
+func (s *stubSink) Configured() bool                  { return s.configured }
+func (s *stubSink) Threshold() compliancekit.Severity { return s.threshold }
 func (s *stubSink) Send(_ context.Context, n []Notification) (Result, error) {
 	s.received = append(s.received, n...)
 	return s.sendResult, s.sendErr
 }
 
-func sampleFinding(id, severity string) core.Finding {
-	sev, _ := core.ParseSeverity(severity)
-	return core.Finding{
+func sampleFinding(id, severity string) compliancekit.Finding {
+	sev, _ := compliancekit.ParseSeverity(severity)
+	return compliancekit.Finding{
 		CheckID:  id,
-		Status:   core.StatusFail,
+		Status:   compliancekit.StatusFail,
 		Severity: sev,
-		Resource: core.ResourceRef{
+		Resource: compliancekit.ResourceRef{
 			ID:       "aws.s3.bucket." + id,
 			Name:     id,
 			Type:     "aws.s3.bucket",
@@ -74,9 +74,9 @@ func TestRegistry_DuplicatePanics(t *testing.T) {
 }
 
 func TestBuildNotifications_FiltersNonActionable(t *testing.T) {
-	findings := []core.Finding{
+	findings := []compliancekit.Finding{
 		sampleFinding("fail-one", "high"),
-		{CheckID: "passing", Status: core.StatusPass, Severity: core.SeverityLow}, // filtered
+		{CheckID: "passing", Status: compliancekit.StatusPass, Severity: compliancekit.SeverityLow}, // filtered
 		sampleFinding("fail-two", "critical"),
 	}
 	got := BuildNotifications(findings, BuildOptions{})
@@ -96,7 +96,7 @@ func TestBuildNotifications_FiltersNonActionable(t *testing.T) {
 }
 
 func TestBuildNotifications_DefaultRendering(t *testing.T) {
-	n := BuildNotifications([]core.Finding{sampleFinding("aws-s3-public-access-block", "critical")}, BuildOptions{
+	n := BuildNotifications([]compliancekit.Finding{sampleFinding("aws-s3-public-access-block", "critical")}, BuildOptions{
 		URLPrefix: "https://compliance.example.com",
 		Project:   "acme-prod",
 	})[0]
@@ -124,14 +124,14 @@ func TestBuildNotifications_DefaultRendering(t *testing.T) {
 func TestDispatch_SeverityGate(t *testing.T) {
 	// Three notifications across severities; two sinks with different
 	// thresholds. Verify each sink receives only what passes its gate.
-	notifications := BuildNotifications([]core.Finding{
+	notifications := BuildNotifications([]compliancekit.Finding{
 		sampleFinding("low-one", "low"),
 		sampleFinding("medium-one", "medium"),
 		sampleFinding("critical-one", "critical"),
 	}, BuildOptions{})
 
-	slack := &stubSink{name: "slack", configured: true, threshold: core.SeverityMedium}
-	pager := &stubSink{name: "pager", configured: true, threshold: core.SeverityCritical}
+	slack := &stubSink{name: "slack", configured: true, threshold: compliancekit.SeverityMedium}
+	pager := &stubSink{name: "pager", configured: true, threshold: compliancekit.SeverityCritical}
 
 	r := NewRegistry()
 	r.Register(slack)
@@ -151,10 +151,10 @@ func TestDispatch_SeverityGate(t *testing.T) {
 }
 
 func TestDispatch_SkipsUnconfiguredSinks(t *testing.T) {
-	notifications := BuildNotifications([]core.Finding{sampleFinding("x", "critical")}, BuildOptions{})
+	notifications := BuildNotifications([]compliancekit.Finding{sampleFinding("x", "critical")}, BuildOptions{})
 
 	off := &stubSink{name: "off", configured: false}
-	on := &stubSink{name: "on", configured: true, threshold: core.SeverityInfo}
+	on := &stubSink{name: "on", configured: true, threshold: compliancekit.SeverityInfo}
 
 	r := NewRegistry()
 	r.Register(off)
@@ -173,10 +173,10 @@ func TestDispatch_SkipsUnconfiguredSinks(t *testing.T) {
 }
 
 func TestDispatch_PerSinkErrorsDoNotBlock(t *testing.T) {
-	notifications := BuildNotifications([]core.Finding{sampleFinding("x", "critical")}, BuildOptions{})
+	notifications := BuildNotifications([]compliancekit.Finding{sampleFinding("x", "critical")}, BuildOptions{})
 
-	failing := &stubSink{name: "failing", configured: true, threshold: core.SeverityInfo, sendErr: errors.New("transport error")}
-	working := &stubSink{name: "working", configured: true, threshold: core.SeverityInfo}
+	failing := &stubSink{name: "failing", configured: true, threshold: compliancekit.SeverityInfo, sendErr: errors.New("transport error")}
+	working := &stubSink{name: "working", configured: true, threshold: compliancekit.SeverityInfo}
 
 	r := NewRegistry()
 	r.Register(failing)

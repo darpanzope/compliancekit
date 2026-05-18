@@ -6,14 +6,14 @@ import (
 
 	"github.com/digitalocean/godo"
 
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // DatabaseType is the resource type for DO Managed Databases.
 const DatabaseType = "digitalocean.database"
 
-func (c *Collector) collectDatabases(ctx context.Context) ([]core.Resource, error) {
-	out := []core.Resource{}
+func (c *Collector) collectDatabases(ctx context.Context) ([]compliancekit.Resource, error) {
+	out := []compliancekit.Resource{}
 	opt := &godo.ListOptions{PerPage: pageSize}
 	for {
 		if err := ctx.Err(); err != nil {
@@ -38,7 +38,7 @@ func (c *Collector) collectDatabases(ctx context.Context) ([]core.Resource, erro
 	return out, nil
 }
 
-func (c *Collector) databaseResource(ctx context.Context, d *godo.Database) core.Resource {
+func (c *Collector) databaseResource(ctx context.Context, d *godo.Database) compliancekit.Resource {
 	publicSSL := false
 	publicHost := ""
 	if d.Connection != nil {
@@ -58,7 +58,7 @@ func (c *Collector) databaseResource(ctx context.Context, d *godo.Database) core
 	}
 
 	rules := c.fetchDBFirewall(ctx, d.ID)
-	r := core.Resource{
+	r := compliancekit.Resource{
 		ID:       fmt.Sprintf("%s.%s", DatabaseType, d.ID),
 		Type:     DatabaseType,
 		Name:     d.Name,

@@ -5,15 +5,15 @@ import (
 	"fmt"
 
 	awscol "github.com/darpanzope/compliancekit/internal/collectors/aws"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // CheckConfigRecorderOn requires AWS Config to be actively
 // recording in every region in scope. CIS AWS Foundations 3.5.
-var CheckConfigRecorderOn = core.Check{
+var CheckConfigRecorderOn = compliancekit.Check{
 	ID:           "aws-config-recorder-on",
 	Title:        "AWS Config must be enabled in every region",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "aws",
 	Service:      "config",
 	ResourceType: awscol.ConfigRegionType,
@@ -36,21 +36,21 @@ var CheckConfigRecorderOn = core.Check{
 	Scanner: "config.RecorderOn",
 }
 
-func ConfigRecorderOn(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func ConfigRecorderOn(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, r := range g.ByType(awscol.ConfigRegionType) {
 		on, _ := r.Attributes["recorder_on"].(bool)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckConfigRecorderOn.ID,
 			Severity: CheckConfigRecorderOn.Severity,
 			Resource: r.Ref(),
 			Tags:     CheckConfigRecorderOn.Tags,
 		}
 		if on {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("region %q: Config recorder on", r.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("region %q: Config recorder NOT recording", r.Name)
 		}
 		findings = append(findings, f)
@@ -62,10 +62,10 @@ func ConfigRecorderOn(_ context.Context, g *core.ResourceGraph) ([]core.Finding,
 // configured in every region with Config enabled. Without a
 // delivery channel the recorder runs but the events have nowhere
 // to land.
-var CheckConfigDeliveryChannel = core.Check{
+var CheckConfigDeliveryChannel = compliancekit.Check{
 	ID:           "aws-config-delivery-channel",
 	Title:        "AWS Config must have a delivery channel configured",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "aws",
 	Service:      "config",
 	ResourceType: awscol.ConfigRegionType,
@@ -86,21 +86,21 @@ var CheckConfigDeliveryChannel = core.Check{
 	Scanner: "config.DeliveryChannel",
 }
 
-func ConfigDeliveryChannel(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func ConfigDeliveryChannel(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, r := range g.ByType(awscol.ConfigRegionType) {
 		channel, _ := r.Attributes["delivery_channel"].(bool)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckConfigDeliveryChannel.ID,
 			Severity: CheckConfigDeliveryChannel.Severity,
 			Resource: r.Ref(),
 			Tags:     CheckConfigDeliveryChannel.Tags,
 		}
 		if channel {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("region %q: Config delivery channel configured", r.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("region %q: no Config delivery channel", r.Name)
 		}
 		findings = append(findings, f)
@@ -111,10 +111,10 @@ func ConfigDeliveryChannel(_ context.Context, g *core.ResourceGraph) ([]core.Fin
 // CheckGuardDutyEnabled requires GuardDuty to be enabled (detector
 // present + status Enabled) in every region in scope. CIS AWS
 // Foundations 3.10.
-var CheckGuardDutyEnabled = core.Check{
+var CheckGuardDutyEnabled = compliancekit.Check{
 	ID:           "aws-guardduty-enabled",
 	Title:        "GuardDuty must be enabled in every region",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "aws",
 	Service:      "guardduty",
 	ResourceType: awscol.GuardDutyRegionType,
@@ -136,21 +136,21 @@ var CheckGuardDutyEnabled = core.Check{
 	Scanner: "guardduty.Enabled",
 }
 
-func GuardDutyEnabled(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func GuardDutyEnabled(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, r := range g.ByType(awscol.GuardDutyRegionType) {
 		enabled, _ := r.Attributes["detector_enabled"].(bool)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckGuardDutyEnabled.ID,
 			Severity: CheckGuardDutyEnabled.Severity,
 			Resource: r.Ref(),
 			Tags:     CheckGuardDutyEnabled.Tags,
 		}
 		if enabled {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("region %q: GuardDuty enabled", r.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("region %q: GuardDuty NOT enabled", r.Name)
 		}
 		findings = append(findings, f)
@@ -159,7 +159,7 @@ func GuardDutyEnabled(_ context.Context, g *core.ResourceGraph) ([]core.Finding,
 }
 
 func init() {
-	core.Register(CheckConfigRecorderOn, ConfigRecorderOn)
-	core.Register(CheckConfigDeliveryChannel, ConfigDeliveryChannel)
-	core.Register(CheckGuardDutyEnabled, GuardDutyEnabled)
+	compliancekit.Register(CheckConfigRecorderOn, ConfigRecorderOn)
+	compliancekit.Register(CheckConfigDeliveryChannel, ConfigDeliveryChannel)
+	compliancekit.Register(CheckGuardDutyEnabled, GuardDutyEnabled)
 }

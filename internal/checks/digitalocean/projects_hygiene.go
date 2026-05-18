@@ -6,16 +6,16 @@ import (
 	"strings"
 
 	docol "github.com/darpanzope/compliancekit/internal/collectors/digitalocean"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.22 phase 4 — DO Project hygiene checks split out of tail.go to
 // satisfy the 600-LoC invariant.
 
-var CheckProjectEnvironmentSet = core.Check{
+var CheckProjectEnvironmentSet = compliancekit.Check{
 	ID:           "do-project-no-environment",
 	Title:        "Projects should declare their environment",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "digitalocean",
 	Service:      "projects",
 	ResourceType: docol.ProjectType,
@@ -35,21 +35,21 @@ var CheckProjectEnvironmentSet = core.Check{
 	Scanner: "projects.EnvironmentSet",
 }
 
-func ProjectEnvironmentSet(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func ProjectEnvironmentSet(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, p := range g.ByType(docol.ProjectType) {
 		env, _ := p.Attributes["environment"].(string)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckProjectEnvironmentSet.ID,
 			Severity: CheckProjectEnvironmentSet.Severity,
 			Resource: p.Ref(),
 			Tags:     CheckProjectEnvironmentSet.Tags,
 		}
 		if strings.TrimSpace(env) == "" {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("project %q: environment unset", p.Name)
 		} else {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("project %q: environment=%q", p.Name, env)
 		}
 		findings = append(findings, f)
@@ -57,10 +57,10 @@ func ProjectEnvironmentSet(_ context.Context, g *core.ResourceGraph) ([]core.Fin
 	return findings, nil
 }
 
-var CheckProjectDefaultDescription = core.Check{
+var CheckProjectDefaultDescription = compliancekit.Check{
 	ID:           "do-project-default-no-description",
 	Title:        "The default project should have an explicit description",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "digitalocean",
 	Service:      "projects",
 	ResourceType: docol.ProjectType,
@@ -80,25 +80,25 @@ var CheckProjectDefaultDescription = core.Check{
 	Scanner: "projects.DefaultDescription",
 }
 
-func ProjectDefaultDescription(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func ProjectDefaultDescription(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, p := range g.ByType(docol.ProjectType) {
 		isDefault, _ := p.Attributes["is_default"].(bool)
 		if !isDefault {
 			continue
 		}
 		desc, _ := p.Attributes["description"].(string)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckProjectDefaultDescription.ID,
 			Severity: CheckProjectDefaultDescription.Severity,
 			Resource: p.Ref(),
 			Tags:     CheckProjectDefaultDescription.Tags,
 		}
 		if strings.TrimSpace(desc) != "" {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("project %q: described", p.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("project %q: default project has no description", p.Name)
 		}
 		findings = append(findings, f)
@@ -106,6 +106,6 @@ func ProjectDefaultDescription(_ context.Context, g *core.ResourceGraph) ([]core
 	return findings, nil
 }
 func init() {
-	core.Register(CheckProjectEnvironmentSet, ProjectEnvironmentSet)
-	core.Register(CheckProjectDefaultDescription, ProjectDefaultDescription)
+	compliancekit.Register(CheckProjectEnvironmentSet, ProjectEnvironmentSet)
+	compliancekit.Register(CheckProjectDefaultDescription, ProjectDefaultDescription)
 }

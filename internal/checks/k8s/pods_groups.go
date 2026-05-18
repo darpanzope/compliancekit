@@ -5,15 +5,15 @@ import (
 	"fmt"
 
 	k8scol "github.com/darpanzope/compliancekit/internal/collectors/k8s"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.22 phase 4 — supplementalGroups check split out of pods_extra.go.
 
-var CheckPodSupplementalGroups = core.Check{
+var CheckPodSupplementalGroups = compliancekit.Check{
 	ID:           "k8s-pod-supplemental-groups-configured",
 	Title:        "Pods with shared volumes should configure supplementalGroups",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "kubernetes",
 	Service:      "pod-security",
 	ResourceType: k8scol.PodType,
@@ -34,21 +34,21 @@ var CheckPodSupplementalGroups = core.Check{
 	Scanner: "pods.SupplementalGroups",
 }
 
-func PodSupplementalGroups(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func PodSupplementalGroups(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, p := range g.ByType(k8scol.PodType) {
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID: CheckPodSupplementalGroups.ID, Severity: CheckPodSupplementalGroups.Severity,
 			Resource: p.Ref(), Tags: CheckPodSupplementalGroups.Tags,
 		}
 		sec, _ := p.Attributes["pod_security"].(map[string]any)
 		raw, set := sec["supplemental_groups"]
 		if !set {
-			f.Status = core.StatusError
+			f.Status = compliancekit.StatusError
 			f.Message = fmt.Sprintf("pod %q: supplementalGroups unset — verify per workload whether volume mounts need group authorization", podDesc(p))
 		} else {
 			groups, _ := raw.([]int64)
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("pod %q: supplementalGroups=%v", podDesc(p), groups)
 		}
 		findings = append(findings, f)
@@ -57,5 +57,5 @@ func PodSupplementalGroups(_ context.Context, g *core.ResourceGraph) ([]core.Fin
 }
 
 func init() {
-	core.Register(CheckPodSupplementalGroups, PodSupplementalGroups)
+	compliancekit.Register(CheckPodSupplementalGroups, PodSupplementalGroups)
 }

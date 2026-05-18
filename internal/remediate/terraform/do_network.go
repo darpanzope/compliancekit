@@ -3,8 +3,8 @@ package terraform
 import (
 	"fmt"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.19 phase 7 — Terraform strategies for the 10 networking-depth
@@ -34,7 +34,7 @@ func init() {
 		[]string{"do-lb-ssl-cipher-floor"}, renderTFLBSSLCipher)
 }
 
-func renderTFFWInboundDupes(f core.Finding) (remediate.Snippet, error) {
+func renderTFFWInboundDupes(f compliancekit.Finding) (remediate.Snippet, error) {
 	name := tfNameOrFallback(f, "FIREWALL")
 	body := fmt.Sprintf(`# De-duplicate the firewall's inbound_rule blocks. Terraform doesn't
 # merge identical inline blocks; pull current state with 'terraform
@@ -56,7 +56,7 @@ resource "digitalocean_firewall" %q {
 	}, nil
 }
 
-func renderTFFWOutbound(f core.Finding) (remediate.Snippet, error) {
+func renderTFFWOutbound(f compliancekit.Finding) (remediate.Snippet, error) {
 	name := tfNameOrFallback(f, "FIREWALL")
 	body := fmt.Sprintf(`resource "digitalocean_firewall" %q {
   name = %q
@@ -84,7 +84,7 @@ func renderTFFWOutbound(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderTFFWICMP(f core.Finding) (remediate.Snippet, error) {
+func renderTFFWICMP(f compliancekit.Finding) (remediate.Snippet, error) {
 	name := tfNameOrFallback(f, "FIREWALL")
 	body := fmt.Sprintf(`resource "digitalocean_firewall" %q {
   name = %q
@@ -100,21 +100,21 @@ func renderTFFWICMP(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderTFFWEmptyTag(_ core.Finding) (remediate.Snippet, error) {
+func renderTFFWEmptyTag(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return renderTFManualOnly(
 		"firewall tag-source resolution is a runtime concept; TF can't verify droplet-count under a tag",
 		"https://cloud.digitalocean.com/networking/firewalls",
 		"Run `doctl compute droplet list --tag-name <tag>` per tag")
 }
 
-func renderTFVPCPeering(_ core.Finding) (remediate.Snippet, error) {
+func renderTFVPCPeering(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return renderTFManualOnly(
 		"DO does not support cross-region VPC peering; the existing peering should be deleted",
 		"https://cloud.digitalocean.com/networking/vpc",
 		"`doctl vpcs peerings delete <id>`; use a VPN tunnel for cross-region connectivity")
 }
 
-func renderTFReservedIP(f core.Finding) (remediate.Snippet, error) {
+func renderTFReservedIP(f compliancekit.Finding) (remediate.Snippet, error) {
 	name := tfNameOrFallback(f, "RESERVED_IP")
 	body := fmt.Sprintf(`resource "digitalocean_reserved_ip" %q {
   region     = "nyc3"
@@ -127,7 +127,7 @@ func renderTFReservedIP(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderTFLBTLSPassthrough(f core.Finding) (remediate.Snippet, error) {
+func renderTFLBTLSPassthrough(f compliancekit.Finding) (remediate.Snippet, error) {
 	name := tfNameOrFallback(f, "LB")
 	body := fmt.Sprintf(`resource "digitalocean_loadbalancer" %q {
   name   = %q
@@ -158,14 +158,14 @@ func renderTFLBTLSPassthrough(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderTFLBStickyCookie(_ core.Finding) (remediate.Snippet, error) {
+func renderTFLBStickyCookie(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return renderTFManualOnly(
 		"DO LB sticky-cookie flags are not configurable; verify via curl or move stickiness to the app",
 		"https://docs.digitalocean.com/products/networking/load-balancers/",
 		"Terminate stickiness at the app layer with cookies under your control")
 }
 
-func renderTFLBProxyProtocol(f core.Finding) (remediate.Snippet, error) {
+func renderTFLBProxyProtocol(f compliancekit.Finding) (remediate.Snippet, error) {
 	name := tfNameOrFallback(f, "LB")
 	body := fmt.Sprintf(`resource "digitalocean_loadbalancer" %q {
   name           = %q
@@ -179,7 +179,7 @@ func renderTFLBProxyProtocol(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderTFLBSSLCipher(_ core.Finding) (remediate.Snippet, error) {
+func renderTFLBSSLCipher(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return renderTFManualOnly(
 		"DO LB cipher/protocol selection is platform-managed",
 		"https://www.ssllabs.com/ssltest/",

@@ -7,7 +7,7 @@ import (
 	"github.com/digitalocean/godo"
 
 	docol "github.com/darpanzope/compliancekit/internal/collectors/digitalocean"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // sshPort is the well-known SSH port. Tracking it as a const keeps the
@@ -24,10 +24,10 @@ var publicCIDRs = map[string]bool{
 // CheckSSHFromAny flags firewall inbound rules that allow SSH (port 22)
 // from 0.0.0.0/0 or ::/0 -- effectively allowing brute-force attempts
 // from anywhere on the internet.
-var CheckSSHFromAny = core.Check{
+var CheckSSHFromAny = compliancekit.Check{
 	ID:           "do-firewall-ssh-from-any",
 	Title:        "Firewalls must not allow SSH (port 22) from the public internet",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "digitalocean",
 	Service:      "firewalls",
 	ResourceType: docol.FirewallType,
@@ -55,12 +55,12 @@ var CheckSSHFromAny = core.Check{
 // firewall and inspects its inbound_rules for port 22 + a "0.0.0.0/0"
 // or "::/0" source. A firewall with no SSH rule at all is Pass (the
 // rule isn't there to be too permissive).
-func SSHFromAny(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func SSHFromAny(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	firewalls := g.ByType(docol.FirewallType)
-	findings := make([]core.Finding, 0, len(firewalls))
+	findings := make([]compliancekit.Finding, 0, len(firewalls))
 
 	for _, fw := range firewalls {
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckSSHFromAny.ID,
 			Severity: CheckSSHFromAny.Severity,
 			Resource: fw.Ref(),
@@ -69,19 +69,19 @@ func SSHFromAny(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error
 
 		rules, ok := fw.Attributes["inbound_rules"].([]godo.InboundRule)
 		if !ok {
-			f.Status = core.StatusSkip
+			f.Status = compliancekit.StatusSkip
 			f.Message = "firewall has no inbound_rules attribute"
 			findings = append(findings, f)
 			continue
 		}
 
 		if exposed := findSSHFromAny(rules); exposed != "" {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf(
 				"firewall %q allows SSH from %s (effectively the public internet)",
 				fw.Name, exposed)
 		} else {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("firewall %q has no public SSH rule", fw.Name)
 		}
 		findings = append(findings, f)
@@ -121,5 +121,5 @@ func rulePortIncludes(portRange, port string) bool {
 }
 
 func init() {
-	core.Register(CheckSSHFromAny, SSHFromAny)
+	compliancekit.Register(CheckSSHFromAny, SSHFromAny)
 }

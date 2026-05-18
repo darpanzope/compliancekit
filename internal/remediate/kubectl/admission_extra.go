@@ -1,8 +1,8 @@
 package kubectl
 
 import (
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.21 phase 6 — kubectl strategies for the 8 admission + policy-
@@ -60,7 +60,7 @@ func init() {
 	for id, e := range admissionExtraEntries {
 		id := id
 		e := e
-		register("kubectl-"+id, []string{id}, func(_ core.Finding) (remediate.Snippet, error) {
+		register("kubectl-"+id, []string{id}, func(_ compliancekit.Finding) (remediate.Snippet, error) {
 			body := "# === kubectl patch ===\n" + e.patch + "\n\n# === Manifest (GitOps) ===\n" + e.manifest + "\n"
 			return remediate.Snippet{
 				Risk: e.risk, Idempotent: true, Content: body,

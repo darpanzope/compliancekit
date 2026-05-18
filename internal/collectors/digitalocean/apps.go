@@ -6,14 +6,14 @@ import (
 
 	"github.com/digitalocean/godo"
 
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // AppType is the resource type for App Platform applications.
 const AppType = "digitalocean.app"
 
-func (c *Collector) collectApps(ctx context.Context) ([]core.Resource, error) {
-	out := []core.Resource{}
+func (c *Collector) collectApps(ctx context.Context) ([]compliancekit.Resource, error) {
+	out := []compliancekit.Resource{}
 	opt := &godo.ListOptions{PerPage: pageSize}
 	for {
 		if err := ctx.Err(); err != nil {
@@ -38,7 +38,7 @@ func (c *Collector) collectApps(ctx context.Context) ([]core.Resource, error) {
 	return out, nil
 }
 
-func (c *Collector) appResource(a *godo.App) core.Resource {
+func (c *Collector) appResource(a *godo.App) compliancekit.Resource {
 	region := ""
 	if a.Region != nil {
 		region = a.Region.Slug
@@ -70,7 +70,7 @@ func (c *Collector) appResource(a *godo.App) core.Resource {
 		managedDBCount = appManagedDBCount(a.Spec.Databases)
 	}
 
-	r := core.Resource{
+	r := compliancekit.Resource{
 		ID:       fmt.Sprintf("%s.%s", AppType, a.ID),
 		Type:     AppType,
 		Name:     a.Spec.GetName(),

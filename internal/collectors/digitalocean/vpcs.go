@@ -6,7 +6,7 @@ import (
 
 	"github.com/digitalocean/godo"
 
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 const (
@@ -22,7 +22,7 @@ const (
 // authenticated account. Pagination handled internally; callers
 // see one flat slice. Peering listing failures are swallowed
 // (some accounts can't see them) so VPCs still ship.
-func (c *Collector) collectVPCs(ctx context.Context) ([]core.Resource, error) {
+func (c *Collector) collectVPCs(ctx context.Context) ([]compliancekit.Resource, error) {
 	out, err := c.collectVPCsInner(ctx)
 	if err != nil {
 		return out, err
@@ -35,8 +35,8 @@ func (c *Collector) collectVPCs(ctx context.Context) ([]core.Resource, error) {
 	return out, nil
 }
 
-func (c *Collector) collectVPCsInner(ctx context.Context) ([]core.Resource, error) {
-	out := []core.Resource{}
+func (c *Collector) collectVPCsInner(ctx context.Context) ([]compliancekit.Resource, error) {
+	out := []compliancekit.Resource{}
 	opt := &godo.ListOptions{PerPage: pageSize}
 	for {
 		if err := ctx.Err(); err != nil {
@@ -61,8 +61,8 @@ func (c *Collector) collectVPCsInner(ctx context.Context) ([]core.Resource, erro
 	return out, nil
 }
 
-func (c *Collector) listVPCPeerings(ctx context.Context) ([]core.Resource, error) {
-	out := []core.Resource{}
+func (c *Collector) listVPCPeerings(ctx context.Context) ([]compliancekit.Resource, error) {
+	out := []compliancekit.Resource{}
 	opt := &godo.ListOptions{PerPage: pageSize}
 	for {
 		if err := ctx.Err(); err != nil {
@@ -87,11 +87,11 @@ func (c *Collector) listVPCPeerings(ctx context.Context) ([]core.Resource, error
 	return out, nil
 }
 
-// vpcResource maps a godo.VPC to a core.Resource. Tries to
+// vpcResource maps a godo.VPC to a compliancekit.Resource. Tries to
 // resolve the member count; falls back to zero if the
 // per-VPC members call fails (e.g. permission denied).
-func (c *Collector) vpcResource(ctx context.Context, v *godo.VPC) core.Resource {
-	r := core.Resource{
+func (c *Collector) vpcResource(ctx context.Context, v *godo.VPC) compliancekit.Resource {
+	r := compliancekit.Resource{
 		ID:       fmt.Sprintf("%s.%s", VPCType, v.ID),
 		Type:     VPCType,
 		Name:     v.Name,
@@ -120,9 +120,9 @@ func resolveVPCMembers(ctx context.Context, client *godo.Client, vpcID string) i
 	return len(members)
 }
 
-func (c *Collector) vpcPeeringResource(p *godo.VPCPeering) core.Resource {
+func (c *Collector) vpcPeeringResource(p *godo.VPCPeering) compliancekit.Resource {
 	vpcIDs := append([]string(nil), p.VPCIDs...)
-	r := core.Resource{
+	r := compliancekit.Resource{
 		ID:       fmt.Sprintf("%s.%s", VPCPeeringType, p.ID),
 		Type:     VPCPeeringType,
 		Name:     p.Name,

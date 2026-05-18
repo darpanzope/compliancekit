@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	awscol "github.com/darpanzope/compliancekit/internal/collectors/aws"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // ========================================================================
@@ -18,10 +18,10 @@ import (
 // AWS Foundations Benchmark 2.1.1 prescribes this as the universal
 // safeguard against the "we accidentally made a bucket public" class
 // of incident.
-var CheckS3PublicAccessBlock = core.Check{
+var CheckS3PublicAccessBlock = compliancekit.Check{
 	ID:           "aws-s3-public-access-block",
 	Title:        "S3 buckets must have Block Public Access fully enabled",
-	Severity:     core.SeverityCritical,
+	Severity:     compliancekit.SeverityCritical,
 	Provider:     "aws",
 	Service:      "s3",
 	ResourceType: awscol.S3BucketType,
@@ -45,25 +45,25 @@ var CheckS3PublicAccessBlock = core.Check{
 	Scanner: "s3.PublicAccessBlock",
 }
 
-func S3PublicAccessBlock(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func S3PublicAccessBlock(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, b := range g.ByType(awscol.S3BucketType) {
 		pab, _ := b.Attributes["public_access_block"].(map[string]any)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckS3PublicAccessBlock.ID,
 			Severity: CheckS3PublicAccessBlock.Severity,
 			Resource: b.Ref(),
 			Tags:     CheckS3PublicAccessBlock.Tags,
 		}
 		if pab == nil {
-			f.Status = core.StatusError
+			f.Status = compliancekit.StatusError
 			f.Message = fmt.Sprintf("bucket %q: public_access_block attribute missing", b.Name)
 			findings = append(findings, f)
 			continue
 		}
 		configured, _ := pab["configured"].(bool)
 		if !configured {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("bucket %q: no Public Access Block configured", b.Name)
 			findings = append(findings, f)
 			continue
@@ -78,10 +78,10 @@ func S3PublicAccessBlock(_ context.Context, g *core.ResourceGraph) ([]core.Findi
 			}
 		}
 		if len(missing) == 0 {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("bucket %q: all PAB flags enabled", b.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("bucket %q: PAB flags disabled: %s",
 				b.Name, strings.Join(missing, ", "))
 		}
@@ -92,10 +92,10 @@ func S3PublicAccessBlock(_ context.Context, g *core.ResourceGraph) ([]core.Findi
 
 // CheckS3DefaultEncryption requires server-side default encryption.
 // CIS 2.1.2. High.
-var CheckS3DefaultEncryption = core.Check{
+var CheckS3DefaultEncryption = compliancekit.Check{
 	ID:           "aws-s3-default-encryption",
 	Title:        "S3 buckets must have default server-side encryption",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "aws",
 	Service:      "s3",
 	ResourceType: awscol.S3BucketType,
@@ -118,22 +118,22 @@ var CheckS3DefaultEncryption = core.Check{
 	Scanner: "s3.DefaultEncryption",
 }
 
-func S3DefaultEncryption(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func S3DefaultEncryption(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, b := range g.ByType(awscol.S3BucketType) {
 		configured, _ := b.Attributes["default_encryption_configured"].(bool)
 		algorithm, _ := b.Attributes["default_encryption_algorithm"].(string)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckS3DefaultEncryption.ID,
 			Severity: CheckS3DefaultEncryption.Severity,
 			Resource: b.Ref(),
 			Tags:     CheckS3DefaultEncryption.Tags,
 		}
 		if configured {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("bucket %q: default encryption %s", b.Name, algorithm)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("bucket %q: no default encryption configured", b.Name)
 		}
 		findings = append(findings, f)
@@ -145,10 +145,10 @@ func S3DefaultEncryption(_ context.Context, g *core.ResourceGraph) ([]core.Findi
 // Versioning gives ransomware / accidental-delete recovery and is
 // the documented prerequisite for several other controls (MFA delete,
 // object lock).
-var CheckS3Versioning = core.Check{
+var CheckS3Versioning = compliancekit.Check{
 	ID:           "aws-s3-versioning",
 	Title:        "S3 buckets must have versioning enabled",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "aws",
 	Service:      "s3",
 	ResourceType: awscol.S3BucketType,
@@ -170,21 +170,21 @@ var CheckS3Versioning = core.Check{
 	Scanner: "s3.Versioning",
 }
 
-func S3Versioning(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func S3Versioning(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, b := range g.ByType(awscol.S3BucketType) {
 		status, _ := b.Attributes["versioning_status"].(string)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckS3Versioning.ID,
 			Severity: CheckS3Versioning.Severity,
 			Resource: b.Ref(),
 			Tags:     CheckS3Versioning.Tags,
 		}
 		if status == "Enabled" {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("bucket %q: versioning enabled", b.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("bucket %q: versioning %q (want Enabled)", b.Name, status)
 		}
 		findings = append(findings, f)
@@ -194,10 +194,10 @@ func S3Versioning(_ context.Context, g *core.ResourceGraph) ([]core.Finding, err
 
 // CheckS3Logging requires server-access logging.
 // CIS 3.6 (formerly 2.6).
-var CheckS3Logging = core.Check{
+var CheckS3Logging = compliancekit.Check{
 	ID:           "aws-s3-logging",
 	Title:        "S3 buckets must have server access logging enabled",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "aws",
 	Service:      "s3",
 	ResourceType: awscol.S3BucketType,
@@ -219,12 +219,12 @@ var CheckS3Logging = core.Check{
 	Scanner: "s3.Logging",
 }
 
-func S3Logging(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func S3Logging(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, b := range g.ByType(awscol.S3BucketType) {
 		enabled, _ := b.Attributes["logging_enabled"].(bool)
 		target, _ := b.Attributes["logging_target_bucket"].(string)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckS3Logging.ID,
 			Severity: CheckS3Logging.Severity,
 			Resource: b.Ref(),
@@ -232,13 +232,13 @@ func S3Logging(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error)
 		}
 		switch {
 		case !enabled:
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("bucket %q: server access logging disabled", b.Name)
 		case target == b.Name:
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("bucket %q: logging target is the same bucket (loop)", b.Name)
 		default:
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("bucket %q: logging to %q", b.Name, target)
 		}
 		findings = append(findings, f)
@@ -250,10 +250,10 @@ func S3Logging(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error)
 // AuthenticatedUsers principal groups. The PAB check covers the
 // account-level safety net; this catches buckets where PAB is off
 // (legacy, intentional) and an ACL has slipped public.
-var CheckS3NoPublicACLs = core.Check{
+var CheckS3NoPublicACLs = compliancekit.Check{
 	ID:           "aws-s3-no-public-acls",
 	Title:        "S3 buckets must not have public ACLs",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "aws",
 	Service:      "s3",
 	ResourceType: awscol.S3BucketType,
@@ -274,21 +274,21 @@ var CheckS3NoPublicACLs = core.Check{
 	Scanner: "s3.NoPublicACLs",
 }
 
-func S3NoPublicACLs(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func S3NoPublicACLs(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, b := range g.ByType(awscol.S3BucketType) {
 		public, _ := b.Attributes["public_acls"].(bool)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckS3NoPublicACLs.ID,
 			Severity: CheckS3NoPublicACLs.Severity,
 			Resource: b.Ref(),
 			Tags:     CheckS3NoPublicACLs.Tags,
 		}
 		if public {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("bucket %q: ACL grants public (AllUsers or AuthenticatedUsers)", b.Name)
 		} else {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("bucket %q: no public ACL grants", b.Name)
 		}
 		findings = append(findings, f)
@@ -297,9 +297,9 @@ func S3NoPublicACLs(_ context.Context, g *core.ResourceGraph) ([]core.Finding, e
 }
 
 func init() {
-	core.Register(CheckS3PublicAccessBlock, S3PublicAccessBlock)
-	core.Register(CheckS3DefaultEncryption, S3DefaultEncryption)
-	core.Register(CheckS3Versioning, S3Versioning)
-	core.Register(CheckS3Logging, S3Logging)
-	core.Register(CheckS3NoPublicACLs, S3NoPublicACLs)
+	compliancekit.Register(CheckS3PublicAccessBlock, S3PublicAccessBlock)
+	compliancekit.Register(CheckS3DefaultEncryption, S3DefaultEncryption)
+	compliancekit.Register(CheckS3Versioning, S3Versioning)
+	compliancekit.Register(CheckS3Logging, S3Logging)
+	compliancekit.Register(CheckS3NoPublicACLs, S3NoPublicACLs)
 }

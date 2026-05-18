@@ -5,14 +5,14 @@ import (
 	"fmt"
 
 	awscol "github.com/darpanzope/compliancekit/internal/collectors/aws"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // CheckRDSEncrypted requires storage encryption at rest. CIS 2.3.1.
-var CheckRDSEncrypted = core.Check{
+var CheckRDSEncrypted = compliancekit.Check{
 	ID:           "aws-rds-encrypted",
 	Title:        "RDS DB instances must be encrypted at rest",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "aws",
 	Service:      "rds",
 	ResourceType: awscol.RDSInstanceType,
@@ -34,21 +34,21 @@ var CheckRDSEncrypted = core.Check{
 	Scanner: "rds.Encrypted",
 }
 
-func RDSEncrypted(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func RDSEncrypted(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, db := range g.ByType(awscol.RDSInstanceType) {
 		encrypted, _ := db.Attributes["storage_encrypted"].(bool)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckRDSEncrypted.ID,
 			Severity: CheckRDSEncrypted.Severity,
 			Resource: db.Ref(),
 			Tags:     CheckRDSEncrypted.Tags,
 		}
 		if encrypted {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("RDS %q: storage encrypted", db.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("RDS %q: storage NOT encrypted", db.Name)
 		}
 		findings = append(findings, f)
@@ -57,10 +57,10 @@ func RDSEncrypted(_ context.Context, g *core.ResourceGraph) ([]core.Finding, err
 }
 
 // CheckRDSNotPublic forbids public DB instances. CIS 2.3.3.
-var CheckRDSNotPublic = core.Check{
+var CheckRDSNotPublic = compliancekit.Check{
 	ID:           "aws-rds-not-publicly-accessible",
 	Title:        "RDS DB instances must not be publicly accessible",
-	Severity:     core.SeverityCritical,
+	Severity:     compliancekit.SeverityCritical,
 	Provider:     "aws",
 	Service:      "rds",
 	ResourceType: awscol.RDSInstanceType,
@@ -83,21 +83,21 @@ var CheckRDSNotPublic = core.Check{
 	Scanner: "rds.NotPublic",
 }
 
-func RDSNotPublic(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func RDSNotPublic(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, db := range g.ByType(awscol.RDSInstanceType) {
 		public, _ := db.Attributes["publicly_accessible"].(bool)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckRDSNotPublic.ID,
 			Severity: CheckRDSNotPublic.Severity,
 			Resource: db.Ref(),
 			Tags:     CheckRDSNotPublic.Tags,
 		}
 		if !public {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("RDS %q: not publicly accessible", db.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("RDS %q: publicly accessible", db.Name)
 		}
 		findings = append(findings, f)
@@ -112,10 +112,10 @@ const minBackupRetentionDays = 7
 // CheckRDSBackupRetention requires automated backups with >= 7 days
 // retention. CIS doesn't pin a hard number but 7 is the
 // industry-standard floor.
-var CheckRDSBackupRetention = core.Check{
+var CheckRDSBackupRetention = compliancekit.Check{
 	ID:           "aws-rds-backup-retention",
 	Title:        "RDS DB instances must have backup retention >= 7 days",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "aws",
 	Service:      "rds",
 	ResourceType: awscol.RDSInstanceType,
@@ -135,21 +135,21 @@ var CheckRDSBackupRetention = core.Check{
 	Scanner: "rds.BackupRetention",
 }
 
-func RDSBackupRetention(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func RDSBackupRetention(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, db := range g.ByType(awscol.RDSInstanceType) {
 		days, _ := db.Attributes["backup_retention_period"].(int)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckRDSBackupRetention.ID,
 			Severity: CheckRDSBackupRetention.Severity,
 			Resource: db.Ref(),
 			Tags:     CheckRDSBackupRetention.Tags,
 		}
 		if days >= minBackupRetentionDays {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("RDS %q: backup retention %d days", db.Name, days)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("RDS %q: backup retention %d days (want >= %d)",
 				db.Name, days, minBackupRetentionDays)
 		}
@@ -160,10 +160,10 @@ func RDSBackupRetention(_ context.Context, g *core.ResourceGraph) ([]core.Findin
 
 // CheckRDSDeletionProtection requires DeletionProtection=true. CIS
 // 2.3.2 prescribes this for production instances.
-var CheckRDSDeletionProtection = core.Check{
+var CheckRDSDeletionProtection = compliancekit.Check{
 	ID:           "aws-rds-deletion-protection",
 	Title:        "RDS DB instances must have deletion protection enabled",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "aws",
 	Service:      "rds",
 	ResourceType: awscol.RDSInstanceType,
@@ -184,21 +184,21 @@ var CheckRDSDeletionProtection = core.Check{
 	Scanner: "rds.DeletionProtection",
 }
 
-func RDSDeletionProtection(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func RDSDeletionProtection(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, db := range g.ByType(awscol.RDSInstanceType) {
 		protected, _ := db.Attributes["deletion_protection"].(bool)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckRDSDeletionProtection.ID,
 			Severity: CheckRDSDeletionProtection.Severity,
 			Resource: db.Ref(),
 			Tags:     CheckRDSDeletionProtection.Tags,
 		}
 		if protected {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("RDS %q: deletion protection enabled", db.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("RDS %q: deletion protection disabled", db.Name)
 		}
 		findings = append(findings, f)
@@ -207,8 +207,8 @@ func RDSDeletionProtection(_ context.Context, g *core.ResourceGraph) ([]core.Fin
 }
 
 func init() {
-	core.Register(CheckRDSEncrypted, RDSEncrypted)
-	core.Register(CheckRDSNotPublic, RDSNotPublic)
-	core.Register(CheckRDSBackupRetention, RDSBackupRetention)
-	core.Register(CheckRDSDeletionProtection, RDSDeletionProtection)
+	compliancekit.Register(CheckRDSEncrypted, RDSEncrypted)
+	compliancekit.Register(CheckRDSNotPublic, RDSNotPublic)
+	compliancekit.Register(CheckRDSBackupRetention, RDSBackupRetention)
+	compliancekit.Register(CheckRDSDeletionProtection, RDSDeletionProtection)
 }

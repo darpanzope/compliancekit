@@ -11,7 +11,7 @@ type match struct {
 	EndColumn   int    `json:"EndColumn,omitempty"`
 	Match       string `json:"Match,omitempty"`
 	// Secret is the raw captured credential value — NEVER persisted
-	// into core.Finding.Secret unredacted. The adapter funnels it
+	// into compliancekit.Finding.Secret unredacted. The adapter funnels it
 	// through redactSecret before storage.
 	Secret  string   `json:"Secret,omitempty"`
 	File    string   `json:"File,omitempty"`

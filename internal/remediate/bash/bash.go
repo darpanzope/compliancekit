@@ -15,12 +15,12 @@ package bash
 import (
 	"fmt"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate"
 	"github.com/darpanzope/compliancekit/internal/remediate/render"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
-type strategyFunc func(core.Finding) (remediate.Snippet, error)
+type strategyFunc func(compliancekit.Finding) (remediate.Snippet, error)
 
 type strategy struct {
 	name string
@@ -31,7 +31,7 @@ type strategy struct {
 func (s *strategy) Name() string                { return s.name }
 func (s *strategy) CheckIDs() []string          { return s.ids }
 func (s *strategy) Formats() []remediate.Format { return []remediate.Format{remediate.FormatBash} }
-func (s *strategy) Render(f core.Finding, format remediate.Format) (remediate.Snippet, error) {
+func (s *strategy) Render(f compliancekit.Finding, format remediate.Format) (remediate.Snippet, error) {
 	if format != remediate.FormatBash {
 		return remediate.Snippet{}, remediate.ErrFormatUnsupported
 	}
@@ -81,7 +81,7 @@ func init() {
 		[]string{"*"}, renderFallbackManual)
 }
 
-func renderSSHDRootLogin(_ core.Finding) (remediate.Snippet, error) {
+func renderSSHDRootLogin(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return remediate.Snippet{
 		Risk: remediate.RiskReview, Idempotent: true,
 		Content:     `sudo sed -ri 's/^#?\s*PermitRootLogin.*/PermitRootLogin no/' /etc/ssh/sshd_config && sudo sshd -t && sudo systemctl reload sshd`,
@@ -91,7 +91,7 @@ func renderSSHDRootLogin(_ core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderSSHDPasswordAuth(_ core.Finding) (remediate.Snippet, error) {
+func renderSSHDPasswordAuth(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return remediate.Snippet{
 		Risk: remediate.RiskReview, Idempotent: true,
 		Content:   `sudo sed -ri 's/^#?\s*PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config && sudo sshd -t && sudo systemctl reload sshd`,
@@ -100,7 +100,7 @@ func renderSSHDPasswordAuth(_ core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderSSHDMaxAuthTries(_ core.Finding) (remediate.Snippet, error) {
+func renderSSHDMaxAuthTries(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return remediate.Snippet{
 		Risk: remediate.RiskReview, Idempotent: true,
 		Content: `# Idempotent: replace existing MaxAuthTries line OR append.
@@ -115,7 +115,7 @@ sudo sshd -t && sudo systemctl reload sshd`,
 	}, nil
 }
 
-func renderSSHDLoginGraceTime(_ core.Finding) (remediate.Snippet, error) {
+func renderSSHDLoginGraceTime(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return remediate.Snippet{
 		Risk: remediate.RiskReview, Idempotent: true,
 		Content: `# Idempotent: replace existing LoginGraceTime line OR append.
@@ -130,7 +130,7 @@ sudo sshd -t && sudo systemctl reload sshd`,
 	}, nil
 }
 
-func renderSSHDProtocol(_ core.Finding) (remediate.Snippet, error) {
+func renderSSHDProtocol(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return remediate.Snippet{
 		Risk: remediate.RiskReview, Idempotent: true,
 		Content: `# Idempotent: replace existing Protocol line OR append.
@@ -147,7 +147,7 @@ sudo sshd -t && sudo systemctl reload sshd`,
 	}, nil
 }
 
-func renderFirewallDefaultDeny(_ core.Finding) (remediate.Snippet, error) {
+func renderFirewallDefaultDeny(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return remediate.Snippet{
 		Risk: remediate.RiskReview, Idempotent: true,
 		Content: `# Distro-aware default-deny for the INPUT chain.
@@ -186,7 +186,7 @@ esac`,
 	}, nil
 }
 
-func renderFirewallActive(_ core.Finding) (remediate.Snippet, error) {
+func renderFirewallActive(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return remediate.Snippet{
 		Risk: remediate.RiskReview, Idempotent: true,
 		Content: `# Debian/Ubuntu:
@@ -199,7 +199,7 @@ sudo ufw allow 22/tcp && sudo ufw default deny incoming && sudo ufw default allo
 	}, nil
 }
 
-func renderSysctlASLR(_ core.Finding) (remediate.Snippet, error) {
+func renderSysctlASLR(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return remediate.Snippet{
 		Risk: remediate.RiskSafe, Idempotent: true,
 		Content:   `echo 'kernel.randomize_va_space = 2' | sudo tee /etc/sysctl.d/99-aslr.conf && sudo sysctl -p /etc/sysctl.d/99-aslr.conf`,
@@ -207,7 +207,7 @@ func renderSysctlASLR(_ core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderSysctlNoSourceRoute(_ core.Finding) (remediate.Snippet, error) {
+func renderSysctlNoSourceRoute(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return remediate.Snippet{
 		Risk: remediate.RiskSafe, Idempotent: true,
 		Content: `sudo tee /etc/sysctl.d/99-source-route.conf <<'EOF'
@@ -221,7 +221,7 @@ sudo sysctl -p /etc/sysctl.d/99-source-route.conf`,
 	}, nil
 }
 
-func renderPasswdPerms(_ core.Finding) (remediate.Snippet, error) {
+func renderPasswdPerms(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return remediate.Snippet{
 		Risk: remediate.RiskSafe, Idempotent: true,
 		Content:   `sudo chmod 0644 /etc/passwd /etc/group && sudo chown root:root /etc/passwd /etc/group`,
@@ -229,7 +229,7 @@ func renderPasswdPerms(_ core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderShadowPerms(_ core.Finding) (remediate.Snippet, error) {
+func renderShadowPerms(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return remediate.Snippet{
 		Risk: remediate.RiskSafe, Idempotent: true,
 		Content:   `sudo chmod 0640 /etc/shadow /etc/gshadow && sudo chown root:shadow /etc/shadow /etc/gshadow`,
@@ -237,7 +237,7 @@ func renderShadowPerms(_ core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderAuditdRun(_ core.Finding) (remediate.Snippet, error) {
+func renderAuditdRun(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return remediate.Snippet{
 		Risk: remediate.RiskSafe, Idempotent: true,
 		Content: `# Debian:
@@ -249,7 +249,7 @@ sudo apt-get install -y auditd && sudo systemctl enable --now auditd
 	}, nil
 }
 
-func renderJournaldPersistent(_ core.Finding) (remediate.Snippet, error) {
+func renderJournaldPersistent(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return remediate.Snippet{
 		Risk: remediate.RiskSafe, Idempotent: true,
 		Content: `sudo sed -ri 's/^#?\s*Storage=.*/Storage=persistent/' /etc/systemd/journald.conf
@@ -261,7 +261,7 @@ sudo systemctl restart systemd-journald`,
 	}, nil
 }
 
-func renderUIDZeroManual(_ core.Finding) (remediate.Snippet, error) {
+func renderUIDZeroManual(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return remediate.Snippet{
 		Risk: remediate.RiskManual, Idempotent: false,
 		Content: `# Critical — multiple UID 0 accounts. Investigate ALL.
@@ -273,7 +273,7 @@ awk -F: '($3 == 0) {print $1}' /etc/passwd
 	}, nil
 }
 
-func renderNoEmptyPasswords(_ core.Finding) (remediate.Snippet, error) {
+func renderNoEmptyPasswords(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return remediate.Snippet{
 		Risk: remediate.RiskReview, Idempotent: true,
 		Content: `# List empty-password users, then lock each.
@@ -289,7 +289,7 @@ awk -F: '($2 == "") {print $1}' /etc/shadow
 // containing the finding's CheckID, Resource ID, and Message so the
 // operator has the breadcrumb without the runbook generator needing
 // special-case handling for "unmatched."
-func renderFallbackManual(f core.Finding) (remediate.Snippet, error) {
+func renderFallbackManual(f compliancekit.Finding) (remediate.Snippet, error) {
 	body := fmt.Sprintf(
 		"# Manual remediation required for finding %s on resource %s.\n"+
 			"# Severity: %s\n"+

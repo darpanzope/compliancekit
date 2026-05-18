@@ -3,8 +3,8 @@ package bash
 import (
 	"fmt"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.20 phase 6 — bash strategies for the 10 sshd-deepening checks.
@@ -30,7 +30,7 @@ func init() {
 	for id, e := range sshdBash {
 		id := id
 		e := e
-		register("bash-"+id, []string{id}, func(_ core.Finding) (remediate.Snippet, error) {
+		register("bash-"+id, []string{id}, func(_ compliancekit.Finding) (remediate.Snippet, error) {
 			body := fmt.Sprintf(`# Idempotent: replace existing %s line OR append.
 if sudo grep -qiE '^[[:space:]]*%s[[:space:]]' /etc/ssh/sshd_config; then
   sudo sed -ri 's|^[[:space:]]*%s[[:space:]].*|%s %s|i' /etc/ssh/sshd_config

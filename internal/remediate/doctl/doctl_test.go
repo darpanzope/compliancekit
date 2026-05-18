@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 func TestRegistryCoverage(t *testing.T) {
@@ -37,9 +37,9 @@ func TestRegistryCoverage(t *testing.T) {
 }
 
 func TestRenderDBMaintenance(t *testing.T) {
-	f := core.Finding{
+	f := compliancekit.Finding{
 		CheckID:  "do-db-no-maintenance-window",
-		Resource: core.ResourceRef{Name: "db-cluster-prod"},
+		Resource: compliancekit.ResourceRef{Name: "db-cluster-prod"},
 	}
 	s, err := remediate.Default.Render(f, remediate.FormatDoctl)
 	if err != nil {
@@ -51,9 +51,9 @@ func TestRenderDBMaintenance(t *testing.T) {
 }
 
 func TestRenderSpacesACLUsesRegion(t *testing.T) {
-	f := core.Finding{
+	f := compliancekit.Finding{
 		CheckID:  "do-spaces-public-acl",
-		Resource: core.ResourceRef{Name: "assets", Region: "sfo3"},
+		Resource: compliancekit.ResourceRef{Name: "assets", Region: "sfo3"},
 	}
 	s, err := remediate.Default.Render(f, remediate.FormatDoctl)
 	if err != nil {

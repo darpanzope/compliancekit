@@ -6,7 +6,7 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // Registry indexes Strategy implementations by CheckID for fast
@@ -105,7 +105,7 @@ func (r *Registry) StrategiesFor(checkID string) []Strategy {
 // (e.g. credential rotation) MUST return a Snippet with Risk=RiskManual
 // and a populated Notes field rather than an error — the caller treats
 // "manual" snippets as actionable POA&M input.
-func (r *Registry) Render(f core.Finding, format Format) (Snippet, error) {
+func (r *Registry) Render(f compliancekit.Finding, format Format) (Snippet, error) {
 	strategies := r.StrategiesFor(f.CheckID)
 	if len(strategies) == 0 {
 		return Snippet{}, fmt.Errorf("%w: %q", ErrNoStrategy, f.CheckID)
@@ -145,7 +145,7 @@ func (r *Registry) Render(f core.Finding, format Format) (Snippet, error) {
 //
 // Order: outer loop over findings (stable), inner loop over AllFormats
 // (canonical order). Output is deterministic for a given input slice.
-func (r *Registry) RenderAll(findings []core.Finding) (snippets []Snippet, unmatched []core.Finding) {
+func (r *Registry) RenderAll(findings []compliancekit.Finding) (snippets []Snippet, unmatched []compliancekit.Finding) {
 	for _, f := range findings {
 		strategies := r.StrategiesFor(f.CheckID)
 		if len(strategies) == 0 {

@@ -9,24 +9,24 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/darpanzope/compliancekit/internal/collectors/cloudcommon"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // collectNodes fetches every Node and flattens the condition + runtime
 // info checks read.
-func (c *Collector) collectNodes(ctx context.Context, scope *ContextScope) ([]core.Resource, error) {
+func (c *Collector) collectNodes(ctx context.Context, scope *ContextScope) ([]compliancekit.Resource, error) {
 	nodes, err := scope.Client.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("list nodes: %w", err)
 	}
-	out := make([]core.Resource, 0, len(nodes.Items))
+	out := make([]compliancekit.Resource, 0, len(nodes.Items))
 	for i := range nodes.Items {
 		out = append(out, c.nodeResource(scope, &nodes.Items[i]))
 	}
 	return out, nil
 }
 
-func (c *Collector) nodeResource(scope *ContextScope, n *corev1.Node) core.Resource {
+func (c *Collector) nodeResource(scope *ContextScope, n *corev1.Node) compliancekit.Resource {
 	conditions := map[string]string{}
 	for _, cond := range n.Status.Conditions {
 		conditions[string(cond.Type)] = string(cond.Status)
@@ -56,7 +56,7 @@ func (c *Collector) nodeResource(scope *ContextScope, n *corev1.Node) core.Resou
 		"age_days":           int(time.Since(n.CreationTimestamp.Time).Hours() / 24),
 		"is_control_plane":   nodeIsControlPlane(n),
 	}
-	r := core.Resource{
+	r := compliancekit.Resource{
 		ID:         fmt.Sprintf("%s.%s.%s", NodeType, scope.Name, n.Name),
 		Type:       NodeType,
 		Name:       n.Name,

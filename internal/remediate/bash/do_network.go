@@ -3,8 +3,8 @@ package bash
 import (
 	"fmt"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.19 phase 7 — bash strategies for networking depth.
@@ -32,14 +32,14 @@ func init() {
 		[]string{"do-lb-ssl-cipher-floor"}, renderBashLBSSLCipher)
 }
 
-func bashResName(f core.Finding, fallback string) string {
+func bashResName(f compliancekit.Finding, fallback string) string {
 	if f.Resource.Name != "" {
 		return f.Resource.Name
 	}
 	return fallback
 }
 
-func renderBashFWInboundDupes(f core.Finding) (remediate.Snippet, error) {
+func renderBashFWInboundDupes(f compliancekit.Finding) (remediate.Snippet, error) {
 	id := bashResName(f, "FW_ID")
 	body := fmt.Sprintf(`fw=%q
 # Dump rules + show duplicate sigs.
@@ -52,7 +52,7 @@ doctl compute firewall get "$fw" -o json \
 	}, nil
 }
 
-func renderBashFWOutbound(f core.Finding) (remediate.Snippet, error) {
+func renderBashFWOutbound(f compliancekit.Finding) (remediate.Snippet, error) {
 	id := bashResName(f, "FW_ID")
 	body := fmt.Sprintf(`fw=%q
 doctl compute firewall add-rules "$fw" \
@@ -64,7 +64,7 @@ doctl compute firewall add-rules "$fw" \
 	}, nil
 }
 
-func renderBashFWICMP(f core.Finding) (remediate.Snippet, error) {
+func renderBashFWICMP(f compliancekit.Finding) (remediate.Snippet, error) {
 	id := bashResName(f, "FW_ID")
 	body := fmt.Sprintf(`fw=%q
 doctl compute firewall remove-rules "$fw" --inbound-rules "protocol:icmp,address:0.0.0.0/0"
@@ -74,7 +74,7 @@ doctl compute firewall add-rules    "$fw" --inbound-rules "protocol:icmp,address
 	}, nil
 }
 
-func renderBashFWEmptyTag(f core.Finding) (remediate.Snippet, error) {
+func renderBashFWEmptyTag(f compliancekit.Finding) (remediate.Snippet, error) {
 	id := bashResName(f, "FW_ID")
 	body := fmt.Sprintf(`fw=%q
 tags="$(doctl compute firewall get "$fw" -o json | jq -r '.[0].inbound_rules[].sources.tags // [] | .[]' | sort -u)"
@@ -88,7 +88,7 @@ done`, id)
 	}, nil
 }
 
-func renderBashVPCPeering(f core.Finding) (remediate.Snippet, error) {
+func renderBashVPCPeering(f compliancekit.Finding) (remediate.Snippet, error) {
 	id := bashResName(f, "PEERING_ID")
 	body := fmt.Sprintf(`doctl vpcs peerings delete %s --force`, id)
 	return remediate.Snippet{
@@ -97,7 +97,7 @@ func renderBashVPCPeering(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderBashReservedIP(f core.Finding) (remediate.Snippet, error) {
+func renderBashReservedIP(f compliancekit.Finding) (remediate.Snippet, error) {
 	ip := bashResName(f, "RESERVED_IP")
 	body := fmt.Sprintf(`ip=%q
 doctl compute reserved-ip delete "$ip" --force
@@ -107,7 +107,7 @@ doctl compute reserved-ip create --region nyc3`, ip)
 	}, nil
 }
 
-func renderBashLBTLSPassthrough(f core.Finding) (remediate.Snippet, error) {
+func renderBashLBTLSPassthrough(f compliancekit.Finding) (remediate.Snippet, error) {
 	id := bashResName(f, "LB_ID")
 	body := fmt.Sprintf(`lb=%q
 # Pull current spec.
@@ -120,14 +120,14 @@ doctl compute load-balancer get "$lb" --format ForwardingRules,TlsPassthrough
 	}, nil
 }
 
-func renderBashLBStickyCookie(_ core.Finding) (remediate.Snippet, error) {
+func renderBashLBStickyCookie(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return renderBashManualOnly(
 		"LB sticky-cookie flags",
 		"https://docs.digitalocean.com/products/networking/load-balancers/",
 		"`curl -sI https://<lb-host>/` to read Set-Cookie flags; move stickiness to app cookie if flags are insufficient")
 }
 
-func renderBashLBProxyProtocol(f core.Finding) (remediate.Snippet, error) {
+func renderBashLBProxyProtocol(f compliancekit.Finding) (remediate.Snippet, error) {
 	id := bashResName(f, "LB_ID")
 	body := fmt.Sprintf(`doctl compute load-balancer get %s --format EnableProxyProtocol`, id)
 	return remediate.Snippet{
@@ -136,7 +136,7 @@ func renderBashLBProxyProtocol(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderBashLBSSLCipher(_ core.Finding) (remediate.Snippet, error) {
+func renderBashLBSSLCipher(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return renderBashManualOnly(
 		"LB TLS cipher / protocol audit",
 		"https://www.ssllabs.com/ssltest/",

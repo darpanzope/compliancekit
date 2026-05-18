@@ -9,17 +9,17 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // Per-process Rego module registry. Loaded modules live here so
 // `checks list` / `checks show` can answer "what file did this
 // check come from" without having to keep a side-table in the CLI.
 //
-// The Go-check registry is core.DefaultRegistry (one CheckFunc per
+// The Go-check registry is compliancekit.DefaultRegistry (one CheckFunc per
 // CheckID). The Rego registry adds metadata that wouldn't make sense
 // on a Go check (.rego source path, raw body for `checks show`).
-// We mirror writes into core.DefaultRegistry so the scan engine
+// We mirror writes into compliancekit.DefaultRegistry so the scan engine
 // doesn't need to know Rego exists.
 var (
 	regoMu      sync.RWMutex
@@ -27,7 +27,7 @@ var (
 )
 
 // RegisterModule adds one already-loaded Module to both the policy
-// package's metadata registry and core.DefaultRegistry. Mutual
+// package's metadata registry and compliancekit.DefaultRegistry. Mutual
 // exclusion with Go checks: if a Go check has already registered
 // under the same ID, this returns an error rather than silently
 // overwriting. Conflicts are a programmer error — two authors
@@ -39,7 +39,7 @@ func RegisterModule(m *Module) error {
 	if m.Check.ID == "" {
 		return fmt.Errorf("policy: module %s has empty Check.ID", m.SourcePath)
 	}
-	if existing, ok := core.LookupCheck(m.Check.ID); ok {
+	if existing, ok := compliancekit.LookupCheck(m.Check.ID); ok {
 		source := "Go"
 		if existing.Policy != "" {
 			source = fmt.Sprintf("Rego (%s)", existing.Policy)
@@ -52,7 +52,7 @@ func RegisterModule(m *Module) error {
 	regoModules[m.Check.ID] = m
 	regoMu.Unlock()
 
-	core.Register(m.Check, m.CheckFunc())
+	compliancekit.Register(m.Check, m.CheckFunc())
 	return nil
 }
 
@@ -166,7 +166,7 @@ func RegisteredIDs() []string {
 }
 
 // Reset clears the policy registry AND removes the matching entries
-// from core.DefaultRegistry. Test-only — production code must not
+// from compliancekit.DefaultRegistry. Test-only — production code must not
 // call this. Symmetry matters: if the policy package mirrors a
 // registration into core, the cleanup needs to undo both sides or
 // suite-ordering bugs leak state across tests.
@@ -179,7 +179,7 @@ func Reset() {
 	regoModules = map[string]*Module{}
 	regoMu.Unlock()
 	for _, id := range ids {
-		core.Unregister(id)
+		compliancekit.Unregister(id)
 	}
 }
 

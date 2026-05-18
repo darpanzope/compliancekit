@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	k8scol "github.com/darpanzope/compliancekit/internal/collectors/k8s"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 const (
@@ -25,10 +25,10 @@ var secretShapedKeys = []string{
 
 // ----- Secret in env --------------------------------------------
 
-var CheckSecretInEnv = core.Check{
+var CheckSecretInEnv = compliancekit.Check{
 	ID:           "k8s-pod-secret-via-env",
 	Title:        "Pods should mount Secrets as volumes rather than env vars",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "kubernetes",
 	Service:      "secrets",
 	ResourceType: k8scol.PodType,
@@ -57,10 +57,10 @@ var CheckSecretInEnv = core.Check{
 // collector enrichment. For now skip the check with a Skip placeholder
 // pending Phase 1b expansion. The check is still registered so the
 // catalog has a stable ID and skip findings make the gap visible.
-func SecretInEnv(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func SecretInEnv(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, p := range g.ByType(k8scol.PodType) {
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckSecretInEnv.ID,
 			Severity: CheckSecretInEnv.Severity,
 			Resource: p.Ref(),
@@ -81,10 +81,10 @@ func SecretInEnv(_ context.Context, g *core.ResourceGraph) ([]core.Finding, erro
 			}
 		}
 		if hasSecretEnv {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("pod %q: container exposes Secret via env", podDesc(p))
 		} else {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("pod %q: no Secret-via-env detected", podDesc(p))
 		}
 		findings = append(findings, f)
@@ -94,10 +94,10 @@ func SecretInEnv(_ context.Context, g *core.ResourceGraph) ([]core.Finding, erro
 
 // ----- Secret orphan --------------------------------------------
 
-var CheckSecretOrphan = core.Check{
+var CheckSecretOrphan = compliancekit.Check{
 	ID:           "k8s-secret-orphan",
 	Title:        "Secrets should be referenced by at least one pod or ServiceAccount",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "kubernetes",
 	Service:      "secrets",
 	ResourceType: k8scol.SecretType,
@@ -116,7 +116,7 @@ var CheckSecretOrphan = core.Check{
 	Scanner: "secrets.SecretOrphan",
 }
 
-func SecretOrphan(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func SecretOrphan(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	usedKeys := map[string]struct{}{}
 	// SA secret references (manual token bindings, image pull secrets).
 	for _, sa := range g.ByType(k8scol.ServiceAccountType) {
@@ -139,7 +139,7 @@ func SecretOrphan(_ context.Context, g *core.ResourceGraph) ([]core.Finding, err
 		usedKeys[ns+"/*"] = struct{}{}
 	}
 
-	findings := []core.Finding{}
+	findings := []compliancekit.Finding{}
 	for _, s := range g.ByType(k8scol.SecretType) {
 		// Managed Secrets (SA tokens, image-pull, helm-release state) skipped.
 		secretType, _ := s.Attributes["type"].(string)
@@ -148,7 +148,7 @@ func SecretOrphan(_ context.Context, g *core.ResourceGraph) ([]core.Finding, err
 		}
 		ns, _ := s.Attributes["namespace"].(string)
 		_, used := usedKeys[ns+"/*"]
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckSecretOrphan.ID,
 			Severity: CheckSecretOrphan.Severity,
 			Resource: s.Ref(),
@@ -157,10 +157,10 @@ func SecretOrphan(_ context.Context, g *core.ResourceGraph) ([]core.Finding, err
 		// Without per-secret reference tracking, this is best-effort:
 		// flag namespaces with no pods or SAs as having orphan secrets.
 		if used {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("secret %q: namespace has pods/SAs (per-secret usage will land Phase 6)", secretDesc(s))
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("secret %q: namespace has no pods or SAs", secretDesc(s))
 		}
 		findings = append(findings, f)
@@ -170,10 +170,10 @@ func SecretOrphan(_ context.Context, g *core.ResourceGraph) ([]core.Finding, err
 
 // ----- Secret too large -----------------------------------------
 
-var CheckSecretTooLarge = core.Check{
+var CheckSecretTooLarge = compliancekit.Check{
 	ID:           "k8s-secret-too-large",
 	Title:        "Secrets should be under 1 MiB",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "kubernetes",
 	Service:      "secrets",
 	ResourceType: k8scol.SecretType,
@@ -195,16 +195,16 @@ var CheckSecretTooLarge = core.Check{
 	Scanner: "secrets.SecretTooLarge",
 }
 
-func SecretTooLarge(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func SecretTooLarge(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	return sizeCheck(g, k8scol.SecretType, CheckSecretTooLarge, secretLargeBytes), nil
 }
 
 // ----- ConfigMap secret-shaped --------------------------------
 
-var CheckConfigMapSecretShaped = core.Check{
+var CheckConfigMapSecretShaped = compliancekit.Check{
 	ID:           "k8s-configmap-secret-shaped-data",
 	Title:        "ConfigMaps should not hold credential-shaped keys",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "kubernetes",
 	Service:      "secrets",
 	ResourceType: k8scol.ConfigMapType,
@@ -225,8 +225,8 @@ var CheckConfigMapSecretShaped = core.Check{
 	Scanner: "secrets.ConfigMapSecretShaped",
 }
 
-func ConfigMapSecretShaped(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func ConfigMapSecretShaped(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, cm := range g.ByType(k8scol.ConfigMapType) {
 		keys, _ := cm.Attributes["keys"].([]string)
 		hits := []string{}
@@ -239,17 +239,17 @@ func ConfigMapSecretShaped(_ context.Context, g *core.ResourceGraph) ([]core.Fin
 				}
 			}
 		}
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckConfigMapSecretShaped.ID,
 			Severity: CheckConfigMapSecretShaped.Severity,
 			Resource: cm.Ref(),
 			Tags:     CheckConfigMapSecretShaped.Tags,
 		}
 		if len(hits) == 0 {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("configmap %q: no credential-shaped keys", secretDesc(cm))
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("configmap %q: credential-shaped keys: %s", secretDesc(cm), strings.Join(hits, ", "))
 		}
 		findings = append(findings, f)
@@ -259,10 +259,10 @@ func ConfigMapSecretShaped(_ context.Context, g *core.ResourceGraph) ([]core.Fin
 
 // ----- ConfigMap too large -------------------------------------
 
-var CheckConfigMapTooLarge = core.Check{
+var CheckConfigMapTooLarge = compliancekit.Check{
 	ID:           "k8s-configmap-too-large",
 	Title:        "ConfigMaps should be under 1 MiB",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "kubernetes",
 	Service:      "secrets",
 	ResourceType: k8scol.ConfigMapType,
@@ -282,16 +282,16 @@ var CheckConfigMapTooLarge = core.Check{
 	Scanner: "secrets.ConfigMapTooLarge",
 }
 
-func ConfigMapTooLarge(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func ConfigMapTooLarge(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	return sizeCheck(g, k8scol.ConfigMapType, CheckConfigMapTooLarge, configMapLargeBytes), nil
 }
 
 // ----- Secret immutable ----------------------------------------
 
-var CheckSecretImmutable = core.Check{
+var CheckSecretImmutable = compliancekit.Check{
 	ID:           "k8s-secret-immutable",
 	Title:        "Long-lived Secrets should be marked immutable",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "kubernetes",
 	Service:      "secrets",
 	ResourceType: k8scol.SecretType,
@@ -311,8 +311,8 @@ var CheckSecretImmutable = core.Check{
 	Scanner: "secrets.SecretImmutable",
 }
 
-func SecretImmutable(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func SecretImmutable(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, s := range g.ByType(k8scol.SecretType) {
 		// SA tokens and helm release states are managed; skip.
 		secretType, _ := s.Attributes["type"].(string)
@@ -320,17 +320,17 @@ func SecretImmutable(_ context.Context, g *core.ResourceGraph) ([]core.Finding, 
 			continue
 		}
 		immut, _ := s.Attributes["immutable"].(bool)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckSecretImmutable.ID,
 			Severity: CheckSecretImmutable.Severity,
 			Resource: s.Ref(),
 			Tags:     CheckSecretImmutable.Tags,
 		}
 		if immut {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("secret %q: immutable", secretDesc(s))
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("secret %q: mutable (consider immutable:true for stable Secrets)", secretDesc(s))
 		}
 		findings = append(findings, f)
@@ -341,29 +341,29 @@ func SecretImmutable(_ context.Context, g *core.ResourceGraph) ([]core.Finding, 
 // ----- helpers + init -------------------------------------------
 
 func init() {
-	core.Register(CheckSecretInEnv, SecretInEnv)
-	core.Register(CheckSecretOrphan, SecretOrphan)
-	core.Register(CheckSecretTooLarge, SecretTooLarge)
-	core.Register(CheckConfigMapSecretShaped, ConfigMapSecretShaped)
-	core.Register(CheckConfigMapTooLarge, ConfigMapTooLarge)
-	core.Register(CheckSecretImmutable, SecretImmutable)
+	compliancekit.Register(CheckSecretInEnv, SecretInEnv)
+	compliancekit.Register(CheckSecretOrphan, SecretOrphan)
+	compliancekit.Register(CheckSecretTooLarge, SecretTooLarge)
+	compliancekit.Register(CheckConfigMapSecretShaped, ConfigMapSecretShaped)
+	compliancekit.Register(CheckConfigMapTooLarge, ConfigMapTooLarge)
+	compliancekit.Register(CheckSecretImmutable, SecretImmutable)
 }
 
-func sizeCheck(g *core.ResourceGraph, t string, check core.Check, threshold int) []core.Finding {
-	findings := []core.Finding{}
+func sizeCheck(g *compliancekit.ResourceGraph, t string, check compliancekit.Check, threshold int) []compliancekit.Finding {
+	findings := []compliancekit.Finding{}
 	for _, r := range g.ByType(t) {
 		size, _ := r.Attributes["size_bytes"].(int)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  check.ID,
 			Severity: check.Severity,
 			Resource: r.Ref(),
 			Tags:     check.Tags,
 		}
 		if size > threshold {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("%s %q: %d bytes exceeds %d", typeLabel(t), secretDesc(r), size, threshold)
 		} else {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("%s %q: %d bytes", typeLabel(t), secretDesc(r), size)
 		}
 		findings = append(findings, f)
@@ -381,7 +381,7 @@ func typeLabel(t string) string {
 	return t
 }
 
-func secretDesc(r core.Resource) string {
+func secretDesc(r compliancekit.Resource) string {
 	ns, _ := r.Attributes["namespace"].(string)
 	if ns == "" {
 		return r.Name

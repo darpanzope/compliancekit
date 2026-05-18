@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 
 	// Side-effect imports register every shipped Linux check and
 	// every remediation format adapter into the registries the
@@ -46,8 +46,8 @@ const (
 )
 
 func TestParity_Linux(t *testing.T) {
-	var linuxChecks []core.Check
-	for _, c := range core.RegisteredChecks() {
+	var linuxChecks []compliancekit.Check
+	for _, c := range compliancekit.RegisteredChecks() {
 		if c.Provider == "linux" {
 			linuxChecks = append(linuxChecks, c)
 		}

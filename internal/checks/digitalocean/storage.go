@@ -6,7 +6,7 @@ import (
 	"time"
 
 	docol "github.com/darpanzope/compliancekit/internal/collectors/digitalocean"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 const snapshotMaxAgeDays = 365
@@ -14,10 +14,10 @@ const snapshotMaxAgeDays = 365
 // CheckVolumeOrphan flags block volumes with zero droplet
 // attachments. Unattached volumes bill forever and are a common
 // post-droplet-delete leftover.
-var CheckVolumeOrphan = core.Check{
+var CheckVolumeOrphan = compliancekit.Check{
 	ID:           "do-volume-orphan",
 	Title:        "Block volumes should be attached to a droplet",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "digitalocean",
 	Service:      "volumes",
 	ResourceType: docol.VolumeType,
@@ -38,21 +38,21 @@ var CheckVolumeOrphan = core.Check{
 	Scanner: "volumes.Orphan",
 }
 
-func VolumeOrphan(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func VolumeOrphan(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, v := range g.ByType(docol.VolumeType) {
 		ids, _ := v.Attributes["droplet_ids"].([]int)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckVolumeOrphan.ID,
 			Severity: CheckVolumeOrphan.Severity,
 			Resource: v.Ref(),
 			Tags:     CheckVolumeOrphan.Tags,
 		}
 		if len(ids) == 0 {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("volume %q: no droplet attached", v.Name)
 		} else {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("volume %q: attached to %d droplet(s)", v.Name, len(ids))
 		}
 		findings = append(findings, f)
@@ -63,10 +63,10 @@ func VolumeOrphan(_ context.Context, g *core.ResourceGraph) ([]core.Finding, err
 // CheckVolumeNotEmpty flags volumes whose filesystem type is empty
 // AND that are not attached to any droplet -- almost always a
 // failed-provision or test-and-forget artifact.
-var CheckVolumeNotEmpty = core.Check{
+var CheckVolumeNotEmpty = compliancekit.Check{
 	ID:           "do-volume-unformatted-orphan",
 	Title:        "Unformatted detached volumes should be cleaned up",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "digitalocean",
 	Service:      "volumes",
 	ResourceType: docol.VolumeType,
@@ -86,22 +86,22 @@ var CheckVolumeNotEmpty = core.Check{
 	Scanner: "volumes.UnformattedOrphan",
 }
 
-func VolumeUnformattedOrphan(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func VolumeUnformattedOrphan(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, v := range g.ByType(docol.VolumeType) {
 		ids, _ := v.Attributes["droplet_ids"].([]int)
 		fsType, _ := v.Attributes["filesystem_type"].(string)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckVolumeNotEmpty.ID,
 			Severity: CheckVolumeNotEmpty.Severity,
 			Resource: v.Ref(),
 			Tags:     CheckVolumeNotEmpty.Tags,
 		}
 		if len(ids) == 0 && fsType == "" {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("volume %q: unformatted + unattached", v.Name)
 		} else {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("volume %q: formatted (%s) or attached", v.Name, fsType)
 		}
 		findings = append(findings, f)
@@ -112,10 +112,10 @@ func VolumeUnformattedOrphan(_ context.Context, g *core.ResourceGraph) ([]core.F
 // CheckSnapshotAge flags snapshots older than snapshotMaxAgeDays.
 // Old snapshots are usually obsolete (the base image has rotated)
 // and bill silently.
-var CheckSnapshotAge = core.Check{
+var CheckSnapshotAge = compliancekit.Check{
 	ID:           "do-snapshot-too-old",
 	Title:        "Snapshots older than one year should be reviewed",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "digitalocean",
 	Service:      "snapshots",
 	ResourceType: docol.SnapshotType,
@@ -137,12 +137,12 @@ var CheckSnapshotAge = core.Check{
 	Scanner: "snapshots.Age",
 }
 
-func SnapshotAge(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func SnapshotAge(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	threshold := time.Now().UTC().Add(-snapshotMaxAgeDays * 24 * time.Hour)
 	for _, s := range g.ByType(docol.SnapshotType) {
 		created, _ := s.Attributes["created_at"].(string)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckSnapshotAge.ID,
 			Severity: CheckSnapshotAge.Severity,
 			Resource: s.Ref(),
@@ -151,14 +151,14 @@ func SnapshotAge(_ context.Context, g *core.ResourceGraph) ([]core.Finding, erro
 		t, err := time.Parse(time.RFC3339, created)
 		switch {
 		case err != nil:
-			f.Status = core.StatusSkip
+			f.Status = compliancekit.StatusSkip
 			f.Message = fmt.Sprintf("snapshot %q: unparsable created_at=%q", s.Name, created)
 		case t.Before(threshold):
 			days := int(time.Since(t).Hours() / 24)
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("snapshot %q: %d days old (> %d)", s.Name, days, snapshotMaxAgeDays)
 		default:
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("snapshot %q: created %s", s.Name, created)
 		}
 		findings = append(findings, f)
@@ -170,10 +170,10 @@ func SnapshotAge(_ context.Context, g *core.ResourceGraph) ([]core.Finding, erro
 // (droplet or volume) is no longer present in this account. These
 // are "ghost" snapshots whose source has been deleted, leaving the
 // snapshot as the only copy of the data.
-var CheckSnapshotResourceExists = core.Check{
+var CheckSnapshotResourceExists = compliancekit.Check{
 	ID:           "do-snapshot-orphan-source",
 	Title:        "Snapshots should have a still-existing source resource",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "digitalocean",
 	Service:      "snapshots",
 	ResourceType: docol.SnapshotType,
@@ -196,7 +196,7 @@ var CheckSnapshotResourceExists = core.Check{
 	Scanner: "snapshots.ResourceExists",
 }
 
-func SnapshotResourceExists(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func SnapshotResourceExists(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	// Build live-resource id sets for droplet + volume snapshots.
 	liveDroplets := map[string]bool{}
 	for _, d := range g.ByType(docol.DropletType) {
@@ -211,11 +211,11 @@ func SnapshotResourceExists(_ context.Context, g *core.ResourceGraph) ([]core.Fi
 		liveVolumes[parts] = true
 	}
 
-	findings := []core.Finding{}
+	findings := []compliancekit.Finding{}
 	for _, s := range g.ByType(docol.SnapshotType) {
 		rt, _ := s.Attributes["resource_type"].(string)
 		rid, _ := s.Attributes["resource_id"].(string)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckSnapshotResourceExists.ID,
 			Severity: CheckSnapshotResourceExists.Severity,
 			Resource: s.Ref(),
@@ -228,16 +228,16 @@ func SnapshotResourceExists(_ context.Context, g *core.ResourceGraph) ([]core.Fi
 		case "volume":
 			live = liveVolumes[rid]
 		default:
-			f.Status = core.StatusSkip
+			f.Status = compliancekit.StatusSkip
 			f.Message = fmt.Sprintf("snapshot %q: unknown resource_type=%q", s.Name, rt)
 			findings = append(findings, f)
 			continue
 		}
 		if live {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("snapshot %q: source %s/%s still exists", s.Name, rt, rid)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("snapshot %q: source %s/%s no longer exists", s.Name, rt, rid)
 		}
 		findings = append(findings, f)
@@ -247,7 +247,7 @@ func SnapshotResourceExists(_ context.Context, g *core.ResourceGraph) ([]core.Fi
 
 // splitLast returns the last "."-separated piece of a string.
 // Used for extracting the trailing godo numeric id from a
-// core.Resource ID.
+// compliancekit.Resource ID.
 func splitLast(s, sep string) string {
 	for i := len(s) - 1; i >= 0; i-- {
 		if string(s[i]) == sep {
@@ -258,8 +258,8 @@ func splitLast(s, sep string) string {
 }
 
 func init() {
-	core.Register(CheckVolumeOrphan, VolumeOrphan)
-	core.Register(CheckVolumeNotEmpty, VolumeUnformattedOrphan)
-	core.Register(CheckSnapshotAge, SnapshotAge)
-	core.Register(CheckSnapshotResourceExists, SnapshotResourceExists)
+	compliancekit.Register(CheckVolumeOrphan, VolumeOrphan)
+	compliancekit.Register(CheckVolumeNotEmpty, VolumeUnformattedOrphan)
+	compliancekit.Register(CheckSnapshotAge, SnapshotAge)
+	compliancekit.Register(CheckSnapshotResourceExists, SnapshotResourceExists)
 }

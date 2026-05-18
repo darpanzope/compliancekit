@@ -3,8 +3,8 @@ package bash
 import (
 	"fmt"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.19 phase 3 — bash strategies for the 10 DNS-depth checks.
@@ -34,14 +34,14 @@ func init() {
 		[]string{"do-domain-dnssec-via-registrar"}, renderBashDNSSECRegistrar)
 }
 
-func bashDomain(f core.Finding) string {
+func bashDomain(f compliancekit.Finding) string {
 	if f.Resource.Name != "" {
 		return f.Resource.Name
 	}
 	return "DOMAIN"
 }
 
-func renderBashDMARCPolicy(f core.Finding) (remediate.Snippet, error) {
+func renderBashDMARCPolicy(f compliancekit.Finding) (remediate.Snippet, error) {
 	d := bashDomain(f)
 	body := fmt.Sprintf(`# Idempotent _dmarc upsert: delete any existing _dmarc TXT, then create the strict record.
 domain=%q
@@ -64,14 +64,20 @@ doctl compute domain records create "$domain" \
 	}, nil
 }
 
-func renderBashDMARCSubdomain(f core.Finding) (remediate.Snippet, error) {
+func renderBashDMARCSubdomain(f compliancekit.Finding) (remediate.Snippet, error) {
 	return renderBashDMARCPolicy(f)
 }
-func renderBashDMARCPct(f core.Finding) (remediate.Snippet, error) { return renderBashDMARCPolicy(f) }
-func renderBashDMARCRUA(f core.Finding) (remediate.Snippet, error) { return renderBashDMARCPolicy(f) }
-func renderBashDMARCRUF(f core.Finding) (remediate.Snippet, error) { return renderBashDMARCPolicy(f) }
+func renderBashDMARCPct(f compliancekit.Finding) (remediate.Snippet, error) {
+	return renderBashDMARCPolicy(f)
+}
+func renderBashDMARCRUA(f compliancekit.Finding) (remediate.Snippet, error) {
+	return renderBashDMARCPolicy(f)
+}
+func renderBashDMARCRUF(f compliancekit.Finding) (remediate.Snippet, error) {
+	return renderBashDMARCPolicy(f)
+}
 
-func renderBashSPFStrict(f core.Finding) (remediate.Snippet, error) {
+func renderBashSPFStrict(f compliancekit.Finding) (remediate.Snippet, error) {
 	d := bashDomain(f)
 	body := fmt.Sprintf(`# Find + update the root SPF TXT record terminator from ~all/?all to -all.
 domain=%q
@@ -91,7 +97,7 @@ doctl compute domain records update "$domain" --record-id "$rec_id" --record-dat
 	}, nil
 }
 
-func renderBashSPFNoRedirect(f core.Finding) (remediate.Snippet, error) {
+func renderBashSPFNoRedirect(f compliancekit.Finding) (remediate.Snippet, error) {
 	d := bashDomain(f)
 	body := fmt.Sprintf(`# redirect= → include: rewrite. Manual review of the resulting SPF is REQUIRED
 # because include: doesn't carry the terminating qualifier.
@@ -106,7 +112,7 @@ echo "Rewrite plan: replace 'redirect=<other>' with 'include:<other>' and add '-
 	}, nil
 }
 
-func renderBashDKIMSelector(f core.Finding) (remediate.Snippet, error) {
+func renderBashDKIMSelector(f compliancekit.Finding) (remediate.Snippet, error) {
 	d := bashDomain(f)
 	body := fmt.Sprintf(`# Generate + publish a DKIM key pair.
 domain=%q
@@ -133,7 +139,7 @@ doctl compute domain records create "$domain" \
 	}, nil
 }
 
-func renderBashCAAIodef(f core.Finding) (remediate.Snippet, error) {
+func renderBashCAAIodef(f compliancekit.Finding) (remediate.Snippet, error) {
 	d := bashDomain(f)
 	body := fmt.Sprintf(`domain=%q
 doctl compute domain records create "$domain" \
@@ -147,7 +153,7 @@ doctl compute domain records create "$domain" \
 	}, nil
 }
 
-func renderBashDNSSECRegistrar(_ core.Finding) (remediate.Snippet, error) {
+func renderBashDNSSECRegistrar(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return renderBashManualOnly(
 		"DNSSEC for DO-managed zones",
 		"https://dnssec-analyzer.verisignlabs.com",

@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.21 phase 11 — coverage for the 10 supply-chain additions in
@@ -48,12 +48,12 @@ func TestSupplyChain(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			pod := mkPod("p1", c.podAttrs)
-			fn, ok := core.Lookup(c.id)
+			fn, ok := compliancekit.Lookup(c.id)
 			if !ok {
 				t.Fatalf("check %q not registered", c.id)
 			}
 			findings, _ := fn(context.Background(), gph(t, pod))
-			got := findings[0].Status == core.StatusPass
+			got := findings[0].Status == compliancekit.StatusPass
 			if got != c.wantPass {
 				t.Errorf("status=%v want pass=%v (msg=%q)", findings[0].Status, c.wantPass, findings[0].Message)
 			}

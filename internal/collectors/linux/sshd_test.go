@@ -3,12 +3,12 @@ package linux
 import (
 	"testing"
 
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
-// Compile-time assertion that *Collector satisfies core.Collector.
+// Compile-time assertion that *Collector satisfies compliancekit.Collector.
 // (Lives in this file to keep collector_test.go optional for v0.2.)
-var _ core.Collector = (*Collector)(nil)
+var _ compliancekit.Collector = (*Collector)(nil)
 
 func TestParseSSHDConfig_BasicDirectives(t *testing.T) {
 	input := `

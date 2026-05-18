@@ -6,14 +6,14 @@ import (
 	"testing"
 
 	linuxcol "github.com/darpanzope/compliancekit/internal/collectors/linux"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.20 phase 1 — tests for the distro-allowlist check.
 
-func distroHost(name string, attrs map[string]any) core.Resource {
+func distroHost(name string, attrs map[string]any) compliancekit.Resource {
 	attrs["reachable"] = true
-	return core.Resource{
+	return compliancekit.Resource{
 		ID:         "linux.host." + name,
 		Type:       linuxcol.HostType,
 		Name:       name,
@@ -26,14 +26,14 @@ func TestDistroSupported(t *testing.T) {
 	cases := []struct {
 		name  string
 		attrs map[string]any
-		want  core.Status
+		want  compliancekit.Status
 		hint  string
 	}{
-		{"ubuntu passes", map[string]any{"distro_id": "ubuntu", "distro_pretty_name": "Ubuntu 22.04"}, core.StatusPass, "ubuntu"},
-		{"rhel passes", map[string]any{"distro_id": "rhel", "distro_pretty_name": "RHEL 9"}, core.StatusPass, "rhel"},
-		{"alpine passes", map[string]any{"distro_id": "alpine", "distro_pretty_name": "Alpine 3.19"}, core.StatusPass, "alpine"},
-		{"unsupported fails", map[string]any{"distro_id": "freebsd", "distro_pretty_name": "FreeBSD 14"}, core.StatusFail, "NOT on"},
-		{"missing distro_id → error", map[string]any{"os_release_error": "ssh: timeout"}, core.StatusError, "os-release"},
+		{"ubuntu passes", map[string]any{"distro_id": "ubuntu", "distro_pretty_name": "Ubuntu 22.04"}, compliancekit.StatusPass, "ubuntu"},
+		{"rhel passes", map[string]any{"distro_id": "rhel", "distro_pretty_name": "RHEL 9"}, compliancekit.StatusPass, "rhel"},
+		{"alpine passes", map[string]any{"distro_id": "alpine", "distro_pretty_name": "Alpine 3.19"}, compliancekit.StatusPass, "alpine"},
+		{"unsupported fails", map[string]any{"distro_id": "freebsd", "distro_pretty_name": "FreeBSD 14"}, compliancekit.StatusFail, "NOT on"},
+		{"missing distro_id → error", map[string]any{"os_release_error": "ssh: timeout"}, compliancekit.StatusError, "os-release"},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -50,13 +50,13 @@ func TestDistroSupported(t *testing.T) {
 }
 
 func TestDistroSupported_Unreachable(t *testing.T) {
-	unreach := core.Resource{
+	unreach := compliancekit.Resource{
 		ID: "linux.host.dead", Type: linuxcol.HostType, Name: "dead", Provider: "linux",
 		Attributes: map[string]any{"reachable": false, "unreachable_reason": "dial: timeout"},
 	}
 	g := newGraph(t, unreach)
 	findings, _ := DistroSupported(context.Background(), g)
-	if findings[0].Status != core.StatusSkip {
+	if findings[0].Status != compliancekit.StatusSkip {
 		t.Errorf("status=%v want StatusSkip", findings[0].Status)
 	}
 }

@@ -3,8 +3,8 @@ package bash
 import (
 	"fmt"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.19 phase 4 — bash strategies for the 10 DOKS-depth checks. Each
@@ -35,14 +35,14 @@ func init() {
 		[]string{"k8s-doks-pod-security-standards-baseline"}, renderBashDOKSPSA)
 }
 
-func bashDOKSCluster(f core.Finding) string {
+func bashDOKSCluster(f compliancekit.Finding) string {
 	if f.Resource.Name != "" {
 		return f.Resource.Name
 	}
 	return "CLUSTER"
 }
 
-func renderBashDOKSVersion(f core.Finding) (remediate.Snippet, error) {
+func renderBashDOKSVersion(f compliancekit.Finding) (remediate.Snippet, error) {
 	c := bashDOKSCluster(f)
 	body := fmt.Sprintf(`# Pick the latest supported minor + upgrade in maintenance window.
 cluster=%q
@@ -56,7 +56,7 @@ doctl kubernetes cluster upgrade "$cluster" --version "$latest"`, c)
 	}, nil
 }
 
-func renderBashDOKSTaints(f core.Finding) (remediate.Snippet, error) {
+func renderBashDOKSTaints(f compliancekit.Finding) (remediate.Snippet, error) {
 	pool := bashDOKSCluster(f)
 	body := fmt.Sprintf(`pool=%q
 cluster_id="$(doctl kubernetes cluster list -o json | jq -r '.[] | select(.node_pools[].name=="'"$pool"'") | .id')"
@@ -68,7 +68,7 @@ doctl kubernetes cluster node-pool update "$cluster_id" "$pool" \
 	}, nil
 }
 
-func renderBashDOKSEnvTag(f core.Finding) (remediate.Snippet, error) {
+func renderBashDOKSEnvTag(f compliancekit.Finding) (remediate.Snippet, error) {
 	pool := bashDOKSCluster(f)
 	body := fmt.Sprintf(`# doctl doesn't mutate tags on existing pools — recreate.
 pool=%q
@@ -83,7 +83,7 @@ doctl kubernetes cluster node-pool create "$cluster_id" \
 	}, nil
 }
 
-func renderBashDOKSSize(f core.Finding) (remediate.Snippet, error) {
+func renderBashDOKSSize(f compliancekit.Finding) (remediate.Snippet, error) {
 	pool := bashDOKSCluster(f)
 	body := fmt.Sprintf(`pool=%q
 cluster_id="$(doctl kubernetes cluster list -o json | jq -r '.[] | select(.node_pools[].name=="'"$pool"'") | .id')"
@@ -107,7 +107,7 @@ doctl kubernetes cluster node-pool delete "$cluster_id" "$pool" --force`, pool)
 	}, nil
 }
 
-func renderBashDOKSMaintenance(f core.Finding) (remediate.Snippet, error) {
+func renderBashDOKSMaintenance(f compliancekit.Finding) (remediate.Snippet, error) {
 	c := bashDOKSCluster(f)
 	body := fmt.Sprintf(`doctl kubernetes cluster update %s --maintenance-window=sunday=04:00`, c)
 	return remediate.Snippet{
@@ -116,7 +116,7 @@ func renderBashDOKSMaintenance(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderBashDOKSLogging(f core.Finding) (remediate.Snippet, error) {
+func renderBashDOKSLogging(f compliancekit.Finding) (remediate.Snippet, error) {
 	c := bashDOKSCluster(f)
 	body := fmt.Sprintf(`cluster=%q
 doctl kubernetes cluster kubeconfig save "$cluster"
@@ -132,7 +132,7 @@ helm upgrade --install fluent-bit fluent/fluent-bit \
 	}, nil
 }
 
-func renderBashDOKSMetricsServer(f core.Finding) (remediate.Snippet, error) {
+func renderBashDOKSMetricsServer(f compliancekit.Finding) (remediate.Snippet, error) {
 	c := bashDOKSCluster(f)
 	body := fmt.Sprintf(`cluster=%q
 doctl kubernetes cluster kubeconfig save "$cluster"
@@ -144,7 +144,7 @@ kubectl -n kube-system get deployment metrics-server >/dev/null 2>&1 || \
 	}, nil
 }
 
-func renderBashDOKSCertManager(f core.Finding) (remediate.Snippet, error) {
+func renderBashDOKSCertManager(f compliancekit.Finding) (remediate.Snippet, error) {
 	c := bashDOKSCluster(f)
 	body := fmt.Sprintf(`cluster=%q
 doctl kubernetes cluster kubeconfig save "$cluster"
@@ -160,7 +160,7 @@ helm upgrade --install cert-manager jetstack/cert-manager \
 	}, nil
 }
 
-func renderBashDOKSAutoscaler(f core.Finding) (remediate.Snippet, error) {
+func renderBashDOKSAutoscaler(f compliancekit.Finding) (remediate.Snippet, error) {
 	c := bashDOKSCluster(f)
 	body := fmt.Sprintf(`cluster=%q
 pools="$(doctl kubernetes cluster node-pool list "$cluster" -o json | jq -r '.[].name')"
@@ -175,7 +175,7 @@ done`, c)
 	}, nil
 }
 
-func renderBashDOKSPSA(f core.Finding) (remediate.Snippet, error) {
+func renderBashDOKSPSA(f compliancekit.Finding) (remediate.Snippet, error) {
 	c := bashDOKSCluster(f)
 	body := fmt.Sprintf(`cluster=%q
 doctl kubernetes cluster kubeconfig save "$cluster"

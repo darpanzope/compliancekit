@@ -9,7 +9,7 @@ import (
 	gdtypes "github.com/aws/aws-sdk-go-v2/service/guardduty/types"
 
 	"github.com/darpanzope/compliancekit/internal/collectors/cloudcommon"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // GuardDutyRegionType is the resource type emitted per region for
@@ -25,7 +25,7 @@ type guarddutyClient interface {
 // collectGuardDuty emits one aws.guardduty.region resource per
 // region in scope, indicating whether GuardDuty has a detector
 // and whether it is enabled.
-func (c *Collector) collectGuardDuty(ctx context.Context, regions []string, out []core.Resource) []core.Resource {
+func (c *Collector) collectGuardDuty(ctx context.Context, regions []string, out []compliancekit.Resource) []compliancekit.Resource {
 	for _, region := range regions {
 		cfg := c.cfg
 		cfg.Region = region
@@ -39,8 +39,8 @@ func (c *Collector) collectGuardDuty(ctx context.Context, regions []string, out 
 	return out
 }
 
-func (c *Collector) collectGuardDutyForRegion(ctx context.Context, client guarddutyClient, region string) (core.Resource, error) {
-	r := core.Resource{
+func (c *Collector) collectGuardDutyForRegion(ctx context.Context, client guarddutyClient, region string) (compliancekit.Resource, error) {
+	r := compliancekit.Resource{
 		ID:       fmt.Sprintf("aws.guardduty.region.%s", region),
 		Type:     GuardDutyRegionType,
 		Name:     region,

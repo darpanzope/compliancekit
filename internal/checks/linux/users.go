@@ -6,13 +6,13 @@ import (
 	"strings"
 
 	linuxcol "github.com/darpanzope/compliancekit/internal/collectors/linux"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // usersOf returns (accounts, shadow_readable, ok). When shadow was not
 // readable, checks that depend on it (empty-password) skip instead of
 // reporting a false negative.
-func usersOf(host core.Resource) (accounts []linuxcol.UserAccount, shadowReadable, ok bool) {
+func usersOf(host compliancekit.Resource) (accounts []linuxcol.UserAccount, shadowReadable, ok bool) {
 	if !host.AttrBool("reachable") {
 		return nil, false, false
 	}
@@ -29,11 +29,11 @@ func usersOf(host core.Resource) (accounts []linuxcol.UserAccount, shadowReadabl
 	return accs, sr, accsOK
 }
 
-func usersSkip(check core.Check, host core.Resource, why string) core.Finding {
-	return core.Finding{
+func usersSkip(check compliancekit.Check, host compliancekit.Resource, why string) compliancekit.Finding {
+	return compliancekit.Finding{
 		CheckID:  check.ID,
 		Severity: check.Severity,
-		Status:   core.StatusSkip,
+		Status:   compliancekit.StatusSkip,
 		Resource: host.Ref(),
 		Message:  why,
 		Tags:     check.Tags,
@@ -45,10 +45,10 @@ func usersSkip(check core.Check, host core.Resource, why string) core.Finding {
 // ============================================================
 
 // CheckUIDZeroOnlyRoot requires that only the "root" account has UID 0.
-var CheckUIDZeroOnlyRoot = core.Check{
+var CheckUIDZeroOnlyRoot = compliancekit.Check{
 	ID:           "linux-uid-zero-only-root",
 	Title:        "Only the root account may have UID 0",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "linux",
 	Service:      "users",
 	ResourceType: linuxcol.HostType,
@@ -68,9 +68,9 @@ var CheckUIDZeroOnlyRoot = core.Check{
 }
 
 // UIDZeroOnlyRoot is the CheckFunc for CheckUIDZeroOnlyRoot.
-func UIDZeroOnlyRoot(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func UIDZeroOnlyRoot(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	hosts := g.ByType(linuxcol.HostType)
-	findings := make([]core.Finding, 0, len(hosts))
+	findings := make([]compliancekit.Finding, 0, len(hosts))
 	for _, h := range hosts {
 		accounts, _, ok := usersOf(h)
 		if !ok {
@@ -83,17 +83,17 @@ func UIDZeroOnlyRoot(_ context.Context, g *core.ResourceGraph) ([]core.Finding, 
 				hiddenRoots = append(hiddenRoots, a.Name)
 			}
 		}
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckUIDZeroOnlyRoot.ID,
 			Severity: CheckUIDZeroOnlyRoot.Severity,
 			Resource: h.Ref(),
 			Tags:     CheckUIDZeroOnlyRoot.Tags,
 		}
 		if len(hiddenRoots) == 0 {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("host %q: only root holds UID 0", h.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("host %q: additional UID-0 accounts: %s", h.Name, strings.Join(hiddenRoots, ", "))
 		}
 		findings = append(findings, f)
@@ -107,10 +107,10 @@ func UIDZeroOnlyRoot(_ context.Context, g *core.ResourceGraph) ([]core.Finding, 
 
 // CheckNoEmptyPasswords requires no /etc/shadow entry to have an empty
 // password hash field.
-var CheckNoEmptyPasswords = core.Check{
+var CheckNoEmptyPasswords = compliancekit.Check{
 	ID:           "linux-no-empty-passwords",
 	Title:        "No account may have an empty password",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "linux",
 	Service:      "users",
 	ResourceType: linuxcol.HostType,
@@ -131,9 +131,9 @@ var CheckNoEmptyPasswords = core.Check{
 }
 
 // NoEmptyPasswords is the CheckFunc for CheckNoEmptyPasswords.
-func NoEmptyPasswords(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func NoEmptyPasswords(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	hosts := g.ByType(linuxcol.HostType)
-	findings := make([]core.Finding, 0, len(hosts))
+	findings := make([]compliancekit.Finding, 0, len(hosts))
 	for _, h := range hosts {
 		accounts, shadowReadable, ok := usersOf(h)
 		if !ok {
@@ -150,17 +150,17 @@ func NoEmptyPasswords(_ context.Context, g *core.ResourceGraph) ([]core.Finding,
 				empties = append(empties, a.Name)
 			}
 		}
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckNoEmptyPasswords.ID,
 			Severity: CheckNoEmptyPasswords.Severity,
 			Resource: h.Ref(),
 			Tags:     CheckNoEmptyPasswords.Tags,
 		}
 		if len(empties) == 0 {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("host %q: no accounts with empty passwords", h.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("host %q: accounts with empty passwords: %s", h.Name, strings.Join(empties, ", "))
 		}
 		findings = append(findings, f)
@@ -169,6 +169,6 @@ func NoEmptyPasswords(_ context.Context, g *core.ResourceGraph) ([]core.Finding,
 }
 
 func init() {
-	core.Register(CheckUIDZeroOnlyRoot, UIDZeroOnlyRoot)
-	core.Register(CheckNoEmptyPasswords, NoEmptyPasswords)
+	compliancekit.Register(CheckUIDZeroOnlyRoot, UIDZeroOnlyRoot)
+	compliancekit.Register(CheckNoEmptyPasswords, NoEmptyPasswords)
 }

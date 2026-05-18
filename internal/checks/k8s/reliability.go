@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	k8scol "github.com/darpanzope/compliancekit/internal/collectors/k8s"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.21 phase 2 — workload reliability deepening. 12 checks covering
@@ -17,10 +17,10 @@ import (
 
 // ----- 1. readiness probe ------------------------------------------
 
-var CheckPodReadinessProbe = core.Check{
+var CheckPodReadinessProbe = compliancekit.Check{
 	ID:           "k8s-pod-readiness-probe",
 	Title:        "Containers should declare a readiness probe",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "kubernetes",
 	Service:      "reliability",
 	ResourceType: k8scol.PodType,
@@ -43,8 +43,8 @@ var CheckPodReadinessProbe = core.Check{
 	Scanner: "reliability.ReadinessProbe",
 }
 
-func PodReadinessProbe(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func PodReadinessProbe(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, p := range g.ByType(k8scol.PodType) {
 		bad := violatingContainers(p, func(c map[string]any) bool {
 			if k, _ := c["kind"].(string); k == "init" {
@@ -62,10 +62,10 @@ func PodReadinessProbe(_ context.Context, g *core.ResourceGraph) ([]core.Finding
 
 // ----- 2. startup probe (slow-starting workloads) -------------------
 
-var CheckPodStartupProbe = core.Check{
+var CheckPodStartupProbe = compliancekit.Check{
 	ID:           "k8s-pod-startup-probe-for-slow-start",
 	Title:        "Slow-starting containers should declare a startup probe",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "kubernetes",
 	Service:      "reliability",
 	ResourceType: k8scol.PodType,
@@ -88,10 +88,10 @@ var CheckPodStartupProbe = core.Check{
 	Scanner: "reliability.StartupProbe",
 }
 
-func PodStartupProbe(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func PodStartupProbe(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, p := range g.ByType(k8scol.PodType) {
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID: CheckPodStartupProbe.ID, Severity: CheckPodStartupProbe.Severity,
 			Resource: p.Ref(), Tags: CheckPodStartupProbe.Tags,
 		}
@@ -114,10 +114,10 @@ func PodStartupProbe(_ context.Context, g *core.ResourceGraph) ([]core.Finding, 
 			}
 		}
 		if len(missing) == 0 {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("pod %q: containers with livenessProbe also have a startupProbe (or no liveness probe to clash with)", podDesc(p))
 		} else {
-			f.Status = core.StatusError
+			f.Status = compliancekit.StatusError
 			f.Message = fmt.Sprintf("pod %q: containers with livenessProbe lacking a startupProbe (audit per workload startup time): %s", podDesc(p), strings.Join(missing, ", "))
 		}
 		findings = append(findings, f)
@@ -127,10 +127,10 @@ func PodStartupProbe(_ context.Context, g *core.ResourceGraph) ([]core.Finding, 
 
 // ----- 3. ephemeral storage limit ----------------------------------
 
-var CheckPodEphemeralStorageLimit = core.Check{
+var CheckPodEphemeralStorageLimit = compliancekit.Check{
 	ID:           "k8s-pod-ephemeral-storage-limit",
 	Title:        "Containers should declare ephemeral-storage limits",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "kubernetes",
 	Service:      "reliability",
 	ResourceType: k8scol.PodType,
@@ -152,8 +152,8 @@ var CheckPodEphemeralStorageLimit = core.Check{
 	Scanner: "reliability.EphemeralStorageLimit",
 }
 
-func PodEphemeralStorageLimit(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func PodEphemeralStorageLimit(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, p := range g.ByType(k8scol.PodType) {
 		bad := violatingContainers(p, func(c map[string]any) bool {
 			has, _ := c["has_ephemeral_storage_limit"].(bool)
@@ -168,10 +168,10 @@ func PodEphemeralStorageLimit(_ context.Context, g *core.ResourceGraph) ([]core.
 
 // ----- 4. topology spread constraints ------------------------------
 
-var CheckPodTopologySpread = core.Check{
+var CheckPodTopologySpread = compliancekit.Check{
 	ID:           "k8s-pod-topology-spread-constraints",
 	Title:        "Multi-replica pods should declare topologySpreadConstraints",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "kubernetes",
 	Service:      "reliability",
 	ResourceType: k8scol.PodType,
@@ -194,26 +194,26 @@ var CheckPodTopologySpread = core.Check{
 	Scanner: "reliability.TopologySpread",
 }
 
-func PodTopologySpread(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func PodTopologySpread(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, p := range g.ByType(k8scol.PodType) {
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID: CheckPodTopologySpread.ID, Severity: CheckPodTopologySpread.Severity,
 			Resource: p.Ref(), Tags: CheckPodTopologySpread.Tags,
 		}
 		ns, _ := p.Attributes["namespace"].(string)
 		if ns == "kube-system" {
-			f.Status = core.StatusSkip
+			f.Status = compliancekit.StatusSkip
 			f.Message = fmt.Sprintf("pod %q: kube-system pods use cluster-managed scheduling", podDesc(p))
 			findings = append(findings, f)
 			continue
 		}
 		count, _ := p.Attributes["topology_spread_constraints"].(int)
 		if count == 0 {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("pod %q: no topologySpreadConstraints set", podDesc(p))
 		} else {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("pod %q: topologySpreadConstraints count=%d", podDesc(p), count)
 		}
 		findings = append(findings, f)
@@ -223,10 +223,10 @@ func PodTopologySpread(_ context.Context, g *core.ResourceGraph) ([]core.Finding
 
 // ----- 5. image digest pinning -------------------------------------
 
-var CheckPodImageDigestPinned = core.Check{
+var CheckPodImageDigestPinned = compliancekit.Check{
 	ID:           "k8s-pod-image-digest-pinned",
 	Title:        "Containers should pin images by sha256 digest",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "kubernetes",
 	Service:      "supply-chain",
 	ResourceType: k8scol.PodType,
@@ -250,8 +250,8 @@ var CheckPodImageDigestPinned = core.Check{
 	Scanner: "supplychain.ImageDigestPinned",
 }
 
-func PodImageDigestPinned(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func PodImageDigestPinned(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, p := range g.ByType(k8scol.PodType) {
 		bad := violatingContainers(p, func(c map[string]any) bool {
 			pinned, _ := c["image_digest_pinned"].(bool)
@@ -266,10 +266,10 @@ func PodImageDigestPinned(_ context.Context, g *core.ResourceGraph) ([]core.Find
 
 // ----- 6. termination grace period set -----------------------------
 
-var CheckPodTerminationGrace = core.Check{
+var CheckPodTerminationGrace = compliancekit.Check{
 	ID:           "k8s-pod-termination-grace-period-explicit",
 	Title:        "Pods should set terminationGracePeriodSeconds explicitly",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "kubernetes",
 	Service:      "reliability",
 	ResourceType: k8scol.PodType,
@@ -291,19 +291,19 @@ var CheckPodTerminationGrace = core.Check{
 	Scanner: "reliability.TerminationGracePeriod",
 }
 
-func PodTerminationGrace(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func PodTerminationGrace(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, p := range g.ByType(k8scol.PodType) {
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID: CheckPodTerminationGrace.ID, Severity: CheckPodTerminationGrace.Severity,
 			Resource: p.Ref(), Tags: CheckPodTerminationGrace.Tags,
 		}
 		grace, _ := p.Attributes["termination_grace_period"].(int64)
 		if grace == 0 {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("pod %q: terminationGracePeriodSeconds unset (defaults to 30s — rarely right for the workload)", podDesc(p))
 		} else {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("pod %q: terminationGracePeriodSeconds=%d", podDesc(p), grace)
 		}
 		findings = append(findings, f)
@@ -315,10 +315,10 @@ func PodTerminationGrace(_ context.Context, g *core.ResourceGraph) ([]core.Findi
 
 // ----- 10. container preStop hook (drain on shutdown) -------------
 
-var CheckPodPreStopHook = core.Check{
+var CheckPodPreStopHook = compliancekit.Check{
 	ID:           "k8s-pod-prestop-hook-for-graceful-drain",
 	Title:        "Long-lived containers should declare a preStop hook",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "kubernetes",
 	Service:      "reliability",
 	ResourceType: k8scol.PodType,
@@ -341,16 +341,16 @@ var CheckPodPreStopHook = core.Check{
 	Scanner: "reliability.PreStopHook",
 }
 
-func PodPreStopHook(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func PodPreStopHook(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, p := range g.ByType(k8scol.PodType) {
 		// All v0.21 phase 2 checks return Info-grade since preStop hooks
 		// are workload-specific. We surface every pod for audit — the
 		// auditor decides per workload whether one is required.
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID: CheckPodPreStopHook.ID, Severity: CheckPodPreStopHook.Severity,
 			Resource: p.Ref(), Tags: CheckPodPreStopHook.Tags,
-			Status:  core.StatusError,
+			Status:  compliancekit.StatusError,
 			Message: fmt.Sprintf("pod %q: audit preStop hooks per container (kubectl get pod -n <ns> <name> -o jsonpath='{.spec.containers[*].lifecycle.preStop}')", podDesc(p)),
 		}
 		findings = append(findings, f)
@@ -360,10 +360,10 @@ func PodPreStopHook(_ context.Context, g *core.ResourceGraph) ([]core.Finding, e
 
 // ----- 11. owner ref present (orphaned pods) ----------------------
 
-var CheckPodHasOwnerRef = core.Check{
+var CheckPodHasOwnerRef = compliancekit.Check{
 	ID:           "k8s-pod-has-owner-ref",
 	Title:        "Standalone pods (no owner reference) should be reviewed",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "kubernetes",
 	Service:      "reliability",
 	ResourceType: k8scol.PodType,
@@ -385,10 +385,10 @@ var CheckPodHasOwnerRef = core.Check{
 	Scanner: "reliability.HasOwnerRef",
 }
 
-func PodHasOwnerRef(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func PodHasOwnerRef(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, p := range g.ByType(k8scol.PodType) {
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID: CheckPodHasOwnerRef.ID, Severity: CheckPodHasOwnerRef.Severity,
 			Resource: p.Ref(), Tags: CheckPodHasOwnerRef.Tags,
 		}
@@ -396,13 +396,13 @@ func PodHasOwnerRef(_ context.Context, g *core.ResourceGraph) ([]core.Finding, e
 		ns, _ := p.Attributes["namespace"].(string)
 		switch {
 		case ns == "kube-system":
-			f.Status = core.StatusSkip
+			f.Status = compliancekit.StatusSkip
 			f.Message = fmt.Sprintf("pod %q: kube-system static pods often have no controller", podDesc(p))
 		case kind == "":
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("pod %q: no owner reference (orphan — won't be rescheduled on node failure)", podDesc(p))
 		default:
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("pod %q: owned by %s", podDesc(p), kind)
 		}
 		findings = append(findings, f)
@@ -412,10 +412,10 @@ func PodHasOwnerRef(_ context.Context, g *core.ResourceGraph) ([]core.Finding, e
 
 // ----- 12. host ports (already exists at container level — add pod-level summary)
 
-var CheckPodNoHostPorts = core.Check{
+var CheckPodNoHostPorts = compliancekit.Check{
 	ID:           "k8s-pod-no-host-ports",
 	Title:        "Pods should not bind hostPort (narrower than hostNetwork but same risk class)",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "kubernetes",
 	Service:      "pod-security",
 	ResourceType: k8scol.PodType,
@@ -438,8 +438,8 @@ var CheckPodNoHostPorts = core.Check{
 	Scanner: "podsecurity.NoHostPorts",
 }
 
-func PodNoHostPorts(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func PodNoHostPorts(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, p := range g.ByType(k8scol.PodType) {
 		bad := violatingContainers(p, func(c map[string]any) bool {
 			ports, _ := c["host_ports"].([]int)
@@ -453,14 +453,14 @@ func PodNoHostPorts(_ context.Context, g *core.ResourceGraph) ([]core.Finding, e
 }
 
 func init() {
-	core.Register(CheckPodReadinessProbe, PodReadinessProbe)
-	core.Register(CheckPodStartupProbe, PodStartupProbe)
-	core.Register(CheckPodEphemeralStorageLimit, PodEphemeralStorageLimit)
-	core.Register(CheckPodTopologySpread, PodTopologySpread)
-	core.Register(CheckPodImageDigestPinned, PodImageDigestPinned)
-	core.Register(CheckPodTerminationGrace, PodTerminationGrace)
+	compliancekit.Register(CheckPodReadinessProbe, PodReadinessProbe)
+	compliancekit.Register(CheckPodStartupProbe, PodStartupProbe)
+	compliancekit.Register(CheckPodEphemeralStorageLimit, PodEphemeralStorageLimit)
+	compliancekit.Register(CheckPodTopologySpread, PodTopologySpread)
+	compliancekit.Register(CheckPodImageDigestPinned, PodImageDigestPinned)
+	compliancekit.Register(CheckPodTerminationGrace, PodTerminationGrace)
 	// v0.22 phase 4 — init-container checks moved to init_containers.go.
-	core.Register(CheckPodPreStopHook, PodPreStopHook)
-	core.Register(CheckPodHasOwnerRef, PodHasOwnerRef)
-	core.Register(CheckPodNoHostPorts, PodNoHostPorts)
+	compliancekit.Register(CheckPodPreStopHook, PodPreStopHook)
+	compliancekit.Register(CheckPodHasOwnerRef, PodHasOwnerRef)
+	compliancekit.Register(CheckPodNoHostPorts, PodNoHostPorts)
 }

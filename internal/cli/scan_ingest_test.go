@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/darpanzope/compliancekit/internal/config"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 
 	// Side-effect imports — must match the production set so the
 	// adapter registry has the same set of formats as a real CLI run.
@@ -33,7 +33,7 @@ func ocsfFixture(name string) string {
 // into one findings slice, phantom resources added to the graph,
 // warnings flow through.
 func TestRunIngestSources_MultipleSources(t *testing.T) {
-	graph := core.NewResourceGraph()
+	graph := compliancekit.NewResourceGraph()
 
 	sources := []config.IngestSource{
 		{
@@ -82,7 +82,7 @@ func TestRunIngestSources_MultipleSources(t *testing.T) {
 // path: a typo in `format:` aborts the scan with a clear error rather
 // than silently skipping the entry.
 func TestRunIngestSources_UnknownFormatErrors(t *testing.T) {
-	graph := core.NewResourceGraph()
+	graph := compliancekit.NewResourceGraph()
 	sources := []config.IngestSource{
 		{Format: "saarif", File: sarifFixture("trivy.sarif")},
 	}
@@ -99,7 +99,7 @@ func TestRunIngestSources_UnknownFormatErrors(t *testing.T) {
 // path: the operator's mistake bubbles up rather than producing
 // silent zero findings.
 func TestRunIngestSources_MissingFileErrors(t *testing.T) {
-	graph := core.NewResourceGraph()
+	graph := compliancekit.NewResourceGraph()
 	sources := []config.IngestSource{
 		{Format: "sarif", File: "/does/not/exist.sarif"},
 	}
@@ -112,7 +112,7 @@ func TestRunIngestSources_MissingFileErrors(t *testing.T) {
 // TestRunIngestSources_EmptyConfigNoOp confirms a config with zero
 // ingest entries is a clean no-op, not an error.
 func TestRunIngestSources_EmptyConfigNoOp(t *testing.T) {
-	findings, warns, err := runIngestSources(context.Background(), nil, core.NewResourceGraph())
+	findings, warns, err := runIngestSources(context.Background(), nil, compliancekit.NewResourceGraph())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

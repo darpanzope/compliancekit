@@ -3,8 +3,8 @@ package ansible
 import (
 	"fmt"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.20 phase 3 — Ansible strategies for the 15 filesystem-hardening
@@ -25,7 +25,7 @@ var mountSepAnsibleIDs = []string{
 func init() {
 	for _, id := range mountSepAnsibleIDs {
 		id := id
-		register("ansible-"+id, []string{id}, func(_ core.Finding) (remediate.Snippet, error) {
+		register("ansible-"+id, []string{id}, func(_ compliancekit.Finding) (remediate.Snippet, error) {
 			body := `# Repartitioning a running host is a planned change; this stub
 # documents the procedure. Build images / new instances with the
 # right partition layout from the start.
@@ -63,7 +63,7 @@ func init() {
 	for id, s := range mountOptAnsibleSpecs {
 		id := id
 		s := s
-		register("ansible-"+id, []string{id}, func(_ core.Finding) (remediate.Snippet, error) {
+		register("ansible-"+id, []string{id}, func(_ compliancekit.Finding) (remediate.Snippet, error) {
 			body := fmt.Sprintf(`# ansible.posix.mount applies live + persists via /etc/fstab in one
 # idempotent step. Pin opts to the union of defaults + the new flag
 # so existing options aren't dropped.

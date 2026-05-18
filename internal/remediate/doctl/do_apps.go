@@ -3,8 +3,8 @@ package doctl
 import (
 	"fmt"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.19 phase 5 — doctl strategies for App Platform depth. App
@@ -34,7 +34,7 @@ func init() {
 		[]string{"do-app-cdn-attachment"}, renderDoctlAppCDN)
 }
 
-func doctlAppName(f core.Finding) string {
+func doctlAppName(f compliancekit.Finding) string {
 	if f.Resource.Name != "" {
 		return f.Resource.Name
 	}
@@ -53,7 +53,7 @@ doctl apps spec get %s > spec.yaml
 doctl apps update %s --spec spec.yaml`, id, fragment, id)
 }
 
-func renderDoctlAppHealthcheck(f core.Finding) (remediate.Snippet, error) {
+func renderDoctlAppHealthcheck(f compliancekit.Finding) (remediate.Snippet, error) {
 	id := doctlAppName(f)
 	fragment := `# Add under each service:
 services:
@@ -70,7 +70,7 @@ services:
 	}, nil
 }
 
-func renderDoctlAppLogDest(f core.Finding) (remediate.Snippet, error) {
+func renderDoctlAppLogDest(f compliancekit.Finding) (remediate.Snippet, error) {
 	id := doctlAppName(f)
 	fragment := `services:
   - name: web
@@ -84,7 +84,7 @@ func renderDoctlAppLogDest(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderDoctlAppServiceAlerts(f core.Finding) (remediate.Snippet, error) {
+func renderDoctlAppServiceAlerts(f compliancekit.Finding) (remediate.Snippet, error) {
 	id := doctlAppName(f)
 	fragment := `services:
   - name: web
@@ -102,7 +102,7 @@ func renderDoctlAppServiceAlerts(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderDoctlAppTier(f core.Finding) (remediate.Snippet, error) {
+func renderDoctlAppTier(f compliancekit.Finding) (remediate.Snippet, error) {
 	id := doctlAppName(f)
 	fragment := `services:
   - name: web
@@ -113,7 +113,7 @@ func renderDoctlAppTier(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderDoctlAppDatabase(f core.Finding) (remediate.Snippet, error) {
+func renderDoctlAppDatabase(f compliancekit.Finding) (remediate.Snippet, error) {
 	id := doctlAppName(f)
 	fragment := `databases:
   - name: app-db
@@ -126,14 +126,14 @@ func renderDoctlAppDatabase(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderDoctlAppDeployProtection(_ core.Finding) (remediate.Snippet, error) {
+func renderDoctlAppDeployProtection(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return renderDoctlManualOnly(
 		"deploy-branch protection",
 		"https://github.com/settings",
 		"GitHub Settings → Branches → require reviews + status checks on the deploy branch")
 }
 
-func renderDoctlAppDomainTLS13(f core.Finding) (remediate.Snippet, error) {
+func renderDoctlAppDomainTLS13(f compliancekit.Finding) (remediate.Snippet, error) {
 	id := doctlAppName(f)
 	fragment := `domains:
   - domain: app.example.com
@@ -144,21 +144,21 @@ func renderDoctlAppDomainTLS13(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderDoctlAppBuildSecretScan(_ core.Finding) (remediate.Snippet, error) {
+func renderDoctlAppBuildSecretScan(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return renderDoctlManualOnly(
 		"build-time secret scan",
 		"https://github.com/gitleaks/gitleaks",
 		"Add gitleaks/trufflehog gate in source-repo CI BEFORE the DO build webhook fires")
 }
 
-func renderDoctlAppCertRotation(_ core.Finding) (remediate.Snippet, error) {
+func renderDoctlAppCertRotation(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return renderDoctlManualOnly(
 		"custom-domain cert provenance",
 		"https://cloud.digitalocean.com/apps",
 		"Drop cert_id from the domain block to use auto-renewing Let's Encrypt")
 }
 
-func renderDoctlAppCDN(_ core.Finding) (remediate.Snippet, error) {
+func renderDoctlAppCDN(_ compliancekit.Finding) (remediate.Snippet, error) {
 	body := `# 1. Create the static-assets bucket.
 aws s3api create-bucket --bucket app-static-assets --endpoint-url https://nyc3.digitaloceanspaces.com
 

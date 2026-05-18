@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 
 	// Side-effect imports register every shipped K8s check and every
 	// remediation format adapter so the assertions read a fully-
@@ -52,8 +52,8 @@ import (
 const maxMissingKubectlK8s = 0
 
 func TestParity_Kubernetes(t *testing.T) {
-	var k8sChecks []core.Check
-	for _, c := range core.RegisteredChecks() {
+	var k8sChecks []compliancekit.Check
+	for _, c := range compliancekit.RegisteredChecks() {
 		if c.Provider == "kubernetes" {
 			k8sChecks = append(k8sChecks, c)
 		}

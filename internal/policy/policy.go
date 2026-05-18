@@ -1,10 +1,10 @@
 // Package policy implements the Rego-backed Check evaluator and the
 // loader that turns `internal/policies/*.rego` files into entries in
-// the core.Check registry. v0.16+.
+// the compliancekit.Check registry. v0.16+.
 //
 // The seam was set up at v0.1 specifically for this milestone: the
 // Evaluator interface (internal/core/evaluator.go) and the
-// Scanner/Policy mutual-exclusion fields on core.Check were both
+// Scanner/Policy mutual-exclusion fields on compliancekit.Check were both
 // shaped so a second evaluator could land without touching any
 // existing Go check.
 //
@@ -35,7 +35,7 @@ import (
 
 	"github.com/open-policy-agent/opa/v1/rego"
 
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // Module is a parsed Rego policy with its catalog metadata extracted.
@@ -61,15 +61,15 @@ type Module struct {
 	// `metadata := {...}` constant. Always non-nil for a successfully
 	// loaded Module; missing or malformed metadata makes the Module
 	// fail to load.
-	Check core.Check
+	Check compliancekit.Check
 }
 
 // CheckFunc returns the evaluator function this module exposes,
 // suitable for registration alongside Go-backed CheckFuncs. The
 // returned function evaluates the policy against the graph passed
 // in at call time; it does NOT hold a stale snapshot.
-func (m *Module) CheckFunc() core.CheckFunc {
-	return func(ctx context.Context, graph *core.ResourceGraph) ([]core.Finding, error) {
+func (m *Module) CheckFunc() compliancekit.CheckFunc {
+	return func(ctx context.Context, graph *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 		return m.Evaluate(ctx, graph)
 	}
 }
@@ -84,7 +84,7 @@ func (m *Module) CheckFunc() core.CheckFunc {
 // The graph is passed in as the `input.resources` array — a JSON
 // projection of the live ResourceGraph. Rego sees a stable, snapshot
 // shape; it cannot reach into the live graph after eval starts.
-func (m *Module) Evaluate(ctx context.Context, graph *core.ResourceGraph) ([]core.Finding, error) {
+func (m *Module) Evaluate(ctx context.Context, graph *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	if m == nil {
 		return nil, errors.New("policy: nil module")
 	}
@@ -122,7 +122,7 @@ func (m *Module) Evaluate(ctx context.Context, graph *core.ResourceGraph) ([]cor
 		return nil, fmt.Errorf("policy %s: decode findings: %w (got %s)", m.SourcePath, err, string(raw))
 	}
 
-	out := make([]core.Finding, 0, len(rawFindings))
+	out := make([]compliancekit.Finding, 0, len(rawFindings))
 	for _, rf := range rawFindings {
 		f, err := rf.toFinding(m.Check, graph)
 		if err != nil {
@@ -146,31 +146,31 @@ type regoFinding struct {
 	Tags       []string `json:"tags,omitempty"`
 }
 
-// toFinding lifts the Rego-emitted shape into a typed core.Finding,
+// toFinding lifts the Rego-emitted shape into a typed compliancekit.Finding,
 // resolving the ResourceRef from the graph and inheriting Check
 // metadata for severity/tags when the policy didn't override.
-func (rf regoFinding) toFinding(check core.Check, graph *core.ResourceGraph) (core.Finding, error) {
-	status, err := core.ParseStatus(rf.Status)
+func (rf regoFinding) toFinding(check compliancekit.Check, graph *compliancekit.ResourceGraph) (compliancekit.Finding, error) {
+	status, err := compliancekit.ParseStatus(rf.Status)
 	if err != nil {
-		return core.Finding{}, fmt.Errorf("status %q: %w", rf.Status, err)
+		return compliancekit.Finding{}, fmt.Errorf("status %q: %w", rf.Status, err)
 	}
 	severity := check.Severity
 	if rf.Severity != "" {
-		s, err := core.ParseSeverity(rf.Severity)
+		s, err := compliancekit.ParseSeverity(rf.Severity)
 		if err != nil {
-			return core.Finding{}, fmt.Errorf("severity %q: %w", rf.Severity, err)
+			return compliancekit.Finding{}, fmt.Errorf("severity %q: %w", rf.Severity, err)
 		}
 		severity = s
 	}
 	tags := append([]string(nil), check.Tags...)
 	tags = append(tags, rf.Tags...)
 
-	ref := core.ResourceRef{ID: rf.ResourceID}
+	ref := compliancekit.ResourceRef{ID: rf.ResourceID}
 	if res, ok := graph.ByID(rf.ResourceID); ok {
 		ref = res.Ref()
 	}
 
-	return core.Finding{
+	return compliancekit.Finding{
 		CheckID:  check.ID,
 		Status:   status,
 		Severity: severity,
@@ -189,7 +189,7 @@ func (rf regoFinding) toFinding(check core.Check, graph *core.ResourceGraph) (co
 // JSON round-trip is intentional: it forces the snapshot semantics
 // (Rego cannot mutate the live graph) and gives us a stable,
 // well-defined data model for the policy author.
-func graphToInput(graph *core.ResourceGraph) (map[string]any, error) {
+func graphToInput(graph *compliancekit.ResourceGraph) (map[string]any, error) {
 	resources := graph.All()
 	encoded, err := json.Marshal(resources)
 	if err != nil {

@@ -60,7 +60,7 @@ type result struct {
 }
 
 // vulnRecord is one CVE / GHSA Trivy reported. We pull every field
-// that maps cleanly into core.Vulnerability; tool-specific extras
+// that maps cleanly into compliancekit.Vulnerability; tool-specific extras
 // (CweIDs, VendorSeverity per-distro, References) are decoded into
 // References / Aliases for completeness.
 type vulnRecord struct {

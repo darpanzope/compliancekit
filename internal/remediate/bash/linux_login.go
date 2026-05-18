@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.20 phase 5 — bash strategies for the 10 PAM/sudo/login.defs
@@ -37,7 +37,7 @@ func init() {
 	for id, e := range loginDefsBash {
 		id := id
 		e := e
-		register("bash-"+id, []string{id}, func(_ core.Finding) (remediate.Snippet, error) {
+		register("bash-"+id, []string{id}, func(_ compliancekit.Finding) (remediate.Snippet, error) {
 			body := renderLoginDefsBash(e)
 			return remediate.Snippet{
 				Risk: remediate.RiskSafe, Idempotent: true, Content: body,
@@ -48,7 +48,7 @@ func init() {
 	for id, hint := range manualLoginHints {
 		id := id
 		hint := hint
-		register("bash-"+id, []string{id}, func(_ core.Finding) (remediate.Snippet, error) {
+		register("bash-"+id, []string{id}, func(_ compliancekit.Finding) (remediate.Snippet, error) {
 			body := fmt.Sprintf("# Manual-verify — inspect the current state, record evidence in waivers.yaml.\n%s\n", hint)
 			return remediate.Snippet{
 				Risk: remediate.RiskManual, Idempotent: false, Content: body,

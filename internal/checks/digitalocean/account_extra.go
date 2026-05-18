@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	docol "github.com/darpanzope/compliancekit/internal/collectors/digitalocean"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.19 phase 1 — account/team governance deepening. Two flavors:
@@ -31,8 +31,8 @@ const (
 	manualVerifyDashboard = "https://cloud.digitalocean.com"
 )
 
-func newAccountFinding(check core.Check, account core.Resource) core.Finding {
-	return core.Finding{
+func newAccountFinding(check compliancekit.Check, account compliancekit.Resource) compliancekit.Finding {
+	return compliancekit.Finding{
 		CheckID:  check.ID,
 		Severity: check.Severity,
 		Resource: account.Ref(),
@@ -45,9 +45,9 @@ func newAccountFinding(check core.Check, account core.Resource) core.Finding {
 // pass/fail determination — but the auditor must record the control
 // state to close the evidence loop, so the finding stays actionable
 // (counts toward --fail-on gates).
-func manualVerify(check core.Check, account core.Resource, control, url string) core.Finding {
+func manualVerify(check compliancekit.Check, account compliancekit.Resource, control, url string) compliancekit.Finding {
 	f := newAccountFinding(check, account)
-	f.Status = core.StatusError
+	f.Status = compliancekit.StatusError
 	f.Message = fmt.Sprintf("account %q: %s — DigitalOcean public API does not expose this control; verify at %s",
 		account.Name, control, url)
 	return f
@@ -55,30 +55,30 @@ func manualVerify(check core.Check, account core.Resource, control, url string) 
 
 // quotaHeadroom returns the fail/pass finding for a (used, limit, label)
 // triple. limit ≤ 0 ⇒ unbounded (always pass); used > limit*0.80 ⇒ fail.
-func quotaHeadroom(check core.Check, account core.Resource, used, limit int, label string) core.Finding {
+func quotaHeadroom(check compliancekit.Check, account compliancekit.Resource, used, limit int, label string) compliancekit.Finding {
 	f := newAccountFinding(check, account)
 	if limit <= 0 {
-		f.Status = core.StatusSkip
+		f.Status = compliancekit.StatusSkip
 		f.Message = fmt.Sprintf("account %q: %s has no published limit", account.Name, label)
 		return f
 	}
 	if used*100 > limit*accountQuotaWarnPct {
-		f.Status = core.StatusFail
+		f.Status = compliancekit.StatusFail
 		f.Message = fmt.Sprintf("account %q: %d/%d %s used (>%d%% threshold)",
 			account.Name, used, limit, label, accountQuotaWarnPct)
 		return f
 	}
-	f.Status = core.StatusPass
+	f.Status = compliancekit.StatusPass
 	f.Message = fmt.Sprintf("account %q: %d/%d %s used", account.Name, used, limit, label)
 	return f
 }
 
 // ----- 1. status_message must be clean ----------------------------------
 
-var CheckAccountStatusMessageClean = core.Check{
+var CheckAccountStatusMessageClean = compliancekit.Check{
 	ID:           "do-account-status-message-clean",
 	Title:        "Account.status_message must be empty",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "digitalocean",
 	Service:      "account",
 	ResourceType: docol.AccountType,
@@ -100,16 +100,16 @@ var CheckAccountStatusMessageClean = core.Check{
 	Scanner: "account.StatusMessageClean",
 }
 
-func AccountStatusMessageClean(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func AccountStatusMessageClean(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, a := range g.ByType(docol.AccountType) {
 		msg, _ := a.Attributes["status_message"].(string)
 		f := newAccountFinding(CheckAccountStatusMessageClean, a)
 		if strings.TrimSpace(msg) == "" {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("account %q: status_message empty", a.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("account %q: status_message=%q", a.Name, msg)
 		}
 		findings = append(findings, f)
@@ -119,10 +119,10 @@ func AccountStatusMessageClean(_ context.Context, g *core.ResourceGraph) ([]core
 
 // ----- 2. droplet quota headroom ----------------------------------------
 
-var CheckAccountDropletQuotaHeadroom = core.Check{
+var CheckAccountDropletQuotaHeadroom = compliancekit.Check{
 	ID:           "do-account-droplet-quota-headroom",
 	Title:        "Droplet usage must leave >20% headroom against the account limit",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "digitalocean",
 	Service:      "account",
 	ResourceType: docol.AccountType,
@@ -146,8 +146,8 @@ var CheckAccountDropletQuotaHeadroom = core.Check{
 	Scanner: "account.DropletQuotaHeadroom",
 }
 
-func AccountDropletQuotaHeadroom(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func AccountDropletQuotaHeadroom(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	used := len(g.ByType(docol.DropletType))
 	for _, a := range g.ByType(docol.AccountType) {
 		limit, _ := a.Attributes["droplet_limit"].(int)
@@ -158,10 +158,10 @@ func AccountDropletQuotaHeadroom(_ context.Context, g *core.ResourceGraph) ([]co
 
 // ----- 3. volume quota headroom -----------------------------------------
 
-var CheckAccountVolumeQuotaHeadroom = core.Check{
+var CheckAccountVolumeQuotaHeadroom = compliancekit.Check{
 	ID:           "do-account-volume-quota-headroom",
 	Title:        "Block-storage volume usage must leave >20% headroom",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "digitalocean",
 	Service:      "account",
 	ResourceType: docol.AccountType,
@@ -183,8 +183,8 @@ var CheckAccountVolumeQuotaHeadroom = core.Check{
 	Scanner: "account.VolumeQuotaHeadroom",
 }
 
-func AccountVolumeQuotaHeadroom(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func AccountVolumeQuotaHeadroom(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	used := len(g.ByType(docol.VolumeType))
 	for _, a := range g.ByType(docol.AccountType) {
 		limit, _ := a.Attributes["volume_limit"].(int)
@@ -195,10 +195,10 @@ func AccountVolumeQuotaHeadroom(_ context.Context, g *core.ResourceGraph) ([]cor
 
 // ----- 4. reserved IP quota headroom ------------------------------------
 
-var CheckAccountReservedIPQuotaHeadroom = core.Check{
+var CheckAccountReservedIPQuotaHeadroom = compliancekit.Check{
 	ID:           "do-account-reserved-ip-quota-headroom",
 	Title:        "Reserved-IP usage must leave >20% headroom",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "digitalocean",
 	Service:      "account",
 	ResourceType: docol.AccountType,
@@ -218,8 +218,8 @@ var CheckAccountReservedIPQuotaHeadroom = core.Check{
 	Scanner: "account.ReservedIPQuotaHeadroom",
 }
 
-func AccountReservedIPQuotaHeadroom(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func AccountReservedIPQuotaHeadroom(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	used := len(g.ByType(docol.ReservedIPType))
 	for _, a := range g.ByType(docol.AccountType) {
 		limit, _ := a.Attributes["reserved_ip_limit"].(int)
@@ -243,10 +243,10 @@ var alertCoverageRequired = []struct {
 	{"load", "v1/insights/droplet/load"},
 }
 
-var CheckAccountMonitoringAlertCoverage = core.Check{
+var CheckAccountMonitoringAlertCoverage = compliancekit.Check{
 	ID:           "do-account-monitoring-alert-coverage",
 	Title:        "Account should have enabled alerts for CPU, memory, disk, and load",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "digitalocean",
 	Service:      "monitoring",
 	ResourceType: docol.AccountType,
@@ -268,8 +268,8 @@ var CheckAccountMonitoringAlertCoverage = core.Check{
 	Scanner: "monitoring.AlertCoverage",
 }
 
-func AccountMonitoringAlertCoverage(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func AccountMonitoringAlertCoverage(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	accounts := g.ByType(docol.AccountType)
 	if len(accounts) == 0 {
 		return findings, nil
@@ -297,10 +297,10 @@ func AccountMonitoringAlertCoverage(_ context.Context, g *core.ResourceGraph) ([
 	for _, a := range accounts {
 		f := newAccountFinding(CheckAccountMonitoringAlertCoverage, a)
 		if len(missing) == 0 {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("account %q: alert coverage complete (cpu, memory, disk, load)", a.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("account %q: missing alert coverage: %s", a.Name, strings.Join(missing, ", "))
 		}
 		findings = append(findings, f)
@@ -310,10 +310,10 @@ func AccountMonitoringAlertCoverage(_ context.Context, g *core.ResourceGraph) ([
 
 // ----- 6. MFA required (manual-verify) ----------------------------------
 
-var CheckAccountMFARequired = core.Check{
+var CheckAccountMFARequired = compliancekit.Check{
 	ID:           "do-account-mfa-required",
 	Title:        "Account must require two-factor authentication for all members",
-	Severity:     core.SeverityCritical,
+	Severity:     compliancekit.SeverityCritical,
 	Provider:     "digitalocean",
 	Service:      "account",
 	ResourceType: docol.AccountType,
@@ -338,8 +338,8 @@ var CheckAccountMFARequired = core.Check{
 	Scanner: "account.MFARequired",
 }
 
-func AccountMFARequired(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func AccountMFARequired(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, a := range g.ByType(docol.AccountType) {
 		findings = append(findings,
 			manualVerify(CheckAccountMFARequired, a,
@@ -351,10 +351,10 @@ func AccountMFARequired(_ context.Context, g *core.ResourceGraph) ([]core.Findin
 
 // ----- 7. API token rotation cadence (manual-verify) --------------------
 
-var CheckAccountAPITokenRotation = core.Check{
+var CheckAccountAPITokenRotation = compliancekit.Check{
 	ID:           "do-account-api-token-rotation-cadence",
 	Title:        "API tokens must be rotated on a documented cadence (≤90d)",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "digitalocean",
 	Service:      "account",
 	ResourceType: docol.AccountType,
@@ -379,8 +379,8 @@ var CheckAccountAPITokenRotation = core.Check{
 	Scanner: "account.APITokenRotation",
 }
 
-func AccountAPITokenRotation(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func AccountAPITokenRotation(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, a := range g.ByType(docol.AccountType) {
 		findings = append(findings,
 			manualVerify(CheckAccountAPITokenRotation, a,
@@ -392,10 +392,10 @@ func AccountAPITokenRotation(_ context.Context, g *core.ResourceGraph) ([]core.F
 
 // ----- 8. audit log retention (manual-verify) ---------------------------
 
-var CheckAccountAuditLogRetention = core.Check{
+var CheckAccountAuditLogRetention = compliancekit.Check{
 	ID:           "do-account-audit-log-retention",
 	Title:        "Account audit logs must be retained ≥90 days",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "digitalocean",
 	Service:      "account",
 	ResourceType: docol.AccountType,
@@ -420,8 +420,8 @@ var CheckAccountAuditLogRetention = core.Check{
 	Scanner: "account.AuditLogRetention",
 }
 
-func AccountAuditLogRetention(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func AccountAuditLogRetention(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, a := range g.ByType(docol.AccountType) {
 		findings = append(findings,
 			manualVerify(CheckAccountAuditLogRetention, a,
@@ -433,10 +433,10 @@ func AccountAuditLogRetention(_ context.Context, g *core.ResourceGraph) ([]core.
 
 // ----- 9. billing alert thresholds (manual-verify) ----------------------
 
-var CheckAccountBillingAlertThresholds = core.Check{
+var CheckAccountBillingAlertThresholds = compliancekit.Check{
 	ID:           "do-account-billing-alert-thresholds",
 	Title:        "Monthly billing alerts must be configured at documented thresholds",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "digitalocean",
 	Service:      "account",
 	ResourceType: docol.AccountType,
@@ -459,8 +459,8 @@ var CheckAccountBillingAlertThresholds = core.Check{
 	Scanner: "account.BillingAlertThresholds",
 }
 
-func AccountBillingAlertThresholds(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func AccountBillingAlertThresholds(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, a := range g.ByType(docol.AccountType) {
 		findings = append(findings,
 			manualVerify(CheckAccountBillingAlertThresholds, a,
@@ -472,10 +472,10 @@ func AccountBillingAlertThresholds(_ context.Context, g *core.ResourceGraph) ([]
 
 // ----- 10. owner delegation policy (manual-verify) ----------------------
 
-var CheckAccountOwnerDelegation = core.Check{
+var CheckAccountOwnerDelegation = compliancekit.Check{
 	ID:           "do-account-owner-delegation-policy",
 	Title:        "Owner-delegation policy must be documented (bus-factor ≥2)",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "digitalocean",
 	Service:      "account",
 	ResourceType: docol.AccountType,
@@ -499,8 +499,8 @@ var CheckAccountOwnerDelegation = core.Check{
 	Scanner: "account.OwnerDelegation",
 }
 
-func AccountOwnerDelegation(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func AccountOwnerDelegation(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, a := range g.ByType(docol.AccountType) {
 		findings = append(findings,
 			manualVerify(CheckAccountOwnerDelegation, a,
@@ -511,14 +511,14 @@ func AccountOwnerDelegation(_ context.Context, g *core.ResourceGraph) ([]core.Fi
 }
 
 func init() {
-	core.Register(CheckAccountStatusMessageClean, AccountStatusMessageClean)
-	core.Register(CheckAccountDropletQuotaHeadroom, AccountDropletQuotaHeadroom)
-	core.Register(CheckAccountVolumeQuotaHeadroom, AccountVolumeQuotaHeadroom)
-	core.Register(CheckAccountReservedIPQuotaHeadroom, AccountReservedIPQuotaHeadroom)
-	core.Register(CheckAccountMonitoringAlertCoverage, AccountMonitoringAlertCoverage)
-	core.Register(CheckAccountMFARequired, AccountMFARequired)
-	core.Register(CheckAccountAPITokenRotation, AccountAPITokenRotation)
-	core.Register(CheckAccountAuditLogRetention, AccountAuditLogRetention)
-	core.Register(CheckAccountBillingAlertThresholds, AccountBillingAlertThresholds)
-	core.Register(CheckAccountOwnerDelegation, AccountOwnerDelegation)
+	compliancekit.Register(CheckAccountStatusMessageClean, AccountStatusMessageClean)
+	compliancekit.Register(CheckAccountDropletQuotaHeadroom, AccountDropletQuotaHeadroom)
+	compliancekit.Register(CheckAccountVolumeQuotaHeadroom, AccountVolumeQuotaHeadroom)
+	compliancekit.Register(CheckAccountReservedIPQuotaHeadroom, AccountReservedIPQuotaHeadroom)
+	compliancekit.Register(CheckAccountMonitoringAlertCoverage, AccountMonitoringAlertCoverage)
+	compliancekit.Register(CheckAccountMFARequired, AccountMFARequired)
+	compliancekit.Register(CheckAccountAPITokenRotation, AccountAPITokenRotation)
+	compliancekit.Register(CheckAccountAuditLogRetention, AccountAuditLogRetention)
+	compliancekit.Register(CheckAccountBillingAlertThresholds, AccountBillingAlertThresholds)
+	compliancekit.Register(CheckAccountOwnerDelegation, AccountOwnerDelegation)
 }

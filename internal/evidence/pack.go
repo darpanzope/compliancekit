@@ -30,8 +30,8 @@ import (
 	"sort"
 	"time"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/frameworks"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // schemaVersion is included in every JSON artifact so consumers can
@@ -110,7 +110,7 @@ type ControlRef struct {
 	ControlID     string
 	ControlName   string
 	DirName       string // "<id>-<slug>" -- this control's directory under <framework>/
-	Findings      []core.Finding
+	Findings      []compliancekit.Finding
 }
 
 // Generate writes a complete evidence pack to opts.OutDir. The pack
@@ -122,7 +122,7 @@ type ControlRef struct {
 // refuses to merge into a pre-existing pack so a stale run cannot
 // taint a fresh one (per ARCHITECTURE.md section 10 -- every artifact
 // is dated and the manifest must cover exactly the files of this run).
-func Generate(_ context.Context, findings []core.Finding, opts Options) (Result, error) {
+func Generate(_ context.Context, findings []compliancekit.Finding, opts Options) (Result, error) {
 	if opts.OutDir == "" {
 		return Result{}, fmt.Errorf("evidence: OutDir is required")
 	}
@@ -266,7 +266,7 @@ func computeFrameworkResults(index map[string][]ControlRef) []FrameworkResult {
 //
 // Output is sorted (framework ID, then control ID) so re-runs over
 // identical input produce byte-identical pack contents.
-func groupByControl(findings []core.Finding) ([]ControlRef, error) {
+func groupByControl(findings []compliancekit.Finding) ([]ControlRef, error) {
 	type key struct{ fw, control string }
 	bucket := map[key]*ControlRef{}
 
@@ -276,7 +276,7 @@ func groupByControl(findings []core.Finding) ([]ControlRef, error) {
 	}
 
 	for _, f := range findings {
-		check, ok := core.LookupCheck(f.CheckID)
+		check, ok := compliancekit.LookupCheck(f.CheckID)
 		if !ok {
 			continue
 		}
@@ -333,14 +333,14 @@ func groupByControl(findings []core.Finding) ([]ControlRef, error) {
 // the period, and the (framework, control) coordinates so the file is
 // self-describing if an auditor exports a single control's folder.
 type controlPayload struct {
-	Schema        string         `json:"schema"`
-	Generated     time.Time      `json:"generated_at"`
-	Period        string         `json:"period"`
-	FrameworkID   string         `json:"framework_id"`
-	FrameworkName string         `json:"framework_name"`
-	ControlID     string         `json:"control_id"`
-	ControlName   string         `json:"control_name"`
-	Findings      []core.Finding `json:"findings"`
+	Schema        string                  `json:"schema"`
+	Generated     time.Time               `json:"generated_at"`
+	Period        string                  `json:"period"`
+	FrameworkID   string                  `json:"framework_id"`
+	FrameworkName string                  `json:"framework_name"`
+	ControlID     string                  `json:"control_id"`
+	ControlName   string                  `json:"control_name"`
+	Findings      []compliancekit.Finding `json:"findings"`
 }
 
 func writeFindingsJSON(path string, c ControlRef, opts Options) error {

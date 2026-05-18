@@ -6,7 +6,7 @@ import (
 
 	awssdk "github.com/aws/aws-sdk-go-v2/aws"
 
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 const providerName = "aws"
@@ -69,11 +69,11 @@ func New(ctx context.Context, opts Options) (*Collector, error) {
 	}, nil
 }
 
-// Name implements core.Collector. Stable across versions; the
+// Name implements compliancekit.Collector. Stable across versions; the
 // evidence pack groups findings by this string.
 func (c *Collector) Name() string { return providerName }
 
-// Collect implements core.Collector. The v0.7-phase-1 implementation
+// Collect implements compliancekit.Collector. The v0.7-phase-1 implementation
 // resolves the account ID and the region scope, then returns an
 // empty resource slice -- per-service collectors land in phases 2-10
 // and each one appends to the returned slice via a service-specific
@@ -91,7 +91,7 @@ func (c *Collector) Name() string { return providerName }
 // At phase 1 the body is just the resolution; the slice is empty.
 // This is intentional -- the foundation commit is testable on its
 // own without needing every service to be done first.
-func (c *Collector) Collect(ctx context.Context) ([]core.Resource, error) {
+func (c *Collector) Collect(ctx context.Context) ([]compliancekit.Resource, error) {
 	accountID, err := ResolveAccountID(ctx, c.cfg)
 	if err != nil {
 		return nil, err
@@ -112,7 +112,7 @@ func (c *Collector) Collect(ctx context.Context) ([]core.Resource, error) {
 	// (IAM) or append per-resource entries (S3 buckets, EC2
 	// instances, etc.).
 	account := c.accountResource(regions)
-	out := []core.Resource{}
+	out := []compliancekit.Resource{}
 
 	// IAM is account-scoped, not region-scoped, so it runs once
 	// regardless of the region scope.

@@ -5,16 +5,16 @@ import (
 	"fmt"
 
 	docol "github.com/darpanzope/compliancekit/internal/collectors/digitalocean"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // CheckNoFirewall flags public-IP droplets without any firewall
 // attached. This is the first cross-resource check: it traverses the
 // droplet -> firewall edge populated by the collector.
-var CheckNoFirewall = core.Check{
+var CheckNoFirewall = compliancekit.Check{
 	ID:           "do-droplet-no-firewall",
 	Title:        "Public-IP droplets must have at least one firewall attached",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "digitalocean",
 	Service:      "droplets",
 	ResourceType: docol.DropletType,
@@ -45,12 +45,12 @@ var CheckNoFirewall = core.Check{
 // Droplets without a public IPv4 address are Skipped -- the check
 // doesn't apply to private-only hosts. Droplets with at least one
 // firewall Pass. Droplets with a public IP and no firewall Fail.
-func NoFirewall(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func NoFirewall(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	droplets := g.ByType(docol.DropletType)
-	findings := make([]core.Finding, 0, len(droplets))
+	findings := make([]compliancekit.Finding, 0, len(droplets))
 
 	for _, d := range droplets {
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckNoFirewall.ID,
 			Severity: CheckNoFirewall.Severity,
 			Resource: d.Ref(),
@@ -58,7 +58,7 @@ func NoFirewall(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error
 		}
 
 		if d.Attr("public_ipv4") == "" {
-			f.Status = core.StatusSkip
+			f.Status = compliancekit.StatusSkip
 			f.Message = fmt.Sprintf("droplet %q has no public IPv4; check N/A", d.Name)
 			findings = append(findings, f)
 			continue
@@ -66,12 +66,12 @@ func NoFirewall(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error
 
 		firewalls := g.Related(d, docol.EdgeFirewall)
 		if len(firewalls) == 0 {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf(
 				"droplet %q has public IP %s but no firewall attached",
 				d.Name, d.Attr("public_ipv4"))
 		} else {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf(
 				"droplet %q is protected by %d firewall(s)",
 				d.Name, len(firewalls))
@@ -85,5 +85,5 @@ func NoFirewall(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error
 // droplets.go init so the registration site for each check sits next
 // to its definition.
 func init() {
-	core.Register(CheckNoFirewall, NoFirewall)
+	compliancekit.Register(CheckNoFirewall, NoFirewall)
 }

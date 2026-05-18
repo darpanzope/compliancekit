@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 func TestGitHub_NotConfigured(t *testing.T) {
@@ -49,10 +49,10 @@ func TestGitHub_SummaryCommentShape(t *testing.T) {
 		Repo:          "acme/compliancekit",
 		PRNumber:      42,
 		APIURL:        srv.URL,
-		SeverityFloor: core.SeverityInfo,
+		SeverityFloor: compliancekit.SeverityInfo,
 		HTTPClient:    srv.Client(),
 	})
-	notifications := BuildNotifications([]core.Finding{
+	notifications := BuildNotifications([]compliancekit.Finding{
 		sampleFinding("aws-s3-public-access-block", "critical"),
 		sampleFinding("aws-iam-root-mfa", "high"),
 	}, BuildOptions{})
@@ -91,10 +91,10 @@ func TestGitHub_403Surfaces(t *testing.T) {
 		Repo:          "x/y",
 		PRNumber:      1,
 		APIURL:        srv.URL,
-		SeverityFloor: core.SeverityInfo,
+		SeverityFloor: compliancekit.SeverityInfo,
 		HTTPClient:    srv.Client(),
 	})
-	notifications := BuildNotifications([]core.Finding{sampleFinding("x", "critical")}, BuildOptions{})
+	notifications := BuildNotifications([]compliancekit.Finding{sampleFinding("x", "critical")}, BuildOptions{})
 	res, err := sink.Send(context.Background(), notifications)
 	if err == nil {
 		t.Fatalf("expected ErrAuth wrapper, got nil")

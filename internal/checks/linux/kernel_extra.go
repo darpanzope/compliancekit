@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	docol "github.com/darpanzope/compliancekit/internal/collectors/linux"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.20 phase 2 — kernel sysctl deepening. 25 new sysctl-shaped
@@ -35,7 +35,7 @@ const (
 // every v0.20 sysctl rule; init() iterates + registers.
 type sysctlSpec struct {
 	id, title, scanner string
-	severity           core.Severity
+	severity           compliancekit.Severity
 	key                string    // sysctl name
 	want               int       // target value
 	cmp                sysctlCmp // comparison operator
@@ -49,7 +49,7 @@ var sysctlSpecs = []sysctlSpec{
 	// --- TCP / IP defenses ----------------------------------------------
 	{
 		id: "linux-sysctl-tcp-syncookies", title: "net.ipv4.tcp_syncookies must be enabled",
-		severity: core.SeverityHigh, key: "net.ipv4.tcp_syncookies", want: 1, cmp: cmpEq,
+		severity: compliancekit.SeverityHigh, key: "net.ipv4.tcp_syncookies", want: 1, cmp: cmpEq,
 		soc2: []string{"CC6.6"}, iso: []string{"A.8.20"}, cis: []string{"3.3.4", "9.2"},
 		tags: []string{"sysctl", "network", "syn-flood"},
 		description: "SYN cookies allow the kernel to handle the SYN queue without " +
@@ -61,7 +61,7 @@ var sysctlSpecs = []sysctlSpec{
 	},
 	{
 		id: "linux-sysctl-rp-filter-all", title: "net.ipv4.conf.all.rp_filter must be strict (1)",
-		severity: core.SeverityMedium, key: "net.ipv4.conf.all.rp_filter", want: 1, cmp: cmpEq,
+		severity: compliancekit.SeverityMedium, key: "net.ipv4.conf.all.rp_filter", want: 1, cmp: cmpEq,
 		soc2: []string{"CC6.6"}, iso: []string{"A.8.20"}, cis: []string{"3.3.7"},
 		tags:        []string{"sysctl", "network", "rp-filter"},
 		description: "Reverse Path filtering rejects packets arriving on an interface that wouldn't be used to reply (IP spoofing mitigation). Strict mode (1) matches the RFC 3704 recommendation.",
@@ -70,7 +70,7 @@ var sysctlSpecs = []sysctlSpec{
 	},
 	{
 		id: "linux-sysctl-rp-filter-default", title: "net.ipv4.conf.default.rp_filter must be strict (1)",
-		severity: core.SeverityMedium, key: "net.ipv4.conf.default.rp_filter", want: 1, cmp: cmpEq,
+		severity: compliancekit.SeverityMedium, key: "net.ipv4.conf.default.rp_filter", want: 1, cmp: cmpEq,
 		soc2: []string{"CC6.6"}, iso: []string{"A.8.20"}, cis: []string{"3.3.7"},
 		tags:        []string{"sysctl", "network", "rp-filter"},
 		description: "The 'default' value is applied to any new interface created after sysctl is set; pair with the 'all' counterpart so currently-attached + future interfaces both filter.",
@@ -79,7 +79,7 @@ var sysctlSpecs = []sysctlSpec{
 	},
 	{
 		id: "linux-sysctl-accept-redirects-all", title: "ICMP redirects must be ignored (all)",
-		severity: core.SeverityMedium, key: "net.ipv4.conf.all.accept_redirects", want: 0, cmp: cmpEq,
+		severity: compliancekit.SeverityMedium, key: "net.ipv4.conf.all.accept_redirects", want: 0, cmp: cmpEq,
 		soc2: []string{"CC6.6"}, iso: []string{"A.8.20"}, cis: []string{"3.3.2"},
 		tags:        []string{"sysctl", "network", "icmp"},
 		description: "ICMP redirects let any host on the LAN tell the kernel to route through a different gateway — an obvious MITM primitive. Always disabled on servers.",
@@ -88,7 +88,7 @@ var sysctlSpecs = []sysctlSpec{
 	},
 	{
 		id: "linux-sysctl-accept-redirects-default", title: "ICMP redirects must be ignored (default)",
-		severity: core.SeverityMedium, key: "net.ipv4.conf.default.accept_redirects", want: 0, cmp: cmpEq,
+		severity: compliancekit.SeverityMedium, key: "net.ipv4.conf.default.accept_redirects", want: 0, cmp: cmpEq,
 		soc2: []string{"CC6.6"}, iso: []string{"A.8.20"}, cis: []string{"3.3.2"},
 		tags:        []string{"sysctl", "network", "icmp"},
 		description: "Paired with the 'all' counterpart; default applies to new interfaces.",
@@ -97,7 +97,7 @@ var sysctlSpecs = []sysctlSpec{
 	},
 	{
 		id: "linux-sysctl-secure-redirects-all", title: "Secure ICMP redirects must be disabled (all)",
-		severity: core.SeverityLow, key: "net.ipv4.conf.all.secure_redirects", want: 0, cmp: cmpEq,
+		severity: compliancekit.SeverityLow, key: "net.ipv4.conf.all.secure_redirects", want: 0, cmp: cmpEq,
 		soc2: []string{"CC6.6"}, iso: []string{"A.8.20"}, cis: []string{"3.3.3"},
 		tags:        []string{"sysctl", "network", "icmp"},
 		description: "secure_redirects accepts redirects from gateways in the default route — slightly safer than accept_redirects but still rejected by CIS for servers.",
@@ -106,7 +106,7 @@ var sysctlSpecs = []sysctlSpec{
 	},
 	{
 		id: "linux-sysctl-secure-redirects-default", title: "Secure ICMP redirects must be disabled (default)",
-		severity: core.SeverityLow, key: "net.ipv4.conf.default.secure_redirects", want: 0, cmp: cmpEq,
+		severity: compliancekit.SeverityLow, key: "net.ipv4.conf.default.secure_redirects", want: 0, cmp: cmpEq,
 		soc2: []string{"CC6.6"}, iso: []string{"A.8.20"}, cis: []string{"3.3.3"},
 		tags:        []string{"sysctl", "network", "icmp"},
 		description: "Default counterpart to the 'all' rule.",
@@ -115,7 +115,7 @@ var sysctlSpecs = []sysctlSpec{
 	},
 	{
 		id: "linux-sysctl-icmp-echo-ignore-broadcasts", title: "Smurf-amplifier ICMP echo must be ignored",
-		severity: core.SeverityMedium, key: "net.ipv4.icmp_echo_ignore_broadcasts", want: 1, cmp: cmpEq,
+		severity: compliancekit.SeverityMedium, key: "net.ipv4.icmp_echo_ignore_broadcasts", want: 1, cmp: cmpEq,
 		soc2: []string{"CC6.6"}, iso: []string{"A.8.20"}, cis: []string{"3.3.5"},
 		tags:        []string{"sysctl", "network", "icmp"},
 		description: "Ignoring broadcast ICMP echo blocks the classic Smurf DoS amplifier where attackers spoof a victim address and broadcast an echo request.",
@@ -124,7 +124,7 @@ var sysctlSpecs = []sysctlSpec{
 	},
 	{
 		id: "linux-sysctl-icmp-ignore-bogus-error-responses", title: "Bogus ICMP error responses must be ignored",
-		severity: core.SeverityLow, key: "net.ipv4.icmp_ignore_bogus_error_responses", want: 1, cmp: cmpEq,
+		severity: compliancekit.SeverityLow, key: "net.ipv4.icmp_ignore_bogus_error_responses", want: 1, cmp: cmpEq,
 		soc2: []string{"CC6.6"}, iso: []string{"A.8.20"}, cis: []string{"3.3.6"},
 		tags:        []string{"sysctl", "network", "icmp"},
 		description: "Silently drops bogus ICMP error responses that some routers emit in violation of RFC 1122 — reduces kernel-log noise that masks real attacks.",
@@ -133,7 +133,7 @@ var sysctlSpecs = []sysctlSpec{
 	},
 	{
 		id: "linux-sysctl-log-martians-all", title: "Martian packets must be logged (all)",
-		severity: core.SeverityLow, key: "net.ipv4.conf.all.log_martians", want: 1, cmp: cmpEq,
+		severity: compliancekit.SeverityLow, key: "net.ipv4.conf.all.log_martians", want: 1, cmp: cmpEq,
 		soc2: []string{"CC7.2"}, iso: []string{"A.8.15"}, cis: []string{"3.3.8"},
 		tags:        []string{"sysctl", "network", "logging"},
 		description: "Martian packets (impossible source addresses) are logged when this knob is enabled — a useful signal that something is either spoofing or seriously misconfigured upstream.",
@@ -142,7 +142,7 @@ var sysctlSpecs = []sysctlSpec{
 	},
 	{
 		id: "linux-sysctl-log-martians-default", title: "Martian packets must be logged (default)",
-		severity: core.SeverityLow, key: "net.ipv4.conf.default.log_martians", want: 1, cmp: cmpEq,
+		severity: compliancekit.SeverityLow, key: "net.ipv4.conf.default.log_martians", want: 1, cmp: cmpEq,
 		soc2: []string{"CC7.2"}, iso: []string{"A.8.15"}, cis: []string{"3.3.8"},
 		tags:        []string{"sysctl", "network", "logging"},
 		description: "Default counterpart to the 'all' rule.",
@@ -151,7 +151,7 @@ var sysctlSpecs = []sysctlSpec{
 	},
 	{
 		id: "linux-sysctl-accept-source-route-default", title: "Source-routed packets must be dropped (default)",
-		severity: core.SeverityMedium, key: "net.ipv4.conf.default.accept_source_route", want: 0, cmp: cmpEq,
+		severity: compliancekit.SeverityMedium, key: "net.ipv4.conf.default.accept_source_route", want: 0, cmp: cmpEq,
 		soc2: []string{"CC6.6"}, iso: []string{"A.8.20"}, cis: []string{"3.3.1"},
 		tags:        []string{"sysctl", "network"},
 		description: "Source routing lets the sender dictate the path a packet takes — bypasses upstream firewalls + reverses NAT mappings. Always disabled on servers.",
@@ -160,7 +160,7 @@ var sysctlSpecs = []sysctlSpec{
 	},
 	{
 		id: "linux-sysctl-send-redirects-default", title: "Kernel must not send ICMP redirects (default)",
-		severity: core.SeverityMedium, key: "net.ipv4.conf.default.send_redirects", want: 0, cmp: cmpEq,
+		severity: compliancekit.SeverityMedium, key: "net.ipv4.conf.default.send_redirects", want: 0, cmp: cmpEq,
 		soc2: []string{"CC6.6"}, iso: []string{"A.8.20"}, cis: []string{"3.2.1"},
 		tags:        []string{"sysctl", "network"},
 		description: "Only routers should emit ICMP redirects. End-user servers + cloud workloads disable both 'all' and 'default'.",
@@ -169,7 +169,7 @@ var sysctlSpecs = []sysctlSpec{
 	},
 	{
 		id: "linux-sysctl-ip-forward-disabled", title: "IPv4 forwarding must be disabled on non-router hosts",
-		severity: core.SeverityMedium, key: "net.ipv4.ip_forward", want: 0, cmp: cmpEq,
+		severity: compliancekit.SeverityMedium, key: "net.ipv4.ip_forward", want: 0, cmp: cmpEq,
 		soc2: []string{"CC6.6"}, iso: []string{"A.8.20"}, cis: []string{"3.2.2"},
 		tags:        []string{"sysctl", "network"},
 		description: "ip_forward=1 turns the host into a router (forwards packets between interfaces). Container hosts running Docker/k8s flip this to 1 intentionally; non-router servers leave it at 0. Waive on Docker / k8s nodes via waivers.yaml.",
@@ -179,7 +179,7 @@ var sysctlSpecs = []sysctlSpec{
 	// --- IPv6 hardening -------------------------------------------------
 	{
 		id: "linux-sysctl-ipv6-accept-ra-all", title: "IPv6 router advertisements must be ignored (all)",
-		severity: core.SeverityMedium, key: "net.ipv6.conf.all.accept_ra", want: 0, cmp: cmpEq,
+		severity: compliancekit.SeverityMedium, key: "net.ipv6.conf.all.accept_ra", want: 0, cmp: cmpEq,
 		soc2: []string{"CC6.6"}, iso: []string{"A.8.20"}, cis: []string{"3.3.9"},
 		tags:        []string{"sysctl", "network", "ipv6"},
 		description: "Router Advertisements let any host on the L2 segment set the default IPv6 gateway — Stateless Address Autoconfig (SLAAC) primitive. On managed cloud networks (static IPv6 from the provider) disabling RA blocks rogue-router attacks.",
@@ -188,7 +188,7 @@ var sysctlSpecs = []sysctlSpec{
 	},
 	{
 		id: "linux-sysctl-ipv6-accept-ra-default", title: "IPv6 router advertisements must be ignored (default)",
-		severity: core.SeverityMedium, key: "net.ipv6.conf.default.accept_ra", want: 0, cmp: cmpEq,
+		severity: compliancekit.SeverityMedium, key: "net.ipv6.conf.default.accept_ra", want: 0, cmp: cmpEq,
 		soc2: []string{"CC6.6"}, iso: []string{"A.8.20"}, cis: []string{"3.3.9"},
 		tags:        []string{"sysctl", "network", "ipv6"},
 		description: "Default counterpart to the 'all' rule.",
@@ -197,7 +197,7 @@ var sysctlSpecs = []sysctlSpec{
 	},
 	{
 		id: "linux-sysctl-ipv6-accept-redirects-all", title: "IPv6 ICMP redirects must be ignored (all)",
-		severity: core.SeverityMedium, key: "net.ipv6.conf.all.accept_redirects", want: 0, cmp: cmpEq,
+		severity: compliancekit.SeverityMedium, key: "net.ipv6.conf.all.accept_redirects", want: 0, cmp: cmpEq,
 		soc2: []string{"CC6.6"}, iso: []string{"A.8.20"}, cis: []string{"3.3.2"},
 		tags:        []string{"sysctl", "network", "ipv6"},
 		description: "Same MITM concern as IPv4 ICMP redirects, applied to the v6 stack.",
@@ -206,7 +206,7 @@ var sysctlSpecs = []sysctlSpec{
 	},
 	{
 		id: "linux-sysctl-ipv6-accept-redirects-default", title: "IPv6 ICMP redirects must be ignored (default)",
-		severity: core.SeverityMedium, key: "net.ipv6.conf.default.accept_redirects", want: 0, cmp: cmpEq,
+		severity: compliancekit.SeverityMedium, key: "net.ipv6.conf.default.accept_redirects", want: 0, cmp: cmpEq,
 		soc2: []string{"CC6.6"}, iso: []string{"A.8.20"}, cis: []string{"3.3.2"},
 		tags:        []string{"sysctl", "network", "ipv6"},
 		description: "Default counterpart to the 'all' rule.",
@@ -215,7 +215,7 @@ var sysctlSpecs = []sysctlSpec{
 	},
 	{
 		id: "linux-sysctl-ipv6-source-route-all", title: "IPv6 source routing must be disabled (all)",
-		severity: core.SeverityMedium, key: "net.ipv6.conf.all.accept_source_route", want: 0, cmp: cmpEq,
+		severity: compliancekit.SeverityMedium, key: "net.ipv6.conf.all.accept_source_route", want: 0, cmp: cmpEq,
 		soc2: []string{"CC6.6"}, iso: []string{"A.8.20"}, cis: []string{"3.3.1"},
 		tags:        []string{"sysctl", "network", "ipv6"},
 		description: "Same path-spoofing concern as IPv4 source routing, applied to the v6 stack.",
@@ -224,7 +224,7 @@ var sysctlSpecs = []sysctlSpec{
 	},
 	{
 		id: "linux-sysctl-ipv6-source-route-default", title: "IPv6 source routing must be disabled (default)",
-		severity: core.SeverityMedium, key: "net.ipv6.conf.default.accept_source_route", want: 0, cmp: cmpEq,
+		severity: compliancekit.SeverityMedium, key: "net.ipv6.conf.default.accept_source_route", want: 0, cmp: cmpEq,
 		soc2: []string{"CC6.6"}, iso: []string{"A.8.20"}, cis: []string{"3.3.1"},
 		tags:        []string{"sysctl", "network", "ipv6"},
 		description: "Default counterpart to the 'all' rule.",
@@ -234,7 +234,7 @@ var sysctlSpecs = []sysctlSpec{
 	// --- Kernel info-leak + exploit-mitigation knobs --------------------
 	{
 		id: "linux-sysctl-dmesg-restrict", title: "kernel.dmesg_restrict must be enabled",
-		severity: core.SeverityMedium, key: "kernel.dmesg_restrict", want: 1, cmp: cmpEq,
+		severity: compliancekit.SeverityMedium, key: "kernel.dmesg_restrict", want: 1, cmp: cmpEq,
 		soc2: []string{"CC6.6"}, iso: []string{"A.8.7"}, cis: []string{"1.5.1"},
 		tags:        []string{"sysctl", "kernel", "info-leak"},
 		description: "dmesg_restrict prevents unprivileged users from reading the kernel ring buffer (KASLR offsets, addresses of loaded modules, hardware MAC addresses). 1 = root-only; 0 = anyone.",
@@ -243,7 +243,7 @@ var sysctlSpecs = []sysctlSpec{
 	},
 	{
 		id: "linux-sysctl-kptr-restrict", title: "kernel.kptr_restrict must be ≥1 (CIS: 2)",
-		severity: core.SeverityMedium, key: "kernel.kptr_restrict", want: 1, cmp: cmpGte,
+		severity: compliancekit.SeverityMedium, key: "kernel.kptr_restrict", want: 1, cmp: cmpGte,
 		soc2: []string{"CC6.6"}, iso: []string{"A.8.7"}, cis: []string{"1.5.2"},
 		tags:        []string{"sysctl", "kernel", "info-leak"},
 		description: "kptr_restrict hides kernel pointer values from /proc — defeats KASLR-defeat exploits that scrape /proc/kallsyms etc. 1 redacts for unprivileged; 2 redacts for everyone.",
@@ -252,7 +252,7 @@ var sysctlSpecs = []sysctlSpec{
 	},
 	{
 		id: "linux-sysctl-yama-ptrace-scope", title: "kernel.yama.ptrace_scope must be ≥1",
-		severity: core.SeverityMedium, key: "kernel.yama.ptrace_scope", want: 1, cmp: cmpGte,
+		severity: compliancekit.SeverityMedium, key: "kernel.yama.ptrace_scope", want: 1, cmp: cmpGte,
 		soc2: []string{"CC6.6"}, iso: []string{"A.8.7"}, cis: []string{"1.5.3"},
 		tags:        []string{"sysctl", "kernel"},
 		description: "Yama restricts ptrace() across processes the caller didn't fork — kills the LD_PRELOAD-then-attach style credential extraction. 0=permissive, 1=restricted (recommended), 2=admin-only, 3=disabled.",
@@ -261,7 +261,7 @@ var sysctlSpecs = []sysctlSpec{
 	},
 	{
 		id: "linux-sysctl-unprivileged-bpf-disabled", title: "kernel.unprivileged_bpf_disabled must be 1",
-		severity: core.SeverityHigh, key: "kernel.unprivileged_bpf_disabled", want: 1, cmp: cmpEq,
+		severity: compliancekit.SeverityHigh, key: "kernel.unprivileged_bpf_disabled", want: 1, cmp: cmpEq,
 		soc2: []string{"CC6.6"}, iso: []string{"A.8.7"}, cis: []string{"1.5.4"},
 		tags:        []string{"sysctl", "kernel", "bpf"},
 		description: "Unprivileged eBPF has been a recurring source of LPE CVEs (CVE-2021-3490, CVE-2022-23222, CVE-2023-2236). Disable unless a specific workload (Cilium, Falco) needs it; even then, prefer CAP_BPF over universal access.",
@@ -270,7 +270,7 @@ var sysctlSpecs = []sysctlSpec{
 	},
 	{
 		id: "linux-sysctl-bpf-jit-harden", title: "net.core.bpf_jit_harden must be ≥1",
-		severity: core.SeverityMedium, key: "net.core.bpf_jit_harden", want: 1, cmp: cmpGte,
+		severity: compliancekit.SeverityMedium, key: "net.core.bpf_jit_harden", want: 1, cmp: cmpGte,
 		soc2: []string{"CC6.6"}, iso: []string{"A.8.7"}, cis: []string{"1.5.5"},
 		tags:        []string{"sysctl", "kernel", "bpf"},
 		description: "BPF JIT hardening mitigates CPU speculative-execution side-channel attacks in JIT-compiled BPF programs. 1=privileged hardening; 2=all programs hardened.",
@@ -280,7 +280,7 @@ var sysctlSpecs = []sysctlSpec{
 	// --- Filesystem hardening (sysctl-shaped) ---------------------------
 	{
 		id: "linux-sysctl-suid-dumpable", title: "fs.suid_dumpable must be 0 (no core dumps from SUID)",
-		severity: core.SeverityHigh, key: "fs.suid_dumpable", want: 0, cmp: cmpEq,
+		severity: compliancekit.SeverityHigh, key: "fs.suid_dumpable", want: 0, cmp: cmpEq,
 		soc2: []string{"CC6.6"}, iso: []string{"A.8.7"}, cis: []string{"1.6.1"},
 		tags:        []string{"sysctl", "filesystem", "suid"},
 		description: "SUID programs that core dump can leak privileged memory (cached secrets, fd contents). Per CIS, 0 = SUID processes never core dump; 1 = always; 2 = root-readable only.",
@@ -289,7 +289,7 @@ var sysctlSpecs = []sysctlSpec{
 	},
 	{
 		id: "linux-sysctl-protected-hardlinks", title: "fs.protected_hardlinks must be enabled",
-		severity: core.SeverityMedium, key: "fs.protected_hardlinks", want: 1, cmp: cmpEq,
+		severity: compliancekit.SeverityMedium, key: "fs.protected_hardlinks", want: 1, cmp: cmpEq,
 		soc2: []string{"CC6.6"}, iso: []string{"A.8.7"}, cis: []string{"1.6.2"},
 		tags:        []string{"sysctl", "filesystem"},
 		description: "protected_hardlinks blocks unprivileged users from creating hardlinks to files they don't own — a classic prelude to /etc/passwd race exploits.",
@@ -298,7 +298,7 @@ var sysctlSpecs = []sysctlSpec{
 	},
 	{
 		id: "linux-sysctl-protected-symlinks", title: "fs.protected_symlinks must be enabled",
-		severity: core.SeverityMedium, key: "fs.protected_symlinks", want: 1, cmp: cmpEq,
+		severity: compliancekit.SeverityMedium, key: "fs.protected_symlinks", want: 1, cmp: cmpEq,
 		soc2: []string{"CC6.6"}, iso: []string{"A.8.7"}, cis: []string{"1.6.3"},
 		tags:        []string{"sysctl", "filesystem"},
 		description: "protected_symlinks restricts symlink-following in world-writable directories — kills TOCTOU race exploits via /tmp symlinks.",
@@ -307,7 +307,7 @@ var sysctlSpecs = []sysctlSpec{
 	},
 }
 
-func sysctlsFromHost(h core.Resource) (map[string]int, bool) {
+func sysctlsFromHost(h compliancekit.Resource) (map[string]int, bool) {
 	kernel, _ := h.Attributes["kernel"].(map[string]any)
 	if kernel == nil {
 		return nil, false
@@ -330,11 +330,11 @@ func sysctlsFromHost(h core.Resource) (map[string]int, bool) {
 	return nil, false
 }
 
-func sysctlCheckFunc(spec sysctlSpec) core.CheckFunc {
-	return func(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-		findings := []core.Finding{}
+func sysctlCheckFunc(spec sysctlSpec) compliancekit.CheckFunc {
+	return func(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+		findings := []compliancekit.Finding{}
 		for _, h := range g.ByType(docol.HostType) {
-			f := core.Finding{
+			f := compliancekit.Finding{
 				CheckID:  spec.id,
 				Severity: spec.severity,
 				Resource: h.Ref(),
@@ -342,31 +342,31 @@ func sysctlCheckFunc(spec sysctlSpec) core.CheckFunc {
 			}
 			reachable, _ := h.Attributes["reachable"].(bool)
 			if !reachable {
-				f.Status = core.StatusSkip
+				f.Status = compliancekit.StatusSkip
 				f.Message = fmt.Sprintf("host %q: unreachable; skipping %s", h.Name, spec.key)
 				findings = append(findings, f)
 				continue
 			}
 			sysctls, ok := sysctlsFromHost(h)
 			if !ok {
-				f.Status = core.StatusError
+				f.Status = compliancekit.StatusError
 				f.Message = fmt.Sprintf("host %q: kernel.sysctls attribute missing", h.Name)
 				findings = append(findings, f)
 				continue
 			}
 			got, present := sysctls[spec.key]
 			if !present {
-				f.Status = core.StatusSkip
+				f.Status = compliancekit.StatusSkip
 				f.Message = fmt.Sprintf("host %q: sysctl %q unavailable (kernel build / permission)", h.Name, spec.key)
 				findings = append(findings, f)
 				continue
 			}
 			ok = sysctlCompare(spec.cmp, got, spec.want)
 			if ok {
-				f.Status = core.StatusPass
+				f.Status = compliancekit.StatusPass
 				f.Message = fmt.Sprintf("host %q: %s = %d (%s %d)", h.Name, spec.key, got, spec.cmp, spec.want)
 			} else {
-				f.Status = core.StatusFail
+				f.Status = compliancekit.StatusFail
 				f.Message = fmt.Sprintf("host %q: %s = %d (want %s %d)", h.Name, spec.key, got, spec.cmp, spec.want)
 			}
 			findings = append(findings, f)
@@ -385,11 +385,11 @@ func sysctlCompare(op sysctlCmp, got, want int) bool {
 	return false
 }
 
-// sysctlCheck builds the core.Check metadata from a sysctlSpec so the
+// sysctlCheck builds the compliancekit.Check metadata from a sysctlSpec so the
 // loop-driven registration in init() doesn't repeat the per-check
 // boilerplate.
-func sysctlCheck(spec sysctlSpec) core.Check {
-	return core.Check{
+func sysctlCheck(spec sysctlSpec) compliancekit.Check {
+	return compliancekit.Check{
 		ID:           spec.id,
 		Title:        spec.title,
 		Severity:     spec.severity,
@@ -412,6 +412,6 @@ func sysctlCheck(spec sysctlSpec) core.Check {
 func init() {
 	for _, spec := range sysctlSpecs {
 		spec := spec
-		core.Register(sysctlCheck(spec), sysctlCheckFunc(spec))
+		compliancekit.Register(sysctlCheck(spec), sysctlCheckFunc(spec))
 	}
 }

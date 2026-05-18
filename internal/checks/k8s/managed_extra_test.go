@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.21 phase 11 — coverage for the 15 DOKS/EKS/GKE manual-verify
@@ -15,7 +15,7 @@ func TestManagedK8sManualVerify(t *testing.T) {
 	g := gph(t, mkCluster("prod"))
 	for _, spec := range managedExtraSpecs {
 		t.Run(spec.id, func(t *testing.T) {
-			fn, ok := core.Lookup(spec.id)
+			fn, ok := compliancekit.Lookup(spec.id)
 			if !ok {
 				t.Fatalf("check %q not registered", spec.id)
 			}
@@ -23,7 +23,7 @@ func TestManagedK8sManualVerify(t *testing.T) {
 			if len(findings) != 1 {
 				t.Fatalf("want 1 finding per cluster, got %d", len(findings))
 			}
-			if findings[0].Status != core.StatusError {
+			if findings[0].Status != compliancekit.StatusError {
 				t.Errorf("status=%v want StatusError (manual-verify)", findings[0].Status)
 			}
 		})

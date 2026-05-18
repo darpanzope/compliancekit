@@ -8,7 +8,7 @@ import (
 	"github.com/digitalocean/godo"
 
 	docol "github.com/darpanzope/compliancekit/internal/collectors/digitalocean"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.19 phase 7 — networking depth: firewall rule dedup + ICMP +
@@ -16,8 +16,8 @@ import (
 // hygiene; LB TLS passthrough mismatch; LB cookie/proxy-protocol/
 // cipher manual verifications.
 
-func newNetFinding(check core.Check, r core.Resource) core.Finding {
-	return core.Finding{
+func newNetFinding(check compliancekit.Check, r compliancekit.Resource) compliancekit.Finding {
+	return compliancekit.Finding{
 		CheckID:  check.ID,
 		Severity: check.Severity,
 		Resource: r.Ref(),
@@ -25,9 +25,9 @@ func newNetFinding(check core.Check, r core.Resource) core.Finding {
 	}
 }
 
-func netManualVerify(check core.Check, r core.Resource, control, hint string) core.Finding {
+func netManualVerify(check compliancekit.Check, r compliancekit.Resource, control, hint string) compliancekit.Finding {
 	f := newNetFinding(check, r)
-	f.Status = core.StatusError
+	f.Status = compliancekit.StatusError
 	f.Message = fmt.Sprintf("%s %q: %s — DO API does not surface this; verify via %s",
 		r.Type, r.Name, control, hint)
 	return f
@@ -35,10 +35,10 @@ func netManualVerify(check core.Check, r core.Resource, control, hint string) co
 
 // ----- 1. duplicate inbound firewall rules ----------------------------
 
-var CheckFWInboundDuplicates = core.Check{
+var CheckFWInboundDuplicates = compliancekit.Check{
 	ID:           "do-fw-inbound-rules-duplicated",
 	Title:        "Firewall must not have duplicate inbound rules",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "digitalocean",
 	Service:      "firewalls",
 	ResourceType: docol.FirewallType,
@@ -72,8 +72,8 @@ func ruleSignature(r godo.InboundRule) string {
 	return strings.Join([]string{r.Protocol, r.PortRange, strings.Join(srcs, ",")}, "|")
 }
 
-func FWInboundDuplicates(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func FWInboundDuplicates(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, fw := range g.ByType(docol.FirewallType) {
 		rules, _ := fw.Attributes["inbound_rules"].([]godo.InboundRule)
 		seen := map[string]int{}
@@ -88,10 +88,10 @@ func FWInboundDuplicates(_ context.Context, g *core.ResourceGraph) ([]core.Findi
 		}
 		f := newNetFinding(CheckFWInboundDuplicates, fw)
 		if dupes == 0 {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("firewall %q: %d unique inbound rules", fw.Name, len(rules))
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("firewall %q: %d duplicate inbound rule(s)", fw.Name, dupes)
 		}
 		findings = append(findings, f)
@@ -101,10 +101,10 @@ func FWInboundDuplicates(_ context.Context, g *core.ResourceGraph) ([]core.Findi
 
 // ----- 2. outbound restrictions ---------------------------------------
 
-var CheckFWOutboundUnrestricted = core.Check{
+var CheckFWOutboundUnrestricted = compliancekit.Check{
 	ID:           "do-fw-outbound-unrestricted",
 	Title:        "Firewalls should restrict outbound traffic",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "digitalocean",
 	Service:      "firewalls",
 	ResourceType: docol.FirewallType,
@@ -125,16 +125,16 @@ var CheckFWOutboundUnrestricted = core.Check{
 	Scanner: "firewalls.OutboundUnrestricted",
 }
 
-func FWOutboundUnrestricted(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func FWOutboundUnrestricted(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, fw := range g.ByType(docol.FirewallType) {
 		rules, _ := fw.Attributes["outbound_rules"].([]godo.OutboundRule)
 		f := newNetFinding(CheckFWOutboundUnrestricted, fw)
 		if len(rules) == 0 {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("firewall %q: no outbound rules (default allow-all)", fw.Name)
 		} else {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("firewall %q: %d outbound rule(s) declared", fw.Name, len(rules))
 		}
 		findings = append(findings, f)
@@ -144,10 +144,10 @@ func FWOutboundUnrestricted(_ context.Context, g *core.ResourceGraph) ([]core.Fi
 
 // ----- 3. ICMP from any -----------------------------------------------
 
-var CheckFWICMPFromAny = core.Check{
+var CheckFWICMPFromAny = compliancekit.Check{
 	ID:           "do-fw-icmp-from-any",
 	Title:        "ICMP from 0.0.0.0/0 leaks host enumeration",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "digitalocean",
 	Service:      "firewalls",
 	ResourceType: docol.FirewallType,
@@ -166,8 +166,8 @@ var CheckFWICMPFromAny = core.Check{
 	Scanner: "firewalls.ICMPFromAny",
 }
 
-func FWICMPFromAny(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func FWICMPFromAny(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, fw := range g.ByType(docol.FirewallType) {
 		rules, _ := fw.Attributes["inbound_rules"].([]godo.InboundRule)
 		open := false
@@ -187,10 +187,10 @@ func FWICMPFromAny(_ context.Context, g *core.ResourceGraph) ([]core.Finding, er
 		}
 		f := newNetFinding(CheckFWICMPFromAny, fw)
 		if open {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("firewall %q: ICMP allowed from 0.0.0.0/0", fw.Name)
 		} else {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("firewall %q: ICMP restricted", fw.Name)
 		}
 		findings = append(findings, f)
@@ -200,10 +200,10 @@ func FWICMPFromAny(_ context.Context, g *core.ResourceGraph) ([]core.Finding, er
 
 // ----- 4. manual: empty tag sources ----------------------------------
 
-var CheckFWEmptyTagSource = core.Check{
+var CheckFWEmptyTagSource = compliancekit.Check{
 	ID:           "do-fw-empty-tag-source",
 	Title:        "Firewall tag sources should resolve to ≥1 droplet",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "digitalocean",
 	Service:      "firewalls",
 	ResourceType: docol.FirewallType,
@@ -223,8 +223,8 @@ var CheckFWEmptyTagSource = core.Check{
 	Scanner: "firewalls.EmptyTagSource",
 }
 
-func FWEmptyTagSource(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func FWEmptyTagSource(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, fw := range g.ByType(docol.FirewallType) {
 		rules, _ := fw.Attributes["inbound_rules"].([]godo.InboundRule)
 		hasTagSource := false
@@ -247,10 +247,10 @@ func FWEmptyTagSource(_ context.Context, g *core.ResourceGraph) ([]core.Finding,
 
 // ----- 5. VPC peering cross-region -----------------------------------
 
-var CheckVPCPeeringCrossRegion = core.Check{
+var CheckVPCPeeringCrossRegion = compliancekit.Check{
 	ID:           "do-vpc-peering-cross-region",
 	Title:        "VPC peering spans must be intra-region (DO does not support cross-region peering)",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "digitalocean",
 	Service:      "networking",
 	ResourceType: docol.VPCPeeringType,
@@ -270,8 +270,8 @@ var CheckVPCPeeringCrossRegion = core.Check{
 	Scanner: "networking.VPCPeeringCrossRegion",
 }
 
-func VPCPeeringCrossRegion(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func VPCPeeringCrossRegion(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	// Build region index over VPCs.
 	regionByVPCID := map[string]string{}
 	for _, v := range g.ByType(docol.VPCType) {
@@ -291,14 +291,14 @@ func VPCPeeringCrossRegion(_ context.Context, g *core.ResourceGraph) ([]core.Fin
 		}
 		f := newNetFinding(CheckVPCPeeringCrossRegion, p)
 		if len(regions) > 1 {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			rs := make([]string, 0, len(regions))
 			for r := range regions {
 				rs = append(rs, r)
 			}
 			f.Message = fmt.Sprintf("vpc peering %q: spans regions %v", p.Name, rs)
 		} else {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("vpc peering %q: intra-region", p.Name)
 		}
 		findings = append(findings, f)
@@ -308,10 +308,10 @@ func VPCPeeringCrossRegion(_ context.Context, g *core.ResourceGraph) ([]core.Fin
 
 // ----- 6. reserved IP without region --------------------------------
 
-var CheckReservedIPNoRegion = core.Check{
+var CheckReservedIPNoRegion = compliancekit.Check{
 	ID:           "do-reserved-ip-no-region",
 	Title:        "Reserved IPs must declare a region",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "digitalocean",
 	Service:      "networking",
 	ResourceType: docol.ReservedIPType,
@@ -331,15 +331,15 @@ var CheckReservedIPNoRegion = core.Check{
 	Scanner: "networking.ReservedIPNoRegion",
 }
 
-func ReservedIPNoRegion(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func ReservedIPNoRegion(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, ip := range g.ByType(docol.ReservedIPType) {
 		f := newNetFinding(CheckReservedIPNoRegion, ip)
 		if ip.Region == "" {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("reserved-ip %q: no region declared", ip.Name)
 		} else {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("reserved-ip %q: region=%s", ip.Name, ip.Region)
 		}
 		findings = append(findings, f)
@@ -349,10 +349,10 @@ func ReservedIPNoRegion(_ context.Context, g *core.ResourceGraph) ([]core.Findin
 
 // ----- 7. LB TLS passthrough with no HTTPS listener -----------------
 
-var CheckLBTLSPassthroughWithoutHTTPS = core.Check{
+var CheckLBTLSPassthroughWithoutHTTPS = compliancekit.Check{
 	ID:           "do-lb-tls-passthrough-misconfigured",
 	Title:        "TLS passthrough must pair with an HTTPS-aware backend",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "digitalocean",
 	Service:      "load_balancers",
 	ResourceType: docol.LoadBalancerType,
@@ -372,8 +372,8 @@ var CheckLBTLSPassthroughWithoutHTTPS = core.Check{
 	Scanner: "load_balancers.TLSPassthroughMisconfigured",
 }
 
-func LBTLSPassthroughWithoutHTTPS(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func LBTLSPassthroughWithoutHTTPS(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, lb := range g.ByType(docol.LoadBalancerType) {
 		rules, _ := lb.Attributes["forwarding_rules"].([]map[string]any)
 		anyPassthroughHTTP := false
@@ -388,10 +388,10 @@ func LBTLSPassthroughWithoutHTTPS(_ context.Context, g *core.ResourceGraph) ([]c
 		}
 		f := newNetFinding(CheckLBTLSPassthroughWithoutHTTPS, lb)
 		if anyPassthroughHTTP {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("lb %q: tls_passthrough HTTPS→HTTP rule (backend can't decrypt)", lb.Name)
 		} else {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("lb %q: forwarding rules consistent", lb.Name)
 		}
 		findings = append(findings, f)
@@ -401,10 +401,10 @@ func LBTLSPassthroughWithoutHTTPS(_ context.Context, g *core.ResourceGraph) ([]c
 
 // ----- 8. manual: sticky cookie HttpOnly ----------------------------
 
-var CheckLBStickyCookieHTTPOnly = core.Check{
+var CheckLBStickyCookieHTTPOnly = compliancekit.Check{
 	ID:           "do-lb-sticky-cookie-no-httponly",
 	Title:        "Sticky-session cookies must be HTTPOnly",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "digitalocean",
 	Service:      "load_balancers",
 	ResourceType: docol.LoadBalancerType,
@@ -425,8 +425,8 @@ var CheckLBStickyCookieHTTPOnly = core.Check{
 	Scanner: "load_balancers.StickyCookieHTTPOnly",
 }
 
-func LBStickyCookieHTTPOnly(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func LBStickyCookieHTTPOnly(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, lb := range g.ByType(docol.LoadBalancerType) {
 		findings = append(findings,
 			netManualVerify(CheckLBStickyCookieHTTPOnly, lb,
@@ -438,10 +438,10 @@ func LBStickyCookieHTTPOnly(_ context.Context, g *core.ResourceGraph) ([]core.Fi
 
 // ----- 9. manual: proxy protocol -----------------------------------
 
-var CheckLBProxyProtocol = core.Check{
+var CheckLBProxyProtocol = compliancekit.Check{
 	ID:           "do-lb-proxy-protocol-mismatch",
 	Title:        "PROXY-protocol must match backend support",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "digitalocean",
 	Service:      "load_balancers",
 	ResourceType: docol.LoadBalancerType,
@@ -462,8 +462,8 @@ var CheckLBProxyProtocol = core.Check{
 	Scanner: "load_balancers.ProxyProtocol",
 }
 
-func LBProxyProtocol(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func LBProxyProtocol(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, lb := range g.ByType(docol.LoadBalancerType) {
 		findings = append(findings,
 			netManualVerify(CheckLBProxyProtocol, lb,
@@ -475,10 +475,10 @@ func LBProxyProtocol(_ context.Context, g *core.ResourceGraph) ([]core.Finding, 
 
 // ----- 10. manual: SSL cipher floor -------------------------------
 
-var CheckLBSSLCipherFloor = core.Check{
+var CheckLBSSLCipherFloor = compliancekit.Check{
 	ID:           "do-lb-ssl-cipher-floor",
 	Title:        "LB-terminated TLS must drop legacy ciphers",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "digitalocean",
 	Service:      "load_balancers",
 	ResourceType: docol.LoadBalancerType,
@@ -500,8 +500,8 @@ var CheckLBSSLCipherFloor = core.Check{
 	Scanner: "load_balancers.SSLCipherFloor",
 }
 
-func LBSSLCipherFloor(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func LBSSLCipherFloor(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, lb := range g.ByType(docol.LoadBalancerType) {
 		findings = append(findings,
 			netManualVerify(CheckLBSSLCipherFloor, lb,
@@ -512,14 +512,14 @@ func LBSSLCipherFloor(_ context.Context, g *core.ResourceGraph) ([]core.Finding,
 }
 
 func init() {
-	core.Register(CheckFWInboundDuplicates, FWInboundDuplicates)
-	core.Register(CheckFWOutboundUnrestricted, FWOutboundUnrestricted)
-	core.Register(CheckFWICMPFromAny, FWICMPFromAny)
-	core.Register(CheckFWEmptyTagSource, FWEmptyTagSource)
-	core.Register(CheckVPCPeeringCrossRegion, VPCPeeringCrossRegion)
-	core.Register(CheckReservedIPNoRegion, ReservedIPNoRegion)
-	core.Register(CheckLBTLSPassthroughWithoutHTTPS, LBTLSPassthroughWithoutHTTPS)
-	core.Register(CheckLBStickyCookieHTTPOnly, LBStickyCookieHTTPOnly)
-	core.Register(CheckLBProxyProtocol, LBProxyProtocol)
-	core.Register(CheckLBSSLCipherFloor, LBSSLCipherFloor)
+	compliancekit.Register(CheckFWInboundDuplicates, FWInboundDuplicates)
+	compliancekit.Register(CheckFWOutboundUnrestricted, FWOutboundUnrestricted)
+	compliancekit.Register(CheckFWICMPFromAny, FWICMPFromAny)
+	compliancekit.Register(CheckFWEmptyTagSource, FWEmptyTagSource)
+	compliancekit.Register(CheckVPCPeeringCrossRegion, VPCPeeringCrossRegion)
+	compliancekit.Register(CheckReservedIPNoRegion, ReservedIPNoRegion)
+	compliancekit.Register(CheckLBTLSPassthroughWithoutHTTPS, LBTLSPassthroughWithoutHTTPS)
+	compliancekit.Register(CheckLBStickyCookieHTTPOnly, LBStickyCookieHTTPOnly)
+	compliancekit.Register(CheckLBProxyProtocol, LBProxyProtocol)
+	compliancekit.Register(CheckLBSSLCipherFloor, LBSSLCipherFloor)
 }

@@ -6,13 +6,13 @@ import (
 	"testing"
 
 	docol "github.com/darpanzope/compliancekit/internal/collectors/digitalocean"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.19 phase 4 — tests for the 10 DOKS-depth checks.
 
-func mkDOKSCluster(name string, attrs map[string]any) core.Resource {
-	return core.Resource{
+func mkDOKSCluster(name string, attrs map[string]any) compliancekit.Resource {
+	return compliancekit.Resource{
 		ID:         "digitalocean.doks.cluster.nyc3." + name,
 		Type:       docol.DOKSClusterType,
 		Name:       name,
@@ -22,8 +22,8 @@ func mkDOKSCluster(name string, attrs map[string]any) core.Resource {
 	}
 }
 
-func mkDOKSPool(name string, attrs map[string]any) core.Resource {
-	return core.Resource{
+func mkDOKSPool(name string, attrs map[string]any) compliancekit.Resource {
+	return compliancekit.Resource{
 		ID:         "digitalocean.doks.nodepool.nyc3.c." + name,
 		Type:       docol.DOKSNodePoolType,
 		Name:       name,
@@ -33,8 +33,8 @@ func mkDOKSPool(name string, attrs map[string]any) core.Resource {
 	}
 }
 
-func graph(rs ...core.Resource) *core.ResourceGraph {
-	g := core.NewResourceGraph()
+func graph(rs ...compliancekit.Resource) *compliancekit.ResourceGraph {
+	g := compliancekit.NewResourceGraph()
 	for _, r := range rs {
 		g.Add(r)
 	}
@@ -45,11 +45,11 @@ func TestDOKSVersionSupported(t *testing.T) {
 	cases := []struct {
 		name string
 		ver  string
-		want core.Status
+		want compliancekit.Status
 	}{
-		{"supported 1.30", "1.30.5-do.0", core.StatusPass},
-		{"deprecated 1.26", "1.26.10-do.4", core.StatusFail},
-		{"deprecated 1.22", "1.22.0-do.0", core.StatusFail},
+		{"supported 1.30", "1.30.5-do.0", compliancekit.StatusPass},
+		{"deprecated 1.26", "1.26.10-do.4", compliancekit.StatusFail},
+		{"deprecated 1.22", "1.22.0-do.0", compliancekit.StatusFail},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -68,11 +68,11 @@ func TestDOKSNodepoolTaints(t *testing.T) {
 		pool    string
 		taints  []map[string]string
 		expectN int
-		want    core.Status
+		want    compliancekit.Status
 	}{
 		{"default-pool skipped", "default-pool", nil, 0, ""},
-		{"named no taints", "gpu", nil, 1, core.StatusFail},
-		{"named with taints", "gpu", []map[string]string{{"key": "dedicated", "value": "gpu", "effect": "NoSchedule"}}, 1, core.StatusPass},
+		{"named no taints", "gpu", nil, 1, compliancekit.StatusFail},
+		{"named with taints", "gpu", []map[string]string{{"key": "dedicated", "value": "gpu", "effect": "NoSchedule"}}, 1, compliancekit.StatusPass},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -92,12 +92,12 @@ func TestDOKSNodepoolEnvironmentTag(t *testing.T) {
 	cases := []struct {
 		name string
 		tags []string
-		want core.Status
+		want compliancekit.Status
 	}{
-		{"no tags", nil, core.StatusFail},
-		{"env: tag", []string{"env:production"}, core.StatusPass},
-		{"environment: tag", []string{"environment:staging"}, core.StatusPass},
-		{"unrelated tags", []string{"team:platform"}, core.StatusFail},
+		{"no tags", nil, compliancekit.StatusFail},
+		{"env: tag", []string{"env:production"}, compliancekit.StatusPass},
+		{"environment: tag", []string{"environment:staging"}, compliancekit.StatusPass},
+		{"unrelated tags", []string{"team:platform"}, compliancekit.StatusFail},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -114,11 +114,11 @@ func TestDOKSNodepoolSizeSupported(t *testing.T) {
 	cases := []struct {
 		name string
 		size string
-		want core.Status
+		want compliancekit.Status
 	}{
-		{"supported size", "s-2vcpu-4gb", core.StatusPass},
-		{"retired 1vcpu-1gb", "s-1vcpu-1gb", core.StatusFail},
-		{"retired 1vcpu-2gb", "s-1vcpu-2gb", core.StatusFail},
+		{"supported size", "s-2vcpu-4gb", compliancekit.StatusPass},
+		{"retired 1vcpu-1gb", "s-1vcpu-1gb", compliancekit.StatusFail},
+		{"retired 1vcpu-2gb", "s-1vcpu-2gb", compliancekit.StatusFail},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -135,13 +135,13 @@ func TestDOKSMaintenanceQuietHours(t *testing.T) {
 	cases := []struct {
 		name string
 		mw   string
-		want core.Status
+		want compliancekit.Status
 	}{
-		{"empty", "", core.StatusFail},
-		{"04:00 quiet", "sunday 04:00", core.StatusPass},
-		{"14:00 loud", "tuesday 14:00", core.StatusFail},
-		{"09:00 loud", "monday 09:00", core.StatusFail},
-		{"22:00 quiet", "sunday 22:00", core.StatusPass},
+		{"empty", "", compliancekit.StatusFail},
+		{"04:00 quiet", "sunday 04:00", compliancekit.StatusPass},
+		{"14:00 loud", "tuesday 14:00", compliancekit.StatusFail},
+		{"09:00 loud", "monday 09:00", compliancekit.StatusFail},
+		{"22:00 quiet", "sunday 22:00", compliancekit.StatusPass},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -158,7 +158,7 @@ func TestDOKSManualVerifyChecks(t *testing.T) {
 	g := graph(mkDOKSCluster("c", nil))
 	cases := []struct {
 		name string
-		fn   func(context.Context, *core.ResourceGraph) ([]core.Finding, error)
+		fn   func(context.Context, *compliancekit.ResourceGraph) ([]compliancekit.Finding, error)
 		hint string
 	}{
 		{"control-plane logging", DOKSControlPlaneLogging, "fluent"},
@@ -170,7 +170,7 @@ func TestDOKSManualVerifyChecks(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			findings, _ := c.fn(context.Background(), g)
-			if findings[0].Status != core.StatusError {
+			if findings[0].Status != compliancekit.StatusError {
 				t.Errorf("status=%v want StatusError", findings[0].Status)
 			}
 			if !strings.Contains(findings[0].Message, c.hint) {

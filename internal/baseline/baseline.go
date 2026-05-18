@@ -21,8 +21,8 @@ import (
 	"sort"
 	"time"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/score"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // SchemaVersion pins the on-disk format. Bump on any breaking change.
@@ -49,18 +49,18 @@ type Baseline struct {
 // without re-loading the original scan ("- 1 resolved: high
 // do-droplet-no-firewall on web-1" beats "- 1 resolved").
 //
-// The fields here MUST be a subset of core.Finding's stable shape;
+// The fields here MUST be a subset of compliancekit.Finding's stable shape;
 // regenerating a baseline against a finding whose CheckID or
 // resource changed is the correct "this is a different finding"
 // signal because Fingerprint will differ.
 type Entry struct {
-	Fingerprint  string        `json:"fingerprint"`
-	CheckID      string        `json:"check_id"`
-	Severity     core.Severity `json:"severity"`
-	Status       core.Status   `json:"status"`
-	ResourceID   string        `json:"resource_id"`
-	ResourceName string        `json:"resource_name"`
-	ResourceType string        `json:"resource_type"`
+	Fingerprint  string                 `json:"fingerprint"`
+	CheckID      string                 `json:"check_id"`
+	Severity     compliancekit.Severity `json:"severity"`
+	Status       compliancekit.Status   `json:"status"`
+	ResourceID   string                 `json:"resource_id"`
+	ResourceName string                 `json:"resource_name"`
+	ResourceType string                 `json:"resource_type"`
 }
 
 // Capture builds a Baseline from a slice of findings + the current
@@ -71,7 +71,7 @@ type Entry struct {
 // Entries are sorted by (fingerprint) for byte-stable re-renders --
 // two captures of the same input produce byte-identical files,
 // which makes the baseline diffable in `git diff` itself.
-func Capture(findings []core.Finding, at time.Time) Baseline {
+func Capture(findings []compliancekit.Finding, at time.Time) Baseline {
 	seen := map[string]struct{}{}
 	entries := []Entry{}
 	for _, f := range findings {

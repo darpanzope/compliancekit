@@ -6,11 +6,11 @@ import (
 	"time"
 
 	docol "github.com/darpanzope/compliancekit/internal/collectors/digitalocean"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
-func mkBucket(name string, attrs map[string]any) core.Resource {
-	return core.Resource{
+func mkBucket(name string, attrs map[string]any) compliancekit.Resource {
+	return compliancekit.Resource{
 		ID:         "digitalocean.spaces_bucket.nyc3." + name,
 		Type:       docol.SpacesBucketType,
 		Name:       name,
@@ -19,8 +19,8 @@ func mkBucket(name string, attrs map[string]any) core.Resource {
 	}
 }
 
-func mkSpacesKey(name string, attrs map[string]any) core.Resource {
-	return core.Resource{
+func mkSpacesKey(name string, attrs map[string]any) compliancekit.Resource {
+	return compliancekit.Resource{
 		ID:         "digitalocean.spaces_key." + name,
 		Type:       docol.SpacesKeyType,
 		Name:       name,
@@ -36,9 +36,9 @@ func TestSpacesNotPublic(t *testing.T) {
 	)
 	findings, _ := SpacesNotPublic(context.Background(), g)
 	for _, f := range findings {
-		want := core.StatusPass
+		want := compliancekit.StatusPass
 		if f.Resource.Name == "public" {
-			want = core.StatusFail
+			want = compliancekit.StatusFail
 		}
 		if f.Status != want {
 			t.Errorf("%s: got %v", f.Resource.Name, f.Status)
@@ -53,9 +53,9 @@ func TestSpacesVersioning(t *testing.T) {
 	)
 	findings, _ := SpacesVersioning(context.Background(), g)
 	for _, f := range findings {
-		want := core.StatusPass
+		want := compliancekit.StatusPass
 		if f.Resource.Name == "off" {
-			want = core.StatusFail
+			want = compliancekit.StatusFail
 		}
 		if f.Status != want {
 			t.Errorf("%s: got %v", f.Resource.Name, f.Status)
@@ -70,9 +70,9 @@ func TestSpacesEncryption(t *testing.T) {
 	)
 	findings, _ := SpacesEncryption(context.Background(), g)
 	for _, f := range findings {
-		want := core.StatusPass
+		want := compliancekit.StatusPass
 		if f.Resource.Name == "noenc" {
-			want = core.StatusFail
+			want = compliancekit.StatusFail
 		}
 		if f.Status != want {
 			t.Errorf("%s: got %v", f.Resource.Name, f.Status)
@@ -87,9 +87,9 @@ func TestSpacesLifecycle(t *testing.T) {
 	)
 	findings, _ := SpacesLifecycle(context.Background(), g)
 	for _, f := range findings {
-		want := core.StatusPass
+		want := compliancekit.StatusPass
 		if f.Resource.Name == "nolc" {
-			want = core.StatusFail
+			want = compliancekit.StatusFail
 		}
 		if f.Status != want {
 			t.Errorf("%s: got %v", f.Resource.Name, f.Status)
@@ -104,9 +104,9 @@ func TestSpacesCORSWildcard(t *testing.T) {
 	)
 	findings, _ := SpacesCORSWildcard(context.Background(), g)
 	for _, f := range findings {
-		want := core.StatusPass
+		want := compliancekit.StatusPass
 		if f.Resource.Name == "wildcard" {
-			want = core.StatusFail
+			want = compliancekit.StatusFail
 		}
 		if f.Status != want {
 			t.Errorf("%s: got %v", f.Resource.Name, f.Status)
@@ -121,9 +121,9 @@ func TestSpacesLogging(t *testing.T) {
 	)
 	findings, _ := SpacesLogging(context.Background(), g)
 	for _, f := range findings {
-		want := core.StatusPass
+		want := compliancekit.StatusPass
 		if f.Resource.Name == "unlogged" {
-			want = core.StatusFail
+			want = compliancekit.StatusFail
 		}
 		if f.Status != want {
 			t.Errorf("%s: got %v", f.Resource.Name, f.Status)
@@ -138,9 +138,9 @@ func TestSpacesKeyNotFullAccess(t *testing.T) {
 	)
 	findings, _ := SpacesKeyNotFullAccess(context.Background(), g)
 	for _, f := range findings {
-		want := core.StatusPass
+		want := compliancekit.StatusPass
 		if f.Resource.Name == "full" {
-			want = core.StatusFail
+			want = compliancekit.StatusFail
 		}
 		if f.Status != want {
 			t.Errorf("%s: got %v", f.Resource.Name, f.Status)
@@ -157,14 +157,14 @@ func TestSpacesKeyAge(t *testing.T) {
 	)
 	findings, _ := SpacesKeyAge(context.Background(), g)
 	for _, f := range findings {
-		var want core.Status
+		var want compliancekit.Status
 		switch f.Resource.Name {
 		case "fresh":
-			want = core.StatusPass
+			want = compliancekit.StatusPass
 		case "old":
-			want = core.StatusFail
+			want = compliancekit.StatusFail
 		case "bad-date":
-			want = core.StatusSkip
+			want = compliancekit.StatusSkip
 		}
 		if f.Status != want {
 			t.Errorf("%s: got %v", f.Resource.Name, f.Status)

@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // FormatMarkdown is the lowercase identifier used in config / CLI.
@@ -23,10 +23,10 @@ type MarkdownReporter struct{}
 // NewMarkdown returns a Markdown reporter.
 func NewMarkdown() *MarkdownReporter { return &MarkdownReporter{} }
 
-// Format implements core.Reporter.
+// Format implements compliancekit.Reporter.
 func (r *MarkdownReporter) Format() string { return FormatMarkdown }
 
-// Render implements core.Reporter. Output structure:
+// Render implements compliancekit.Reporter. Output structure:
 //
 //	# Scan report
 //	**Generated:** <UTC timestamp>
@@ -47,7 +47,7 @@ func (r *MarkdownReporter) Format() string { return FormatMarkdown }
 // Passing and skipped findings are intentionally omitted from the body
 // (they show in the count tally) to keep the PR comment scannable.
 // Reviewers want to see what's broken, not what passed.
-func (r *MarkdownReporter) Render(_ context.Context, findings []core.Finding, _ *core.ResourceGraph, w io.Writer) error {
+func (r *MarkdownReporter) Render(_ context.Context, findings []compliancekit.Finding, _ *compliancekit.ResourceGraph, w io.Writer) error {
 	bySev := groupBySeverity(findings)
 
 	bw := &errWriter{w: w}
@@ -93,7 +93,7 @@ func (r *MarkdownReporter) Render(_ context.Context, findings []core.Finding, _ 
 	return bw.err
 }
 
-func renderFindingMarkdown(w io.Writer, f core.Finding) {
+func renderFindingMarkdown(w io.Writer, f compliancekit.Finding) {
 	// `**check-id** on `resource-name` (resource-type)`
 	fmt.Fprintf(w, "- **%s** on `%s`", f.CheckID, f.Resource.Name)
 	if f.Resource.Type != "" {
@@ -113,7 +113,7 @@ func renderFindingMarkdown(w io.Writer, f core.Finding) {
 // renderVulnSubbullet emits the v0.14 Vulnerability block as one or
 // two indented subbullets under the parent finding. No-op when v
 // is nil.
-func renderVulnSubbullet(w io.Writer, v *core.Vulnerability) {
+func renderVulnSubbullet(w io.Writer, v *compliancekit.Vulnerability) {
 	if v == nil {
 		return
 	}
@@ -147,7 +147,7 @@ func renderVulnSubbullet(w io.Writer, v *core.Vulnerability) {
 // renderSecretSubbullet emits the v0.14 Secret block. Fingerprint is
 // pre-redacted by the ingest adapter; the renderer must never enrich
 // or attempt to recover the raw value (ADR-010).
-func renderSecretSubbullet(w io.Writer, s *core.Secret) {
+func renderSecretSubbullet(w io.Writer, s *compliancekit.Secret) {
 	if s == nil {
 		return
 	}
@@ -167,8 +167,8 @@ func renderSecretSubbullet(w io.Writer, s *core.Secret) {
 // groupBySeverity buckets findings by severity. Findings whose severity
 // is SeverityUnknown end up in their own bucket (defensive -- shouldn't
 // happen in practice since every check sets a real severity).
-func groupBySeverity(findings []core.Finding) map[core.Severity][]core.Finding {
-	out := map[core.Severity][]core.Finding{}
+func groupBySeverity(findings []compliancekit.Finding) map[compliancekit.Severity][]compliancekit.Finding {
+	out := map[compliancekit.Severity][]compliancekit.Finding{}
 	for _, f := range findings {
 		out[f.Severity] = append(out[f.Severity], f)
 	}
@@ -187,8 +187,8 @@ func groupBySeverity(findings []core.Finding) map[core.Severity][]core.Finding {
 
 // actionableOnly filters to fail/error findings. The Markdown report
 // is intended for PR review; pass/skip findings would just add noise.
-func actionableOnly(findings []core.Finding) []core.Finding {
-	out := make([]core.Finding, 0, len(findings))
+func actionableOnly(findings []compliancekit.Finding) []compliancekit.Finding {
+	out := make([]compliancekit.Finding, 0, len(findings))
 	for _, f := range findings {
 		if f.Status.IsActionable() {
 			out = append(out, f)
@@ -199,13 +199,13 @@ func actionableOnly(findings []core.Finding) []core.Finding {
 
 // severitiesHighToLow returns the severity enum in display order:
 // Critical first, then High, Medium, Low, Info.
-func severitiesHighToLow() []core.Severity {
-	return []core.Severity{
-		core.SeverityCritical,
-		core.SeverityHigh,
-		core.SeverityMedium,
-		core.SeverityLow,
-		core.SeverityInfo,
+func severitiesHighToLow() []compliancekit.Severity {
+	return []compliancekit.Severity{
+		compliancekit.SeverityCritical,
+		compliancekit.SeverityHigh,
+		compliancekit.SeverityMedium,
+		compliancekit.SeverityLow,
+		compliancekit.SeverityInfo,
 	}
 }
 

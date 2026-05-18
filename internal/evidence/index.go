@@ -9,9 +9,9 @@ import (
 	"sort"
 	"time"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/frameworks"
 	"github.com/darpanzope/compliancekit/internal/score"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // summaryHTMLName is the filename used for the auditor-readable index
@@ -193,10 +193,10 @@ func buildControlView(c ControlRef, fw *frameworks.Framework, t *frameworks.Tail
 		ID:      c.ControlID,
 		Name:    c.ControlName,
 		Dir:     fmt.Sprintf("%s/%s", c.FrameworkID, c.DirName),
-		Pass:    countStatus(c.Findings, core.StatusPass),
-		Fail:    countStatus(c.Findings, core.StatusFail),
-		Skip:    countStatus(c.Findings, core.StatusSkip),
-		Errored: countStatus(c.Findings, core.StatusError),
+		Pass:    countStatus(c.Findings, compliancekit.StatusPass),
+		Fail:    countStatus(c.Findings, compliancekit.StatusFail),
+		Skip:    countStatus(c.Findings, compliancekit.StatusSkip),
+		Errored: countStatus(c.Findings, compliancekit.StatusError),
 	}
 	if fw != nil {
 		if ctrl, ok := fw.Controls[c.ControlID]; ok {
@@ -211,7 +211,7 @@ func buildControlView(c ControlRef, fw *frameworks.Framework, t *frameworks.Tail
 	return v
 }
 
-func countStatus(findings []core.Finding, status core.Status) int {
+func countStatus(findings []compliancekit.Finding, status compliancekit.Status) int {
 	n := 0
 	for _, f := range findings {
 		if f.Status == status {
@@ -226,9 +226,9 @@ func countStatus(findings []core.Finding, status core.Status) int {
 // under multiple framework controls is the same artifact in audit
 // terms; this helper returns the canonical set for downstream
 // summarisation (total count, hardening score).
-func uniqueFindings(index map[string][]ControlRef) []core.Finding {
+func uniqueFindings(index map[string][]ControlRef) []compliancekit.Finding {
 	seen := map[string]struct{}{}
-	out := []core.Finding{}
+	out := []compliancekit.Finding{}
 	for _, refs := range index {
 		for _, c := range refs {
 			for _, f := range c.Findings {

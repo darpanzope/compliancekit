@@ -8,7 +8,7 @@ import (
 	"github.com/hetznercloud/hcloud-go/v2/hcloud"
 
 	"github.com/darpanzope/compliancekit/internal/collectors/cloudcommon"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // ServerType is the resource type emitted per Hetzner Cloud
@@ -16,19 +16,19 @@ import (
 // status, lock) attach to this.
 const ServerType = "hetzner.server"
 
-func (c *Collector) collectServers(ctx context.Context) ([]core.Resource, error) {
+func (c *Collector) collectServers(ctx context.Context) ([]compliancekit.Resource, error) {
 	servers, err := c.client.Server.All(ctx)
 	if err != nil {
 		return nil, err
 	}
-	out := make([]core.Resource, 0, len(servers))
+	out := make([]compliancekit.Resource, 0, len(servers))
 	for _, s := range servers {
 		out = append(out, c.serverResource(s))
 	}
 	return out, nil
 }
 
-func (c *Collector) serverResource(s *hcloud.Server) core.Resource {
+func (c *Collector) serverResource(s *hcloud.Server) compliancekit.Resource {
 	region := ""
 	if s.Location != nil {
 		region = s.Location.Name
@@ -45,7 +45,7 @@ func (c *Collector) serverResource(s *hcloud.Server) core.Resource {
 		imageCreated = s.Image.Created
 	}
 
-	r := core.Resource{
+	r := compliancekit.Resource{
 		ID:       fmt.Sprintf("%s.%d", ServerType, s.ID),
 		Type:     ServerType,
 		Name:     s.Name,

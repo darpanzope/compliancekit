@@ -5,13 +5,13 @@ import (
 	"testing"
 
 	linuxcol "github.com/darpanzope/compliancekit/internal/collectors/linux"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // hostWithSSHD builds a linux.host Resource carrying the given parsed
 // sshd_config map. Useful for compact check tests.
-func hostWithSSHD(name string, sshd map[string]string) core.Resource {
-	return core.Resource{
+func hostWithSSHD(name string, sshd map[string]string) compliancekit.Resource {
+	return compliancekit.Resource{
 		ID:       "linux.host." + name,
 		Type:     linuxcol.HostType,
 		Name:     name,
@@ -23,8 +23,8 @@ func hostWithSSHD(name string, sshd map[string]string) core.Resource {
 	}
 }
 
-func unreachableHost(name, reason string) core.Resource {
-	return core.Resource{
+func unreachableHost(name, reason string) compliancekit.Resource {
+	return compliancekit.Resource{
 		ID:       "linux.host." + name,
 		Type:     linuxcol.HostType,
 		Name:     name,
@@ -36,9 +36,9 @@ func unreachableHost(name, reason string) core.Resource {
 	}
 }
 
-func newGraph(t *testing.T, rs ...core.Resource) *core.ResourceGraph {
+func newGraph(t *testing.T, rs ...compliancekit.Resource) *compliancekit.ResourceGraph {
 	t.Helper()
-	g := core.NewResourceGraph()
+	g := compliancekit.NewResourceGraph()
 	for _, r := range rs {
 		g.Add(r)
 	}
@@ -61,20 +61,20 @@ func TestSSHDNoRootLogin(t *testing.T) {
 		t.Fatalf("expected 4 findings, got %d", len(findings))
 	}
 
-	byHost := map[string]core.Finding{}
+	byHost := map[string]compliancekit.Finding{}
 	for _, f := range findings {
 		byHost[f.Resource.Name] = f
 	}
-	if byHost["good"].Status != core.StatusPass {
+	if byHost["good"].Status != compliancekit.StatusPass {
 		t.Errorf("good: %s, want pass", byHost["good"].Status)
 	}
-	if byHost["bad"].Status != core.StatusFail {
+	if byHost["bad"].Status != compliancekit.StatusFail {
 		t.Errorf("bad: %s, want fail", byHost["bad"].Status)
 	}
-	if byHost["missing"].Status != core.StatusFail {
+	if byHost["missing"].Status != compliancekit.StatusFail {
 		t.Errorf("missing: %s, want fail (absent directive is non-compliant)", byHost["missing"].Status)
 	}
-	if byHost["offline"].Status != core.StatusSkip {
+	if byHost["offline"].Status != compliancekit.StatusSkip {
 		t.Errorf("offline: %s, want skip", byHost["offline"].Status)
 	}
 }
@@ -91,10 +91,10 @@ func TestSSHDNoPasswordAuth(t *testing.T) {
 	if len(findings) != 2 {
 		t.Fatalf("expected 2 findings, got %d", len(findings))
 	}
-	if findings[0].Status != core.StatusPass {
+	if findings[0].Status != compliancekit.StatusPass {
 		t.Errorf("good: %s, want pass", findings[0].Status)
 	}
-	if findings[1].Status != core.StatusFail {
+	if findings[1].Status != compliancekit.StatusFail {
 		t.Errorf("bad: %s, want fail", findings[1].Status)
 	}
 }
@@ -115,10 +115,10 @@ func TestSSHDProtocol2_AbsentDirectiveIsPass(t *testing.T) {
 		t.Fatalf("expected 3 findings, got %d", len(findings))
 	}
 
-	want := map[string]core.Status{
-		"modern":    core.StatusPass,
-		"explicit2": core.StatusPass,
-		"legacy":    core.StatusFail,
+	want := map[string]compliancekit.Status{
+		"modern":    compliancekit.StatusPass,
+		"explicit2": compliancekit.StatusPass,
+		"legacy":    compliancekit.StatusFail,
 	}
 	for _, f := range findings {
 		if f.Status != want[f.Resource.Name] {
@@ -140,23 +140,23 @@ func TestSSHDMaxAuthTries(t *testing.T) {
 		t.Fatalf("SSHDMaxAuthTries: %v", err)
 	}
 
-	byHost := map[string]core.Status{}
+	byHost := map[string]compliancekit.Status{}
 	for _, f := range findings {
 		byHost[f.Resource.Name] = f.Status
 	}
-	if byHost["low"] != core.StatusPass {
+	if byHost["low"] != compliancekit.StatusPass {
 		t.Errorf("low (3): %s, want pass", byHost["low"])
 	}
-	if byHost["limit"] != core.StatusPass {
+	if byHost["limit"] != compliancekit.StatusPass {
 		t.Errorf("limit (4): %s, want pass", byHost["limit"])
 	}
-	if byHost["high"] != core.StatusFail {
+	if byHost["high"] != compliancekit.StatusFail {
 		t.Errorf("high (10): %s, want fail", byHost["high"])
 	}
-	if byHost["absent"] != core.StatusFail {
+	if byHost["absent"] != compliancekit.StatusFail {
 		t.Errorf("absent: %s, want fail", byHost["absent"])
 	}
-	if byHost["garbage"] != core.StatusError {
+	if byHost["garbage"] != compliancekit.StatusError {
 		t.Errorf("garbage value: %s, want error", byHost["garbage"])
 	}
 }
@@ -203,20 +203,20 @@ func TestSSHDLoginGraceTime_Findings(t *testing.T) {
 	if err != nil {
 		t.Fatalf("SSHDLoginGraceTime: %v", err)
 	}
-	byHost := map[string]core.Status{}
+	byHost := map[string]compliancekit.Status{}
 	for _, f := range findings {
 		byHost[f.Resource.Name] = f.Status
 	}
-	if byHost["good-int"] != core.StatusPass {
+	if byHost["good-int"] != compliancekit.StatusPass {
 		t.Errorf("good-int: %s, want pass", byHost["good-int"])
 	}
-	if byHost["good-suffix"] != core.StatusPass {
+	if byHost["good-suffix"] != compliancekit.StatusPass {
 		t.Errorf("good-suffix: %s, want pass", byHost["good-suffix"])
 	}
-	if byHost["bad"] != core.StatusFail {
+	if byHost["bad"] != compliancekit.StatusFail {
 		t.Errorf("bad: %s, want fail", byHost["bad"])
 	}
-	if byHost["absent"] != core.StatusFail {
+	if byHost["absent"] != compliancekit.StatusFail {
 		t.Errorf("absent: %s, want fail", byHost["absent"])
 	}
 }
@@ -229,7 +229,7 @@ func TestSSHDChecks_RegisterIntoDefaultRegistry(t *testing.T) {
 		CheckSSHDMaxAuthTries.ID,
 		CheckSSHDLoginGraceTime.ID,
 	} {
-		if _, ok := core.Lookup(id); !ok {
+		if _, ok := compliancekit.Lookup(id); !ok {
 			t.Errorf("check %q not registered", id)
 		}
 	}

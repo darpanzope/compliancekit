@@ -27,8 +27,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // Options controls runbook generation.
@@ -60,7 +60,7 @@ type Result struct {
 // of findings without any strategy — they appear in the runbook's
 // "Unmatched" section as breadcrumbs even though they're handled by
 // POA&M emit elsewhere.
-func Write(root string, snippets []remediate.Snippet, unmatched []core.Finding, opts Options) (Result, error) {
+func Write(root string, snippets []remediate.Snippet, unmatched []compliancekit.Finding, opts Options) (Result, error) {
 	if root == "" {
 		return Result{}, fmt.Errorf("runbook: empty root")
 	}
@@ -114,7 +114,7 @@ func Write(root string, snippets []remediate.Snippet, unmatched []core.Finding, 
 }
 
 // renderMarkdown is exposed for tests; produces the full runbook.
-func renderMarkdown(snippets []remediate.Snippet, unmatched []core.Finding, formats []remediate.Format, opts Options) string {
+func renderMarkdown(snippets []remediate.Snippet, unmatched []compliancekit.Finding, formats []remediate.Format, opts Options) string {
 	generated := opts.GeneratedAt
 	if generated.IsZero() {
 		generated = time.Now().UTC()
@@ -182,7 +182,7 @@ func writeRiskLegend(sb *strings.Builder) {
 type entry struct {
 	risk     remediate.RiskClass
 	checkID  string
-	resource core.ResourceRef
+	resource compliancekit.ResourceRef
 	byFormat map[remediate.Format]remediate.Snippet
 }
 
@@ -244,7 +244,7 @@ func writeEntry(sb *strings.Builder, e entry) {
 	fmt.Fprintf(sb, "### `%s` on `%s`\n\n", e.checkID, resName)
 
 	// Lookup metadata from the catalog for nicer prose.
-	if c, ok := core.LookupCheck(e.checkID); ok {
+	if c, ok := compliancekit.LookupCheck(e.checkID); ok {
 		if c.Title != "" {
 			fmt.Fprintf(sb, "**%s**\n\n", c.Title)
 		}
@@ -444,7 +444,7 @@ func countSnippetsInRisk(entries []entry) int {
 	return total
 }
 
-func countFindings(snippets []remediate.Snippet, unmatched []core.Finding) int {
+func countFindings(snippets []remediate.Snippet, unmatched []compliancekit.Finding) int {
 	seen := map[string]bool{}
 	for _, sn := range snippets {
 		seen[sn.CheckID+"|"+sn.Resource.ID] = true

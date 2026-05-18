@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 
 	// Side-effect imports: these populate the default check registry
 	// at test-binary init, mirroring what cmd/compliancekit/main.go
@@ -47,7 +47,7 @@ func TestChecksList_JSONIsParseable(t *testing.T) {
 	if err := runChecksList(&buf, checksListOptions{format: "json"}); err != nil {
 		t.Fatalf("runChecksList json: %v", err)
 	}
-	var arr []core.Check
+	var arr []compliancekit.Check
 	if err := json.Unmarshal(buf.Bytes(), &arr); err != nil {
 		t.Fatalf("output not valid JSON: %v", err)
 	}

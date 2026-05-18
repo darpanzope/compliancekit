@@ -8,10 +8,10 @@ import (
 	"sort"
 	"time"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/frameworks"
 	"github.com/darpanzope/compliancekit/internal/remediate"
 	"github.com/darpanzope/compliancekit/internal/score"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // FormatHTML is the lowercase identifier used in config / CLI.
@@ -36,10 +36,10 @@ type HTMLReporter struct{}
 // NewHTML returns an HTML reporter.
 func NewHTML() *HTMLReporter { return &HTMLReporter{} }
 
-// Format implements core.Reporter.
+// Format implements compliancekit.Reporter.
 func (r *HTMLReporter) Format() string { return FormatHTML }
 
-// Render implements core.Reporter. Emits a complete HTML page (with
+// Render implements compliancekit.Reporter. Emits a complete HTML page (with
 // doctype, head, body, embedded CSS+JS, footer) so the operator can
 // open the file directly in a browser, email it, or commit it to a
 // repo as a static artifact.
@@ -50,7 +50,7 @@ func (r *HTMLReporter) Format() string { return FormatHTML }
 //
 // The graph is currently unused; the v0.4 evidence pack reporter
 // will read raw resource detail through it.
-func (r *HTMLReporter) Render(_ context.Context, findings []core.Finding, _ *core.ResourceGraph, w io.Writer) error {
+func (r *HTMLReporter) Render(_ context.Context, findings []compliancekit.Finding, _ *compliancekit.ResourceGraph, w io.Writer) error {
 	view := buildHTMLView(findings)
 	return htmlTemplate.Execute(w, view)
 }
@@ -116,7 +116,7 @@ type htmlSnippet struct {
 // buildHTMLView assembles the template view from a flat findings slice.
 // Pass findings are included; the consumer (a browser, not a PR
 // reviewer) wants the full picture.
-func buildHTMLView(findings []core.Finding) htmlView {
+func buildHTMLView(findings []compliancekit.Finding) htmlView {
 	counts := map[string]int{
 		"critical": 0, "high": 0, "medium": 0, "low": 0, "info": 0,
 	}
@@ -146,18 +146,18 @@ func buildHTMLView(findings []core.Finding) htmlView {
 // buildHTMLSections buckets findings by severity in display order
 // (Critical -> Info). Within each bucket, findings sort by check ID
 // then resource ID so re-renders are byte-stable.
-func buildHTMLSections(findings []core.Finding) []htmlSection {
-	bySev := map[core.Severity][]htmlFinding{}
+func buildHTMLSections(findings []compliancekit.Finding) []htmlSection {
+	bySev := map[compliancekit.Severity][]htmlFinding{}
 	for _, f := range findings {
 		bySev[f.Severity] = append(bySev[f.Severity], findingToHTML(f))
 	}
 
-	severities := []core.Severity{
-		core.SeverityCritical,
-		core.SeverityHigh,
-		core.SeverityMedium,
-		core.SeverityLow,
-		core.SeverityInfo,
+	severities := []compliancekit.Severity{
+		compliancekit.SeverityCritical,
+		compliancekit.SeverityHigh,
+		compliancekit.SeverityMedium,
+		compliancekit.SeverityLow,
+		compliancekit.SeverityInfo,
 	}
 	out := make([]htmlSection, 0, len(severities))
 	for _, sev := range severities {
@@ -180,7 +180,7 @@ func buildHTMLSections(findings []core.Finding) []htmlSection {
 // findingToHTML expands a Finding with metadata from the check registry
 // and the framework catalog so the template doesn't have to chase
 // references at render time.
-func findingToHTML(f core.Finding) htmlFinding {
+func findingToHTML(f compliancekit.Finding) htmlFinding {
 	view := htmlFinding{
 		CheckID:       f.CheckID,
 		Status:        string(f.Status),
@@ -195,7 +195,7 @@ func findingToHTML(f core.Finding) htmlFinding {
 	// registered Check metadata. A finding for an unregistered check
 	// (shouldn't happen, but defensive) renders with the minimum
 	// fields above.
-	if check, ok := core.LookupCheck(f.CheckID); ok {
+	if check, ok := compliancekit.LookupCheck(f.CheckID); ok {
 		view.Title = check.Title
 		view.Description = check.Description
 		view.Remediation = check.Remediation
@@ -226,7 +226,7 @@ func findingToHTML(f core.Finding) htmlFinding {
 // generic "see message" stub that's noise inline. The runbook
 // produced by `compliancekit remediate` is where the fallback shows
 // up; the HTML stays clean.
-func htmlSnippetsForCheck(f core.Finding) []htmlSnippet {
+func htmlSnippetsForCheck(f compliancekit.Finding) []htmlSnippet {
 	var out []htmlSnippet
 	seen := map[remediate.Format]bool{}
 	for _, s := range remediate.Default.StrategiesFor(f.CheckID) {

@@ -8,13 +8,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 func TestWriteWaiversJSON_EmptyWhenNoWaivers(t *testing.T) {
 	dir := t.TempDir()
-	path, err := writeWaiversJSON(dir, []core.Finding{
-		{CheckID: "x", Status: core.StatusFail, Resource: core.ResourceRef{ID: "r"}},
+	path, err := writeWaiversJSON(dir, []compliancekit.Finding{
+		{CheckID: "x", Status: compliancekit.StatusFail, Resource: compliancekit.ResourceRef{ID: "r"}},
 	})
 	if err != nil {
 		t.Fatalf("writeWaiversJSON: %v", err)
@@ -30,14 +30,14 @@ func TestWriteWaiversJSON_EmptyWhenNoWaivers(t *testing.T) {
 func TestWriteWaiversJSON_PopulatedShape(t *testing.T) {
 	dir := t.TempDir()
 	expires := time.Date(2099, 12, 31, 0, 0, 0, 0, time.UTC)
-	findings := []core.Finding{
+	findings := []compliancekit.Finding{
 		{
 			CheckID:  "aws-s3-no-public-acls",
-			Status:   core.StatusSkip,
-			Severity: core.SeverityHigh,
-			Resource: core.ResourceRef{ID: "aws.s3.bucket.public-cdn", Name: "public-cdn"},
+			Status:   compliancekit.StatusSkip,
+			Severity: compliancekit.SeverityHigh,
+			Resource: compliancekit.ResourceRef{ID: "aws.s3.bucket.public-cdn", Name: "public-cdn"},
 			Message:  "bucket has public ACL",
-			Waiver: &core.WaiverRef{
+			Waiver: &compliancekit.WaiverRef{
 				CheckID:    "aws-s3-no-public-acls",
 				ResourceID: "aws.s3.bucket.public-cdn",
 				Reason:     "public CDN bucket; CloudFront enforces signed URLs at edge",
@@ -49,8 +49,8 @@ func TestWriteWaiversJSON_PopulatedShape(t *testing.T) {
 		},
 		{
 			CheckID:  "x",
-			Status:   core.StatusFail,
-			Resource: core.ResourceRef{ID: "r"},
+			Status:   compliancekit.StatusFail,
+			Resource: compliancekit.ResourceRef{ID: "r"},
 			// No Waiver — should not appear in the artifact.
 		},
 	}
@@ -94,18 +94,18 @@ func TestWriteWaiversJSON_PopulatedShape(t *testing.T) {
 func TestWriteWaiversJSON_StableOrder(t *testing.T) {
 	dir := t.TempDir()
 	expires := time.Date(2099, 12, 31, 0, 0, 0, 0, time.UTC)
-	mkFinding := func(check, res string) core.Finding {
-		return core.Finding{
+	mkFinding := func(check, res string) compliancekit.Finding {
+		return compliancekit.Finding{
 			CheckID:  check,
-			Status:   core.StatusSkip,
-			Resource: core.ResourceRef{ID: res},
-			Waiver: &core.WaiverRef{
+			Status:   compliancekit.StatusSkip,
+			Resource: compliancekit.ResourceRef{ID: res},
+			Waiver: &compliancekit.WaiverRef{
 				CheckID: check, ResourceID: res, Reason: "ok", Approver: "a",
 				Expires: expires,
 			},
 		}
 	}
-	findings := []core.Finding{
+	findings := []compliancekit.Finding{
 		mkFinding("z-check", "r-2"),
 		mkFinding("a-check", "r-1"),
 		mkFinding("a-check", "r-0"),

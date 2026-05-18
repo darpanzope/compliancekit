@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.19 phase 2 — tests for the 10 Spaces-depth checks. Real-data
@@ -17,12 +17,12 @@ func TestSpacesLifecycleNoExpiration(t *testing.T) {
 	cases := []struct {
 		name   string
 		attrs  map[string]any
-		want   core.Status
+		want   compliancekit.Status
 		expect string // substring expected in message; "" to skip
 	}{
 		{"no lifecycle → skip", map[string]any{"lifecycle_configured": false}, "", ""},
-		{"has expiration", map[string]any{"lifecycle_configured": true, "lifecycle_has_expiration": true}, core.StatusPass, "has expiration"},
-		{"missing expiration", map[string]any{"lifecycle_configured": true, "lifecycle_has_expiration": false}, core.StatusFail, "no expiration"},
+		{"has expiration", map[string]any{"lifecycle_configured": true, "lifecycle_has_expiration": true}, compliancekit.StatusPass, "has expiration"},
+		{"missing expiration", map[string]any{"lifecycle_configured": true, "lifecycle_has_expiration": false}, compliancekit.StatusFail, "no expiration"},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -48,11 +48,11 @@ func TestSpacesLifecycleNoMPUAbort(t *testing.T) {
 	cases := []struct {
 		name  string
 		attrs map[string]any
-		want  core.Status
+		want  compliancekit.Status
 	}{
 		{"no lifecycle", map[string]any{"lifecycle_configured": false}, ""},
-		{"has mpu abort", map[string]any{"lifecycle_configured": true, "lifecycle_has_mpu_abort": true}, core.StatusPass},
-		{"missing mpu abort", map[string]any{"lifecycle_configured": true, "lifecycle_has_mpu_abort": false}, core.StatusFail},
+		{"has mpu abort", map[string]any{"lifecycle_configured": true, "lifecycle_has_mpu_abort": true}, compliancekit.StatusPass},
+		{"missing mpu abort", map[string]any{"lifecycle_configured": true, "lifecycle_has_mpu_abort": false}, compliancekit.StatusFail},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -75,12 +75,12 @@ func TestSpacesLoggingSelfTarget(t *testing.T) {
 	cases := []struct {
 		name  string
 		attrs map[string]any
-		want  core.Status
+		want  compliancekit.Status
 	}{
 		{"logging off", map[string]any{"logging_enabled": false}, ""},
-		{"target=source", map[string]any{"logging_enabled": true, "logging_target_bucket": "b"}, core.StatusFail},
-		{"target≠source", map[string]any{"logging_enabled": true, "logging_target_bucket": "audit"}, core.StatusPass},
-		{"missing target", map[string]any{"logging_enabled": true}, core.StatusError},
+		{"target=source", map[string]any{"logging_enabled": true, "logging_target_bucket": "b"}, compliancekit.StatusFail},
+		{"target≠source", map[string]any{"logging_enabled": true, "logging_target_bucket": "audit"}, compliancekit.StatusPass},
+		{"missing target", map[string]any{"logging_enabled": true}, compliancekit.StatusError},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -105,11 +105,11 @@ func TestSpacesPolicyRequired(t *testing.T) {
 		mkBucket("without", map[string]any{"policy_configured": false}),
 	)
 	findings, _ := SpacesPolicyRequired(context.Background(), g)
-	byName := map[string]core.Status{}
+	byName := map[string]compliancekit.Status{}
 	for _, f := range findings {
 		byName[f.Resource.Name] = f.Status
 	}
-	if byName["with"] != core.StatusPass || byName["without"] != core.StatusFail {
+	if byName["with"] != compliancekit.StatusPass || byName["without"] != compliancekit.StatusFail {
 		t.Errorf("statuses wrong: %+v", byName)
 	}
 }
@@ -124,14 +124,14 @@ func TestSpacesVersioningRequiresLifecycle(t *testing.T) {
 	if len(findings) != 2 {
 		t.Fatalf("expected 2 findings (versioning-only ones), got %d", len(findings))
 	}
-	byName := map[string]core.Status{}
+	byName := map[string]compliancekit.Status{}
 	for _, f := range findings {
 		byName[f.Resource.Name] = f.Status
 	}
-	if byName["vers-no-lifecycle"] != core.StatusFail {
+	if byName["vers-no-lifecycle"] != compliancekit.StatusFail {
 		t.Errorf("vers-no-lifecycle should fail, got %v", byName["vers-no-lifecycle"])
 	}
-	if byName["vers-and-lifecycle"] != core.StatusPass {
+	if byName["vers-and-lifecycle"] != compliancekit.StatusPass {
 		t.Errorf("vers-and-lifecycle should pass, got %v", byName["vers-and-lifecycle"])
 	}
 }
@@ -141,12 +141,12 @@ func TestSpacesAuditPairing(t *testing.T) {
 		name string
 		enc  bool
 		log  bool
-		want core.Status
+		want compliancekit.Status
 	}{
-		{"both off", false, false, core.StatusFail},
-		{"enc on log off", true, false, core.StatusFail},
-		{"enc off log on", false, true, core.StatusFail},
-		{"both on", true, true, core.StatusPass},
+		{"both off", false, false, compliancekit.StatusFail},
+		{"enc on log off", true, false, compliancekit.StatusFail},
+		{"enc off log on", false, true, compliancekit.StatusFail},
+		{"both on", true, true, compliancekit.StatusPass},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -166,7 +166,7 @@ func TestSpacesManualVerifyChecks(t *testing.T) {
 	g := newAccountGraph(mkBucket("b", nil))
 	cases := []struct {
 		name    string
-		fn      func(context.Context, *core.ResourceGraph) ([]core.Finding, error)
+		fn      func(context.Context, *compliancekit.ResourceGraph) ([]compliancekit.Finding, error)
 		urlPart string
 	}{
 		{"object-lock", SpacesObjectLockAppLayer, "s3-compatibility"},
@@ -177,7 +177,7 @@ func TestSpacesManualVerifyChecks(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			findings, _ := c.fn(context.Background(), g)
-			if findings[0].Status != core.StatusError {
+			if findings[0].Status != compliancekit.StatusError {
 				t.Errorf("status=%v, want StatusError", findings[0].Status)
 			}
 			if !strings.Contains(findings[0].Message, c.urlPart) {

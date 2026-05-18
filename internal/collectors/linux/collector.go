@@ -6,17 +6,17 @@ import (
 	"sync"
 
 	"github.com/darpanzope/compliancekit/internal/config"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
-// HostType is the core.Resource Type emitted per inventory host.
+// HostType is the compliancekit.Resource Type emitted per inventory host.
 // Exported so check packages can reference it without hard-coding.
 const HostType = "linux.host"
 
-// Compile-time assertion that *Collector satisfies core.Collector.
-var _ core.Collector = (*Collector)(nil)
+// Compile-time assertion that *Collector satisfies compliancekit.Collector.
+var _ compliancekit.Collector = (*Collector)(nil)
 
-// Collector implements core.Collector for SSH-reachable Linux hosts.
+// Collector implements compliancekit.Collector for SSH-reachable Linux hosts.
 //
 // At v0.2 it gathers sshd configuration; later phases extend the same
 // per-host fan-out with firewall, audit, filesystem, user, kernel,
@@ -54,15 +54,15 @@ const defaultMaxParallel = 16
 func (c *Collector) Name() string { return "linux" }
 
 // Collect fans out across every host in the inventory, gathers facts
-// over SSH, and returns one core.Resource per host.
+// over SSH, and returns one compliancekit.Resource per host.
 //
 // One unreachable host does NOT abort the scan -- it produces a
 // Resource with reachable=false plus unreachable_reason, and checks
 // can decide to skip or emit StatusError. This matches ROADMAP.md's
 // v0.2 DoD: "one bad host doesn't kill the run."
-func (c *Collector) Collect(ctx context.Context) ([]core.Resource, error) {
+func (c *Collector) Collect(ctx context.Context) ([]compliancekit.Resource, error) {
 	hosts := c.inventory.AllHosts()
-	results := make([]core.Resource, len(hosts))
+	results := make([]compliancekit.Resource, len(hosts))
 
 	sem := make(chan struct{}, c.maxParallel)
 	var wg sync.WaitGroup
@@ -92,7 +92,7 @@ func (c *Collector) Collect(ctx context.Context) ([]core.Resource, error) {
 // against the resulting client. Any dial / merge failure produces an
 // unreachable Resource; individual gatherer failures attach an
 // error attribute so checks can decide whether to skip or fail.
-func (c *Collector) gatherOne(ctx context.Context, host Host) core.Resource {
+func (c *Collector) gatherOne(ctx context.Context, host Host) compliancekit.Resource {
 	opts, err := MergeHost(host, c.sshDefaults)
 	if err != nil {
 		return unreachableResource(host, fmt.Sprintf("merge host: %v", err))
@@ -185,7 +185,7 @@ func (c *Collector) gatherOne(ctx context.Context, host Host) core.Resource {
 	// v0.20 phase 9 — MAC (SELinux / AppArmor) state.
 	attrs["mac"] = gatherMAC(ctx, client)
 
-	return core.Resource{
+	return compliancekit.Resource{
 		ID:         "linux.host." + host.Host,
 		Type:       HostType,
 		Name:       host.Host,
@@ -198,8 +198,8 @@ func (c *Collector) gatherOne(ctx context.Context, host Host) core.Resource {
 // unreachableResource is the placeholder Resource emitted when a host
 // cannot be reached. The "reachable" attribute is set so checks can
 // detect this state with a single Attr() lookup.
-func unreachableResource(host Host, reason string) core.Resource {
-	return core.Resource{
+func unreachableResource(host Host, reason string) compliancekit.Resource {
+	return compliancekit.Resource{
 		ID:       "linux.host." + host.Host,
 		Type:     HostType,
 		Name:     host.Host,

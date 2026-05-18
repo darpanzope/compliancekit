@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 func TestDiscord_NotConfigured(t *testing.T) {
@@ -29,10 +29,10 @@ func TestDiscord_HappyPath(t *testing.T) {
 
 	sink := NewDiscord(DiscordConfig{
 		WebhookURL:    srv.URL,
-		SeverityFloor: core.SeverityInfo,
+		SeverityFloor: compliancekit.SeverityInfo,
 		HTTPClient:    srv.Client(),
 	})
-	notifications := BuildNotifications([]core.Finding{
+	notifications := BuildNotifications([]compliancekit.Finding{
 		sampleFinding("aws-s3-public-access-block", "critical"),
 	}, BuildOptions{URLPrefix: "https://x"})
 
@@ -64,10 +64,10 @@ func TestDiscord_AllSendsFailReturnsError(t *testing.T) {
 
 	sink := NewDiscord(DiscordConfig{
 		WebhookURL:    srv.URL,
-		SeverityFloor: core.SeverityInfo,
+		SeverityFloor: compliancekit.SeverityInfo,
 		HTTPClient:    srv.Client(),
 	})
-	notifications := BuildNotifications([]core.Finding{sampleFinding("x", "critical")}, BuildOptions{})
+	notifications := BuildNotifications([]compliancekit.Finding{sampleFinding("x", "critical")}, BuildOptions{})
 	_, err := sink.Send(context.Background(), notifications)
 	if err == nil {
 		t.Fatalf("expected error on all-fail")

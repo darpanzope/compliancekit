@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 const sampleFindingsJSON = `{
@@ -90,7 +90,7 @@ func TestNotify_OnlyNewMode(t *testing.T) {
 	// Build a baseline that ALREADY contains both findings — only-new
 	// mode should drop everything.
 	var env struct {
-		Findings []core.Finding `json:"findings"`
+		Findings []compliancekit.Finding `json:"findings"`
 	}
 	_ = json.Unmarshal([]byte(sampleFindingsJSON), &env)
 	baselineBody, _ := json.Marshal(env)

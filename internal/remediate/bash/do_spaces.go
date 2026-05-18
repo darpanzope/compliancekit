@@ -3,8 +3,8 @@ package bash
 import (
 	"fmt"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.19 phase 2 — bash strategies for the 10 Spaces-depth checks.
@@ -36,7 +36,7 @@ func init() {
 
 const bashSpacesDefaultRegion = "nyc3"
 
-func bashSpacesNameRegion(f core.Finding) (name, region string) {
+func bashSpacesNameRegion(f compliancekit.Finding) (name, region string) {
 	name = f.Resource.Name
 	if name == "" {
 		name = "BUCKET_NAME"
@@ -52,7 +52,7 @@ func bashSpacesEndpoint(region string) string {
 	return fmt.Sprintf("https://%s.digitaloceanspaces.com", region)
 }
 
-func renderBashSpacesLifecycleExp(f core.Finding) (remediate.Snippet, error) {
+func renderBashSpacesLifecycleExp(f compliancekit.Finding) (remediate.Snippet, error) {
 	name, region := bashSpacesNameRegion(f)
 	body := fmt.Sprintf(`# Add (or replace) a lifecycle rule with a 365-day expiration + MPU abort.
 endpoint=%q
@@ -69,12 +69,12 @@ rm -f "$tmp"`, bashSpacesEndpoint(region), name)
 	}, nil
 }
 
-func renderBashSpacesLifecycleMPU(f core.Finding) (remediate.Snippet, error) {
+func renderBashSpacesLifecycleMPU(f compliancekit.Finding) (remediate.Snippet, error) {
 	// Same shape; the rule covers both expiration + MPU.
 	return renderBashSpacesLifecycleExp(f)
 }
 
-func renderBashSpacesLoggingTarget(f core.Finding) (remediate.Snippet, error) {
+func renderBashSpacesLoggingTarget(f compliancekit.Finding) (remediate.Snippet, error) {
 	name, region := bashSpacesNameRegion(f)
 	body := fmt.Sprintf(`# Re-target server-access logs at a sibling bucket.
 endpoint=%q
@@ -95,7 +95,7 @@ aws s3api put-bucket-logging --bucket "$bucket" \
 	}, nil
 }
 
-func renderBashSpacesPolicy(f core.Finding) (remediate.Snippet, error) {
+func renderBashSpacesPolicy(f compliancekit.Finding) (remediate.Snippet, error) {
 	name, region := bashSpacesNameRegion(f)
 	body := fmt.Sprintf(`endpoint=%q
 bucket=%q
@@ -112,7 +112,7 @@ rm -f "$tmp"`, bashSpacesEndpoint(region), name)
 	}, nil
 }
 
-func renderBashSpacesVersionLifecycle(f core.Finding) (remediate.Snippet, error) {
+func renderBashSpacesVersionLifecycle(f compliancekit.Finding) (remediate.Snippet, error) {
 	name, region := bashSpacesNameRegion(f)
 	body := fmt.Sprintf(`endpoint=%q
 bucket=%q
@@ -128,7 +128,7 @@ rm -f "$tmp"`, bashSpacesEndpoint(region), name)
 	}, nil
 }
 
-func renderBashSpacesAuditPairing(f core.Finding) (remediate.Snippet, error) {
+func renderBashSpacesAuditPairing(f compliancekit.Finding) (remediate.Snippet, error) {
 	name, region := bashSpacesNameRegion(f)
 	body := fmt.Sprintf(`endpoint=%q
 bucket=%q
@@ -150,28 +150,28 @@ aws s3api put-bucket-logging --bucket "$bucket" \
 	}, nil
 }
 
-func renderBashSpacesObjectLock(_ core.Finding) (remediate.Snippet, error) {
+func renderBashSpacesObjectLock(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return renderBashManualOnly(
 		"S3 Object Lock — DO Spaces does not implement",
 		"https://www.digitalocean.com/trust",
 		"Replicate audit-relevant writes to an Object-Lock-capable target (AWS S3 + Object Lock, B2, MinIO WORM)")
 }
 
-func renderBashSpacesReplication(_ core.Finding) (remediate.Snippet, error) {
+func renderBashSpacesReplication(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return renderBashManualOnly(
 		"S3 Cross-Region Replication — DO Spaces does not implement",
 		"https://docs.digitalocean.com/products/spaces/",
 		"Schedule rclone sync between source and target regions; capture last-success in the runbook")
 }
 
-func renderBashSpacesMFADelete(_ core.Finding) (remediate.Snippet, error) {
+func renderBashSpacesMFADelete(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return renderBashManualOnly(
 		"S3 MFA-Delete — DO Spaces does not implement",
 		"https://cloud.digitalocean.com/account/security",
 		"Enforce team 2FA + segregate delete-capable Spaces keys per bucket")
 }
 
-func renderBashSpacesKeyRotation(_ core.Finding) (remediate.Snippet, error) {
+func renderBashSpacesKeyRotation(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return renderBashManualOnly(
 		"Spaces encryption key rotation",
 		"https://www.digitalocean.com/trust",

@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 func mustContain(t *testing.T, haystack, needle string) {
@@ -15,10 +15,10 @@ func mustContain(t *testing.T, haystack, needle string) {
 	}
 }
 
-func k8sFinding(checkID, kind, namespace, name string) core.Finding {
-	return core.Finding{
+func k8sFinding(checkID, kind, namespace, name string) compliancekit.Finding {
+	return compliancekit.Finding{
 		CheckID: checkID,
-		Resource: core.ResourceRef{
+		Resource: compliancekit.ResourceRef{
 			ID:       "k8s." + strings.ToLower(kind) + ".prod." + namespace + "." + name,
 			Type:     "k8s." + strings.ToLower(kind),
 			Name:     name,
@@ -121,7 +121,7 @@ func TestRenderRBACManual(t *testing.T) {
 		"k8s-rbac-escalate",
 	}
 	for _, id := range cases {
-		f := core.Finding{CheckID: id, Resource: core.ResourceRef{Name: "kubeadm-anyuser"}}
+		f := compliancekit.Finding{CheckID: id, Resource: compliancekit.ResourceRef{Name: "kubeadm-anyuser"}}
 		s, err := remediate.Default.Render(f, remediate.FormatKubectl)
 		if err != nil {
 			t.Errorf("Render(%q): %v", id, err)
@@ -135,9 +135,9 @@ func TestRenderRBACManual(t *testing.T) {
 }
 
 func TestRenderPSAlabel(t *testing.T) {
-	f := core.Finding{
+	f := compliancekit.Finding{
 		CheckID:  "k8s-namespace-psa-label",
-		Resource: core.ResourceRef{Name: "prod"},
+		Resource: compliancekit.ResourceRef{Name: "prod"},
 	}
 	s, err := remediate.Default.Render(f, remediate.FormatKubectl)
 	if err != nil {

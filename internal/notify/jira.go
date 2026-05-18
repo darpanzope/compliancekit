@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate/tickets"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // JiraConfig configures the Jira notification sink. Reuses the v0.15
@@ -32,7 +32,7 @@ type JiraConfig struct {
 	ProjectKey string
 	IssueType  string
 
-	SeverityFloor core.Severity
+	SeverityFloor compliancekit.Severity
 	HTTPClient    *http.Client
 }
 
@@ -63,7 +63,7 @@ func (j *Jira) Name() string { return "jira" }
 func (j *Jira) Configured() bool { return j.client.Configured() }
 
 // Threshold returns the per-sink severity floor.
-func (j *Jira) Threshold() core.Severity { return j.cfg.SeverityFloor }
+func (j *Jira) Threshold() compliancekit.Severity { return j.cfg.SeverityFloor }
 
 // Send creates one Jira issue per notification. Per-notification
 // failures accumulate in Result.Errors; top-level error only when
@@ -112,7 +112,7 @@ func init() {
 		IssueType:  envOr("JIRA_NOTIFY_ISSUE_TYPE", "JIRA_ISSUE_TYPE"),
 	}
 	if t := os.Getenv("JIRA_NOTIFY_THRESHOLD"); t != "" {
-		if sev, err := core.ParseSeverity(t); err == nil {
+		if sev, err := compliancekit.ParseSeverity(t); err == nil {
 			cfg.SeverityFloor = sev
 		}
 	}

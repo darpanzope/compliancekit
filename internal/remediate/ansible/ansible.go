@@ -9,11 +9,11 @@
 package ansible
 
 import (
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
-type strategyFunc func(core.Finding) (remediate.Snippet, error)
+type strategyFunc func(compliancekit.Finding) (remediate.Snippet, error)
 
 type strategy struct {
 	name string
@@ -24,7 +24,7 @@ type strategy struct {
 func (s *strategy) Name() string                { return s.name }
 func (s *strategy) CheckIDs() []string          { return s.ids }
 func (s *strategy) Formats() []remediate.Format { return []remediate.Format{remediate.FormatAnsible} }
-func (s *strategy) Render(f core.Finding, format remediate.Format) (remediate.Snippet, error) {
+func (s *strategy) Render(f compliancekit.Finding, format remediate.Format) (remediate.Snippet, error) {
 	if format != remediate.FormatAnsible {
 		return remediate.Snippet{}, remediate.ErrFormatUnsupported
 	}
@@ -63,7 +63,7 @@ func init() {
 		[]string{"linux-uid-zero-only-root"}, renderUIDZeroOnlyRoot)
 }
 
-func renderSSHDHardening(_ core.Finding) (remediate.Snippet, error) {
+func renderSSHDHardening(_ compliancekit.Finding) (remediate.Snippet, error) {
 	tasks := `- name: Harden sshd
   become: true
   block:
@@ -109,7 +109,7 @@ func renderSSHDHardening(_ core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderFirewall(_ core.Finding) (remediate.Snippet, error) {
+func renderFirewall(_ compliancekit.Finding) (remediate.Snippet, error) {
 	tasks := `- name: Enable + default-deny firewall (UFW on Debian/Ubuntu)
   become: true
   when: ansible_os_family == "Debian"
@@ -166,7 +166,7 @@ func renderFirewall(_ core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderSysctlHardening(_ core.Finding) (remediate.Snippet, error) {
+func renderSysctlHardening(_ compliancekit.Finding) (remediate.Snippet, error) {
 	tasks := `- name: Sysctl hardening — kernel + network
   become: true
   ansible.posix.sysctl:
@@ -193,7 +193,7 @@ func renderSysctlHardening(_ core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderAuditd(_ core.Finding) (remediate.Snippet, error) {
+func renderAuditd(_ compliancekit.Finding) (remediate.Snippet, error) {
 	tasks := `- name: Install + start auditd
   become: true
   block:
@@ -219,7 +219,7 @@ func renderAuditd(_ core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderJournaldPersistent(_ core.Finding) (remediate.Snippet, error) {
+func renderJournaldPersistent(_ compliancekit.Finding) (remediate.Snippet, error) {
 	tasks := `- name: Make systemd-journald storage persistent
   become: true
   block:
@@ -246,7 +246,7 @@ func renderJournaldPersistent(_ core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderPasswdPerms(_ core.Finding) (remediate.Snippet, error) {
+func renderPasswdPerms(_ compliancekit.Finding) (remediate.Snippet, error) {
 	tasks := `- name: Fix /etc/passwd and /etc/shadow permissions
   become: true
   block:
@@ -281,7 +281,7 @@ func renderPasswdPerms(_ core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderNoEmptyPasswords(_ core.Finding) (remediate.Snippet, error) {
+func renderNoEmptyPasswords(_ compliancekit.Finding) (remediate.Snippet, error) {
 	tasks := `- name: Remove any empty-password lines from /etc/shadow
   become: true
   ansible.builtin.shell: |
@@ -300,7 +300,7 @@ func renderNoEmptyPasswords(_ core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderUIDZeroOnlyRoot(_ core.Finding) (remediate.Snippet, error) {
+func renderUIDZeroOnlyRoot(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return remediate.Snippet{
 		Risk: remediate.RiskManual, Idempotent: false,
 		Content: `# Manual remediation — multiple UID 0 accounts is a severe finding.

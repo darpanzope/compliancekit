@@ -5,10 +5,10 @@ import (
 	"fmt"
 
 	hetznercol "github.com/darpanzope/compliancekit/internal/collectors/hetzner"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
-func servicesOf(lb core.Resource) []map[string]any {
+func servicesOf(lb compliancekit.Resource) []map[string]any {
 	s, _ := lb.Attributes["services"].([]map[string]any)
 	return s
 }
@@ -16,10 +16,10 @@ func servicesOf(lb core.Resource) []map[string]any {
 // CheckLBHTTPSListener requires a Hetzner LB serve at least one
 // HTTPS service. An LB without an HTTPS listener serves traffic
 // in plaintext — almost always a misconfiguration.
-var CheckLBHTTPSListener = core.Check{
+var CheckLBHTTPSListener = compliancekit.Check{
 	ID:           "hetzner-lb-no-https-listener",
 	Title:        "Hetzner load balancers should serve at least one HTTPS listener",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "hetzner",
 	Service:      "load_balancers",
 	ResourceType: hetznercol.LoadBalancerType,
@@ -40,10 +40,10 @@ var CheckLBHTTPSListener = core.Check{
 	Scanner: "lb.HTTPSListener",
 }
 
-func LBHTTPSListener(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func LBHTTPSListener(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, lb := range g.ByType(hetznercol.LoadBalancerType) {
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckLBHTTPSListener.ID,
 			Severity: CheckLBHTTPSListener.Severity,
 			Resource: lb.Ref(),
@@ -57,10 +57,10 @@ func LBHTTPSListener(_ context.Context, g *core.ResourceGraph) ([]core.Finding, 
 			}
 		}
 		if hasHTTPS {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("lb %q: https listener present", lb.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("lb %q: no https service configured", lb.Name)
 		}
 		findings = append(findings, f)
@@ -72,10 +72,10 @@ func LBHTTPSListener(_ context.Context, g *core.ResourceGraph) ([]core.Finding, 
 // LB is configured to redirect to HTTPS. Hetzner exposes
 // `redirect_http: bool` on the HTTP sub-config; without it, a
 // client request to the http listener gets served back in clear.
-var CheckLBHTTPRedirect = core.Check{
+var CheckLBHTTPRedirect = compliancekit.Check{
 	ID:           "hetzner-lb-http-not-redirected",
 	Title:        "Hetzner LB HTTP services must redirect to HTTPS",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "hetzner",
 	Service:      "load_balancers",
 	ResourceType: hetznercol.LoadBalancerType,
@@ -96,10 +96,10 @@ var CheckLBHTTPRedirect = core.Check{
 	Scanner: "lb.HTTPRedirect",
 }
 
-func LBHTTPRedirect(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func LBHTTPRedirect(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, lb := range g.ByType(hetznercol.LoadBalancerType) {
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckLBHTTPRedirect.ID,
 			Severity: CheckLBHTTPRedirect.Severity,
 			Resource: lb.Ref(),
@@ -114,17 +114,17 @@ func LBHTTPRedirect(_ context.Context, g *core.ResourceGraph) ([]core.Finding, e
 			}
 		}
 		if httpService == nil {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("lb %q: no http listener", lb.Name)
 			findings = append(findings, f)
 			continue
 		}
 		redirect, _ := httpService["redirect_http"].(bool)
 		if redirect {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("lb %q: http -> https redirect enabled", lb.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("lb %q: http listener does NOT redirect to https", lb.Name)
 		}
 		findings = append(findings, f)
@@ -133,6 +133,6 @@ func LBHTTPRedirect(_ context.Context, g *core.ResourceGraph) ([]core.Finding, e
 }
 
 func init() {
-	core.Register(CheckLBHTTPSListener, LBHTTPSListener)
-	core.Register(CheckLBHTTPRedirect, LBHTTPRedirect)
+	compliancekit.Register(CheckLBHTTPSListener, LBHTTPSListener)
+	compliancekit.Register(CheckLBHTTPRedirect, LBHTTPRedirect)
 }

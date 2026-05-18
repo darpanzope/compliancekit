@@ -15,12 +15,12 @@ package azcli
 import (
 	"fmt"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate"
 	"github.com/darpanzope/compliancekit/internal/remediate/render"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
-type strategyFunc func(core.Finding) (remediate.Snippet, error)
+type strategyFunc func(compliancekit.Finding) (remediate.Snippet, error)
 
 type strategy struct {
 	name string
@@ -31,7 +31,7 @@ type strategy struct {
 func (s *strategy) Name() string                { return s.name }
 func (s *strategy) CheckIDs() []string          { return s.ids }
 func (s *strategy) Formats() []remediate.Format { return []remediate.Format{remediate.FormatAzureCLI} }
-func (s *strategy) Render(f core.Finding, format remediate.Format) (remediate.Snippet, error) {
+func (s *strategy) Render(f compliancekit.Finding, format remediate.Format) (remediate.Snippet, error) {
 	if format != remediate.FormatAzureCLI {
 		return remediate.Snippet{}, remediate.ErrFormatUnsupported
 	}
@@ -57,7 +57,7 @@ func init() {
 		[]string{"ingest.defender-for-cloud.RBAC_BUILT_IN_OWNER"}, renderRBACOwnerManual)
 }
 
-func renderStorageNoPublic(f core.Finding) (remediate.Snippet, error) {
+func renderStorageNoPublic(f compliancekit.Finding) (remediate.Snippet, error) {
 	acct := accountName(f)
 	cmd := fmt.Sprintf(
 		"az storage account update --name %s --allow-blob-public-access false",
@@ -70,7 +70,7 @@ func renderStorageNoPublic(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderStorageEncryption(f core.Finding) (remediate.Snippet, error) {
+func renderStorageEncryption(f compliancekit.Finding) (remediate.Snippet, error) {
 	acct := accountName(f)
 	cmd := fmt.Sprintf(
 		`# Verify encryption-at-rest is on (Microsoft-managed keys default).
@@ -85,7 +85,7 @@ az storage account show --name %s --query encryption
 	}, nil
 }
 
-func renderSQLTDE(f core.Finding) (remediate.Snippet, error) {
+func renderSQLTDE(f compliancekit.Finding) (remediate.Snippet, error) {
 	srv := serverName(f)
 	cmd := fmt.Sprintf(
 		"az sql db tde set --resource-group $RG --server %s --database $DB --status Enabled",
@@ -97,7 +97,7 @@ func renderSQLTDE(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderSQLAuditing(f core.Finding) (remediate.Snippet, error) {
+func renderSQLAuditing(f compliancekit.Finding) (remediate.Snippet, error) {
 	srv := serverName(f)
 	cmd := fmt.Sprintf(
 		`az sql server audit-policy update --resource-group $RG --name %s --state Enabled \
@@ -110,7 +110,7 @@ func renderSQLAuditing(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderSQLFirewallTighten(f core.Finding) (remediate.Snippet, error) {
+func renderSQLFirewallTighten(f compliancekit.Finding) (remediate.Snippet, error) {
 	srv := serverName(f)
 	cmd := fmt.Sprintf(
 		`# Inspect existing rules (look for 0.0.0.0 - 255.255.255.255).
@@ -127,7 +127,7 @@ az sql server firewall-rule list --resource-group $RG --server %s
 	}, nil
 }
 
-func renderRBACOwnerManual(f core.Finding) (remediate.Snippet, error) {
+func renderRBACOwnerManual(f compliancekit.Finding) (remediate.Snippet, error) {
 	return remediate.Snippet{
 		Risk: remediate.RiskManual, Idempotent: false,
 		Content: fmt.Sprintf(
@@ -144,7 +144,7 @@ func renderRBACOwnerManual(f core.Finding) (remediate.Snippet, error) {
 // accountName extracts the storage account name from the finding's
 // resource. OCSF Defender findings encode the Azure resource path
 // in Resource.Name when produced by the ingest adapter.
-func accountName(f core.Finding) string {
+func accountName(f compliancekit.Finding) string {
 	if f.Resource.Name != "" {
 		return f.Resource.Name
 	}
@@ -152,7 +152,7 @@ func accountName(f core.Finding) string {
 }
 
 // serverName extracts a SQL server name analogously.
-func serverName(f core.Finding) string {
+func serverName(f compliancekit.Finding) string {
 	if f.Resource.Name != "" {
 		return f.Resource.Name
 	}

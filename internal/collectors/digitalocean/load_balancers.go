@@ -6,7 +6,7 @@ import (
 
 	"github.com/digitalocean/godo"
 
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // LoadBalancerType is the resource type for DO Load Balancers.
@@ -14,8 +14,8 @@ const LoadBalancerType = "digitalocean.load_balancer"
 
 // collectLoadBalancers enumerates every Load Balancer in the
 // authenticated account with its forwarding rules + health check.
-func (c *Collector) collectLoadBalancers(ctx context.Context) ([]core.Resource, error) {
-	out := []core.Resource{}
+func (c *Collector) collectLoadBalancers(ctx context.Context) ([]compliancekit.Resource, error) {
+	out := []compliancekit.Resource{}
 	opt := &godo.ListOptions{PerPage: pageSize}
 	for {
 		if err := ctx.Err(); err != nil {
@@ -40,7 +40,7 @@ func (c *Collector) collectLoadBalancers(ctx context.Context) ([]core.Resource, 
 	return out, nil
 }
 
-func (c *Collector) loadBalancerResource(lb *godo.LoadBalancer) core.Resource {
+func (c *Collector) loadBalancerResource(lb *godo.LoadBalancer) compliancekit.Resource {
 	region := ""
 	if lb.Region != nil {
 		region = lb.Region.Slug
@@ -66,7 +66,7 @@ func (c *Collector) loadBalancerResource(lb *godo.LoadBalancer) core.Resource {
 	}
 
 	dropletIDs := append([]int(nil), lb.DropletIDs...)
-	r := core.Resource{
+	r := compliancekit.Resource{
 		ID:       fmt.Sprintf("%s.%s", LoadBalancerType, lb.ID),
 		Type:     LoadBalancerType,
 		Name:     lb.Name,

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.21 phase 10 — shared kubectl parity backfill helper.
@@ -87,9 +87,9 @@ func riskForBackfilledID(checkID string) remediate.RiskClass {
 func registerBackfillIDs(ids ...string) {
 	for _, id := range ids {
 		id := id
-		register("kubectl-backfill-"+id, []string{id}, func(_ core.Finding) (remediate.Snippet, error) {
+		register("kubectl-backfill-"+id, []string{id}, func(_ compliancekit.Finding) (remediate.Snippet, error) {
 			remediation := ""
-			if check, ok := core.LookupCheck(id); ok {
+			if check, ok := compliancekit.LookupCheck(id); ok {
 				remediation = check.Remediation
 			}
 			if remediation == "" {

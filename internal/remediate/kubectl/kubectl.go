@@ -34,13 +34,13 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate"
 	"github.com/darpanzope/compliancekit/internal/remediate/render"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // strategyFunc is the common shape of every renderer in this package.
-type strategyFunc func(core.Finding) (remediate.Snippet, error)
+type strategyFunc func(compliancekit.Finding) (remediate.Snippet, error)
 
 type strategy struct {
 	name string
@@ -51,7 +51,7 @@ type strategy struct {
 func (s *strategy) Name() string                { return s.name }
 func (s *strategy) CheckIDs() []string          { return s.ids }
 func (s *strategy) Formats() []remediate.Format { return []remediate.Format{remediate.FormatKubectl} }
-func (s *strategy) Render(f core.Finding, format remediate.Format) (remediate.Snippet, error) {
+func (s *strategy) Render(f compliancekit.Finding, format remediate.Format) (remediate.Snippet, error) {
 	if format != remediate.FormatKubectl {
 		return remediate.Snippet{}, remediate.ErrFormatUnsupported
 	}
@@ -75,7 +75,7 @@ const defaultNamespace = "default"
 // Returns ("Deployment", "default", "my-app") for a typical input.
 // Falls back to sensible defaults when fields are missing so a
 // strategy never panics on malformed input.
-func workloadFromResource(f core.Finding) (kind, namespace, name string) {
+func workloadFromResource(f compliancekit.Finding) (kind, namespace, name string) {
 	kind = "Deployment"
 	if t := f.Resource.Type; strings.HasPrefix(t, "k8s.") {
 		kind = capitalize(strings.TrimPrefix(t, "k8s."))

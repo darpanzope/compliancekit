@@ -15,7 +15,7 @@
 package cloudcommon
 
 import (
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // Account-attribution attribute keys. Set these on every cloud
@@ -49,7 +49,7 @@ type ResourceCoord struct {
 // strings are skipped so a collector that does not know one or both
 // fields (e.g. a per-region scan that hasn't resolved the account
 // yet) does not write empty values.
-func Stamp(r *core.Resource, coord ResourceCoord) {
+func Stamp(r *compliancekit.Resource, coord ResourceCoord) {
 	if r.Attributes == nil {
 		r.Attributes = map[string]any{}
 	}
@@ -68,7 +68,7 @@ func Stamp(r *core.Resource, coord ResourceCoord) {
 // zero-valued ResourceCoord if either attribute is absent. The check
 // renderer + evidence-pack writer use this to populate the
 // control-mapping.csv account_id / region columns.
-func CoordOf(r core.Resource) ResourceCoord {
+func CoordOf(r compliancekit.Resource) ResourceCoord {
 	c := ResourceCoord{Region: r.Region}
 	if c.Region == "" {
 		if s, ok := r.Attributes[AttrRegion].(string); ok {

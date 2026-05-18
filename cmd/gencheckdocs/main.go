@@ -40,8 +40,8 @@ import (
 	_ "github.com/darpanzope/compliancekit/internal/checks/k8s"
 	_ "github.com/darpanzope/compliancekit/internal/checks/linux"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/frameworks"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 func main() {
@@ -69,7 +69,7 @@ func main() {
 			fmt.Fprintf(os.Stderr, "gencheckdocs: %s is stale; run 'make docs'\n", *outPath)
 			os.Exit(1)
 		}
-		fmt.Printf("gencheckdocs: %s is up to date (%d checks)\n", *outPath, len(core.DefaultRegistry().Checks()))
+		fmt.Printf("gencheckdocs: %s is up to date (%d checks)\n", *outPath, len(compliancekit.DefaultRegistry().Checks()))
 		return
 	}
 
@@ -77,7 +77,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "gencheckdocs: write %s: %v\n", *outPath, err)
 		os.Exit(1)
 	}
-	fmt.Printf("gencheckdocs: wrote %s (%d checks)\n", *outPath, len(core.DefaultRegistry().Checks()))
+	fmt.Printf("gencheckdocs: wrote %s (%d checks)\n", *outPath, len(compliancekit.DefaultRegistry().Checks()))
 }
 
 // renderCatalogue assembles the entire docs/checks.md body. Determinism
@@ -88,7 +88,7 @@ func main() {
 // "generated at" comment is the only timestamp and it is in the
 // header banner only).
 func renderCatalogue() ([]byte, error) {
-	checks := core.DefaultRegistry().Checks()
+	checks := compliancekit.DefaultRegistry().Checks()
 	if len(checks) == 0 {
 		return nil, fmt.Errorf("registry is empty -- side-effect imports missing")
 	}
@@ -107,7 +107,7 @@ func writeHeader(b *bytes.Buffer, total int) {
 	fmt.Fprintln(b, "<!--")
 	fmt.Fprintln(b, "  AUTO-GENERATED FILE -- DO NOT EDIT BY HAND.")
 	fmt.Fprintln(b, "  Regenerate with: make docs")
-	fmt.Fprintln(b, "  Source of truth: internal/checks/**/*.go (the core.Check vars).")
+	fmt.Fprintln(b, "  Source of truth: internal/checks/**/*.go (the compliancekit.Check vars).")
 	fmt.Fprintln(b, "-->")
 	fmt.Fprintln(b)
 	fmt.Fprintf(b, "This catalog is generated from the live registry on each release. "+
@@ -125,7 +125,7 @@ func writeHeader(b *bytes.Buffer, total int) {
 	fmt.Fprintln(b)
 }
 
-func writeCountsByProvider(b *bytes.Buffer, checks []core.Check) {
+func writeCountsByProvider(b *bytes.Buffer, checks []compliancekit.Check) {
 	counts := map[string]int{}
 	for _, c := range checks {
 		counts[c.Provider]++
@@ -143,7 +143,7 @@ func writeCountsByProvider(b *bytes.Buffer, checks []core.Check) {
 	fmt.Fprintln(b)
 }
 
-func writeCountsBySeverity(b *bytes.Buffer, checks []core.Check) {
+func writeCountsBySeverity(b *bytes.Buffer, checks []compliancekit.Check) {
 	counts := map[string]int{}
 	for _, c := range checks {
 		counts[c.Severity.String()]++
@@ -162,8 +162,8 @@ func writeCountsBySeverity(b *bytes.Buffer, checks []core.Check) {
 	fmt.Fprintln(b)
 }
 
-func writeProviderSections(b *bytes.Buffer, checks []core.Check) {
-	byProvider := map[string][]core.Check{}
+func writeProviderSections(b *bytes.Buffer, checks []compliancekit.Check) {
+	byProvider := map[string][]compliancekit.Check{}
 	for _, c := range checks {
 		byProvider[c.Provider] = append(byProvider[c.Provider], c)
 	}
@@ -178,7 +178,7 @@ func writeProviderSections(b *bytes.Buffer, checks []core.Check) {
 	}
 }
 
-func writeCheck(b *bytes.Buffer, c core.Check) {
+func writeCheck(b *bytes.Buffer, c compliancekit.Check) {
 	fmt.Fprintf(b, "### `%s`\n\n", c.ID)
 	fmt.Fprintf(b, "**%s** &middot; severity `%s` &middot; service `%s` &middot; resource `%s`\n\n",
 		c.Title, c.Severity, c.Service, c.ResourceType)

@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // FunctionsNamespaceType is the resource type for DO Functions
@@ -13,12 +13,12 @@ import (
 // key counts.
 const FunctionsNamespaceType = "digitalocean.functions_namespace"
 
-func (c *Collector) collectFunctions(ctx context.Context) ([]core.Resource, error) {
+func (c *Collector) collectFunctions(ctx context.Context) ([]compliancekit.Resource, error) {
 	namespaces, _, err := c.client.Functions.ListNamespaces(ctx)
 	if err != nil {
 		return nil, err
 	}
-	out := []core.Resource{}
+	out := []compliancekit.Resource{}
 	for _, ns := range namespaces {
 		// best-effort trigger + key counts
 		triggers, _, _ := c.client.Functions.ListTriggers(ctx, ns.Namespace)
@@ -35,7 +35,7 @@ func (c *Collector) collectFunctions(ctx context.Context) ([]core.Resource, erro
 			}
 		}
 
-		r := core.Resource{
+		r := compliancekit.Resource{
 			ID:       fmt.Sprintf("%s.%s", FunctionsNamespaceType, ns.UUID),
 			Type:     FunctionsNamespaceType,
 			Name:     ns.Label,

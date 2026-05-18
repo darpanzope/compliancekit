@@ -3,8 +3,8 @@ package doctl
 import (
 	"fmt"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.19 phase 7 — doctl strategies for networking depth.
@@ -32,14 +32,14 @@ func init() {
 		[]string{"do-lb-ssl-cipher-floor"}, renderDoctlLBSSLCipher)
 }
 
-func doctlResName(f core.Finding, fallback string) string {
+func doctlResName(f compliancekit.Finding, fallback string) string {
 	if f.Resource.Name != "" {
 		return f.Resource.Name
 	}
 	return fallback
 }
 
-func renderDoctlFWInboundDupes(f core.Finding) (remediate.Snippet, error) {
+func renderDoctlFWInboundDupes(f compliancekit.Finding) (remediate.Snippet, error) {
 	id := doctlResName(f, "FW_ID")
 	body := fmt.Sprintf(`# Audit + dedupe inbound rules. doctl shows each rule as its own line.
 doctl compute firewall get %s --format InboundRules
@@ -52,7 +52,7 @@ doctl compute firewall get %s --format InboundRules
 	}, nil
 }
 
-func renderDoctlFWOutbound(f core.Finding) (remediate.Snippet, error) {
+func renderDoctlFWOutbound(f compliancekit.Finding) (remediate.Snippet, error) {
 	id := doctlResName(f, "FW_ID")
 	body := fmt.Sprintf(`doctl compute firewall add-rules %s \
   --outbound-rules "protocol:tcp,ports:443,address:0.0.0.0/0" \
@@ -64,7 +64,7 @@ func renderDoctlFWOutbound(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderDoctlFWICMP(f core.Finding) (remediate.Snippet, error) {
+func renderDoctlFWICMP(f compliancekit.Finding) (remediate.Snippet, error) {
 	id := doctlResName(f, "FW_ID")
 	body := fmt.Sprintf(`# Remove the wide rule + add a tight one.
 doctl compute firewall remove-rules %s --inbound-rules "protocol:icmp,address:0.0.0.0/0"
@@ -74,7 +74,7 @@ doctl compute firewall add-rules    %s --inbound-rules "protocol:icmp,address:10
 	}, nil
 }
 
-func renderDoctlFWEmptyTag(f core.Finding) (remediate.Snippet, error) {
+func renderDoctlFWEmptyTag(f compliancekit.Finding) (remediate.Snippet, error) {
 	id := doctlResName(f, "FW_ID")
 	body := fmt.Sprintf(`# 1. List rules + their tag sources.
 doctl compute firewall get %s --format InboundRules
@@ -86,7 +86,7 @@ doctl compute firewall get %s --format InboundRules
 	}, nil
 }
 
-func renderDoctlVPCPeering(f core.Finding) (remediate.Snippet, error) {
+func renderDoctlVPCPeering(f compliancekit.Finding) (remediate.Snippet, error) {
 	id := doctlResName(f, "PEERING_ID")
 	body := fmt.Sprintf(`# Cross-region peering is unsupported; delete the record.
 doctl vpcs peerings delete %s --force
@@ -97,7 +97,7 @@ doctl vpcs peerings delete %s --force
 	}, nil
 }
 
-func renderDoctlReservedIP(f core.Finding) (remediate.Snippet, error) {
+func renderDoctlReservedIP(f compliancekit.Finding) (remediate.Snippet, error) {
 	ip := doctlResName(f, "RESERVED_IP")
 	body := fmt.Sprintf(`# Recreate the reserved IP with an explicit region.
 doctl compute reserved-ip delete %s --force
@@ -107,7 +107,7 @@ doctl compute reserved-ip create --region nyc3`, ip)
 	}, nil
 }
 
-func renderDoctlLBTLSPassthrough(f core.Finding) (remediate.Snippet, error) {
+func renderDoctlLBTLSPassthrough(f compliancekit.Finding) (remediate.Snippet, error) {
 	id := doctlResName(f, "LB_ID")
 	body := fmt.Sprintf(`# Inspect current forwarding rules.
 doctl compute load-balancer get %s --format ForwardingRules
@@ -120,14 +120,14 @@ doctl compute load-balancer get %s --format ForwardingRules
 	}, nil
 }
 
-func renderDoctlLBStickyCookie(_ core.Finding) (remediate.Snippet, error) {
+func renderDoctlLBStickyCookie(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return renderDoctlManualOnly(
 		"LB sticky cookie flags",
 		"https://docs.digitalocean.com/products/networking/load-balancers/",
 		"`curl -sI https://<lb-host>/` + inspect Set-Cookie flags; if non-compliant, move stickiness to the app layer")
 }
 
-func renderDoctlLBProxyProtocol(f core.Finding) (remediate.Snippet, error) {
+func renderDoctlLBProxyProtocol(f compliancekit.Finding) (remediate.Snippet, error) {
 	id := doctlResName(f, "LB_ID")
 	body := fmt.Sprintf(`# Check the LB's proxy_protocol setting.
 doctl compute load-balancer get %s --format EnableProxyProtocol
@@ -139,7 +139,7 @@ doctl compute load-balancer get %s --format EnableProxyProtocol
 	}, nil
 }
 
-func renderDoctlLBSSLCipher(_ core.Finding) (remediate.Snippet, error) {
+func renderDoctlLBSSLCipher(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return renderDoctlManualOnly(
 		"LB TLS cipher / protocol audit",
 		"https://www.ssllabs.com/ssltest/",

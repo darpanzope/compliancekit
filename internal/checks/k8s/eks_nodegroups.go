@@ -6,15 +6,15 @@ import (
 	"strings"
 
 	awscol "github.com/darpanzope/compliancekit/internal/collectors/aws"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.22 phase 4 — EKS NodeGroup checks split out of eks.go.
 
-var CheckEKSNGAmiType = core.Check{
+var CheckEKSNGAmiType = compliancekit.Check{
 	ID:           "k8s-eks-nodegroup-bottlerocket",
 	Title:        "EKS node groups should use Bottlerocket or AL2023",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "kubernetes",
 	Service:      "eks",
 	ResourceType: awscol.EKSNodegroupType,
@@ -34,21 +34,21 @@ var CheckEKSNGAmiType = core.Check{
 	Scanner: "eks.NGAmiType",
 }
 
-func EKSNGAmiType(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func EKSNGAmiType(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, ng := range g.ByType(awscol.EKSNodegroupType) {
 		ami, _ := ng.Attributes["ami_type"].(string)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckEKSNGAmiType.ID,
 			Severity: CheckEKSNGAmiType.Severity,
 			Resource: ng.Ref(),
 			Tags:     CheckEKSNGAmiType.Tags,
 		}
 		if strings.HasPrefix(ami, "BOTTLEROCKET_") || strings.HasPrefix(ami, "AL2023_") {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("nodegroup %q: amiType=%s", ng.Name, ami)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("nodegroup %q: amiType=%s (consider Bottlerocket or AL2023)", ng.Name, ami)
 		}
 		findings = append(findings, f)
@@ -58,10 +58,10 @@ func EKSNGAmiType(_ context.Context, g *core.ResourceGraph) ([]core.Finding, err
 
 // ----- Nodegroup remote SSH access ------------------------------
 
-var CheckEKSNGSSH = core.Check{
+var CheckEKSNGSSH = compliancekit.Check{
 	ID:           "k8s-eks-nodegroup-ssh",
 	Title:        "EKS node groups should not enable SSH remote access",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "kubernetes",
 	Service:      "eks",
 	ResourceType: awscol.EKSNodegroupType,
@@ -81,21 +81,21 @@ var CheckEKSNGSSH = core.Check{
 	Scanner: "eks.NGSSH",
 }
 
-func EKSNGSSH(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func EKSNGSSH(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, ng := range g.ByType(awscol.EKSNodegroupType) {
 		ssh, _ := ng.Attributes["remote_access_ssh"].(bool)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckEKSNGSSH.ID,
 			Severity: CheckEKSNGSSH.Severity,
 			Resource: ng.Ref(),
 			Tags:     CheckEKSNGSSH.Tags,
 		}
 		if ssh {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("nodegroup %q: SSH remote access key configured", ng.Name)
 		} else {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("nodegroup %q: no SSH key", ng.Name)
 		}
 		findings = append(findings, f)
@@ -105,10 +105,10 @@ func EKSNGSSH(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) 
 
 // ----- Nodegroup version skew -----------------------------------
 
-var CheckEKSNGVersion = core.Check{
+var CheckEKSNGVersion = compliancekit.Check{
 	ID:           "k8s-eks-nodegroup-version-skew",
 	Title:        "EKS node group version should match the cluster version",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "kubernetes",
 	Service:      "eks",
 	ResourceType: awscol.EKSNodegroupType,
@@ -128,28 +128,28 @@ var CheckEKSNGVersion = core.Check{
 	Scanner: "eks.NGVersion",
 }
 
-func EKSNGVersion(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func EKSNGVersion(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	clusters := map[string]string{}
 	for _, c := range g.ByType(awscol.EKSClusterType) {
 		v, _ := c.Attributes["version"].(string)
 		clusters[c.Name] = v
 	}
-	findings := []core.Finding{}
+	findings := []compliancekit.Finding{}
 	for _, ng := range g.ByType(awscol.EKSNodegroupType) {
 		clusterName, _ := ng.Attributes["cluster_name"].(string)
 		ngVer, _ := ng.Attributes["version"].(string)
 		clusterVer := clusters[clusterName]
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckEKSNGVersion.ID,
 			Severity: CheckEKSNGVersion.Severity,
 			Resource: ng.Ref(),
 			Tags:     CheckEKSNGVersion.Tags,
 		}
 		if clusterVer == "" || ngVer == clusterVer {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("nodegroup %q: version=%s (cluster %s)", ng.Name, ngVer, clusterVer)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("nodegroup %q: version=%s vs cluster %s", ng.Name, ngVer, clusterVer)
 		}
 		findings = append(findings, f)
@@ -159,10 +159,10 @@ func EKSNGVersion(_ context.Context, g *core.ResourceGraph) ([]core.Finding, err
 
 // ----- Nodegroup launch template ---------------------------------
 
-var CheckEKSNGLaunchTemplate = core.Check{
+var CheckEKSNGLaunchTemplate = compliancekit.Check{
 	ID:           "k8s-eks-nodegroup-launch-template",
 	Title:        "EKS node groups should use a launch template",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "kubernetes",
 	Service:      "eks",
 	ResourceType: awscol.EKSNodegroupType,
@@ -183,21 +183,21 @@ var CheckEKSNGLaunchTemplate = core.Check{
 	Scanner: "eks.NGLaunchTemplate",
 }
 
-func EKSNGLaunchTemplate(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func EKSNGLaunchTemplate(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, ng := range g.ByType(awscol.EKSNodegroupType) {
 		hasLT, _ := ng.Attributes["has_launch_template"].(bool)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckEKSNGLaunchTemplate.ID,
 			Severity: CheckEKSNGLaunchTemplate.Severity,
 			Resource: ng.Ref(),
 			Tags:     CheckEKSNGLaunchTemplate.Tags,
 		}
 		if hasLT {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("nodegroup %q: launch template attached", ng.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("nodegroup %q: no launch template (IMDS hop limit defaults to 2)", ng.Name)
 		}
 		findings = append(findings, f)
@@ -208,8 +208,8 @@ func EKSNGLaunchTemplate(_ context.Context, g *core.ResourceGraph) ([]core.Findi
 // ----- Cluster version supported --------------------------------
 
 func init() {
-	core.Register(CheckEKSNGAmiType, EKSNGAmiType)
-	core.Register(CheckEKSNGSSH, EKSNGSSH)
-	core.Register(CheckEKSNGVersion, EKSNGVersion)
-	core.Register(CheckEKSNGLaunchTemplate, EKSNGLaunchTemplate)
+	compliancekit.Register(CheckEKSNGAmiType, EKSNGAmiType)
+	compliancekit.Register(CheckEKSNGSSH, EKSNGSSH)
+	compliancekit.Register(CheckEKSNGVersion, EKSNGVersion)
+	compliancekit.Register(CheckEKSNGLaunchTemplate, EKSNGLaunchTemplate)
 }

@@ -8,7 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/rds"
 
 	"github.com/darpanzope/compliancekit/internal/collectors/cloudcommon"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // RDSInstanceType is the resource type for RDS DB instances.
@@ -19,7 +19,7 @@ type rdsClient interface {
 	DescribeDBInstances(ctx context.Context, in *rds.DescribeDBInstancesInput, opts ...func(*rds.Options)) (*rds.DescribeDBInstancesOutput, error)
 }
 
-func (c *Collector) collectRDS(ctx context.Context, regions []string, out []core.Resource) []core.Resource {
+func (c *Collector) collectRDS(ctx context.Context, regions []string, out []compliancekit.Resource) []compliancekit.Resource {
 	for _, region := range regions {
 		cfg := c.cfg
 		cfg.Region = region
@@ -33,7 +33,7 @@ func (c *Collector) collectRDS(ctx context.Context, regions []string, out []core
 	return out
 }
 
-func (c *Collector) collectRDSWithClient(ctx context.Context, client rdsClient, region string, out []core.Resource) ([]core.Resource, error) {
+func (c *Collector) collectRDSWithClient(ctx context.Context, client rdsClient, region string, out []compliancekit.Resource) ([]compliancekit.Resource, error) {
 	var marker *string
 	for {
 		page, err := client.DescribeDBInstances(ctx, &rds.DescribeDBInstancesInput{Marker: marker})
@@ -42,7 +42,7 @@ func (c *Collector) collectRDSWithClient(ctx context.Context, client rdsClient, 
 		}
 		for _, db := range page.DBInstances {
 			id := awssdk.ToString(db.DBInstanceIdentifier)
-			r := core.Resource{
+			r := compliancekit.Resource{
 				ID:       fmt.Sprintf("aws.rds.instance.%s.%s", region, id),
 				Type:     RDSInstanceType,
 				Name:     id,

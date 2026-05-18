@@ -1,6 +1,6 @@
 // Package aws holds the AWS check implementations.
 //
-// Each check is a core.Check metadata value plus a core.CheckFunc
+// Each check is a compliancekit.Check metadata value plus a compliancekit.CheckFunc
 // that queries the ResourceGraph (which the AWS collector populated)
 // and emits Findings.
 //
@@ -17,7 +17,7 @@ import (
 	"time"
 
 	awscol "github.com/darpanzope/compliancekit/internal/collectors/aws"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // ========================================================================
@@ -27,10 +27,10 @@ import (
 // CheckRootAccessKey requires the AWS root account to have NO access
 // keys. CIS AWS Foundations Benchmark 1.4. Critical: a leaked root
 // key compromises everything below it.
-var CheckRootAccessKey = core.Check{
+var CheckRootAccessKey = compliancekit.Check{
 	ID:           "aws-iam-root-access-key",
 	Title:        "AWS root account must have no access keys",
-	Severity:     core.SeverityCritical,
+	Severity:     compliancekit.SeverityCritical,
 	Provider:     "aws",
 	Service:      "iam",
 	ResourceType: awscol.AccountType,
@@ -51,21 +51,21 @@ var CheckRootAccessKey = core.Check{
 	Scanner: "iam.RootAccessKey",
 }
 
-func RootAccessKey(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func RootAccessKey(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, acct := range g.ByType(awscol.AccountType) {
 		present, _ := acct.Attributes["root_has_access_keys"].(bool)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckRootAccessKey.ID,
 			Severity: CheckRootAccessKey.Severity,
 			Resource: acct.Ref(),
 			Tags:     CheckRootAccessKey.Tags,
 		}
 		if present {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("account %q: root access keys present", acct.Name)
 		} else {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("account %q: no root access keys", acct.Name)
 		}
 		findings = append(findings, f)
@@ -74,10 +74,10 @@ func RootAccessKey(_ context.Context, g *core.ResourceGraph) ([]core.Finding, er
 }
 
 // CheckRootMFA requires MFA on the root account. CIS 1.5. High.
-var CheckRootMFA = core.Check{
+var CheckRootMFA = compliancekit.Check{
 	ID:           "aws-iam-root-mfa",
 	Title:        "AWS root account must have MFA enabled",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "aws",
 	Service:      "iam",
 	ResourceType: awscol.AccountType,
@@ -97,21 +97,21 @@ var CheckRootMFA = core.Check{
 	Scanner: "iam.RootMFA",
 }
 
-func RootMFA(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func RootMFA(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, acct := range g.ByType(awscol.AccountType) {
 		enabled, _ := acct.Attributes["root_mfa_enabled"].(bool)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckRootMFA.ID,
 			Severity: CheckRootMFA.Severity,
 			Resource: acct.Ref(),
 			Tags:     CheckRootMFA.Tags,
 		}
 		if enabled {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("account %q: root MFA enabled", acct.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("account %q: root MFA not enabled", acct.Name)
 		}
 		findings = append(findings, f)
@@ -122,10 +122,10 @@ func RootMFA(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
 // CheckPasswordPolicy requires a password policy that meets CIS
 // thresholds (length >= 14, requires all character classes, etc.).
 // CIS 1.8.
-var CheckPasswordPolicy = core.Check{
+var CheckPasswordPolicy = compliancekit.Check{
 	ID:           "aws-iam-password-policy",
 	Title:        "AWS account must enforce a strong password policy",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "aws",
 	Service:      "iam",
 	ResourceType: awscol.AccountType,
@@ -148,35 +148,35 @@ var CheckPasswordPolicy = core.Check{
 	Scanner: "iam.PasswordPolicy",
 }
 
-func PasswordPolicy(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func PasswordPolicy(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, acct := range g.ByType(awscol.AccountType) {
 		raw, present := acct.Attributes["password_policy"]
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckPasswordPolicy.ID,
 			Severity: CheckPasswordPolicy.Severity,
 			Resource: acct.Ref(),
 			Tags:     CheckPasswordPolicy.Tags,
 		}
 		if !present || raw == nil {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("account %q: no password policy configured", acct.Name)
 			findings = append(findings, f)
 			continue
 		}
 		policy, ok := raw.(map[string]any)
 		if !ok {
-			f.Status = core.StatusError
+			f.Status = compliancekit.StatusError
 			f.Message = fmt.Sprintf("account %q: password_policy attribute has unexpected shape", acct.Name)
 			findings = append(findings, f)
 			continue
 		}
 		failures := evaluatePasswordPolicy(policy)
 		if len(failures) == 0 {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("account %q: password policy meets CIS thresholds", acct.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("account %q: password policy weak: %s",
 				acct.Name, strings.Join(failures, "; "))
 		}
@@ -221,10 +221,10 @@ const accessKeyMaxAge = 90 * 24 * time.Hour
 
 // CheckAccessKeyAge requires every IAM user's active access keys to
 // be younger than accessKeyMaxAge. CIS 1.14. High.
-var CheckAccessKeyAge = core.Check{
+var CheckAccessKeyAge = compliancekit.Check{
 	ID:           "aws-iam-access-key-age",
 	Title:        "IAM user access keys must be rotated within 90 days",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "aws",
 	Service:      "iam",
 	ResourceType: awscol.IAMUserType,
@@ -246,8 +246,8 @@ var CheckAccessKeyAge = core.Check{
 	Scanner: "iam.AccessKeyAge",
 }
 
-func AccessKeyAge(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func AccessKeyAge(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	now := time.Now().UTC()
 	for _, u := range g.ByType(awscol.IAMUserType) {
 		keys, _ := u.Attributes["access_keys"].([]map[string]any)
@@ -271,7 +271,7 @@ func AccessKeyAge(_ context.Context, g *core.ResourceGraph) ([]core.Finding, err
 					k["access_key_id"], int(age.Hours()/24)))
 			}
 		}
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckAccessKeyAge.ID,
 			Severity: CheckAccessKeyAge.Severity,
 			Resource: u.Ref(),
@@ -279,14 +279,14 @@ func AccessKeyAge(_ context.Context, g *core.ResourceGraph) ([]core.Finding, err
 		}
 		switch {
 		case oldest == 0:
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("user %q: no active access keys", u.Name)
 		case len(violators) == 0:
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("user %q: oldest active key is %d days old",
 				u.Name, int(oldest.Hours()/24))
 		default:
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("user %q: stale access keys: %s",
 				u.Name, strings.Join(violators, ", "))
 		}
@@ -300,10 +300,10 @@ func AccessKeyAge(_ context.Context, g *core.ResourceGraph) ([]core.Finding, err
 const unusedUserThreshold = 90 * 24 * time.Hour
 
 // CheckUnusedUsers flags IAM users with no console activity for 90+ days.
-var CheckUnusedUsers = core.Check{
+var CheckUnusedUsers = compliancekit.Check{
 	ID:           "aws-iam-unused-users",
 	Title:        "IAM users inactive for 90 days must be removed",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "aws",
 	Service:      "iam",
 	ResourceType: awscol.IAMUserType,
@@ -324,11 +324,11 @@ var CheckUnusedUsers = core.Check{
 	Scanner: "iam.UnusedUsers",
 }
 
-func UnusedUsers(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func UnusedUsers(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	now := time.Now().UTC()
 	for _, u := range g.ByType(awscol.IAMUserType) {
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckUnusedUsers.ID,
 			Severity: CheckUnusedUsers.Severity,
 			Resource: u.Ref(),
@@ -340,10 +340,10 @@ func UnusedUsers(_ context.Context, g *core.ResourceGraph) ([]core.Finding, erro
 			// pass (still in onboarding window); otherwise fail.
 			created, _ := u.Attributes["created_at"].(time.Time)
 			if now.Sub(created) <= unusedUserThreshold {
-				f.Status = core.StatusPass
+				f.Status = compliancekit.StatusPass
 				f.Message = fmt.Sprintf("user %q: new (no activity yet, within onboarding window)", u.Name)
 			} else {
-				f.Status = core.StatusFail
+				f.Status = compliancekit.StatusFail
 				f.Message = fmt.Sprintf("user %q: never used since creation %d days ago",
 					u.Name, int(now.Sub(created).Hours()/24))
 			}
@@ -352,10 +352,10 @@ func UnusedUsers(_ context.Context, g *core.ResourceGraph) ([]core.Finding, erro
 		}
 		idle := now.Sub(lastSeen)
 		if idle > unusedUserThreshold {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("user %q: idle for %d days", u.Name, int(idle.Hours()/24))
 		} else {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("user %q: active within last %d days", u.Name, int(idle.Hours()/24))
 		}
 		findings = append(findings, f)
@@ -367,7 +367,7 @@ func UnusedUsers(_ context.Context, g *core.ResourceGraph) ([]core.Finding, erro
 // any active access key creation timestamp. The credential report
 // has finer-grained per-key last-used, but our collector doesn't
 // fetch that yet -- creation date is a conservative proxy.
-func mostRecentActivity(u core.Resource, now time.Time) time.Time {
+func mostRecentActivity(u compliancekit.Resource, now time.Time) time.Time {
 	out := time.Time{}
 	if t, _ := u.Attributes["password_last_used"].(time.Time); !t.IsZero() {
 		out = t
@@ -392,10 +392,10 @@ func mostRecentActivity(u core.Resource, now time.Time) time.Time {
 // and roles, not users." Direct user-attached policies are an
 // audit nightmare because permissions scatter across user accounts
 // instead of consolidating in groups/roles. CIS 1.16.
-var CheckNoUserManagedPolicies = core.Check{
+var CheckNoUserManagedPolicies = compliancekit.Check{
 	ID:           "aws-iam-no-user-managed-policies",
 	Title:        "IAM policies must attach to groups or roles, not users",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "aws",
 	Service:      "iam",
 	ResourceType: awscol.IAMUserType,
@@ -418,21 +418,21 @@ var CheckNoUserManagedPolicies = core.Check{
 	Scanner: "iam.NoUserManagedPolicies",
 }
 
-func NoUserManagedPolicies(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func NoUserManagedPolicies(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, u := range g.ByType(awscol.IAMUserType) {
 		attached, _ := u.Attributes["attached_managed_policies"].([]string)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckNoUserManagedPolicies.ID,
 			Severity: CheckNoUserManagedPolicies.Severity,
 			Resource: u.Ref(),
 			Tags:     CheckNoUserManagedPolicies.Tags,
 		}
 		if len(attached) == 0 {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("user %q: no managed policies attached directly", u.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("user %q: %d managed policies attached directly: %s",
 				u.Name, len(attached), strings.Join(shortenARNs(attached), ", "))
 		}
@@ -457,12 +457,12 @@ func shortenARNs(arns []string) []string {
 }
 
 func init() {
-	core.Register(CheckRootAccessKey, RootAccessKey)
-	core.Register(CheckRootMFA, RootMFA)
-	core.Register(CheckPasswordPolicy, PasswordPolicy)
-	core.Register(CheckAccessKeyAge, AccessKeyAge)
-	core.Register(CheckUnusedUsers, UnusedUsers)
-	core.Register(CheckNoUserManagedPolicies, NoUserManagedPolicies)
+	compliancekit.Register(CheckRootAccessKey, RootAccessKey)
+	compliancekit.Register(CheckRootMFA, RootMFA)
+	compliancekit.Register(CheckPasswordPolicy, PasswordPolicy)
+	compliancekit.Register(CheckAccessKeyAge, AccessKeyAge)
+	compliancekit.Register(CheckUnusedUsers, UnusedUsers)
+	compliancekit.Register(CheckNoUserManagedPolicies, NoUserManagedPolicies)
 	// v0.22 phase 4 — ConsoleUserMFA + NoStarInlinePolicies moved to
 	// iam_policies.go.
 }

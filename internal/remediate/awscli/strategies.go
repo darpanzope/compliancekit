@@ -3,9 +3,9 @@ package awscli
 import (
 	"fmt"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate"
 	"github.com/darpanzope/compliancekit/internal/remediate/render"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 func init() {
@@ -69,7 +69,7 @@ func init() {
 
 // --- S3 ----------------------------------------------------------------
 
-func renderS3PublicAccessBlock(f core.Finding) (remediate.Snippet, error) {
+func renderS3PublicAccessBlock(f compliancekit.Finding) (remediate.Snippet, error) {
 	bucket := bucketName(f)
 	cmd := fmt.Sprintf(
 		`aws s3api put-public-access-block --bucket %s \
@@ -84,7 +84,7 @@ func renderS3PublicAccessBlock(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderS3Encryption(f core.Finding) (remediate.Snippet, error) {
+func renderS3Encryption(f compliancekit.Finding) (remediate.Snippet, error) {
 	bucket := bucketName(f)
 	cmd := fmt.Sprintf(
 		`aws s3api put-bucket-encryption --bucket %s \
@@ -97,7 +97,7 @@ func renderS3Encryption(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderS3Versioning(f core.Finding) (remediate.Snippet, error) {
+func renderS3Versioning(f compliancekit.Finding) (remediate.Snippet, error) {
 	bucket := bucketName(f)
 	cmd := fmt.Sprintf(
 		"aws s3api put-bucket-versioning --bucket %s --versioning-configuration Status=Enabled",
@@ -109,7 +109,7 @@ func renderS3Versioning(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderS3PrivateACL(f core.Finding) (remediate.Snippet, error) {
+func renderS3PrivateACL(f compliancekit.Finding) (remediate.Snippet, error) {
 	bucket := bucketName(f)
 	cmd := fmt.Sprintf("aws s3api put-bucket-acl --bucket %s --acl private", render.ShellQuote(bucket))
 	return remediate.Snippet{
@@ -122,7 +122,7 @@ func renderS3PrivateACL(f core.Finding) (remediate.Snippet, error) {
 
 // --- IAM ---------------------------------------------------------------
 
-func renderIAMPasswordPolicy(_ core.Finding) (remediate.Snippet, error) {
+func renderIAMPasswordPolicy(_ compliancekit.Finding) (remediate.Snippet, error) {
 	cmd := `aws iam update-account-password-policy \
   --minimum-password-length 14 \
   --require-symbols --require-numbers --require-uppercase-characters --require-lowercase-characters \
@@ -136,7 +136,7 @@ func renderIAMPasswordPolicy(_ core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderIAMRootManual(f core.Finding) (remediate.Snippet, error) {
+func renderIAMRootManual(f compliancekit.Finding) (remediate.Snippet, error) {
 	return remediate.Snippet{
 		Risk: remediate.RiskManual, Idempotent: false,
 		Content: "# Manual remediation required — root credentials are managed through the AWS console, not the CLI.\n",
@@ -146,7 +146,7 @@ func renderIAMRootManual(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderIAMUnusedUserManual(f core.Finding) (remediate.Snippet, error) {
+func renderIAMUnusedUserManual(f compliancekit.Finding) (remediate.Snippet, error) {
 	user := f.Resource.Name
 	if user == "" {
 		user = "REPLACE_WITH_USERNAME"
@@ -164,7 +164,7 @@ func renderIAMUnusedUserManual(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderIAMAccessKeyAge(f core.Finding) (remediate.Snippet, error) {
+func renderIAMAccessKeyAge(f compliancekit.Finding) (remediate.Snippet, error) {
 	user := f.Resource.Name
 	return remediate.Snippet{
 		Risk: remediate.RiskManual, Idempotent: false,
@@ -180,7 +180,7 @@ func renderIAMAccessKeyAge(f core.Finding) (remediate.Snippet, error) {
 
 // --- CloudTrail --------------------------------------------------------
 
-func renderCloudTrailUpdate(f core.Finding) (remediate.Snippet, error) {
+func renderCloudTrailUpdate(f compliancekit.Finding) (remediate.Snippet, error) {
 	name := f.Resource.Name
 	if name == "" {
 		name = "audit"
@@ -198,7 +198,7 @@ aws cloudtrail start-logging --name %s`,
 
 // --- EC2 ---------------------------------------------------------------
 
-func renderEBSEncryptionDefault(f core.Finding) (remediate.Snippet, error) {
+func renderEBSEncryptionDefault(f compliancekit.Finding) (remediate.Snippet, error) {
 	region := regionOf(f)
 	cmd := fmt.Sprintf("aws ec2 enable-ebs-encryption-by-default --region %s", render.ShellQuote(region))
 	return remediate.Snippet{
@@ -209,7 +209,7 @@ func renderEBSEncryptionDefault(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderIMDSv2(f core.Finding) (remediate.Snippet, error) {
+func renderIMDSv2(f compliancekit.Finding) (remediate.Snippet, error) {
 	id := f.Resource.Name
 	if id == "" {
 		id = "i-EXAMPLE"
@@ -224,7 +224,7 @@ func renderIMDSv2(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderSGRevokeOpenIngress(f core.Finding) (remediate.Snippet, error) {
+func renderSGRevokeOpenIngress(f compliancekit.Finding) (remediate.Snippet, error) {
 	sgID := f.Resource.Name
 	if sgID == "" {
 		sgID = "sg-EXAMPLE"
@@ -245,7 +245,7 @@ aws ec2 describe-security-groups --group-ids %s --query 'SecurityGroups[].IpPerm
 
 // --- RDS ---------------------------------------------------------------
 
-func renderRDSDeletionProtection(f core.Finding) (remediate.Snippet, error) {
+func renderRDSDeletionProtection(f compliancekit.Finding) (remediate.Snippet, error) {
 	id := dbIdentifier(f)
 	cmd := fmt.Sprintf(
 		"aws rds modify-db-instance --db-instance-identifier %s --deletion-protection --apply-immediately",
@@ -260,7 +260,7 @@ func renderRDSDeletionProtection(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderRDSBackupRetention(f core.Finding) (remediate.Snippet, error) {
+func renderRDSBackupRetention(f compliancekit.Finding) (remediate.Snippet, error) {
 	id := dbIdentifier(f)
 	cmd := fmt.Sprintf(
 		"aws rds modify-db-instance --db-instance-identifier %s --backup-retention-period 7 --preferred-backup-window 03:00-04:00 --apply-immediately",
@@ -272,7 +272,7 @@ func renderRDSBackupRetention(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderRDSNotPublic(f core.Finding) (remediate.Snippet, error) {
+func renderRDSNotPublic(f compliancekit.Finding) (remediate.Snippet, error) {
 	id := dbIdentifier(f)
 	cmd := fmt.Sprintf(
 		"aws rds modify-db-instance --db-instance-identifier %s --no-publicly-accessible --apply-immediately",
@@ -284,7 +284,7 @@ func renderRDSNotPublic(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderRDSEncryptedManual(f core.Finding) (remediate.Snippet, error) {
+func renderRDSEncryptedManual(f compliancekit.Finding) (remediate.Snippet, error) {
 	id := dbIdentifier(f)
 	return remediate.Snippet{
 		Risk: remediate.RiskManual, Idempotent: false,
@@ -302,7 +302,7 @@ aws rds restore-db-instance-from-db-snapshot \
 
 // --- KMS ---------------------------------------------------------------
 
-func renderKMSRotation(f core.Finding) (remediate.Snippet, error) {
+func renderKMSRotation(f compliancekit.Finding) (remediate.Snippet, error) {
 	keyID := f.Resource.Name
 	if keyID == "" {
 		keyID = "alias/REPLACE_WITH_KEY"
@@ -318,7 +318,7 @@ func renderKMSRotation(f core.Finding) (remediate.Snippet, error) {
 
 // --- GuardDuty + Config -----------------------------------------------
 
-func renderGuardDuty(f core.Finding) (remediate.Snippet, error) {
+func renderGuardDuty(f compliancekit.Finding) (remediate.Snippet, error) {
 	region := regionOf(f)
 	cmd := fmt.Sprintf(
 		"aws guardduty create-detector --enable --finding-publishing-frequency FIFTEEN_MINUTES --region %s",
@@ -330,7 +330,7 @@ func renderGuardDuty(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderConfigRecorderManual(f core.Finding) (remediate.Snippet, error) {
+func renderConfigRecorderManual(f compliancekit.Finding) (remediate.Snippet, error) {
 	region := regionOf(f)
 	return remediate.Snippet{
 		Risk: remediate.RiskReview, Idempotent: false,
@@ -352,14 +352,14 @@ aws configservice start-configuration-recorder --configuration-recorder-name def
 
 // --- helpers ----------------------------------------------------------
 
-func bucketName(f core.Finding) string {
+func bucketName(f compliancekit.Finding) string {
 	if f.Resource.Name != "" {
 		return f.Resource.Name
 	}
 	return f.Resource.ID
 }
 
-func dbIdentifier(f core.Finding) string {
+func dbIdentifier(f compliancekit.Finding) string {
 	if f.Resource.Name != "" {
 		return f.Resource.Name
 	}

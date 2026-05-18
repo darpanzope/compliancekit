@@ -6,15 +6,15 @@ import (
 	"time"
 
 	docol "github.com/darpanzope/compliancekit/internal/collectors/digitalocean"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 const registryGCMaxAgeDays = 30
 
-var CheckRegistryGarbageCollection = core.Check{
+var CheckRegistryGarbageCollection = compliancekit.Check{
 	ID:           "do-registry-no-recent-gc",
 	Title:        "Container registries should run garbage collection regularly",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "digitalocean",
 	Service:      "registry",
 	ResourceType: docol.RegistryType,
@@ -36,11 +36,11 @@ var CheckRegistryGarbageCollection = core.Check{
 	Scanner: "registry.GC",
 }
 
-func RegistryGarbageCollection(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func RegistryGarbageCollection(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	threshold := time.Now().UTC().Add(-registryGCMaxAgeDays * 24 * time.Hour)
 	for _, r := range g.ByType(docol.RegistryType) {
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckRegistryGarbageCollection.ID,
 			Severity: CheckRegistryGarbageCollection.Severity,
 			Resource: r.Ref(),
@@ -50,14 +50,14 @@ func RegistryGarbageCollection(_ context.Context, g *core.ResourceGraph) ([]core
 		t, ok := raw.(time.Time)
 		switch {
 		case !ok || t.IsZero():
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("registry %q: no garbage-collection run on record", r.Name)
 		case t.Before(threshold):
 			days := int(time.Since(t).Hours() / 24)
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("registry %q: last GC %d days ago (> %d)", r.Name, days, registryGCMaxAgeDays)
 		default:
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("registry %q: last GC %s", r.Name, t.Format(time.RFC3339))
 		}
 		findings = append(findings, f)
@@ -65,10 +65,10 @@ func RegistryGarbageCollection(_ context.Context, g *core.ResourceGraph) ([]core
 	return findings, nil
 }
 
-var CheckRegistryHasRepositories = core.Check{
+var CheckRegistryHasRepositories = compliancekit.Check{
 	ID:           "do-registry-empty",
 	Title:        "Container registries should host at least one repository",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "digitalocean",
 	Service:      "registry",
 	ResourceType: docol.RegistryType,
@@ -87,21 +87,21 @@ var CheckRegistryHasRepositories = core.Check{
 	Scanner: "registry.HasRepositories",
 }
 
-func RegistryHasRepositories(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func RegistryHasRepositories(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, r := range g.ByType(docol.RegistryType) {
 		n, _ := r.Attributes["repository_count"].(int)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckRegistryHasRepositories.ID,
 			Severity: CheckRegistryHasRepositories.Severity,
 			Resource: r.Ref(),
 			Tags:     CheckRegistryHasRepositories.Tags,
 		}
 		if n > 0 {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("registry %q: %d repository/repositories", r.Name, n)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("registry %q: empty", r.Name)
 		}
 		findings = append(findings, f)
@@ -109,10 +109,10 @@ func RegistryHasRepositories(_ context.Context, g *core.ResourceGraph) ([]core.F
 	return findings, nil
 }
 
-var CheckRegistryNotStarterTier = core.Check{
+var CheckRegistryNotStarterTier = compliancekit.Check{
 	ID:           "do-registry-starter-tier",
 	Title:        "Production container registries should not run on the Starter tier",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "digitalocean",
 	Service:      "registry",
 	ResourceType: docol.RegistryType,
@@ -133,21 +133,21 @@ var CheckRegistryNotStarterTier = core.Check{
 	Scanner: "registry.NotStarterTier",
 }
 
-func RegistryNotStarterTier(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func RegistryNotStarterTier(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, r := range g.ByType(docol.RegistryType) {
 		tier, _ := r.Attributes["subscription_tier"].(string)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckRegistryNotStarterTier.ID,
 			Severity: CheckRegistryNotStarterTier.Severity,
 			Resource: r.Ref(),
 			Tags:     CheckRegistryNotStarterTier.Tags,
 		}
 		if tier == "starter" {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("registry %q: on Starter tier (500MB limit)", r.Name)
 		} else {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("registry %q: tier=%q", r.Name, tier)
 		}
 		findings = append(findings, f)
@@ -156,7 +156,7 @@ func RegistryNotStarterTier(_ context.Context, g *core.ResourceGraph) ([]core.Fi
 }
 
 func init() {
-	core.Register(CheckRegistryGarbageCollection, RegistryGarbageCollection)
-	core.Register(CheckRegistryHasRepositories, RegistryHasRepositories)
-	core.Register(CheckRegistryNotStarterTier, RegistryNotStarterTier)
+	compliancekit.Register(CheckRegistryGarbageCollection, RegistryGarbageCollection)
+	compliancekit.Register(CheckRegistryHasRepositories, RegistryHasRepositories)
+	compliancekit.Register(CheckRegistryNotStarterTier, RegistryNotStarterTier)
 }

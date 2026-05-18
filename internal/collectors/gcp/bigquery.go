@@ -7,7 +7,7 @@ import (
 	bigquery "google.golang.org/api/bigquery/v2"
 
 	"github.com/darpanzope/compliancekit/internal/collectors/cloudcommon"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // BigQueryDatasetType holds BigQuery datasets. One resource per
@@ -20,7 +20,7 @@ const BigQueryDatasetType = "gcp.bigquery.dataset"
 // errors emit a placeholder and continue. Per-dataset Get failures
 // are captured as a collect_error attribute on the listed
 // dataset rather than aborting the whole project.
-func (c *Collector) collectBigQuery(ctx context.Context, out []core.Resource) []core.Resource {
+func (c *Collector) collectBigQuery(ctx context.Context, out []compliancekit.Resource) []compliancekit.Resource {
 	for _, projectID := range c.projects {
 		updated, err := c.collectBigQueryForProject(ctx, projectID, out)
 		if err != nil {
@@ -32,7 +32,7 @@ func (c *Collector) collectBigQuery(ctx context.Context, out []core.Resource) []
 	return out
 }
 
-func (c *Collector) collectBigQueryForProject(ctx context.Context, projectID string, out []core.Resource) ([]core.Resource, error) {
+func (c *Collector) collectBigQueryForProject(ctx context.Context, projectID string, out []compliancekit.Resource) ([]compliancekit.Resource, error) {
 	svc, err := bigquery.NewService(ctx, c.clientOption())
 	if err != nil {
 		return out, fmt.Errorf("new bigquery service: %w", err)
@@ -58,7 +58,7 @@ func (c *Collector) collectBigQueryForProject(ctx context.Context, projectID str
 	return out, nil
 }
 
-func (c *Collector) bigQueryDatasetResource(projectID string, d *bigquery.Dataset) core.Resource {
+func (c *Collector) bigQueryDatasetResource(projectID string, d *bigquery.Dataset) compliancekit.Resource {
 	datasetID := ""
 	if d.DatasetReference != nil {
 		datasetID = d.DatasetReference.DatasetId
@@ -82,7 +82,7 @@ func (c *Collector) bigQueryDatasetResource(projectID string, d *bigquery.Datase
 		access = append(access, entry)
 	}
 
-	r := core.Resource{
+	r := compliancekit.Resource{
 		ID:       fmt.Sprintf("gcp.bigquery.dataset.%s.%s", projectID, datasetID),
 		Type:     BigQueryDatasetType,
 		Name:     datasetID,
@@ -104,12 +104,12 @@ func (c *Collector) bigQueryDatasetResource(projectID string, d *bigquery.Datase
 	return r
 }
 
-func (c *Collector) bigQueryDatasetErrorResource(projectID string, listed *bigquery.DatasetListDatasets, err error) core.Resource {
+func (c *Collector) bigQueryDatasetErrorResource(projectID string, listed *bigquery.DatasetListDatasets, err error) compliancekit.Resource {
 	datasetID := ""
 	if listed.DatasetReference != nil {
 		datasetID = listed.DatasetReference.DatasetId
 	}
-	r := core.Resource{
+	r := compliancekit.Resource{
 		ID:       fmt.Sprintf("gcp.bigquery.dataset.%s.%s", projectID, datasetID),
 		Type:     BigQueryDatasetType,
 		Name:     datasetID,

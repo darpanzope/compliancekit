@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.20 phase 2 — bash strategies for the 31 sysctl-shaped Linux
@@ -53,7 +53,7 @@ func init() {
 	for id, e := range sysctlBash {
 		id := id
 		e := e
-		register("bash-"+id, []string{id}, func(_ core.Finding) (remediate.Snippet, error) {
+		register("bash-"+id, []string{id}, func(_ compliancekit.Finding) (remediate.Snippet, error) {
 			body := renderSysctlBash(e.key, e.val)
 			return remediate.Snippet{
 				Risk: remediate.RiskSafe, Idempotent: true,

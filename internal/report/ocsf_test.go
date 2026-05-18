@@ -7,11 +7,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // Compile-time assertion.
-var _ core.Reporter = (*OCSFReporter)(nil)
+var _ compliancekit.Reporter = (*OCSFReporter)(nil)
 
 func TestOCSF_Format(t *testing.T) {
 	if got := NewOCSF().Format(); got != "json-ocsf" {
@@ -37,26 +37,26 @@ func TestOCSF_RenderEmptyIsEmptyArray(t *testing.T) {
 func TestOCSF_RenderEmitsAllStatuses(t *testing.T) {
 	// SIEM use cases need pass+fail+skip so dashboards can compute
 	// pass rates. Unlike SARIF, OCSF emits everything.
-	findings := []core.Finding{
+	findings := []compliancekit.Finding{
 		{
 			CheckID:   "fail-check",
-			Status:    core.StatusFail,
-			Severity:  core.SeverityHigh,
-			Resource:  core.ResourceRef{ID: "r1", Name: "web-01", Type: "linux.host"},
+			Status:    compliancekit.StatusFail,
+			Severity:  compliancekit.SeverityHigh,
+			Resource:  compliancekit.ResourceRef{ID: "r1", Name: "web-01", Type: "linux.host"},
 			Message:   "broken",
 			Timestamp: time.Date(2026, 5, 13, 12, 0, 0, 0, time.UTC),
 		},
 		{
 			CheckID:  "pass-check",
-			Status:   core.StatusPass,
-			Severity: core.SeverityLow,
-			Resource: core.ResourceRef{ID: "r2", Name: "web-02", Type: "linux.host"},
+			Status:   compliancekit.StatusPass,
+			Severity: compliancekit.SeverityLow,
+			Resource: compliancekit.ResourceRef{ID: "r2", Name: "web-02", Type: "linux.host"},
 		},
 		{
 			CheckID:  "skip-check",
-			Status:   core.StatusSkip,
-			Severity: core.SeverityMedium,
-			Resource: core.ResourceRef{ID: "r3", Name: "web-03", Type: "linux.host"},
+			Status:   compliancekit.StatusSkip,
+			Severity: compliancekit.SeverityMedium,
+			Resource: compliancekit.ResourceRef{ID: "r3", Name: "web-03", Type: "linux.host"},
 		},
 	}
 
@@ -135,15 +135,15 @@ func TestOCSF_RenderEmitsAllStatuses(t *testing.T) {
 
 func TestOCSF_SeverityMapping(t *testing.T) {
 	cases := []struct {
-		sev    core.Severity
+		sev    compliancekit.Severity
 		wantID int
 		wantS  string
 	}{
-		{core.SeverityInfo, 1, "Informational"},
-		{core.SeverityLow, 2, "Low"},
-		{core.SeverityMedium, 3, "Medium"},
-		{core.SeverityHigh, 4, "High"},
-		{core.SeverityCritical, 5, "Critical"},
+		{compliancekit.SeverityInfo, 1, "Informational"},
+		{compliancekit.SeverityLow, 2, "Low"},
+		{compliancekit.SeverityMedium, 3, "Medium"},
+		{compliancekit.SeverityHigh, 4, "High"},
+		{compliancekit.SeverityCritical, 5, "Critical"},
 	}
 	for _, c := range cases {
 		gotID, gotS := ocsfSeverityFor(c.sev)
@@ -156,8 +156,8 @@ func TestOCSF_SeverityMapping(t *testing.T) {
 func TestOCSF_TimePopulatedWhenZero(t *testing.T) {
 	// Findings produced by checks before the engine stamps them
 	// (defensive) should still have a non-zero OCSF time.
-	findings := []core.Finding{
-		{CheckID: "x", Status: core.StatusPass, Severity: core.SeverityInfo, Resource: core.ResourceRef{ID: "r"}},
+	findings := []compliancekit.Finding{
+		{CheckID: "x", Status: compliancekit.StatusPass, Severity: compliancekit.SeverityInfo, Resource: compliancekit.ResourceRef{ID: "r"}},
 	}
 	var buf bytes.Buffer
 	_ = NewOCSF().Render(context.Background(), findings, nil, &buf)

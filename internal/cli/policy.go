@@ -11,8 +11,8 @@ import (
 	"github.com/open-policy-agent/opa/v1/format"
 	"github.com/spf13/cobra"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/policy"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // newPolicyCmd builds `compliancekit policy` and its three
@@ -66,7 +66,7 @@ func newPolicyTestCmd() *cobra.Command {
 		Short: "Evaluate POLICY.rego against a synthetic resource graph",
 		Long: `Evaluate the Rego policy at POLICY.rego against a synthetic
 resource graph loaded from FIXTURE.json. The fixture is a JSON
-array of core.Resource objects:
+array of compliancekit.Resource objects:
 
   [
     {
@@ -115,7 +115,7 @@ func runPolicyTest(ctx context.Context, stdout io.Writer, fixturePath, policyPat
 	return fmt.Errorf("unknown --format=%q (want json | table)", outFormat)
 }
 
-func renderFindingsTable(w io.Writer, findings []core.Finding) error {
+func renderFindingsTable(w io.Writer, findings []compliancekit.Finding) error {
 	fmt.Fprintf(w, "%d finding(s)\n", len(findings))
 	for _, f := range findings {
 		fmt.Fprintf(w, "  [%s] %s on %s — %s\n", f.Severity, f.Status, f.Resource.ID, f.Message)
@@ -124,19 +124,19 @@ func renderFindingsTable(w io.Writer, findings []core.Finding) error {
 }
 
 // loadFixtureGraph reads a JSON file containing an array of
-// core.Resource and projects it into a ResourceGraph.
-func loadFixtureGraph(path string) (*core.ResourceGraph, error) {
+// compliancekit.Resource and projects it into a ResourceGraph.
+func loadFixtureGraph(path string) (*compliancekit.ResourceGraph, error) {
 	// #nosec G304 — operator-supplied fixture path; this is the CLI's
 	// documented input.
 	body, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
-	var resources []core.Resource
+	var resources []compliancekit.Resource
 	if err := json.Unmarshal(body, &resources); err != nil {
 		return nil, fmt.Errorf("parse %s: %w", path, err)
 	}
-	g := core.NewResourceGraph()
+	g := compliancekit.NewResourceGraph()
 	for _, r := range resources {
 		g.Add(r)
 	}

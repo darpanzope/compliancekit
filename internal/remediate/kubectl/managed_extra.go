@@ -1,8 +1,8 @@
 package kubectl
 
 import (
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.21 phase 8 — kubectl strategies for the 15 managed-K8s
@@ -34,7 +34,7 @@ func init() {
 	for id, body := range managedStrategies {
 		id := id
 		body := body
-		register("kubectl-"+id, []string{id}, func(_ core.Finding) (remediate.Snippet, error) {
+		register("kubectl-"+id, []string{id}, func(_ compliancekit.Finding) (remediate.Snippet, error) {
 			return remediate.Snippet{
 				Risk: remediate.RiskReview, Idempotent: false,
 				Content: "# Managed K8s deepening — remediation lives in the cloud control plane.\n# " + id + "\n\n" + body + "\n",

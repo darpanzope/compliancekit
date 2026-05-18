@@ -18,17 +18,17 @@ import (
 	// can resolve CheckID -> Frameworks. Mirrors cmd/compliancekit/main.go.
 	_ "github.com/darpanzope/compliancekit/internal/checks/digitalocean"
 	_ "github.com/darpanzope/compliancekit/internal/checks/linux"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // helper finding with real check IDs so the registry can resolve
 // framework mappings.
-func mkFinding(checkID, resourceID string, status core.Status, sev core.Severity) core.Finding {
-	return core.Finding{
+func mkFinding(checkID, resourceID string, status compliancekit.Status, sev compliancekit.Severity) compliancekit.Finding {
+	return compliancekit.Finding{
 		CheckID:  checkID,
 		Status:   status,
 		Severity: sev,
-		Resource: core.ResourceRef{
+		Resource: compliancekit.ResourceRef{
 			ID:       resourceID,
 			Type:     "digitalocean.droplet",
 			Name:     resourceID,
@@ -43,11 +43,11 @@ func TestGenerate_ProducesExpectedLayout(t *testing.T) {
 	dir := t.TempDir()
 	out := filepath.Join(dir, "pack")
 
-	findings := []core.Finding{
+	findings := []compliancekit.Finding{
 		// Maps to soc2/CC6.6 + iso27001/A.8.21 + cis-v8/4.4 + 12.2
-		mkFinding("do-droplet-no-firewall", "droplet-1", core.StatusFail, core.SeverityHigh),
+		mkFinding("do-droplet-no-firewall", "droplet-1", compliancekit.StatusFail, compliancekit.SeverityHigh),
 		// Same control bucket (CC6.6) plus another control set
-		mkFinding("do-droplet-backups-disabled", "droplet-2", core.StatusFail, core.SeverityMedium),
+		mkFinding("do-droplet-backups-disabled", "droplet-2", compliancekit.StatusFail, compliancekit.SeverityMedium),
 	}
 
 	res, err := Generate(context.Background(), findings, Options{
@@ -117,8 +117,8 @@ func TestGenerate_ManifestCoversAllFiles(t *testing.T) {
 	dir := t.TempDir()
 	out := filepath.Join(dir, "pack")
 
-	findings := []core.Finding{
-		mkFinding("do-droplet-no-firewall", "droplet-1", core.StatusFail, core.SeverityHigh),
+	findings := []compliancekit.Finding{
+		mkFinding("do-droplet-no-firewall", "droplet-1", compliancekit.StatusFail, compliancekit.SeverityHigh),
 	}
 
 	res, err := Generate(context.Background(), findings, Options{
@@ -202,8 +202,8 @@ func TestGenerate_FindingsJSONIsParseable(t *testing.T) {
 	dir := t.TempDir()
 	out := filepath.Join(dir, "pack")
 
-	findings := []core.Finding{
-		mkFinding("do-droplet-no-firewall", "droplet-1", core.StatusFail, core.SeverityHigh),
+	findings := []compliancekit.Finding{
+		mkFinding("do-droplet-no-firewall", "droplet-1", compliancekit.StatusFail, compliancekit.SeverityHigh),
 	}
 	if _, err := Generate(context.Background(), findings, Options{
 		OutDir:    out,
@@ -297,9 +297,9 @@ func TestGenerate_WritesControlMarkdown(t *testing.T) {
 	dir := t.TempDir()
 	out := filepath.Join(dir, "pack")
 
-	findings := []core.Finding{
-		mkFinding("do-droplet-no-firewall", "droplet-1", core.StatusFail, core.SeverityHigh),
-		mkFinding("do-droplet-no-firewall", "droplet-2", core.StatusPass, core.SeverityHigh),
+	findings := []compliancekit.Finding{
+		mkFinding("do-droplet-no-firewall", "droplet-1", compliancekit.StatusFail, compliancekit.SeverityHigh),
+		mkFinding("do-droplet-no-firewall", "droplet-2", compliancekit.StatusPass, compliancekit.SeverityHigh),
 	}
 	if _, err := Generate(context.Background(), findings, Options{
 		OutDir:    out,
@@ -350,9 +350,9 @@ func TestGenerate_WritesMappingCSV(t *testing.T) {
 	dir := t.TempDir()
 	out := filepath.Join(dir, "pack")
 
-	findings := []core.Finding{
-		mkFinding("do-droplet-no-firewall", "droplet-1", core.StatusFail, core.SeverityHigh),
-		mkFinding("do-droplet-no-firewall", "droplet-2", core.StatusFail, core.SeverityHigh),
+	findings := []compliancekit.Finding{
+		mkFinding("do-droplet-no-firewall", "droplet-1", compliancekit.StatusFail, compliancekit.SeverityHigh),
+		mkFinding("do-droplet-no-firewall", "droplet-2", compliancekit.StatusFail, compliancekit.SeverityHigh),
 	}
 	res, err := Generate(context.Background(), findings, Options{
 		OutDir:    out,
@@ -412,9 +412,9 @@ func TestGenerate_WritesSummaryHTML(t *testing.T) {
 	dir := t.TempDir()
 	out := filepath.Join(dir, "pack")
 
-	findings := []core.Finding{
-		mkFinding("do-droplet-no-firewall", "droplet-1", core.StatusFail, core.SeverityHigh),
-		mkFinding("do-droplet-no-firewall", "droplet-2", core.StatusPass, core.SeverityHigh),
+	findings := []compliancekit.Finding{
+		mkFinding("do-droplet-no-firewall", "droplet-1", compliancekit.StatusFail, compliancekit.SeverityHigh),
+		mkFinding("do-droplet-no-firewall", "droplet-2", compliancekit.StatusPass, compliancekit.SeverityHigh),
 	}
 	res, err := Generate(context.Background(), findings, Options{
 		OutDir:    out,

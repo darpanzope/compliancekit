@@ -3,9 +3,9 @@ package terraform
 import (
 	"fmt"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate"
 	"github.com/darpanzope/compliancekit/internal/remediate/render"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 func init() {
@@ -81,7 +81,7 @@ func init() {
 
 // --- S3 ----------------------------------------------------------------
 
-func renderAWSS3PublicAccessBlock(f core.Finding) (remediate.Snippet, error) {
+func renderAWSS3PublicAccessBlock(f compliancekit.Finding) (remediate.Snippet, error) {
 	bucket := f.Resource.Name
 	if bucket == "" {
 		bucket = f.Resource.ID
@@ -104,7 +104,7 @@ func renderAWSS3PublicAccessBlock(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderAWSS3DefaultEncryption(f core.Finding) (remediate.Snippet, error) {
+func renderAWSS3DefaultEncryption(f compliancekit.Finding) (remediate.Snippet, error) {
 	bucket := f.Resource.Name
 	if bucket == "" {
 		bucket = f.Resource.ID
@@ -126,7 +126,7 @@ func renderAWSS3DefaultEncryption(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderAWSS3Versioning(f core.Finding) (remediate.Snippet, error) {
+func renderAWSS3Versioning(f compliancekit.Finding) (remediate.Snippet, error) {
 	bucket := f.Resource.Name
 	if bucket == "" {
 		bucket = f.Resource.ID
@@ -147,7 +147,7 @@ func renderAWSS3Versioning(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderAWSS3Logging(f core.Finding) (remediate.Snippet, error) {
+func renderAWSS3Logging(f compliancekit.Finding) (remediate.Snippet, error) {
 	bucket := f.Resource.Name
 	if bucket == "" {
 		bucket = f.Resource.ID
@@ -167,7 +167,7 @@ func renderAWSS3Logging(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderAWSS3NoPublicACLs(f core.Finding) (remediate.Snippet, error) {
+func renderAWSS3NoPublicACLs(f compliancekit.Finding) (remediate.Snippet, error) {
 	bucket := f.Resource.Name
 	if bucket == "" {
 		bucket = f.Resource.ID
@@ -186,7 +186,7 @@ func renderAWSS3NoPublicACLs(f core.Finding) (remediate.Snippet, error) {
 
 // --- IAM ---------------------------------------------------------------
 
-func renderAWSIAMPasswordPolicy(_ core.Finding) (remediate.Snippet, error) {
+func renderAWSIAMPasswordPolicy(_ compliancekit.Finding) (remediate.Snippet, error) {
 	b := render.NewHCLBlock("resource", "aws_iam_account_password_policy", "fix")
 	b.Attr("minimum_password_length", 14)
 	b.Attr("require_lowercase_characters", true)
@@ -208,7 +208,7 @@ func renderAWSIAMPasswordPolicy(_ core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderAWSIAMRootManual(f core.Finding) (remediate.Snippet, error) {
+func renderAWSIAMRootManual(f compliancekit.Finding) (remediate.Snippet, error) {
 	return remediate.Snippet{
 		Risk:       remediate.RiskManual,
 		Idempotent: false,
@@ -222,7 +222,7 @@ func renderAWSIAMRootManual(f core.Finding) (remediate.Snippet, error) {
 
 // --- CloudTrail --------------------------------------------------------
 
-func renderAWSCloudTrail(f core.Finding) (remediate.Snippet, error) {
+func renderAWSCloudTrail(f compliancekit.Finding) (remediate.Snippet, error) {
 	name := f.Resource.Name
 	if name == "" {
 		name = "audit"
@@ -248,7 +248,7 @@ func renderAWSCloudTrail(f core.Finding) (remediate.Snippet, error) {
 
 // --- EC2 ---------------------------------------------------------------
 
-func renderAWSEC2EBSEncryptionDefault(_ core.Finding) (remediate.Snippet, error) {
+func renderAWSEC2EBSEncryptionDefault(_ compliancekit.Finding) (remediate.Snippet, error) {
 	b := render.NewHCLBlock("resource", "aws_ebs_encryption_by_default", "fix")
 	b.Attr("enabled", true)
 	return remediate.Snippet{
@@ -263,7 +263,7 @@ func renderAWSEC2EBSEncryptionDefault(_ core.Finding) (remediate.Snippet, error)
 	}, nil
 }
 
-func renderAWSEC2IMDSv2(f core.Finding) (remediate.Snippet, error) {
+func renderAWSEC2IMDSv2(f compliancekit.Finding) (remediate.Snippet, error) {
 	name := f.Resource.Name
 	if name == "" {
 		name = f.Resource.ID
@@ -288,7 +288,7 @@ func renderAWSEC2IMDSv2(f core.Finding) (remediate.Snippet, error) {
 
 // --- RDS ---------------------------------------------------------------
 
-func renderAWSRDSDeletionProtection(f core.Finding) (remediate.Snippet, error) {
+func renderAWSRDSDeletionProtection(f compliancekit.Finding) (remediate.Snippet, error) {
 	name := f.Resource.Name
 	if name == "" {
 		name = f.Resource.ID
@@ -309,7 +309,7 @@ func renderAWSRDSDeletionProtection(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderAWSRDSBackupRetention(f core.Finding) (remediate.Snippet, error) {
+func renderAWSRDSBackupRetention(f compliancekit.Finding) (remediate.Snippet, error) {
 	name := f.Resource.Name
 	if name == "" {
 		name = f.Resource.ID
@@ -332,7 +332,7 @@ func renderAWSRDSBackupRetention(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderAWSRDSNotPublic(f core.Finding) (remediate.Snippet, error) {
+func renderAWSRDSNotPublic(f compliancekit.Finding) (remediate.Snippet, error) {
 	name := f.Resource.Name
 	if name == "" {
 		name = f.Resource.ID
@@ -353,7 +353,7 @@ func renderAWSRDSNotPublic(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderAWSRDSEncryptedManual(f core.Finding) (remediate.Snippet, error) {
+func renderAWSRDSEncryptedManual(f compliancekit.Finding) (remediate.Snippet, error) {
 	name := f.Resource.Name
 	if name == "" {
 		name = f.Resource.ID
@@ -373,7 +373,7 @@ func renderAWSRDSEncryptedManual(f core.Finding) (remediate.Snippet, error) {
 
 // --- KMS ---------------------------------------------------------------
 
-func renderAWSKMSRotation(f core.Finding) (remediate.Snippet, error) {
+func renderAWSKMSRotation(f compliancekit.Finding) (remediate.Snippet, error) {
 	name := f.Resource.Name
 	if name == "" {
 		name = f.Resource.ID
@@ -396,7 +396,7 @@ func renderAWSKMSRotation(f core.Finding) (remediate.Snippet, error) {
 
 // --- GuardDuty + Config -----------------------------------------------
 
-func renderAWSGuardDuty(_ core.Finding) (remediate.Snippet, error) {
+func renderAWSGuardDuty(_ compliancekit.Finding) (remediate.Snippet, error) {
 	b := render.NewHCLBlock("resource", "aws_guardduty_detector", "fix")
 	b.Attr("enable", true)
 	b.Attr("finding_publishing_frequency", "FIFTEEN_MINUTES")
@@ -418,7 +418,7 @@ func renderAWSGuardDuty(_ core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderAWSConfig(_ core.Finding) (remediate.Snippet, error) {
+func renderAWSConfig(_ compliancekit.Finding) (remediate.Snippet, error) {
 	rec := render.NewHCLBlock("resource", "aws_config_configuration_recorder", "fix")
 	rec.Attr("name", "default")
 	rec.RawAttr("role_arn", "aws_iam_role.config.arn")

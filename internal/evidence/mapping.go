@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/frameworks"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // mappingCSVName is the filename used for the control-mapping export
@@ -101,7 +101,7 @@ func writeMappingCSV(outDir string, controls []ControlRef, tailoring *frameworks
 		}
 		for _, fnd := range c.Findings {
 			title := ""
-			if chk, ok := core.LookupCheck(fnd.CheckID); ok {
+			if chk, ok := compliancekit.LookupCheck(fnd.CheckID); ok {
 				title = chk.Title
 			}
 			sourceType, sourceTool := sourceColumns(fnd)
@@ -148,7 +148,7 @@ func writeMappingCSV(outDir string, controls []ControlRef, tailoring *frameworks
 // for the control-mapping.csv row. A nil Source or Type=="native"
 // (or empty) maps to ("native", ""); ingest findings carry through
 // their Source.Type + Source.Tool. v0.13+.
-func sourceColumns(f core.Finding) (sourceType, sourceTool string) {
+func sourceColumns(f compliancekit.Finding) (sourceType, sourceTool string) {
 	if f.Source == nil || f.Source.Type == "" || f.Source.Type == "native" {
 		return "native", ""
 	}
@@ -163,7 +163,7 @@ func sourceColumns(f core.Finding) (sourceType, sourceTool string) {
 // Per ADR-013 the waiver block is visible in the evidence pack —
 // the auditor sees the acknowledgement plus the reason + approver
 // rather than the finding silently disappearing.
-func waiverColumns(f core.Finding) (active, reason, approver, expires string) {
+func waiverColumns(f compliancekit.Finding) (active, reason, approver, expires string) {
 	if f.Waiver == nil {
 		return "false", "", "", ""
 	}

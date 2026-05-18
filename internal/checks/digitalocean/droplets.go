@@ -1,8 +1,8 @@
 // Package digitalocean holds the DigitalOcean check implementations.
 //
-// Each check is a core.Check metadata value plus a core.CheckFunc that
+// Each check is a compliancekit.Check metadata value plus a compliancekit.CheckFunc that
 // queries the ResourceGraph and emits Findings. Checks register
-// themselves into core.DefaultRegistry via the init function so the
+// themselves into compliancekit.DefaultRegistry via the init function so the
 // scan command picks them up automatically.
 //
 // At v0.1 metadata lives as Go vars next to the function. v0.3 will
@@ -18,14 +18,14 @@ import (
 	"time"
 
 	docol "github.com/darpanzope/compliancekit/internal/collectors/digitalocean"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // CheckBackupsDisabled flags droplets without weekly backups enabled.
-var CheckBackupsDisabled = core.Check{
+var CheckBackupsDisabled = compliancekit.Check{
 	ID:           "do-droplet-backups-disabled",
 	Title:        "Droplet backups must be enabled",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "digitalocean",
 	Service:      "droplets",
 	ResourceType: docol.DropletType,
@@ -46,24 +46,24 @@ var CheckBackupsDisabled = core.Check{
 }
 
 // BackupsDisabled is the CheckFunc for CheckBackupsDisabled.
-func BackupsDisabled(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func BackupsDisabled(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	droplets := g.ByType(docol.DropletType)
-	findings := make([]core.Finding, 0, len(droplets))
+	findings := make([]compliancekit.Finding, 0, len(droplets))
 	for _, d := range droplets {
 		features, _ := d.Attributes["features"].([]string)
 		hasBackups := containsString(features, "backups")
 
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckBackupsDisabled.ID,
 			Severity: CheckBackupsDisabled.Severity,
 			Resource: d.Ref(),
 			Tags:     CheckBackupsDisabled.Tags,
 		}
 		if hasBackups {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("droplet %q has backups enabled", d.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("droplet %q has backups disabled", d.Name)
 		}
 		findings = append(findings, f)
@@ -73,10 +73,10 @@ func BackupsDisabled(_ context.Context, g *core.ResourceGraph) ([]core.Finding, 
 
 // CheckNoTags flags droplets without any tags, an attribution gap that
 // makes ownership and environment classification ambiguous.
-var CheckNoTags = core.Check{
+var CheckNoTags = compliancekit.Check{
 	ID:           "do-droplet-no-tags",
 	Title:        "Droplets should carry attribution tags",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "digitalocean",
 	Service:      "droplets",
 	ResourceType: docol.DropletType,
@@ -99,21 +99,21 @@ var CheckNoTags = core.Check{
 }
 
 // NoTags is the CheckFunc for CheckNoTags.
-func NoTags(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func NoTags(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	droplets := g.ByType(docol.DropletType)
-	findings := make([]core.Finding, 0, len(droplets))
+	findings := make([]compliancekit.Finding, 0, len(droplets))
 	for _, d := range droplets {
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckNoTags.ID,
 			Severity: CheckNoTags.Severity,
 			Resource: d.Ref(),
 			Tags:     CheckNoTags.Tags,
 		}
 		if len(d.Tags) == 0 {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("droplet %q has no tags", d.Name)
 		} else {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("droplet %q has %d tag(s)", d.Name, len(d.Tags))
 		}
 		findings = append(findings, f)
@@ -128,10 +128,10 @@ var OldImageAgeLimit = 365 * 24 * time.Hour
 
 // CheckOldImage flags droplets whose base image is older than
 // OldImageAgeLimit (default: 1 year).
-var CheckOldImage = core.Check{
+var CheckOldImage = compliancekit.Check{
 	ID:           "do-droplet-old-image",
 	Title:        "Droplet base image should be less than one year old",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "digitalocean",
 	Service:      "droplets",
 	ResourceType: docol.DropletType,
@@ -153,13 +153,13 @@ var CheckOldImage = core.Check{
 }
 
 // OldImage is the CheckFunc for CheckOldImage.
-func OldImage(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func OldImage(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	droplets := g.ByType(docol.DropletType)
-	findings := make([]core.Finding, 0, len(droplets))
+	findings := make([]compliancekit.Finding, 0, len(droplets))
 	now := time.Now().UTC()
 
 	for _, d := range droplets {
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckOldImage.ID,
 			Severity: CheckOldImage.Severity,
 			Resource: d.Ref(),
@@ -168,7 +168,7 @@ func OldImage(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) 
 
 		imgCreated := d.Attr("image_created_at")
 		if imgCreated == "" {
-			f.Status = core.StatusSkip
+			f.Status = compliancekit.StatusSkip
 			f.Message = "image creation timestamp unknown"
 			findings = append(findings, f)
 			continue
@@ -176,7 +176,7 @@ func OldImage(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) 
 
 		t, err := time.Parse(time.RFC3339, imgCreated)
 		if err != nil {
-			f.Status = core.StatusError
+			f.Status = compliancekit.StatusError
 			f.Message = fmt.Sprintf("could not parse image_created_at %q: %v", imgCreated, err)
 			findings = append(findings, f)
 			continue
@@ -184,11 +184,11 @@ func OldImage(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) 
 
 		age := now.Sub(t)
 		if age > OldImageAgeLimit {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("droplet %q image is %d days old (limit: %d)",
 				d.Name, int(age.Hours()/24), int(OldImageAgeLimit.Hours()/24))
 		} else {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("droplet %q image is %d days old",
 				d.Name, int(age.Hours()/24))
 		}
@@ -202,9 +202,9 @@ func OldImage(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) 
 // triggers this at startup so checks are available without explicit
 // wiring at every call site.
 func init() {
-	core.Register(CheckBackupsDisabled, BackupsDisabled)
-	core.Register(CheckNoTags, NoTags)
-	core.Register(CheckOldImage, OldImage)
+	compliancekit.Register(CheckBackupsDisabled, BackupsDisabled)
+	compliancekit.Register(CheckNoTags, NoTags)
+	compliancekit.Register(CheckOldImage, OldImage)
 }
 
 // containsString reports whether ss contains the exact string s.

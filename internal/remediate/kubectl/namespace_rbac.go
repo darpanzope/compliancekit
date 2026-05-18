@@ -3,9 +3,9 @@ package kubectl
 import (
 	"fmt"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate"
 	"github.com/darpanzope/compliancekit/internal/remediate/render"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 func init() {
@@ -39,7 +39,7 @@ func init() {
 		renderRBACManual)
 }
 
-func renderNamespacePSALabel(f core.Finding) (remediate.Snippet, error) {
+func renderNamespacePSALabel(f compliancekit.Finding) (remediate.Snippet, error) {
 	ns := f.Resource.Name
 	if ns == "" {
 		ns = defaultNamespace
@@ -70,7 +70,7 @@ metadata:
 	}, nil
 }
 
-func renderNamespaceLimitRange(f core.Finding) (remediate.Snippet, error) {
+func renderNamespaceLimitRange(f compliancekit.Finding) (remediate.Snippet, error) {
 	ns := f.Resource.Name
 	if ns == "" {
 		ns = defaultNamespace
@@ -109,7 +109,7 @@ spec:
 	}, nil
 }
 
-func renderNamespaceResourceQuota(f core.Finding) (remediate.Snippet, error) {
+func renderNamespaceResourceQuota(f compliancekit.Finding) (remediate.Snippet, error) {
 	ns := f.Resource.Name
 	if ns == "" {
 		ns = defaultNamespace
@@ -145,7 +145,7 @@ spec:
 	}, nil
 }
 
-func renderRBACManual(f core.Finding) (remediate.Snippet, error) {
+func renderRBACManual(f compliancekit.Finding) (remediate.Snippet, error) {
 	name := f.Resource.Name
 	if name == "" {
 		name = f.Resource.ID

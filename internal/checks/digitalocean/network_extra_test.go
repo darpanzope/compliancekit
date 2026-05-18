@@ -8,13 +8,13 @@ import (
 	"github.com/digitalocean/godo"
 
 	docol "github.com/darpanzope/compliancekit/internal/collectors/digitalocean"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.19 phase 7 — tests for the 10 networking-depth checks.
 
-func mkFW(name string, inbound []godo.InboundRule, outbound []godo.OutboundRule) core.Resource {
-	return core.Resource{
+func mkFW(name string, inbound []godo.InboundRule, outbound []godo.OutboundRule) compliancekit.Resource {
+	return compliancekit.Resource{
 		ID:       "digitalocean.firewall." + name,
 		Type:     docol.FirewallType,
 		Name:     name,
@@ -26,22 +26,22 @@ func mkFW(name string, inbound []godo.InboundRule, outbound []godo.OutboundRule)
 	}
 }
 
-func mkVPCRegional(uuid, region string) core.Resource {
-	return core.Resource{
+func mkVPCRegional(uuid, region string) compliancekit.Resource {
+	return compliancekit.Resource{
 		ID: "digitalocean.vpc." + uuid, Type: docol.VPCType, Name: uuid, Provider: "digitalocean",
 		Attributes: map[string]any{"uuid": uuid, "region": region},
 	}
 }
 
-func mkPeering(name string, vpcIDs []string) core.Resource {
-	return core.Resource{
+func mkPeering(name string, vpcIDs []string) compliancekit.Resource {
+	return compliancekit.Resource{
 		ID: "digitalocean.vpc_peering." + name, Type: docol.VPCPeeringType, Name: name, Provider: "digitalocean",
 		Attributes: map[string]any{"vpc_ids": vpcIDs},
 	}
 }
 
-func mkLBExtra(name string, rules []map[string]any) core.Resource {
-	return core.Resource{
+func mkLBExtra(name string, rules []map[string]any) compliancekit.Resource {
+	return compliancekit.Resource{
 		ID: "digitalocean.load_balancer." + name, Type: docol.LoadBalancerType, Name: name, Provider: "digitalocean",
 		Attributes: map[string]any{"forwarding_rules": rules},
 	}
@@ -58,11 +58,11 @@ func TestFWInboundDuplicates(t *testing.T) {
 	}
 	g := newAccountGraph(mkFW("dupe", dup, nil), mkFW("uniq", uniq, nil))
 	findings, _ := FWInboundDuplicates(context.Background(), g)
-	by := map[string]core.Status{}
+	by := map[string]compliancekit.Status{}
 	for _, f := range findings {
 		by[f.Resource.Name] = f.Status
 	}
-	if by["dupe"] != core.StatusFail || by["uniq"] != core.StatusPass {
+	if by["dupe"] != compliancekit.StatusFail || by["uniq"] != compliancekit.StatusPass {
 		t.Errorf("statuses=%+v", by)
 	}
 }
@@ -73,11 +73,11 @@ func TestFWOutboundUnrestricted(t *testing.T) {
 		mkFW("restricted", nil, []godo.OutboundRule{{Protocol: "tcp", PortRange: "443"}}),
 	)
 	findings, _ := FWOutboundUnrestricted(context.Background(), g)
-	by := map[string]core.Status{}
+	by := map[string]compliancekit.Status{}
 	for _, f := range findings {
 		by[f.Resource.Name] = f.Status
 	}
-	if by["open"] != core.StatusFail || by["restricted"] != core.StatusPass {
+	if by["open"] != compliancekit.StatusFail || by["restricted"] != compliancekit.StatusPass {
 		t.Errorf("statuses=%+v", by)
 	}
 }
@@ -87,11 +87,11 @@ func TestFWICMPFromAny(t *testing.T) {
 	tight := []godo.InboundRule{{Protocol: "icmp", Sources: &godo.Sources{Addresses: []string{"10.0.0.0/8"}}}}
 	g := newAccountGraph(mkFW("open", open, nil), mkFW("tight", tight, nil))
 	findings, _ := FWICMPFromAny(context.Background(), g)
-	by := map[string]core.Status{}
+	by := map[string]compliancekit.Status{}
 	for _, f := range findings {
 		by[f.Resource.Name] = f.Status
 	}
-	if by["open"] != core.StatusFail || by["tight"] != core.StatusPass {
+	if by["open"] != compliancekit.StatusFail || by["tight"] != compliancekit.StatusPass {
 		t.Errorf("statuses=%+v", by)
 	}
 }
@@ -103,25 +103,25 @@ func TestVPCPeeringCrossRegion(t *testing.T) {
 		mkPeering("intra", []string{"v1", "v3"}),
 	)
 	findings, _ := VPCPeeringCrossRegion(context.Background(), g)
-	by := map[string]core.Status{}
+	by := map[string]compliancekit.Status{}
 	for _, f := range findings {
 		by[f.Resource.Name] = f.Status
 	}
-	if by["cross"] != core.StatusFail || by["intra"] != core.StatusPass {
+	if by["cross"] != compliancekit.StatusFail || by["intra"] != compliancekit.StatusPass {
 		t.Errorf("statuses=%+v", by)
 	}
 }
 
 func TestReservedIPNoRegion(t *testing.T) {
-	with := core.Resource{ID: "digitalocean.reserved_ip.a", Type: docol.ReservedIPType, Name: "1.2.3.4", Provider: "digitalocean", Region: "nyc3"}
-	without := core.Resource{ID: "digitalocean.reserved_ip.b", Type: docol.ReservedIPType, Name: "5.6.7.8", Provider: "digitalocean"}
+	with := compliancekit.Resource{ID: "digitalocean.reserved_ip.a", Type: docol.ReservedIPType, Name: "1.2.3.4", Provider: "digitalocean", Region: "nyc3"}
+	without := compliancekit.Resource{ID: "digitalocean.reserved_ip.b", Type: docol.ReservedIPType, Name: "5.6.7.8", Provider: "digitalocean"}
 	g := newAccountGraph(with, without)
 	findings, _ := ReservedIPNoRegion(context.Background(), g)
-	by := map[string]core.Status{}
+	by := map[string]compliancekit.Status{}
 	for _, f := range findings {
 		by[f.Resource.Name] = f.Status
 	}
-	if by["1.2.3.4"] != core.StatusPass || by["5.6.7.8"] != core.StatusFail {
+	if by["1.2.3.4"] != compliancekit.StatusPass || by["5.6.7.8"] != compliancekit.StatusFail {
 		t.Errorf("statuses=%+v", by)
 	}
 }
@@ -136,11 +136,11 @@ func TestLBTLSPassthroughWithoutHTTPS(t *testing.T) {
 	}
 	g := newAccountGraph(mkLBExtra("bad", badRules), mkLBExtra("good", goodRules))
 	findings, _ := LBTLSPassthroughWithoutHTTPS(context.Background(), g)
-	by := map[string]core.Status{}
+	by := map[string]compliancekit.Status{}
 	for _, f := range findings {
 		by[f.Resource.Name] = f.Status
 	}
-	if by["bad"] != core.StatusFail || by["good"] != core.StatusPass {
+	if by["bad"] != compliancekit.StatusFail || by["good"] != compliancekit.StatusPass {
 		t.Errorf("statuses=%+v", by)
 	}
 }
@@ -149,7 +149,7 @@ func TestNetworkManualVerifyChecks(t *testing.T) {
 	lb := mkLBExtra("lb", nil)
 	cases := []struct {
 		name string
-		fn   func(context.Context, *core.ResourceGraph) ([]core.Finding, error)
+		fn   func(context.Context, *compliancekit.ResourceGraph) ([]compliancekit.Finding, error)
 		hint string
 	}{
 		{"sticky cookie", LBStickyCookieHTTPOnly, "Set-Cookie"},
@@ -159,7 +159,7 @@ func TestNetworkManualVerifyChecks(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			findings, _ := c.fn(context.Background(), newAccountGraph(lb))
-			if findings[0].Status != core.StatusError {
+			if findings[0].Status != compliancekit.StatusError {
 				t.Errorf("status=%v want StatusError", findings[0].Status)
 			}
 			if !strings.Contains(strings.ToLower(findings[0].Message), strings.ToLower(c.hint)) {
@@ -182,7 +182,7 @@ func TestFWEmptyTagSource(t *testing.T) {
 	if len(findings) != 1 {
 		t.Fatalf("findings=%d want 1 (only with-tag firewall fires)", len(findings))
 	}
-	if findings[0].Status != core.StatusError {
+	if findings[0].Status != compliancekit.StatusError {
 		t.Errorf("status=%v want StatusError", findings[0].Status)
 	}
 }

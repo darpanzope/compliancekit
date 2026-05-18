@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 func TestRegistryCoverage(t *testing.T) {
@@ -32,9 +32,9 @@ func TestRegistryCoverage(t *testing.T) {
 }
 
 func TestRenderServerBackups(t *testing.T) {
-	f := core.Finding{
+	f := compliancekit.Finding{
 		CheckID:  "hetzner-server-no-backups",
-		Resource: core.ResourceRef{Name: "12345"},
+		Resource: compliancekit.ResourceRef{Name: "12345"},
 	}
 	s, err := remediate.Default.Render(f, remediate.FormatHcloud)
 	if err != nil {

@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	gcpcol "github.com/darpanzope/compliancekit/internal/collectors/gcp"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // publicBQSpecialGroups are dataset-access special groups that
@@ -30,10 +30,10 @@ var publicBQIamMembers = map[string]bool{
 // CheckBQNoPublicDatasets forbids public access on BigQuery
 // datasets. allUsers or allAuthenticatedUsers in the dataset's
 // access list exposes every table in the dataset.
-var CheckBQNoPublicDatasets = core.Check{
+var CheckBQNoPublicDatasets = compliancekit.Check{
 	ID:           "gcp-bigquery-no-public-datasets",
 	Title:        "BigQuery datasets must not grant access to allUsers/allAuthenticatedUsers",
-	Severity:     core.SeverityCritical,
+	Severity:     compliancekit.SeverityCritical,
 	Provider:     "gcp",
 	Service:      "bigquery",
 	ResourceType: gcpcol.BigQueryDatasetType,
@@ -55,8 +55,8 @@ var CheckBQNoPublicDatasets = core.Check{
 	Scanner: "bigquery.NoPublicDatasets",
 }
 
-func BQNoPublicDatasets(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func BQNoPublicDatasets(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, d := range g.ByType(gcpcol.BigQueryDatasetType) {
 		access, _ := d.Attributes["access"].([]map[string]any)
 
@@ -73,17 +73,17 @@ func BQNoPublicDatasets(_ context.Context, g *core.ResourceGraph) ([]core.Findin
 		}
 		sort.Strings(hits)
 
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckBQNoPublicDatasets.ID,
 			Severity: CheckBQNoPublicDatasets.Severity,
 			Resource: d.Ref(),
 			Tags:     CheckBQNoPublicDatasets.Tags,
 		}
 		if len(hits) == 0 {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("dataset %q: no public access", d.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("dataset %q: public access via %s", d.Name, strings.Join(hits, ", "))
 		}
 		findings = append(findings, f)
@@ -96,10 +96,10 @@ func BQNoPublicDatasets(_ context.Context, g *core.ResourceGraph) ([]core.Findin
 // public-datasets check so allUsers (critical) and
 // allAuthenticatedUsers (high) can carry different severities
 // and frameworks emphasis can differ.
-var CheckBQNoAllAuthenticated = core.Check{
+var CheckBQNoAllAuthenticated = compliancekit.Check{
 	ID:           "gcp-bigquery-no-all-authenticated-users",
 	Title:        "BigQuery datasets must not grant access to allAuthenticatedUsers",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "gcp",
 	Service:      "bigquery",
 	ResourceType: gcpcol.BigQueryDatasetType,
@@ -121,8 +121,8 @@ var CheckBQNoAllAuthenticated = core.Check{
 	Scanner: "bigquery.NoAllAuthenticated",
 }
 
-func BQNoAllAuthenticated(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func BQNoAllAuthenticated(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, d := range g.ByType(gcpcol.BigQueryDatasetType) {
 		access, _ := d.Attributes["access"].([]map[string]any)
 
@@ -135,17 +135,17 @@ func BQNoAllAuthenticated(_ context.Context, g *core.ResourceGraph) ([]core.Find
 			}
 		}
 
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckBQNoAllAuthenticated.ID,
 			Severity: CheckBQNoAllAuthenticated.Severity,
 			Resource: d.Ref(),
 			Tags:     CheckBQNoAllAuthenticated.Tags,
 		}
 		if offenders == 0 {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("dataset %q: no allAuthenticatedUsers grant", d.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("dataset %q: %d allAuthenticatedUsers grant(s)", d.Name, offenders)
 		}
 		findings = append(findings, f)
@@ -155,10 +155,10 @@ func BQNoAllAuthenticated(_ context.Context, g *core.ResourceGraph) ([]core.Find
 
 // CheckBQDefaultCMEK requires datasets to configure a default
 // CMEK so new tables inherit customer-managed encryption.
-var CheckBQDefaultCMEK = core.Check{
+var CheckBQDefaultCMEK = compliancekit.Check{
 	ID:           "gcp-bigquery-default-cmek",
 	Title:        "BigQuery datasets must have a default CMEK configured",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "gcp",
 	Service:      "bigquery",
 	ResourceType: gcpcol.BigQueryDatasetType,
@@ -181,11 +181,11 @@ var CheckBQDefaultCMEK = core.Check{
 	Scanner: "bigquery.DefaultCMEK",
 }
 
-func BQDefaultCMEK(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func BQDefaultCMEK(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, d := range g.ByType(gcpcol.BigQueryDatasetType) {
 		on, _ := d.Attributes["default_cmek"].(bool)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckBQDefaultCMEK.ID,
 			Severity: CheckBQDefaultCMEK.Severity,
 			Resource: d.Ref(),
@@ -193,10 +193,10 @@ func BQDefaultCMEK(_ context.Context, g *core.ResourceGraph) ([]core.Finding, er
 		}
 		if on {
 			key, _ := d.Attributes["default_cmek_key"].(string)
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("dataset %q: default CMEK %s", d.Name, lastSegment(key))
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("dataset %q: no default CMEK (Google-managed encryption only)", d.Name)
 		}
 		findings = append(findings, f)
@@ -214,7 +214,7 @@ func lastSegment(s string) string {
 }
 
 func init() {
-	core.Register(CheckBQNoPublicDatasets, BQNoPublicDatasets)
-	core.Register(CheckBQNoAllAuthenticated, BQNoAllAuthenticated)
-	core.Register(CheckBQDefaultCMEK, BQDefaultCMEK)
+	compliancekit.Register(CheckBQNoPublicDatasets, BQNoPublicDatasets)
+	compliancekit.Register(CheckBQNoAllAuthenticated, BQNoAllAuthenticated)
+	compliancekit.Register(CheckBQDefaultCMEK, BQDefaultCMEK)
 }

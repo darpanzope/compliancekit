@@ -9,7 +9,7 @@ import (
 	"github.com/digitalocean/godo"
 
 	docol "github.com/darpanzope/compliancekit/internal/collectors/digitalocean"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 const (
@@ -25,12 +25,12 @@ const (
 
 // inboundRulesOf returns the firewall's inbound rules, or false if
 // the attribute is missing or the wrong type.
-func inboundRulesOf(fw core.Resource) ([]godo.InboundRule, bool) {
+func inboundRulesOf(fw compliancekit.Resource) ([]godo.InboundRule, bool) {
 	rules, ok := fw.Attributes["inbound_rules"].([]godo.InboundRule)
 	return rules, ok
 }
 
-func outboundRulesOf(fw core.Resource) ([]godo.OutboundRule, bool) {
+func outboundRulesOf(fw compliancekit.Resource) ([]godo.OutboundRule, bool) {
 	rules, ok := fw.Attributes["outbound_rules"].([]godo.OutboundRule)
 	return rules, ok
 }
@@ -40,10 +40,10 @@ func outboundRulesOf(fw core.Resource) ([]godo.OutboundRule, bool) {
 // surface than SSH (most droplets are Linux, but the rare Windows
 // droplet behind a wide-open RDP rule is a magnet for
 // credential-stuffing).
-var CheckFirewallRDPFromAny = core.Check{
+var CheckFirewallRDPFromAny = compliancekit.Check{
 	ID:           "do-firewall-rdp-from-any",
 	Title:        "Firewalls must not allow RDP (port 3389) from the public internet",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "digitalocean",
 	Service:      "firewalls",
 	ResourceType: docol.FirewallType,
@@ -65,10 +65,10 @@ var CheckFirewallRDPFromAny = core.Check{
 	Scanner: "firewalls.RDPFromAny",
 }
 
-func FirewallRDPFromAny(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func FirewallRDPFromAny(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, fw := range g.ByType(docol.FirewallType) {
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckFirewallRDPFromAny.ID,
 			Severity: CheckFirewallRDPFromAny.Severity,
 			Resource: fw.Ref(),
@@ -76,16 +76,16 @@ func FirewallRDPFromAny(_ context.Context, g *core.ResourceGraph) ([]core.Findin
 		}
 		rules, ok := inboundRulesOf(fw)
 		if !ok {
-			f.Status = core.StatusSkip
+			f.Status = compliancekit.StatusSkip
 			f.Message = "firewall has no inbound_rules attribute"
 			findings = append(findings, f)
 			continue
 		}
 		if exposed := findPortFromAny(rules, "tcp", rdpPort); exposed != "" {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("firewall %q allows RDP from %s", fw.Name, exposed)
 		} else {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("firewall %q has no public RDP rule", fw.Name)
 		}
 		findings = append(findings, f)
@@ -97,10 +97,10 @@ func FirewallRDPFromAny(_ context.Context, g *core.ResourceGraph) ([]core.Findin
 // public Internet. This is the catastrophic "default-allow" rule
 // shape -- a single mistake on a firewall update sets the entire
 // allowlist to 0.0.0.0/0:any.
-var CheckFirewallAnyFromAny = core.Check{
+var CheckFirewallAnyFromAny = compliancekit.Check{
 	ID:           "do-firewall-any-port-from-any",
 	Title:        "Firewalls must not allow any-port from the public internet",
-	Severity:     core.SeverityCritical,
+	Severity:     compliancekit.SeverityCritical,
 	Provider:     "digitalocean",
 	Service:      "firewalls",
 	ResourceType: docol.FirewallType,
@@ -123,10 +123,10 @@ var CheckFirewallAnyFromAny = core.Check{
 	Scanner: "firewalls.AnyFromAny",
 }
 
-func FirewallAnyFromAny(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func FirewallAnyFromAny(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, fw := range g.ByType(docol.FirewallType) {
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckFirewallAnyFromAny.ID,
 			Severity: CheckFirewallAnyFromAny.Severity,
 			Resource: fw.Ref(),
@@ -134,7 +134,7 @@ func FirewallAnyFromAny(_ context.Context, g *core.ResourceGraph) ([]core.Findin
 		}
 		rules, ok := inboundRulesOf(fw)
 		if !ok {
-			f.Status = core.StatusSkip
+			f.Status = compliancekit.StatusSkip
 			f.Message = "firewall has no inbound_rules attribute"
 			findings = append(findings, f)
 			continue
@@ -158,10 +158,10 @@ func FirewallAnyFromAny(_ context.Context, g *core.ResourceGraph) ([]core.Findin
 			}
 		}
 		if offending != "" {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("firewall %q: %s", fw.Name, offending)
 		} else {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("firewall %q: no public any-port rule", fw.Name)
 		}
 		findings = append(findings, f)
@@ -173,10 +173,10 @@ func FirewallAnyFromAny(_ context.Context, g *core.ResourceGraph) ([]core.Findin
 // where the port range covers more than broadPortThreshold ports.
 // Catches the "I just opened 1000-65535 instead of the one port"
 // shape.
-var CheckFirewallBroadPortRange = core.Check{
+var CheckFirewallBroadPortRange = compliancekit.Check{
 	ID:           "do-firewall-broad-port-range",
 	Title:        "Firewalls must not open broad port ranges to the public internet",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "digitalocean",
 	Service:      "firewalls",
 	ResourceType: docol.FirewallType,
@@ -198,10 +198,10 @@ var CheckFirewallBroadPortRange = core.Check{
 	Scanner: "firewalls.BroadPortRange",
 }
 
-func FirewallBroadPortRange(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func FirewallBroadPortRange(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, fw := range g.ByType(docol.FirewallType) {
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckFirewallBroadPortRange.ID,
 			Severity: CheckFirewallBroadPortRange.Severity,
 			Resource: fw.Ref(),
@@ -209,7 +209,7 @@ func FirewallBroadPortRange(_ context.Context, g *core.ResourceGraph) ([]core.Fi
 		}
 		rules, ok := inboundRulesOf(fw)
 		if !ok {
-			f.Status = core.StatusSkip
+			f.Status = compliancekit.StatusSkip
 			f.Message = "firewall has no inbound_rules attribute"
 			findings = append(findings, f)
 			continue
@@ -231,11 +231,11 @@ func FirewallBroadPortRange(_ context.Context, g *core.ResourceGraph) ([]core.Fi
 			}
 		}
 		if len(hits) > 0 {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("firewall %q: %d broad public rule(s): %s",
 				fw.Name, len(hits), strings.Join(hits, "; "))
 		} else {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("firewall %q: no broad public port ranges", fw.Name)
 		}
 		findings = append(findings, f)
@@ -270,10 +270,10 @@ func portRangeSize(pr string) int {
 // actually safe -- the check INVERTS: a firewall with a wide-open
 // outbound rule (all ports + all protocols to 0.0.0.0/0) is the
 // real problem because outbound is how data exfiltration leaves.
-var CheckFirewallOutboundDenyAll = core.Check{
+var CheckFirewallOutboundDenyAll = compliancekit.Check{
 	ID:           "do-firewall-outbound-any-to-any",
 	Title:        "Firewalls should not allow outbound any-to-any",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "digitalocean",
 	Service:      "firewalls",
 	ResourceType: docol.FirewallType,
@@ -298,10 +298,10 @@ var CheckFirewallOutboundDenyAll = core.Check{
 	Scanner: "firewalls.OutboundAnyToAny",
 }
 
-func FirewallOutboundDenyAll(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func FirewallOutboundDenyAll(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, fw := range g.ByType(docol.FirewallType) {
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckFirewallOutboundDenyAll.ID,
 			Severity: CheckFirewallOutboundDenyAll.Severity,
 			Resource: fw.Ref(),
@@ -309,7 +309,7 @@ func FirewallOutboundDenyAll(_ context.Context, g *core.ResourceGraph) ([]core.F
 		}
 		rules, ok := outboundRulesOf(fw)
 		if !ok {
-			f.Status = core.StatusSkip
+			f.Status = compliancekit.StatusSkip
 			f.Message = "firewall has no outbound_rules attribute"
 			findings = append(findings, f)
 			continue
@@ -333,10 +333,10 @@ func FirewallOutboundDenyAll(_ context.Context, g *core.ResourceGraph) ([]core.F
 			}
 		}
 		if offending != "" {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("firewall %q outbound: %s", fw.Name, offending)
 		} else {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("firewall %q: no any-to-any outbound rule", fw.Name)
 		}
 		findings = append(findings, f)
@@ -348,10 +348,10 @@ func FirewallOutboundDenyAll(_ context.Context, g *core.ResourceGraph) ([]core.F
 // no tags. Such firewalls do nothing but they clutter the audit
 // trail and confuse incident response ("which firewall guards
 // what?").
-var CheckFirewallOrphan = core.Check{
+var CheckFirewallOrphan = compliancekit.Check{
 	ID:           "do-firewall-orphan",
 	Title:        "Firewalls should be attached to at least one droplet or tag",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "digitalocean",
 	Service:      "firewalls",
 	ResourceType: docol.FirewallType,
@@ -374,10 +374,10 @@ var CheckFirewallOrphan = core.Check{
 	Scanner: "firewalls.Orphan",
 }
 
-func FirewallOrphan(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func FirewallOrphan(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, fw := range g.ByType(docol.FirewallType) {
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckFirewallOrphan.ID,
 			Severity: CheckFirewallOrphan.Severity,
 			Resource: fw.Ref(),
@@ -386,10 +386,10 @@ func FirewallOrphan(_ context.Context, g *core.ResourceGraph) ([]core.Finding, e
 		ids, _ := fw.Attributes["droplet_ids"].([]int)
 		tagAttached := len(fw.Tags) > 0
 		if len(ids) == 0 && !tagAttached {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("firewall %q: no attached droplets or tags", fw.Name)
 		} else {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("firewall %q: %d droplet(s), %d tag(s)", fw.Name, len(ids), len(fw.Tags))
 		}
 		findings = append(findings, f)
@@ -421,9 +421,9 @@ func findPortFromAny(rules []godo.InboundRule, protocol, port string) string {
 }
 
 func init() {
-	core.Register(CheckFirewallRDPFromAny, FirewallRDPFromAny)
-	core.Register(CheckFirewallAnyFromAny, FirewallAnyFromAny)
-	core.Register(CheckFirewallBroadPortRange, FirewallBroadPortRange)
-	core.Register(CheckFirewallOutboundDenyAll, FirewallOutboundDenyAll)
-	core.Register(CheckFirewallOrphan, FirewallOrphan)
+	compliancekit.Register(CheckFirewallRDPFromAny, FirewallRDPFromAny)
+	compliancekit.Register(CheckFirewallAnyFromAny, FirewallAnyFromAny)
+	compliancekit.Register(CheckFirewallBroadPortRange, FirewallBroadPortRange)
+	compliancekit.Register(CheckFirewallOutboundDenyAll, FirewallOutboundDenyAll)
+	compliancekit.Register(CheckFirewallOrphan, FirewallOrphan)
 }

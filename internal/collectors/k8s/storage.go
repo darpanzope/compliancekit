@@ -10,14 +10,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/darpanzope/compliancekit/internal/collectors/cloudcommon"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // collectStorage fetches Secrets, ConfigMaps, PVs, PVCs, and
 // StorageClasses. Secrets carry runtime credentials; PV/PVC/SC are
 // the persistent-storage configuration surface.
-func (c *Collector) collectStorage(ctx context.Context, scope *ContextScope) ([]core.Resource, error) {
-	out := make([]core.Resource, 0, 64)
+func (c *Collector) collectStorage(ctx context.Context, scope *ContextScope) ([]compliancekit.Resource, error) {
+	out := make([]compliancekit.Resource, 0, 64)
 
 	secrets, err := listSecrets(ctx, scope)
 	if err != nil {
@@ -160,7 +160,7 @@ func filterPVCsByExclude(in []corev1.PersistentVolumeClaim, ex []string) []corev
 
 // ---- Resource builders ----
 
-func (c *Collector) secretResource(scope *ContextScope, s *corev1.Secret) core.Resource {
+func (c *Collector) secretResource(scope *ContextScope, s *corev1.Secret) compliancekit.Resource {
 	totalSize := 0
 	keys := make([]string, 0, len(s.Data))
 	for k, v := range s.Data {
@@ -180,7 +180,7 @@ func (c *Collector) secretResource(scope *ContextScope, s *corev1.Secret) core.R
 		"for_sa_name": s.Annotations["kubernetes.io/service-account.name"],
 		"immutable":   boolOrFalse(s.Immutable),
 	}
-	r := core.Resource{
+	r := compliancekit.Resource{
 		ID:         fmt.Sprintf("%s.%s.%s.%s", SecretType, scope.Name, s.Namespace, s.Name),
 		Type:       SecretType,
 		Name:       s.Name,
@@ -191,7 +191,7 @@ func (c *Collector) secretResource(scope *ContextScope, s *corev1.Secret) core.R
 	return r
 }
 
-func (c *Collector) configMapResource(scope *ContextScope, cm *corev1.ConfigMap) core.Resource {
+func (c *Collector) configMapResource(scope *ContextScope, cm *corev1.ConfigMap) compliancekit.Resource {
 	totalSize := 0
 	keys := make([]string, 0, len(cm.Data))
 	for k, v := range cm.Data {
@@ -207,7 +207,7 @@ func (c *Collector) configMapResource(scope *ContextScope, cm *corev1.ConfigMap)
 		"labels":     copyStringMap(cm.Labels),
 		"immutable":  boolOrFalse(cm.Immutable),
 	}
-	r := core.Resource{
+	r := compliancekit.Resource{
 		ID:         fmt.Sprintf("%s.%s.%s.%s", ConfigMapType, scope.Name, cm.Namespace, cm.Name),
 		Type:       ConfigMapType,
 		Name:       cm.Name,
@@ -218,7 +218,7 @@ func (c *Collector) configMapResource(scope *ContextScope, cm *corev1.ConfigMap)
 	return r
 }
 
-func (c *Collector) storageClassResource(scope *ContextScope, sc *storagev1.StorageClass) core.Resource {
+func (c *Collector) storageClassResource(scope *ContextScope, sc *storagev1.StorageClass) compliancekit.Resource {
 	reclaim := ""
 	if sc.ReclaimPolicy != nil {
 		reclaim = string(*sc.ReclaimPolicy)
@@ -239,7 +239,7 @@ func (c *Collector) storageClassResource(scope *ContextScope, sc *storagev1.Stor
 		"has_encryption":      hasEncryptionParam(sc.Parameters),
 		"labels":              copyStringMap(sc.Labels),
 	}
-	r := core.Resource{
+	r := compliancekit.Resource{
 		ID:         fmt.Sprintf("%s.%s.%s", StorageClassType, scope.Name, sc.Name),
 		Type:       StorageClassType,
 		Name:       sc.Name,
@@ -250,7 +250,7 @@ func (c *Collector) storageClassResource(scope *ContextScope, sc *storagev1.Stor
 	return r
 }
 
-func (c *Collector) persistentVolumeResource(scope *ContextScope, pv *corev1.PersistentVolume) core.Resource {
+func (c *Collector) persistentVolumeResource(scope *ContextScope, pv *corev1.PersistentVolume) compliancekit.Resource {
 	capacity := ""
 	if q, ok := pv.Spec.Capacity[corev1.ResourceStorage]; ok {
 		capacity = q.String()
@@ -272,7 +272,7 @@ func (c *Collector) persistentVolumeResource(scope *ContextScope, pv *corev1.Per
 		"volume_mode":         pvVolumeMode(pv),
 		"labels":              copyStringMap(pv.Labels),
 	}
-	r := core.Resource{
+	r := compliancekit.Resource{
 		ID:         fmt.Sprintf("%s.%s.%s", PersistentVolumeType, scope.Name, pv.Name),
 		Type:       PersistentVolumeType,
 		Name:       pv.Name,
@@ -283,7 +283,7 @@ func (c *Collector) persistentVolumeResource(scope *ContextScope, pv *corev1.Per
 	return r
 }
 
-func (c *Collector) persistentVolumeClaimResource(scope *ContextScope, pvc *corev1.PersistentVolumeClaim) core.Resource {
+func (c *Collector) persistentVolumeClaimResource(scope *ContextScope, pvc *corev1.PersistentVolumeClaim) compliancekit.Resource {
 	storageClassName := ""
 	if pvc.Spec.StorageClassName != nil {
 		storageClassName = *pvc.Spec.StorageClassName
@@ -301,7 +301,7 @@ func (c *Collector) persistentVolumeClaimResource(scope *ContextScope, pvc *core
 		"access_modes":       flattenAccessModes(pvc.Spec.AccessModes),
 		"labels":             copyStringMap(pvc.Labels),
 	}
-	r := core.Resource{
+	r := compliancekit.Resource{
 		ID:         fmt.Sprintf("%s.%s.%s.%s", PersistentVolumeClaimType, scope.Name, pvc.Namespace, pvc.Name),
 		Type:       PersistentVolumeClaimType,
 		Name:       pvc.Name,

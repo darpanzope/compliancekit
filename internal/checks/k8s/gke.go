@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	gcpcol "github.com/darpanzope/compliancekit/internal/collectors/gcp"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // GKE enrichment checks. GKE resources come from the GCP collector
@@ -14,10 +14,10 @@ import (
 
 // ----- Private cluster ------------------------------------------
 
-var CheckGKEPrivateCluster = core.Check{
+var CheckGKEPrivateCluster = compliancekit.Check{
 	ID:           "k8s-gke-private-cluster",
 	Title:        "GKE clusters should run with private nodes",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "kubernetes",
 	Service:      "gke",
 	ResourceType: gcpcol.GKEClusterType,
@@ -37,17 +37,17 @@ var CheckGKEPrivateCluster = core.Check{
 	Scanner: "gke.PrivateCluster",
 }
 
-func GKEPrivateCluster(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func GKEPrivateCluster(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	return gkeBoolCheck(g, CheckGKEPrivateCluster, "private_nodes",
 		"private nodes enabled", "private nodes disabled (public node IPs)"), nil
 }
 
 // ----- Master authorized networks -------------------------------
 
-var CheckGKEMasterAuthorized = core.Check{
+var CheckGKEMasterAuthorized = compliancekit.Check{
 	ID:           "k8s-gke-master-authorized-networks",
 	Title:        "GKE clusters should restrict control-plane CIDR access",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "kubernetes",
 	Service:      "gke",
 	ResourceType: gcpcol.GKEClusterType,
@@ -67,11 +67,11 @@ var CheckGKEMasterAuthorized = core.Check{
 	Scanner: "gke.MasterAuthorized",
 }
 
-func GKEMasterAuthorized(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func GKEMasterAuthorized(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, c := range g.ByType(gcpcol.GKEClusterType) {
 		cidrs, _ := c.Attributes["master_authorized_cidrs"].([]string)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckGKEMasterAuthorized.ID,
 			Severity: CheckGKEMasterAuthorized.Severity,
 			Resource: c.Ref(),
@@ -79,13 +79,13 @@ func GKEMasterAuthorized(_ context.Context, g *core.ResourceGraph) ([]core.Findi
 		}
 		switch {
 		case len(cidrs) == 0:
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("gke cluster %q: master authorized networks not configured", c.Name)
 		case containsString(cidrs, "0.0.0.0/0"):
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("gke cluster %q: master authorized includes 0.0.0.0/0", c.Name)
 		default:
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("gke cluster %q: %d authorized CIDR(s)", c.Name, len(cidrs))
 		}
 		findings = append(findings, f)
@@ -95,10 +95,10 @@ func GKEMasterAuthorized(_ context.Context, g *core.ResourceGraph) ([]core.Findi
 
 // ----- Workload Identity -----------------------------------------
 
-var CheckGKEWorkloadIdentity = core.Check{
+var CheckGKEWorkloadIdentity = compliancekit.Check{
 	ID:           "k8s-gke-workload-identity",
 	Title:        "GKE clusters should enable Workload Identity",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "kubernetes",
 	Service:      "gke",
 	ResourceType: gcpcol.GKEClusterType,
@@ -119,17 +119,17 @@ var CheckGKEWorkloadIdentity = core.Check{
 	Scanner: "gke.WorkloadIdentity",
 }
 
-func GKEWorkloadIdentity(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func GKEWorkloadIdentity(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	return gkeBoolCheck(g, CheckGKEWorkloadIdentity, "workload_identity",
 		"Workload Identity enabled", "Workload Identity disabled"), nil
 }
 
 // ----- Binary Authorization -------------------------------------
 
-var CheckGKEBinaryAuth = core.Check{
+var CheckGKEBinaryAuth = compliancekit.Check{
 	ID:           "k8s-gke-binary-authorization",
 	Title:        "GKE clusters should enable Binary Authorization",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "kubernetes",
 	Service:      "gke",
 	ResourceType: gcpcol.GKEClusterType,
@@ -149,21 +149,21 @@ var CheckGKEBinaryAuth = core.Check{
 	Scanner: "gke.BinaryAuth",
 }
 
-func GKEBinaryAuth(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func GKEBinaryAuth(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, c := range g.ByType(gcpcol.GKEClusterType) {
 		mode, _ := c.Attributes["binary_authorization"].(string)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckGKEBinaryAuth.ID,
 			Severity: CheckGKEBinaryAuth.Severity,
 			Resource: c.Ref(),
 			Tags:     CheckGKEBinaryAuth.Tags,
 		}
 		if mode == "PROJECT_SINGLETON_POLICY_ENFORCE" || mode == "POLICY_BINDINGS" || mode == "POLICY_BINDINGS_AND_PROJECT_SINGLETON_POLICY_ENFORCE" {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("gke cluster %q: binAuthz=%s", c.Name, mode)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("gke cluster %q: binAuthz=%s (not enforcing)", c.Name, mode)
 		}
 		findings = append(findings, f)
@@ -173,10 +173,10 @@ func GKEBinaryAuth(_ context.Context, g *core.ResourceGraph) ([]core.Finding, er
 
 // ----- Network policy -------------------------------------------
 
-var CheckGKENetworkPolicy = core.Check{
+var CheckGKENetworkPolicy = compliancekit.Check{
 	ID:           "k8s-gke-network-policy",
 	Title:        "GKE clusters should enable network policy",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "kubernetes",
 	Service:      "gke",
 	ResourceType: gcpcol.GKEClusterType,
@@ -196,17 +196,17 @@ var CheckGKENetworkPolicy = core.Check{
 	Scanner: "gke.NetworkPolicy",
 }
 
-func GKENetworkPolicy(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func GKENetworkPolicy(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	return gkeBoolCheck(g, CheckGKENetworkPolicy, "network_policy",
 		"network policy enabled", "network policy disabled (NetworkPolicy resources are no-ops)"), nil
 }
 
 // ----- Shielded nodes -------------------------------------------
 
-var CheckGKEShieldedNodes = core.Check{
+var CheckGKEShieldedNodes = compliancekit.Check{
 	ID:           "k8s-gke-shielded-nodes",
 	Title:        "GKE clusters should enable Shielded Nodes",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "kubernetes",
 	Service:      "gke",
 	ResourceType: gcpcol.GKEClusterType,
@@ -226,17 +226,17 @@ var CheckGKEShieldedNodes = core.Check{
 	Scanner: "gke.ShieldedNodes",
 }
 
-func GKEShieldedNodes(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func GKEShieldedNodes(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	return gkeBoolCheck(g, CheckGKEShieldedNodes, "shielded_nodes",
 		"shielded nodes enabled", "shielded nodes disabled"), nil
 }
 
 // ----- Release channel -------------------------------------------
 
-var CheckGKEReleaseChannel = core.Check{
+var CheckGKEReleaseChannel = compliancekit.Check{
 	ID:           "k8s-gke-release-channel",
 	Title:        "GKE clusters should subscribe to a release channel",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "kubernetes",
 	Service:      "gke",
 	ResourceType: gcpcol.GKEClusterType,
@@ -256,11 +256,11 @@ var CheckGKEReleaseChannel = core.Check{
 	Scanner: "gke.ReleaseChannel",
 }
 
-func GKEReleaseChannel(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func GKEReleaseChannel(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, c := range g.ByType(gcpcol.GKEClusterType) {
 		channel, _ := c.Attributes["release_channel"].(string)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckGKEReleaseChannel.ID,
 			Severity: CheckGKEReleaseChannel.Severity,
 			Resource: c.Ref(),
@@ -268,10 +268,10 @@ func GKEReleaseChannel(_ context.Context, g *core.ResourceGraph) ([]core.Finding
 		}
 		switch channel {
 		case "RAPID", "REGULAR", "STABLE":
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("gke cluster %q: release channel=%s", c.Name, channel)
 		default:
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("gke cluster %q: no release channel (channel=%s)", c.Name, channel)
 		}
 		findings = append(findings, f)
@@ -281,10 +281,10 @@ func GKEReleaseChannel(_ context.Context, g *core.ResourceGraph) ([]core.Finding
 
 // ----- Legacy ABAC -----------------------------------------------
 
-var CheckGKELegacyABAC = core.Check{
+var CheckGKELegacyABAC = compliancekit.Check{
 	ID:           "k8s-gke-legacy-abac",
 	Title:        "GKE clusters should not enable legacy ABAC",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "kubernetes",
 	Service:      "gke",
 	ResourceType: gcpcol.GKEClusterType,
@@ -303,21 +303,21 @@ var CheckGKELegacyABAC = core.Check{
 	Scanner: "gke.LegacyABAC",
 }
 
-func GKELegacyABAC(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func GKELegacyABAC(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, c := range g.ByType(gcpcol.GKEClusterType) {
 		enabled, _ := c.Attributes["legacy_abac"].(bool)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckGKELegacyABAC.ID,
 			Severity: CheckGKELegacyABAC.Severity,
 			Resource: c.Ref(),
 			Tags:     CheckGKELegacyABAC.Tags,
 		}
 		if !enabled {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("gke cluster %q: legacy ABAC disabled", c.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("gke cluster %q: legacy ABAC enabled (bypasses RBAC)", c.Name)
 		}
 		findings = append(findings, f)
@@ -327,10 +327,10 @@ func GKELegacyABAC(_ context.Context, g *core.ResourceGraph) ([]core.Finding, er
 
 // ----- Cluster logging + monitoring -----------------------------
 
-var CheckGKELoggingMonitoring = core.Check{
+var CheckGKELoggingMonitoring = compliancekit.Check{
 	ID:           "k8s-gke-logging-monitoring",
 	Title:        "GKE clusters should enable logging and monitoring",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "kubernetes",
 	Service:      "gke",
 	ResourceType: gcpcol.GKEClusterType,
@@ -351,19 +351,19 @@ var CheckGKELoggingMonitoring = core.Check{
 	Scanner: "gke.LoggingMonitoring",
 }
 
-func GKELoggingMonitoring(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func GKELoggingMonitoring(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, c := range g.ByType(gcpcol.GKEClusterType) {
 		lg, _ := c.Attributes["logging_enabled"].(bool)
 		mn, _ := c.Attributes["monitoring_enabled"].(bool)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckGKELoggingMonitoring.ID,
 			Severity: CheckGKELoggingMonitoring.Severity,
 			Resource: c.Ref(),
 			Tags:     CheckGKELoggingMonitoring.Tags,
 		}
 		if lg && mn {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("gke cluster %q: logging + monitoring enabled", c.Name)
 		} else {
 			missing := []string{}
@@ -373,7 +373,7 @@ func GKELoggingMonitoring(_ context.Context, g *core.ResourceGraph) ([]core.Find
 			if !mn {
 				missing = append(missing, "monitoring")
 			}
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("gke cluster %q: missing %s", c.Name, strings.Join(missing, ", "))
 		}
 		findings = append(findings, f)
@@ -383,10 +383,10 @@ func GKELoggingMonitoring(_ context.Context, g *core.ResourceGraph) ([]core.Find
 
 // ----- Nodepool auto-upgrade ------------------------------------
 
-var CheckGKENPAutoUpgrade = core.Check{
+var CheckGKENPAutoUpgrade = compliancekit.Check{
 	ID:           "k8s-gke-nodepool-auto-upgrade",
 	Title:        "GKE node pools should enable auto-upgrade",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "kubernetes",
 	Service:      "gke",
 	ResourceType: gcpcol.GKENodePoolType,
@@ -404,17 +404,17 @@ var CheckGKENPAutoUpgrade = core.Check{
 	Scanner: "gke.NPAutoUpgrade",
 }
 
-func GKENPAutoUpgrade(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func GKENPAutoUpgrade(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	return gkeNPBoolCheck(g, CheckGKENPAutoUpgrade, "auto_upgrade",
 		"auto-upgrade enabled", "auto-upgrade disabled"), nil
 }
 
 // ----- Nodepool auto-repair -------------------------------------
 
-var CheckGKENPAutoRepair = core.Check{
+var CheckGKENPAutoRepair = compliancekit.Check{
 	ID:           "k8s-gke-nodepool-auto-repair",
 	Title:        "GKE node pools should enable auto-repair",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "kubernetes",
 	Service:      "gke",
 	ResourceType: gcpcol.GKENodePoolType,
@@ -433,17 +433,17 @@ var CheckGKENPAutoRepair = core.Check{
 	Scanner: "gke.NPAutoRepair",
 }
 
-func GKENPAutoRepair(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func GKENPAutoRepair(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	return gkeNPBoolCheck(g, CheckGKENPAutoRepair, "auto_repair",
 		"auto-repair enabled", "auto-repair disabled"), nil
 }
 
 // ----- Nodepool COS image ----------------------------------------
 
-var CheckGKENPCOSImage = core.Check{
+var CheckGKENPCOSImage = compliancekit.Check{
 	ID:           "k8s-gke-nodepool-cos",
 	Title:        "GKE node pools should use Container-Optimized OS",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "kubernetes",
 	Service:      "gke",
 	ResourceType: gcpcol.GKENodePoolType,
@@ -460,17 +460,17 @@ var CheckGKENPCOSImage = core.Check{
 	Scanner: "gke.NPCOSImage",
 }
 
-func GKENPCOSImage(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func GKENPCOSImage(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	return gkeNPBoolCheck(g, CheckGKENPCOSImage, "cos_image",
 		"COS_CONTAINERD image", "non-COS image"), nil
 }
 
 // ----- Nodepool default service account --------------------------
 
-var CheckGKENPDefaultSA = core.Check{
+var CheckGKENPDefaultSA = compliancekit.Check{
 	ID:           "k8s-gke-nodepool-default-sa",
 	Title:        "GKE node pools should not use the default Compute Engine SA",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "kubernetes",
 	Service:      "gke",
 	ResourceType: gcpcol.GKENodePoolType,
@@ -491,21 +491,21 @@ var CheckGKENPDefaultSA = core.Check{
 	Scanner: "gke.NPDefaultSA",
 }
 
-func GKENPDefaultSA(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func GKENPDefaultSA(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, np := range g.ByType(gcpcol.GKENodePoolType) {
 		def, _ := np.Attributes["default_sa"].(bool)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckGKENPDefaultSA.ID,
 			Severity: CheckGKENPDefaultSA.Severity,
 			Resource: np.Ref(),
 			Tags:     CheckGKENPDefaultSA.Tags,
 		}
 		if def {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("nodepool %q: uses default Compute Engine SA", np.Name)
 		} else {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("nodepool %q: dedicated SA", np.Name)
 		}
 		findings = append(findings, f)
@@ -516,36 +516,36 @@ func GKENPDefaultSA(_ context.Context, g *core.ResourceGraph) ([]core.Finding, e
 // ----- init -----------------------------------------------------
 
 func init() {
-	core.Register(CheckGKEPrivateCluster, GKEPrivateCluster)
-	core.Register(CheckGKEMasterAuthorized, GKEMasterAuthorized)
-	core.Register(CheckGKEWorkloadIdentity, GKEWorkloadIdentity)
-	core.Register(CheckGKEBinaryAuth, GKEBinaryAuth)
-	core.Register(CheckGKENetworkPolicy, GKENetworkPolicy)
-	core.Register(CheckGKEShieldedNodes, GKEShieldedNodes)
-	core.Register(CheckGKEReleaseChannel, GKEReleaseChannel)
-	core.Register(CheckGKELegacyABAC, GKELegacyABAC)
-	core.Register(CheckGKELoggingMonitoring, GKELoggingMonitoring)
-	core.Register(CheckGKENPAutoUpgrade, GKENPAutoUpgrade)
-	core.Register(CheckGKENPAutoRepair, GKENPAutoRepair)
-	core.Register(CheckGKENPCOSImage, GKENPCOSImage)
-	core.Register(CheckGKENPDefaultSA, GKENPDefaultSA)
+	compliancekit.Register(CheckGKEPrivateCluster, GKEPrivateCluster)
+	compliancekit.Register(CheckGKEMasterAuthorized, GKEMasterAuthorized)
+	compliancekit.Register(CheckGKEWorkloadIdentity, GKEWorkloadIdentity)
+	compliancekit.Register(CheckGKEBinaryAuth, GKEBinaryAuth)
+	compliancekit.Register(CheckGKENetworkPolicy, GKENetworkPolicy)
+	compliancekit.Register(CheckGKEShieldedNodes, GKEShieldedNodes)
+	compliancekit.Register(CheckGKEReleaseChannel, GKEReleaseChannel)
+	compliancekit.Register(CheckGKELegacyABAC, GKELegacyABAC)
+	compliancekit.Register(CheckGKELoggingMonitoring, GKELoggingMonitoring)
+	compliancekit.Register(CheckGKENPAutoUpgrade, GKENPAutoUpgrade)
+	compliancekit.Register(CheckGKENPAutoRepair, GKENPAutoRepair)
+	compliancekit.Register(CheckGKENPCOSImage, GKENPCOSImage)
+	compliancekit.Register(CheckGKENPDefaultSA, GKENPDefaultSA)
 }
 
-func gkeBoolCheck(g *core.ResourceGraph, check core.Check, attr, passMsg, failMsg string) []core.Finding {
-	findings := []core.Finding{}
+func gkeBoolCheck(g *compliancekit.ResourceGraph, check compliancekit.Check, attr, passMsg, failMsg string) []compliancekit.Finding {
+	findings := []compliancekit.Finding{}
 	for _, c := range g.ByType(gcpcol.GKEClusterType) {
 		v, _ := c.Attributes[attr].(bool)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  check.ID,
 			Severity: check.Severity,
 			Resource: c.Ref(),
 			Tags:     check.Tags,
 		}
 		if v {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("gke cluster %q: %s", c.Name, passMsg)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("gke cluster %q: %s", c.Name, failMsg)
 		}
 		findings = append(findings, f)
@@ -553,21 +553,21 @@ func gkeBoolCheck(g *core.ResourceGraph, check core.Check, attr, passMsg, failMs
 	return findings
 }
 
-func gkeNPBoolCheck(g *core.ResourceGraph, check core.Check, attr, passMsg, failMsg string) []core.Finding {
-	findings := []core.Finding{}
+func gkeNPBoolCheck(g *compliancekit.ResourceGraph, check compliancekit.Check, attr, passMsg, failMsg string) []compliancekit.Finding {
+	findings := []compliancekit.Finding{}
 	for _, np := range g.ByType(gcpcol.GKENodePoolType) {
 		v, _ := np.Attributes[attr].(bool)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  check.ID,
 			Severity: check.Severity,
 			Resource: np.Ref(),
 			Tags:     check.Tags,
 		}
 		if v {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("nodepool %q: %s", np.Name, passMsg)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("nodepool %q: %s", np.Name, failMsg)
 		}
 		findings = append(findings, f)

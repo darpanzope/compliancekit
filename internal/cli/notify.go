@@ -12,8 +12,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/notify"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // newNotifyCmd builds `compliancekit notify`, which dispatches
@@ -111,13 +111,13 @@ func runNotify(ctx context.Context, stdout io.Writer, opts notifyOptions) error 
 
 // applyFilters runs the baseline subtraction + global severity floor.
 // Extracted so runNotify stays under the gocyclo ceiling.
-func applyFilters(stdout io.Writer, findings []core.Finding, opts notifyOptions) ([]core.Finding, error) {
+func applyFilters(stdout io.Writer, findings []compliancekit.Finding, opts notifyOptions) ([]compliancekit.Finding, error) {
 	if opts.baseline != "" {
 		baseFingerprints, err := loadBaselineFingerprints(opts.baseline)
 		if err != nil {
 			return nil, fmt.Errorf("load baseline: %w", err)
 		}
-		var filtered []core.Finding
+		var filtered []compliancekit.Finding
 		for _, f := range findings {
 			if !baseFingerprints[f.Fingerprint()] {
 				filtered = append(filtered, f)
@@ -130,11 +130,11 @@ func applyFilters(stdout io.Writer, findings []core.Finding, opts notifyOptions)
 	if opts.severity == "" {
 		return findings, nil
 	}
-	floor, err := core.ParseSeverity(opts.severity)
+	floor, err := compliancekit.ParseSeverity(opts.severity)
 	if err != nil {
 		return nil, fmt.Errorf("--severity: %w", err)
 	}
-	var filtered []core.Finding
+	var filtered []compliancekit.Finding
 	for _, f := range findings {
 		if f.Severity >= floor {
 			filtered = append(filtered, f)
@@ -215,7 +215,7 @@ func configuredSinkCount() int {
 // loadNotifyFindings reads findings JSON from path (or stdin when
 // path is "-"). Reuses the shared loadFindings from evidence.go for
 // the path case; only owns the stdin case.
-func loadNotifyFindings(path string) ([]core.Finding, error) {
+func loadNotifyFindings(path string) ([]compliancekit.Finding, error) {
 	if path != "-" {
 		return loadFindings(path)
 	}
@@ -224,12 +224,12 @@ func loadNotifyFindings(path string) ([]core.Finding, error) {
 		return nil, err
 	}
 	var env struct {
-		Findings []core.Finding `json:"findings"`
+		Findings []compliancekit.Finding `json:"findings"`
 	}
 	if err := json.Unmarshal(body, &env); err == nil && env.Findings != nil {
 		return env.Findings, nil
 	}
-	var arr []core.Finding
+	var arr []compliancekit.Finding
 	if err := json.Unmarshal(body, &arr); err == nil {
 		return arr, nil
 	}

@@ -5,11 +5,11 @@ import (
 	"testing"
 
 	docol "github.com/darpanzope/compliancekit/internal/collectors/digitalocean"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
-func mkNS(name string, attrs map[string]any) core.Resource {
-	return core.Resource{
+func mkNS(name string, attrs map[string]any) compliancekit.Resource {
+	return compliancekit.Resource{
 		ID:         "digitalocean.functions_namespace." + name,
 		Type:       docol.FunctionsNamespaceType,
 		Name:       name,
@@ -25,9 +25,9 @@ func TestFunctionsHasAccessKey(t *testing.T) {
 	)
 	findings, _ := FunctionsHasAccessKey(context.Background(), g)
 	for _, f := range findings {
-		want := core.StatusPass
+		want := compliancekit.StatusPass
 		if f.Resource.Name == "without" {
-			want = core.StatusFail
+			want = compliancekit.StatusFail
 		}
 		if f.Status != want {
 			t.Errorf("%s: got %v", f.Resource.Name, f.Status)
@@ -42,9 +42,9 @@ func TestFunctionsOrphan(t *testing.T) {
 	)
 	findings, _ := FunctionsOrphan(context.Background(), g)
 	for _, f := range findings {
-		want := core.StatusPass
+		want := compliancekit.StatusPass
 		if f.Resource.Name == "empty" {
-			want = core.StatusFail
+			want = compliancekit.StatusFail
 		}
 		if f.Status != want {
 			t.Errorf("%s: got %v", f.Resource.Name, f.Status)
@@ -60,9 +60,9 @@ func TestFunctionsAllTriggersEnabled(t *testing.T) {
 	)
 	findings, _ := FunctionsAllTriggersEnabled(context.Background(), g)
 	for _, f := range findings {
-		want := core.StatusPass
+		want := compliancekit.StatusPass
 		if f.Resource.Name == "partial" {
-			want = core.StatusFail
+			want = compliancekit.StatusFail
 		}
 		if f.Status != want {
 			t.Errorf("%s: got %v", f.Resource.Name, f.Status)

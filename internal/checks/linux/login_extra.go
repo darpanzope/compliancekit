@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	docol "github.com/darpanzope/compliancekit/internal/collectors/linux"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.20 phase 5 — PAM + sudo + login.defs hardening. Five real-data
@@ -20,13 +20,13 @@ import (
 
 // ----- login.defs real-data checks --------------------------------------
 
-func loginDefsFromHost(h core.Resource) (docol.LoginDefs, bool) {
+func loginDefsFromHost(h compliancekit.Resource) (docol.LoginDefs, bool) {
 	v, ok := h.Attributes["login_defs"].(docol.LoginDefs)
 	return v, ok
 }
 
-func newLoginFinding(check core.Check, h core.Resource) core.Finding {
-	return core.Finding{
+func newLoginFinding(check compliancekit.Check, h compliancekit.Resource) compliancekit.Finding {
+	return compliancekit.Finding{
 		CheckID:  check.ID,
 		Severity: check.Severity,
 		Resource: h.Ref(),
@@ -34,10 +34,10 @@ func newLoginFinding(check core.Check, h core.Resource) core.Finding {
 	}
 }
 
-var CheckPassMaxDays = core.Check{
+var CheckPassMaxDays = compliancekit.Check{
 	ID:           "linux-login-defs-pass-max-days",
 	Title:        "/etc/login.defs PASS_MAX_DAYS must be ≤ 365",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "linux",
 	Service:      "auth",
 	ResourceType: docol.HostType,
@@ -55,26 +55,26 @@ var CheckPassMaxDays = core.Check{
 	Scanner: "linux.login.PassMaxDays",
 }
 
-func PassMaxDays(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func PassMaxDays(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, h := range g.ByType(docol.HostType) {
 		f := newLoginFinding(CheckPassMaxDays, h)
 		ld, ok := loginDefsFromHost(h)
 		if !ok {
-			f.Status = core.StatusError
+			f.Status = compliancekit.StatusError
 			f.Message = fmt.Sprintf("host %q: login_defs unavailable", h.Name)
 			findings = append(findings, f)
 			continue
 		}
 		switch {
 		case !ld.HasPassMaxDays:
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("host %q: PASS_MAX_DAYS not set in /etc/login.defs", h.Name)
 		case ld.PassMaxDays <= 365 && ld.PassMaxDays > 0:
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("host %q: PASS_MAX_DAYS=%d (≤365)", h.Name, ld.PassMaxDays)
 		default:
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("host %q: PASS_MAX_DAYS=%d (must be 1..365)", h.Name, ld.PassMaxDays)
 		}
 		findings = append(findings, f)
@@ -82,10 +82,10 @@ func PassMaxDays(_ context.Context, g *core.ResourceGraph) ([]core.Finding, erro
 	return findings, nil
 }
 
-var CheckPassMinDays = core.Check{
+var CheckPassMinDays = compliancekit.Check{
 	ID:           "linux-login-defs-pass-min-days",
 	Title:        "/etc/login.defs PASS_MIN_DAYS must be ≥ 1",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "linux",
 	Service:      "auth",
 	ResourceType: docol.HostType,
@@ -101,26 +101,26 @@ var CheckPassMinDays = core.Check{
 	Scanner: "linux.login.PassMinDays",
 }
 
-func PassMinDays(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func PassMinDays(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, h := range g.ByType(docol.HostType) {
 		f := newLoginFinding(CheckPassMinDays, h)
 		ld, ok := loginDefsFromHost(h)
 		if !ok {
-			f.Status = core.StatusError
+			f.Status = compliancekit.StatusError
 			f.Message = fmt.Sprintf("host %q: login_defs unavailable", h.Name)
 			findings = append(findings, f)
 			continue
 		}
 		switch {
 		case !ld.HasPassMinDays:
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("host %q: PASS_MIN_DAYS not set", h.Name)
 		case ld.PassMinDays >= 1:
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("host %q: PASS_MIN_DAYS=%d (≥1)", h.Name, ld.PassMinDays)
 		default:
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("host %q: PASS_MIN_DAYS=%d (must be ≥1)", h.Name, ld.PassMinDays)
 		}
 		findings = append(findings, f)
@@ -128,10 +128,10 @@ func PassMinDays(_ context.Context, g *core.ResourceGraph) ([]core.Finding, erro
 	return findings, nil
 }
 
-var CheckPassWarnAge = core.Check{
+var CheckPassWarnAge = compliancekit.Check{
 	ID:           "linux-login-defs-pass-warn-age",
 	Title:        "/etc/login.defs PASS_WARN_AGE must be ≥ 7",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "linux",
 	Service:      "auth",
 	ResourceType: docol.HostType,
@@ -148,26 +148,26 @@ var CheckPassWarnAge = core.Check{
 	Scanner: "linux.login.PassWarnAge",
 }
 
-func PassWarnAge(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func PassWarnAge(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, h := range g.ByType(docol.HostType) {
 		f := newLoginFinding(CheckPassWarnAge, h)
 		ld, ok := loginDefsFromHost(h)
 		if !ok {
-			f.Status = core.StatusError
+			f.Status = compliancekit.StatusError
 			f.Message = fmt.Sprintf("host %q: login_defs unavailable", h.Name)
 			findings = append(findings, f)
 			continue
 		}
 		switch {
 		case !ld.HasPassWarnAge:
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("host %q: PASS_WARN_AGE not set", h.Name)
 		case ld.PassWarnAge >= 7:
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("host %q: PASS_WARN_AGE=%d (≥7)", h.Name, ld.PassWarnAge)
 		default:
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("host %q: PASS_WARN_AGE=%d (must be ≥7)", h.Name, ld.PassWarnAge)
 		}
 		findings = append(findings, f)
@@ -175,10 +175,10 @@ func PassWarnAge(_ context.Context, g *core.ResourceGraph) ([]core.Finding, erro
 	return findings, nil
 }
 
-var CheckEncryptMethod = core.Check{
+var CheckEncryptMethod = compliancekit.Check{
 	ID:           "linux-login-defs-encrypt-method",
 	Title:        "/etc/login.defs ENCRYPT_METHOD must be SHA512 or YESCRYPT",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "linux",
 	Service:      "auth",
 	ResourceType: docol.HostType,
@@ -197,13 +197,13 @@ var CheckEncryptMethod = core.Check{
 	Scanner: "linux.login.EncryptMethod",
 }
 
-func EncryptMethod(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func EncryptMethod(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, h := range g.ByType(docol.HostType) {
 		f := newLoginFinding(CheckEncryptMethod, h)
 		ld, ok := loginDefsFromHost(h)
 		if !ok {
-			f.Status = core.StatusError
+			f.Status = compliancekit.StatusError
 			f.Message = fmt.Sprintf("host %q: login_defs unavailable", h.Name)
 			findings = append(findings, f)
 			continue
@@ -211,13 +211,13 @@ func EncryptMethod(_ context.Context, g *core.ResourceGraph) ([]core.Finding, er
 		method := strings.ToUpper(ld.EncryptMethod)
 		switch method {
 		case "SHA512", "YESCRYPT":
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("host %q: ENCRYPT_METHOD=%s", h.Name, method)
 		case "":
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("host %q: ENCRYPT_METHOD not set; relies on PAM default which may be SHA256/MD5", h.Name)
 		default:
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("host %q: ENCRYPT_METHOD=%s (must be SHA512 or YESCRYPT)", h.Name, method)
 		}
 		findings = append(findings, f)
@@ -225,10 +225,10 @@ func EncryptMethod(_ context.Context, g *core.ResourceGraph) ([]core.Finding, er
 	return findings, nil
 }
 
-var CheckUmask = core.Check{
+var CheckUmask = compliancekit.Check{
 	ID:           "linux-login-defs-umask",
 	Title:        "/etc/login.defs UMASK must be 027 or stricter",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "linux",
 	Service:      "auth",
 	ResourceType: docol.HostType,
@@ -245,28 +245,28 @@ var CheckUmask = core.Check{
 	Scanner: "linux.login.Umask",
 }
 
-func UmaskCheck(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func UmaskCheck(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, h := range g.ByType(docol.HostType) {
 		f := newLoginFinding(CheckUmask, h)
 		ld, ok := loginDefsFromHost(h)
 		if !ok {
-			f.Status = core.StatusError
+			f.Status = compliancekit.StatusError
 			f.Message = fmt.Sprintf("host %q: login_defs unavailable", h.Name)
 			findings = append(findings, f)
 			continue
 		}
 		if !ld.HasUmask {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("host %q: UMASK not set", h.Name)
 			findings = append(findings, f)
 			continue
 		}
 		if umaskAtLeast(ld.Umask, 0o27) {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("host %q: UMASK=%s (≥ 027)", h.Name, ld.Umask)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("host %q: UMASK=%s (must be 027 or stricter)", h.Name, ld.Umask)
 		}
 		findings = append(findings, f)
@@ -293,31 +293,31 @@ func umaskAtLeast(umask string, floor int) bool {
 
 var manualLoginChecks = []manualVerifySpec{
 	{id: "linux-sudo-nopasswd-audit", title: "Audit /etc/sudoers + /etc/sudoers.d for NOPASSWD entries",
-		severity: core.SeverityHigh, soc2: []string{"CC6.3"}, iso: []string{"A.5.15"}, cis: []string{"5.4.4"},
+		severity: compliancekit.SeverityHigh, soc2: []string{"CC6.3"}, iso: []string{"A.5.15"}, cis: []string{"5.4.4"},
 		tags:       []string{"sudo", "manual-verify"},
 		descSuffix: "NOPASSWD entries let a compromised account elevate without re-auth. Every entry should be (a) auditable + (b) narrowly scoped (Cmnd_Alias) — not blanket. Per-distro PAM + sudoers parsing is deferred to a future milestone; verify manually.",
 		hint:       "`sudo grep -r NOPASSWD /etc/sudoers /etc/sudoers.d/`",
 		scanner:    "linux.sudo.NopasswdAudit"},
 	{id: "linux-sudo-secure-path", title: "/etc/sudoers must set secure_path (no user-controlled PATH)",
-		severity: core.SeverityMedium, soc2: []string{"CC6.3"}, iso: []string{"A.5.15"}, cis: []string{"5.4.3"},
+		severity: compliancekit.SeverityMedium, soc2: []string{"CC6.3"}, iso: []string{"A.5.15"}, cis: []string{"5.4.3"},
 		tags:       []string{"sudo", "manual-verify"},
 		descSuffix: "secure_path strips the user's PATH and substitutes a hardcoded list — prevents trojan binaries in ~/bin from being run via sudo. Distro defaults differ; verify.",
 		hint:       "`sudo grep ^Defaults.*secure_path /etc/sudoers`",
 		scanner:    "linux.sudo.SecurePath"},
 	{id: "linux-sudo-logging", title: "sudo must log to syslog or a dedicated log file",
-		severity: core.SeverityMedium, soc2: []string{"CC7.2"}, iso: []string{"A.8.15"}, cis: []string{"5.4.5"},
+		severity: compliancekit.SeverityMedium, soc2: []string{"CC7.2"}, iso: []string{"A.8.15"}, cis: []string{"5.4.5"},
 		tags:       []string{"sudo", "manual-verify"},
 		descSuffix: "sudo's default logging is via syslog. Verify the syslog target collects sudoers entries OR add a Defaults logfile= line.",
 		hint:       "`sudo grep -E '^Defaults.*(logfile|syslog)' /etc/sudoers`",
 		scanner:    "linux.sudo.Logging"},
 	{id: "linux-pam-faillock-configured", title: "PAM must enforce account lockout after failed attempts (faillock / tally2)",
-		severity: core.SeverityHigh, soc2: []string{"CC6.1"}, iso: []string{"A.8.5"}, cis: []string{"5.4.2.1"},
+		severity: compliancekit.SeverityHigh, soc2: []string{"CC6.1"}, iso: []string{"A.8.5"}, cis: []string{"5.4.2.1"},
 		tags:       []string{"pam", "manual-verify"},
 		descSuffix: "faillock (RHEL family, Ubuntu 22.04+) or pam_tally2 (older) implements account lockout after N failed password attempts. PAM stack varies per distro; verify the appropriate module is present + configured (CIS recommends deny=5, unlock_time=900).",
 		hint:       "`sudo grep -E 'pam_faillock|pam_tally2' /etc/pam.d/* | head`",
 		scanner:    "linux.pam.Faillock"},
 	{id: "linux-pam-pwquality-configured", title: "PAM pwquality must enforce length + complexity",
-		severity: core.SeverityMedium, soc2: []string{"CC6.1"}, iso: []string{"A.5.17"}, cis: []string{"5.4.3.1"},
+		severity: compliancekit.SeverityMedium, soc2: []string{"CC6.1"}, iso: []string{"A.5.17"}, cis: []string{"5.4.3.1"},
 		tags:       []string{"pam", "manual-verify"},
 		descSuffix: "pam_pwquality (or pam_passwdqc) enforces minimum password length (≥14 per CIS) + complexity classes. /etc/security/pwquality.conf carries the knobs.",
 		hint:       "`sudo cat /etc/security/pwquality.conf | grep -v '^#'`",
@@ -326,15 +326,15 @@ var manualLoginChecks = []manualVerifySpec{
 
 type manualVerifySpec struct {
 	id, title        string
-	severity         core.Severity
+	severity         compliancekit.Severity
 	soc2, iso, cis   []string
 	tags             []string
 	descSuffix, hint string
 	scanner          string
 }
 
-func manualVerifyCheck(spec manualVerifySpec) core.Check {
-	return core.Check{
+func manualVerifyCheck(spec manualVerifySpec) compliancekit.Check {
+	return compliancekit.Check{
 		ID: spec.id, Title: spec.title, Severity: spec.severity,
 		Provider: "linux", Service: "auth", ResourceType: docol.HostType,
 		Description: fmt.Sprintf("Manual-verify check; CIS Linux Server v8 §%s. %s",
@@ -348,11 +348,11 @@ func manualVerifyCheck(spec manualVerifySpec) core.Check {
 	}
 }
 
-func manualVerifyFunc(spec manualVerifySpec) core.CheckFunc {
-	return func(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-		findings := []core.Finding{}
+func manualVerifyFunc(spec manualVerifySpec) compliancekit.CheckFunc {
+	return func(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+		findings := []compliancekit.Finding{}
 		for _, h := range g.ByType(docol.HostType) {
-			f := core.Finding{
+			f := compliancekit.Finding{
 				CheckID:  spec.id,
 				Severity: spec.severity,
 				Resource: h.Ref(),
@@ -360,12 +360,12 @@ func manualVerifyFunc(spec manualVerifySpec) core.CheckFunc {
 			}
 			reachable, _ := h.Attributes["reachable"].(bool)
 			if !reachable {
-				f.Status = core.StatusSkip
+				f.Status = compliancekit.StatusSkip
 				f.Message = fmt.Sprintf("host %q: unreachable", h.Name)
 				findings = append(findings, f)
 				continue
 			}
-			f.Status = core.StatusError
+			f.Status = compliancekit.StatusError
 			f.Message = fmt.Sprintf("host %q: manual-verify — run %s and record evidence", h.Name, spec.hint)
 			findings = append(findings, f)
 		}
@@ -374,13 +374,13 @@ func manualVerifyFunc(spec manualVerifySpec) core.CheckFunc {
 }
 
 func init() {
-	core.Register(CheckPassMaxDays, PassMaxDays)
-	core.Register(CheckPassMinDays, PassMinDays)
-	core.Register(CheckPassWarnAge, PassWarnAge)
-	core.Register(CheckEncryptMethod, EncryptMethod)
-	core.Register(CheckUmask, UmaskCheck)
+	compliancekit.Register(CheckPassMaxDays, PassMaxDays)
+	compliancekit.Register(CheckPassMinDays, PassMinDays)
+	compliancekit.Register(CheckPassWarnAge, PassWarnAge)
+	compliancekit.Register(CheckEncryptMethod, EncryptMethod)
+	compliancekit.Register(CheckUmask, UmaskCheck)
 	for _, spec := range manualLoginChecks {
 		spec := spec
-		core.Register(manualVerifyCheck(spec), manualVerifyFunc(spec))
+		compliancekit.Register(manualVerifyCheck(spec), manualVerifyFunc(spec))
 	}
 }

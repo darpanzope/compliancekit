@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/policy"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // fixtureJSON is the shape `compliancekit policy test` expects on disk.
@@ -42,7 +42,7 @@ func TestPolicyTest_JSONOutput(t *testing.T) {
 	if err := runPolicyTest(context.Background(), &out, fixturePath, "../policy/testdata/sample.rego", "json"); err != nil {
 		t.Fatalf("runPolicyTest: %v", err)
 	}
-	var findings []core.Finding
+	var findings []compliancekit.Finding
 	if err := json.Unmarshal(out.Bytes(), &findings); err != nil {
 		t.Fatalf("invalid JSON output: %v\n%s", err, out.String())
 	}

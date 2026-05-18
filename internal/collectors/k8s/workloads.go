@@ -9,19 +9,19 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/darpanzope/compliancekit/internal/collectors/cloudcommon"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // collectWorkloads emits k8s.pod resources for every Pod visible in
 // the scope. Phase 2 expands to Deployments / StatefulSets / DaemonSets
 // / Jobs / CronJobs; Phase 1 ships Pods only since the Pod Security
 // checks all target the runtime Pod surface.
-func (c *Collector) collectWorkloads(ctx context.Context, scope *ContextScope) ([]core.Resource, error) {
+func (c *Collector) collectWorkloads(ctx context.Context, scope *ContextScope) ([]compliancekit.Resource, error) {
 	pods, err := listPods(ctx, scope)
 	if err != nil {
 		return nil, fmt.Errorf("list pods: %w", err)
 	}
-	out := make([]core.Resource, 0, len(pods))
+	out := make([]compliancekit.Resource, 0, len(pods))
 	for i := range pods {
 		out = append(out, c.podResource(scope, &pods[i]))
 	}
@@ -67,10 +67,10 @@ func filterPodsByExclude(pods []corev1.Pod, exclude []string) []corev1.Pod {
 }
 
 // podResource flattens the bits of pod.Spec the Pod Security checks
-// inspect into a core.Resource attribute map. The flattening is
+// inspect into a compliancekit.Resource attribute map. The flattening is
 // deliberate — keeping check code free of client-go imports means the
 // catalog stays loadable from a binary that never touches the K8s API.
-func (c *Collector) podResource(scope *ContextScope, pod *corev1.Pod) core.Resource {
+func (c *Collector) podResource(scope *ContextScope, pod *corev1.Pod) compliancekit.Resource {
 	attrs := map[string]any{
 		"namespace":          pod.Namespace,
 		"service_account":    pod.Spec.ServiceAccountName,
@@ -96,7 +96,7 @@ func (c *Collector) podResource(scope *ContextScope, pod *corev1.Pod) core.Resou
 		"topology_spread_constraints": len(pod.Spec.TopologySpreadConstraints),
 		"init_container_count":        len(pod.Spec.InitContainers),
 	}
-	r := core.Resource{
+	r := compliancekit.Resource{
 		ID:         fmt.Sprintf("%s.%s.%s.%s", PodType, scope.Name, pod.Namespace, pod.Name),
 		Type:       PodType,
 		Name:       pod.Name,

@@ -6,15 +6,15 @@ import (
 
 	"github.com/digitalocean/godo"
 
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // SpacesKeyType is the resource type for DO Spaces access keys
 // (the S3-compatible credentials).
 const SpacesKeyType = "digitalocean.spaces_key"
 
-func (c *Collector) collectSpacesKeys(ctx context.Context) ([]core.Resource, error) {
-	out := []core.Resource{}
+func (c *Collector) collectSpacesKeys(ctx context.Context) ([]compliancekit.Resource, error) {
+	out := []compliancekit.Resource{}
 	opt := &godo.ListOptions{PerPage: pageSize}
 	for {
 		if err := ctx.Err(); err != nil {
@@ -39,7 +39,7 @@ func (c *Collector) collectSpacesKeys(ctx context.Context) ([]core.Resource, err
 	return out, nil
 }
 
-func (c *Collector) spacesKeyResource(k *godo.SpacesKey) core.Resource {
+func (c *Collector) spacesKeyResource(k *godo.SpacesKey) compliancekit.Resource {
 	grants := []map[string]any{}
 	for _, g := range k.Grants {
 		grants = append(grants, map[string]any{
@@ -47,7 +47,7 @@ func (c *Collector) spacesKeyResource(k *godo.SpacesKey) core.Resource {
 			"permission": string(g.Permission),
 		})
 	}
-	r := core.Resource{
+	r := compliancekit.Resource{
 		ID:       fmt.Sprintf("%s.%s", SpacesKeyType, k.AccessKey),
 		Type:     SpacesKeyType,
 		Name:     k.Name,

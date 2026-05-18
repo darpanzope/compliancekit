@@ -8,7 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/cloudtrail"
 
 	"github.com/darpanzope/compliancekit/internal/collectors/cloudcommon"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // CloudTrailType is the resource type for CloudTrail trails.
@@ -23,7 +23,7 @@ type cloudtrailClient interface {
 // collectCloudTrail enumerates trails per region. A multi-region
 // trail is described in every region it is "home" in; we de-dup
 // by trail ARN so the global trail does not produce N findings.
-func (c *Collector) collectCloudTrail(ctx context.Context, regions []string, out []core.Resource) []core.Resource {
+func (c *Collector) collectCloudTrail(ctx context.Context, regions []string, out []compliancekit.Resource) []compliancekit.Resource {
 	seen := map[string]bool{}
 	for _, region := range regions {
 		cfg := c.cfg
@@ -38,7 +38,7 @@ func (c *Collector) collectCloudTrail(ctx context.Context, regions []string, out
 	return out
 }
 
-func (c *Collector) collectCloudTrailWithClient(ctx context.Context, client cloudtrailClient, region string, seen map[string]bool, out []core.Resource) ([]core.Resource, error) {
+func (c *Collector) collectCloudTrailWithClient(ctx context.Context, client cloudtrailClient, region string, seen map[string]bool, out []compliancekit.Resource) ([]compliancekit.Resource, error) {
 	resp, err := client.DescribeTrails(ctx, &cloudtrail.DescribeTrailsInput{})
 	if err != nil {
 		return nil, fmt.Errorf("describe trails: %w", err)
@@ -66,7 +66,7 @@ func (c *Collector) collectCloudTrailWithClient(ctx context.Context, client clou
 			isLogging = awssdk.ToBool(status.IsLogging)
 		}
 
-		r := core.Resource{
+		r := compliancekit.Resource{
 			ID:       fmt.Sprintf("aws.cloudtrail.trail.%s", arn),
 			Type:     CloudTrailType,
 			Name:     awssdk.ToString(t.Name),

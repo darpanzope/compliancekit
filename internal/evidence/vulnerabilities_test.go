@@ -7,36 +7,36 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 func TestWriteVulnerabilitiesCSV(t *testing.T) {
 	dir := t.TempDir()
-	findings := []core.Finding{
+	findings := []compliancekit.Finding{
 		{
 			CheckID:  "ingest.trivy.CVE-2024-12345",
-			Status:   core.StatusFail,
-			Severity: core.SeverityHigh,
-			Resource: core.ResourceRef{
+			Status:   compliancekit.StatusFail,
+			Severity: compliancekit.SeverityHigh,
+			Resource: compliancekit.ResourceRef{
 				ID:   "container-image://abc123",
 				Type: "container.image",
 				Name: "alpine:3.18.0",
 			},
-			Vulnerability: &core.Vulnerability{
+			Vulnerability: &compliancekit.Vulnerability{
 				ID:           "CVE-2024-12345",
 				CVSSScore:    8.1,
 				CVSSVector:   "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:H/A:H",
 				FixedVersion: "3.0.8",
 				Image:        "alpine:3.18.0",
 				PrimaryURL:   "https://nvd.nist.gov/vuln/detail/CVE-2024-12345",
-				Package: core.Package{
+				Package: compliancekit.Package{
 					Name:      "openssl",
 					Version:   "3.0.7",
 					Ecosystem: "apk",
 					PURL:      "pkg:apk/alpine/openssl@3.0.7",
 				},
 			},
-			Source: &core.Source{
+			Source: &compliancekit.Source{
 				Type:        "ingest",
 				Tool:        "trivy",
 				ToolVersion: "v0.50.4",
@@ -46,8 +46,8 @@ func TestWriteVulnerabilitiesCSV(t *testing.T) {
 		// A non-vuln finding shouldn't appear.
 		{
 			CheckID:  "do.spaces.public-read",
-			Status:   core.StatusFail,
-			Severity: core.SeverityHigh,
+			Status:   compliancekit.StatusFail,
+			Severity: compliancekit.SeverityHigh,
 		},
 	}
 
@@ -98,8 +98,8 @@ func TestWriteVulnerabilitiesCSV(t *testing.T) {
 
 func TestWriteVulnerabilitiesCSV_NoVulnFindings(t *testing.T) {
 	dir := t.TempDir()
-	findings := []core.Finding{
-		{CheckID: "do.spaces.public-read", Status: core.StatusFail, Severity: core.SeverityHigh},
+	findings := []compliancekit.Finding{
+		{CheckID: "do.spaces.public-read", Status: compliancekit.StatusFail, Severity: compliancekit.SeverityHigh},
 	}
 	path, err := writeVulnerabilitiesCSV(dir, findings)
 	if err != nil {

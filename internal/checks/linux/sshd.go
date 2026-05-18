@@ -16,14 +16,14 @@ import (
 	"strings"
 
 	linuxcol "github.com/darpanzope/compliancekit/internal/collectors/linux"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // sshdConfigOf returns the parsed sshd_config from a host Resource, or
 // (nil, false) when the host was unreachable, sshd probe failed, or
 // the attribute is otherwise missing. Every sshd check uses this
 // helper so the skip path lives in one place.
-func sshdConfigOf(host core.Resource) (map[string]string, bool) {
+func sshdConfigOf(host compliancekit.Resource) (map[string]string, bool) {
 	if !host.AttrBool("reachable") {
 		return nil, false
 	}
@@ -46,11 +46,11 @@ func sshdConfigOf(host core.Resource) (map[string]string, bool) {
 // The reason is constant for now -- future gatherers may want to
 // distinguish "unreachable" vs "sshd probe failed" but every existing
 // check folds those into the same Skip with the same message.
-func skipFinding(check core.Check, host core.Resource) core.Finding {
-	return core.Finding{
+func skipFinding(check compliancekit.Check, host compliancekit.Resource) compliancekit.Finding {
+	return compliancekit.Finding{
 		CheckID:  check.ID,
 		Severity: check.Severity,
-		Status:   core.StatusSkip,
+		Status:   compliancekit.StatusSkip,
 		Resource: host.Ref(),
 		Message:  "sshd config unavailable",
 		Tags:     check.Tags,
@@ -62,10 +62,10 @@ func skipFinding(check core.Check, host core.Resource) core.Finding {
 // ============================================================
 
 // CheckSSHDNoRootLogin requires PermitRootLogin=no.
-var CheckSSHDNoRootLogin = core.Check{
+var CheckSSHDNoRootLogin = compliancekit.Check{
 	ID:           "linux-sshd-no-root-login",
 	Title:        "SSH must not permit root login",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "linux",
 	Service:      "sshd",
 	ResourceType: linuxcol.HostType,
@@ -86,9 +86,9 @@ var CheckSSHDNoRootLogin = core.Check{
 }
 
 // SSHDNoRootLogin is the CheckFunc for CheckSSHDNoRootLogin.
-func SSHDNoRootLogin(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func SSHDNoRootLogin(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	hosts := g.ByType(linuxcol.HostType)
-	findings := make([]core.Finding, 0, len(hosts))
+	findings := make([]compliancekit.Finding, 0, len(hosts))
 	for _, h := range hosts {
 		cfg, ok := sshdConfigOf(h)
 		if !ok {
@@ -96,17 +96,17 @@ func SSHDNoRootLogin(_ context.Context, g *core.ResourceGraph) ([]core.Finding, 
 			continue
 		}
 		v := cfg["permitrootlogin"]
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckSSHDNoRootLogin.ID,
 			Severity: CheckSSHDNoRootLogin.Severity,
 			Resource: h.Ref(),
 			Tags:     CheckSSHDNoRootLogin.Tags,
 		}
 		if v == "no" {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("host %q: PermitRootLogin=no", h.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("host %q: PermitRootLogin=%q (want no)", h.Name, v)
 		}
 		findings = append(findings, f)
@@ -119,10 +119,10 @@ func SSHDNoRootLogin(_ context.Context, g *core.ResourceGraph) ([]core.Finding, 
 // ============================================================
 
 // CheckSSHDNoPasswordAuth requires PasswordAuthentication=no.
-var CheckSSHDNoPasswordAuth = core.Check{
+var CheckSSHDNoPasswordAuth = compliancekit.Check{
 	ID:           "linux-sshd-no-password-auth",
 	Title:        "SSH must not accept password authentication",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "linux",
 	Service:      "sshd",
 	ResourceType: linuxcol.HostType,
@@ -144,9 +144,9 @@ var CheckSSHDNoPasswordAuth = core.Check{
 }
 
 // SSHDNoPasswordAuth is the CheckFunc for CheckSSHDNoPasswordAuth.
-func SSHDNoPasswordAuth(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func SSHDNoPasswordAuth(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	hosts := g.ByType(linuxcol.HostType)
-	findings := make([]core.Finding, 0, len(hosts))
+	findings := make([]compliancekit.Finding, 0, len(hosts))
 	for _, h := range hosts {
 		cfg, ok := sshdConfigOf(h)
 		if !ok {
@@ -154,17 +154,17 @@ func SSHDNoPasswordAuth(_ context.Context, g *core.ResourceGraph) ([]core.Findin
 			continue
 		}
 		v := cfg["passwordauthentication"]
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckSSHDNoPasswordAuth.ID,
 			Severity: CheckSSHDNoPasswordAuth.Severity,
 			Resource: h.Ref(),
 			Tags:     CheckSSHDNoPasswordAuth.Tags,
 		}
 		if v == "no" {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("host %q: PasswordAuthentication=no", h.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("host %q: PasswordAuthentication=%q (want no)", h.Name, v)
 		}
 		findings = append(findings, f)
@@ -177,10 +177,10 @@ func SSHDNoPasswordAuth(_ context.Context, g *core.ResourceGraph) ([]core.Findin
 // ============================================================
 
 // CheckSSHDProtocol2 requires Protocol 2 (SSH-1 is ancient and broken).
-var CheckSSHDProtocol2 = core.Check{
+var CheckSSHDProtocol2 = compliancekit.Check{
 	ID:           "linux-sshd-protocol-2",
 	Title:        "SSH must use protocol version 2 only",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "linux",
 	Service:      "sshd",
 	ResourceType: linuxcol.HostType,
@@ -201,9 +201,9 @@ var CheckSSHDProtocol2 = core.Check{
 }
 
 // SSHDProtocol2 is the CheckFunc for CheckSSHDProtocol2.
-func SSHDProtocol2(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func SSHDProtocol2(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	hosts := g.ByType(linuxcol.HostType)
-	findings := make([]core.Finding, 0, len(hosts))
+	findings := make([]compliancekit.Finding, 0, len(hosts))
 	for _, h := range hosts {
 		cfg, ok := sshdConfigOf(h)
 		if !ok {
@@ -215,7 +215,7 @@ func SSHDProtocol2(_ context.Context, g *core.ResourceGraph) ([]core.Finding, er
 		// as Pass to avoid a noisy finding on every modern host;
 		// "explicit non-2" is a Fail.
 		v, present := cfg["protocol"]
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckSSHDProtocol2.ID,
 			Severity: CheckSSHDProtocol2.Severity,
 			Resource: h.Ref(),
@@ -223,13 +223,13 @@ func SSHDProtocol2(_ context.Context, g *core.ResourceGraph) ([]core.Finding, er
 		}
 		switch {
 		case !present:
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("host %q: Protocol directive absent (modern OpenSSH default is 2)", h.Name)
 		case v == "2":
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("host %q: Protocol=2", h.Name)
 		default:
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("host %q: Protocol=%q (want 2)", h.Name, v)
 		}
 		findings = append(findings, f)
@@ -247,10 +247,10 @@ func SSHDProtocol2(_ context.Context, g *core.ResourceGraph) ([]core.Finding, er
 const MaxAuthTriesCeiling = 4
 
 // CheckSSHDMaxAuthTries flags MaxAuthTries > MaxAuthTriesCeiling.
-var CheckSSHDMaxAuthTries = core.Check{
+var CheckSSHDMaxAuthTries = compliancekit.Check{
 	ID:           "linux-sshd-max-auth-tries",
 	Title:        "SSH MaxAuthTries should be 4 or less",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "linux",
 	Service:      "sshd",
 	ResourceType: linuxcol.HostType,
@@ -270,9 +270,9 @@ var CheckSSHDMaxAuthTries = core.Check{
 }
 
 // SSHDMaxAuthTries is the CheckFunc for CheckSSHDMaxAuthTries.
-func SSHDMaxAuthTries(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func SSHDMaxAuthTries(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	hosts := g.ByType(linuxcol.HostType)
-	findings := make([]core.Finding, 0, len(hosts))
+	findings := make([]compliancekit.Finding, 0, len(hosts))
 	for _, h := range hosts {
 		cfg, ok := sshdConfigOf(h)
 		if !ok {
@@ -280,14 +280,14 @@ func SSHDMaxAuthTries(_ context.Context, g *core.ResourceGraph) ([]core.Finding,
 			continue
 		}
 		raw, present := cfg["maxauthtries"]
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckSSHDMaxAuthTries.ID,
 			Severity: CheckSSHDMaxAuthTries.Severity,
 			Resource: h.Ref(),
 			Tags:     CheckSSHDMaxAuthTries.Tags,
 		}
 		if !present {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("host %q: MaxAuthTries absent (OpenSSH default is 6, exceeds ceiling %d)", h.Name, MaxAuthTriesCeiling)
 			findings = append(findings, f)
 			continue
@@ -295,13 +295,13 @@ func SSHDMaxAuthTries(_ context.Context, g *core.ResourceGraph) ([]core.Finding,
 		n, err := strconv.Atoi(strings.TrimSpace(raw))
 		switch {
 		case err != nil:
-			f.Status = core.StatusError
+			f.Status = compliancekit.StatusError
 			f.Message = fmt.Sprintf("host %q: MaxAuthTries=%q is not an integer", h.Name, raw)
 		case n <= MaxAuthTriesCeiling:
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("host %q: MaxAuthTries=%d", h.Name, n)
 		default:
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("host %q: MaxAuthTries=%d (ceiling %d)", h.Name, n, MaxAuthTriesCeiling)
 		}
 		findings = append(findings, f)
@@ -319,10 +319,10 @@ func SSHDMaxAuthTries(_ context.Context, g *core.ResourceGraph) ([]core.Finding,
 const LoginGraceTimeCeilingSeconds = 60
 
 // CheckSSHDLoginGraceTime flags LoginGraceTime > 60s.
-var CheckSSHDLoginGraceTime = core.Check{
+var CheckSSHDLoginGraceTime = compliancekit.Check{
 	ID:           "linux-sshd-login-grace-time",
 	Title:        "SSH LoginGraceTime should be 60 seconds or less",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "linux",
 	Service:      "sshd",
 	ResourceType: linuxcol.HostType,
@@ -343,9 +343,9 @@ var CheckSSHDLoginGraceTime = core.Check{
 }
 
 // SSHDLoginGraceTime is the CheckFunc for CheckSSHDLoginGraceTime.
-func SSHDLoginGraceTime(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func SSHDLoginGraceTime(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	hosts := g.ByType(linuxcol.HostType)
-	findings := make([]core.Finding, 0, len(hosts))
+	findings := make([]compliancekit.Finding, 0, len(hosts))
 	for _, h := range hosts {
 		cfg, ok := sshdConfigOf(h)
 		if !ok {
@@ -353,14 +353,14 @@ func SSHDLoginGraceTime(_ context.Context, g *core.ResourceGraph) ([]core.Findin
 			continue
 		}
 		raw, present := cfg["logingracetime"]
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckSSHDLoginGraceTime.ID,
 			Severity: CheckSSHDLoginGraceTime.Severity,
 			Resource: h.Ref(),
 			Tags:     CheckSSHDLoginGraceTime.Tags,
 		}
 		if !present {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("host %q: LoginGraceTime absent (OpenSSH default 120s exceeds ceiling %ds)", h.Name, LoginGraceTimeCeilingSeconds)
 			findings = append(findings, f)
 			continue
@@ -368,13 +368,13 @@ func SSHDLoginGraceTime(_ context.Context, g *core.ResourceGraph) ([]core.Findin
 		seconds, err := parseSSHDDuration(raw)
 		switch {
 		case err != nil:
-			f.Status = core.StatusError
+			f.Status = compliancekit.StatusError
 			f.Message = fmt.Sprintf("host %q: LoginGraceTime=%q is not a parseable duration", h.Name, raw)
 		case seconds <= LoginGraceTimeCeilingSeconds:
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("host %q: LoginGraceTime=%ds", h.Name, seconds)
 		default:
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("host %q: LoginGraceTime=%ds (ceiling %ds)", h.Name, seconds, LoginGraceTimeCeilingSeconds)
 		}
 		findings = append(findings, f)
@@ -423,9 +423,9 @@ func parseSSHDDuration(s string) (int, error) {
 // init registers every check in this file with the default registry.
 // cmd/compliancekit imports this package for its side effects.
 func init() {
-	core.Register(CheckSSHDNoRootLogin, SSHDNoRootLogin)
-	core.Register(CheckSSHDNoPasswordAuth, SSHDNoPasswordAuth)
-	core.Register(CheckSSHDProtocol2, SSHDProtocol2)
-	core.Register(CheckSSHDMaxAuthTries, SSHDMaxAuthTries)
-	core.Register(CheckSSHDLoginGraceTime, SSHDLoginGraceTime)
+	compliancekit.Register(CheckSSHDNoRootLogin, SSHDNoRootLogin)
+	compliancekit.Register(CheckSSHDNoPasswordAuth, SSHDNoPasswordAuth)
+	compliancekit.Register(CheckSSHDProtocol2, SSHDProtocol2)
+	compliancekit.Register(CheckSSHDMaxAuthTries, SSHDMaxAuthTries)
+	compliancekit.Register(CheckSSHDLoginGraceTime, SSHDLoginGraceTime)
 }

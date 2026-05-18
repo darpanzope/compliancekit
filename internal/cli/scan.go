@@ -16,11 +16,11 @@ import (
 	k8scol "github.com/darpanzope/compliancekit/internal/collectors/k8s"
 	linuxcol "github.com/darpanzope/compliancekit/internal/collectors/linux"
 	"github.com/darpanzope/compliancekit/internal/config"
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/engine"
 	"github.com/darpanzope/compliancekit/internal/profile"
 	"github.com/darpanzope/compliancekit/internal/report"
 	"github.com/darpanzope/compliancekit/internal/score"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 
 	// v0.22.1 — side-effect imports register every remediation
 	// Strategy with remediate.Default so the HTML reporter can pull
@@ -166,9 +166,9 @@ func runScan(ctx context.Context, w io.Writer, opts scanOptions, providerFilter 
 // Per-provider construction lives in individual buildXCollector
 // helpers so this function stays under gocyclo's 15-edge ceiling
 // as new providers land.
-func buildCollectors(ctx context.Context, cfg *config.Config, providerFilter string) ([]core.Collector, error) {
-	var collectors []core.Collector
-	for _, build := range []func(context.Context, *config.Config, string) (core.Collector, error){
+func buildCollectors(ctx context.Context, cfg *config.Config, providerFilter string) ([]compliancekit.Collector, error) {
+	var collectors []compliancekit.Collector
+	for _, build := range []func(context.Context, *config.Config, string) (compliancekit.Collector, error){
 		buildDOCollector,
 		buildLinuxCollector,
 		buildAWSCollector,
@@ -191,7 +191,7 @@ func providerSelected(name, filter string) bool {
 	return filter == "" || filter == name
 }
 
-func buildDOCollector(_ context.Context, cfg *config.Config, filter string) (core.Collector, error) {
+func buildDOCollector(_ context.Context, cfg *config.Config, filter string) (compliancekit.Collector, error) {
 	if !cfg.Providers.DigitalOcean.Enabled || !providerSelected("digitalocean", filter) {
 		return nil, nil
 	}
@@ -203,7 +203,7 @@ func buildDOCollector(_ context.Context, cfg *config.Config, filter string) (cor
 	return do.New(token), nil
 }
 
-func buildLinuxCollector(_ context.Context, cfg *config.Config, filter string) (core.Collector, error) {
+func buildLinuxCollector(_ context.Context, cfg *config.Config, filter string) (compliancekit.Collector, error) {
 	if !cfg.Providers.Linux.Enabled || !providerSelected("linux", filter) {
 		return nil, nil
 	}
@@ -214,7 +214,7 @@ func buildLinuxCollector(_ context.Context, cfg *config.Config, filter string) (
 	return linuxcol.New(inv, cfg.Providers.Linux.SSH), nil
 }
 
-func buildAWSCollector(ctx context.Context, cfg *config.Config, filter string) (core.Collector, error) {
+func buildAWSCollector(ctx context.Context, cfg *config.Config, filter string) (compliancekit.Collector, error) {
 	if !cfg.Providers.AWS.Enabled || !providerSelected("aws", filter) {
 		return nil, nil
 	}
@@ -236,7 +236,7 @@ func buildAWSCollector(ctx context.Context, cfg *config.Config, filter string) (
 	return awsCol, nil
 }
 
-func buildGCPCollector(ctx context.Context, cfg *config.Config, filter string) (core.Collector, error) {
+func buildGCPCollector(ctx context.Context, cfg *config.Config, filter string) (compliancekit.Collector, error) {
 	if !cfg.Providers.GCP.Enabled || !providerSelected("gcp", filter) {
 		return nil, nil
 	}
@@ -253,7 +253,7 @@ func buildGCPCollector(ctx context.Context, cfg *config.Config, filter string) (
 	return gc, nil
 }
 
-func buildHetznerCollector(_ context.Context, cfg *config.Config, filter string) (core.Collector, error) {
+func buildHetznerCollector(_ context.Context, cfg *config.Config, filter string) (compliancekit.Collector, error) {
 	if !cfg.Providers.Hetzner.Enabled || !providerSelected("hetzner", filter) {
 		return nil, nil
 	}
@@ -265,7 +265,7 @@ func buildHetznerCollector(_ context.Context, cfg *config.Config, filter string)
 	return hetznercol.New(token), nil
 }
 
-func buildKubernetesCollector(_ context.Context, cfg *config.Config, filter string) (core.Collector, error) {
+func buildKubernetesCollector(_ context.Context, cfg *config.Config, filter string) (compliancekit.Collector, error) {
 	if !cfg.Providers.Kubernetes.Enabled || !providerSelected("kubernetes", filter) {
 		return nil, nil
 	}
@@ -307,9 +307,9 @@ func applyScanFlagOverrides(cfg *config.Config, opts scanOptions) {
 // pointing at a named entry under cfg.Profiles, the surviving subset
 // is copied into a fresh registry so the engine iterates the smaller
 // set without engine.New needing to know about profiles at all.
-func buildRegistry(cfg *config.Config) (*core.Registry, error) {
+func buildRegistry(cfg *config.Config) (*compliancekit.Registry, error) {
 	if cfg.Profile == "" {
-		return core.DefaultRegistry(), nil
+		return compliancekit.DefaultRegistry(), nil
 	}
 	pc, ok := cfg.Profiles[cfg.Profile]
 	if !ok {
@@ -328,12 +328,12 @@ func buildRegistry(cfg *config.Config) (*core.Registry, error) {
 		IncludeIDs:        pc.IncludeIDs,
 		ExcludeIDs:        pc.ExcludeIDs,
 	}
-	all := core.DefaultRegistry()
+	all := compliancekit.DefaultRegistry()
 	surviving, err := p.Filter(all.Checks())
 	if err != nil {
 		return nil, err
 	}
-	filtered := core.NewRegistry()
+	filtered := compliancekit.NewRegistry()
 	for _, c := range surviving {
 		fn, ok := all.Get(c.ID)
 		if !ok {
@@ -347,11 +347,11 @@ func buildRegistry(cfg *config.Config) (*core.Registry, error) {
 }
 
 // buildReporters constructs the reporter set from the configured format list.
-func buildReporters(formats []string) ([]core.Reporter, error) {
+func buildReporters(formats []string) ([]compliancekit.Reporter, error) {
 	if len(formats) == 0 {
 		formats = []string{report.FormatJSON}
 	}
-	reporters := make([]core.Reporter, 0, len(formats))
+	reporters := make([]compliancekit.Reporter, 0, len(formats))
 	for _, f := range formats {
 		r, err := report.New(f)
 		if err != nil {
@@ -363,7 +363,7 @@ func buildReporters(formats []string) ([]core.Reporter, error) {
 }
 
 // writeReport opens path and invokes r.Render.
-func writeReport(ctx context.Context, r core.Reporter, result engine.Result, path string) error {
+func writeReport(ctx context.Context, r compliancekit.Reporter, result engine.Result, path string) error {
 	// path is composed from cfg.Output.OutDir (operator-controlled) and a
 	// fixed-suffix filename derived from the reporter format. There is no
 	// untrusted input here; the gosec G304 warning is a false positive.
@@ -381,7 +381,7 @@ func writeReport(ctx context.Context, r core.Reporter, result engine.Result, pat
 
 // hasActionableAtOrAbove reports whether any Fail or Error finding is
 // at or above the given severity.
-func hasActionableAtOrAbove(findings []core.Finding, level core.Severity) bool {
+func hasActionableAtOrAbove(findings []compliancekit.Finding, level compliancekit.Severity) bool {
 	for _, f := range findings {
 		if f.Status.IsActionable() && f.Severity >= level {
 			return true
@@ -390,7 +390,7 @@ func hasActionableAtOrAbove(findings []core.Finding, level core.Severity) bool {
 	return false
 }
 
-func describeCollectors(cs []core.Collector) string {
+func describeCollectors(cs []compliancekit.Collector) string {
 	if len(cs) == 1 {
 		return cs[0].Name()
 	}
@@ -406,31 +406,31 @@ func describeCollectors(cs []core.Collector) string {
 
 // printSummary writes the end-of-scan summary to w. Matches the shape
 // shown in ROADMAP.md's v0.1 demo block.
-func printSummary(w io.Writer, findings []core.Finding) {
+func printSummary(w io.Writer, findings []compliancekit.Finding) {
 	var (
 		fail, errored                     int
 		critical, high, medium, low, info int
 	)
 	for _, f := range findings {
 		switch f.Status {
-		case core.StatusFail:
+		case compliancekit.StatusFail:
 			fail++
-		case core.StatusError:
+		case compliancekit.StatusError:
 			errored++
 		}
 		if !f.Status.IsActionable() {
 			continue
 		}
 		switch f.Severity {
-		case core.SeverityCritical:
+		case compliancekit.SeverityCritical:
 			critical++
-		case core.SeverityHigh:
+		case compliancekit.SeverityHigh:
 			high++
-		case core.SeverityMedium:
+		case compliancekit.SeverityMedium:
 			medium++
-		case core.SeverityLow:
+		case compliancekit.SeverityLow:
 			low++
-		case core.SeverityInfo:
+		case compliancekit.SeverityInfo:
 			info++
 		}
 	}

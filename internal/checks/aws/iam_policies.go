@@ -8,15 +8,15 @@ import (
 	"strings"
 
 	awscol "github.com/darpanzope/compliancekit/internal/collectors/aws"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.22 phase 4 — User-policy hygiene IAM checks split out of iam.go.
 
-var CheckConsoleUserMFA = core.Check{
+var CheckConsoleUserMFA = compliancekit.Check{
 	ID:           "aws-iam-console-user-mfa",
 	Title:        "IAM users with console access must have MFA enabled",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "aws",
 	Service:      "iam",
 	ResourceType: awscol.IAMUserType,
@@ -37,12 +37,12 @@ var CheckConsoleUserMFA = core.Check{
 	Scanner: "iam.ConsoleUserMFA",
 }
 
-func ConsoleUserMFA(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func ConsoleUserMFA(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, u := range g.ByType(awscol.IAMUserType) {
 		console, _ := u.Attributes["has_console_access"].(bool)
 		mfa, _ := u.Attributes["console_mfa_enabled"].(bool)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckConsoleUserMFA.ID,
 			Severity: CheckConsoleUserMFA.Severity,
 			Resource: u.Ref(),
@@ -50,13 +50,13 @@ func ConsoleUserMFA(_ context.Context, g *core.ResourceGraph) ([]core.Finding, e
 		}
 		switch {
 		case !console:
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("user %q: no console access (skip)", u.Name)
 		case mfa:
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("user %q: console access + MFA enabled", u.Name)
 		default:
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("user %q: console access without MFA", u.Name)
 		}
 		findings = append(findings, f)
@@ -68,10 +68,10 @@ func ConsoleUserMFA(_ context.Context, g *core.ResourceGraph) ([]core.Finding, e
 // `*:*` (full administrative privilege). Inline policies on
 // individual users are an audit nightmare; ones that grant blanket
 // access make the user equivalent to root.
-var CheckNoStarInlinePolicies = core.Check{
+var CheckNoStarInlinePolicies = compliancekit.Check{
 	ID:           "aws-iam-no-star-inline-policies",
 	Title:        "IAM inline policies must not grant `*:*` permissions",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "aws",
 	Service:      "iam",
 	ResourceType: awscol.IAMUserType,
@@ -93,8 +93,8 @@ var CheckNoStarInlinePolicies = core.Check{
 	Scanner: "iam.NoStarInlinePolicies",
 }
 
-func NoStarInlinePolicies(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func NoStarInlinePolicies(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, u := range g.ByType(awscol.IAMUserType) {
 		inline, _ := u.Attributes["inline_policies"].([]map[string]any)
 		violators := []string{}
@@ -108,21 +108,21 @@ func NoStarInlinePolicies(_ context.Context, g *core.ResourceGraph) ([]core.Find
 				violators = append(violators, name)
 			}
 		}
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckNoStarInlinePolicies.ID,
 			Severity: CheckNoStarInlinePolicies.Severity,
 			Resource: u.Ref(),
 			Tags:     CheckNoStarInlinePolicies.Tags,
 		}
 		if len(violators) == 0 {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			if len(inline) == 0 {
 				f.Message = fmt.Sprintf("user %q: no inline policies", u.Name)
 			} else {
 				f.Message = fmt.Sprintf("user %q: %d inline policies, none with *:*", u.Name, len(inline))
 			}
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("user %q: inline policies with *:*: %s",
 				u.Name, strings.Join(violators, ", "))
 		}
@@ -176,6 +176,6 @@ func matchesStar(v any) bool {
 	return false
 }
 func init() {
-	core.Register(CheckConsoleUserMFA, ConsoleUserMFA)
-	core.Register(CheckNoStarInlinePolicies, NoStarInlinePolicies)
+	compliancekit.Register(CheckConsoleUserMFA, ConsoleUserMFA)
+	compliancekit.Register(CheckNoStarInlinePolicies, NoStarInlinePolicies)
 }

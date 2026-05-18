@@ -12,9 +12,9 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/darpanzope/compliancekit/internal/config"
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/evidence"
 	"github.com/darpanzope/compliancekit/internal/frameworks"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // evidenceOptions are the flags accepted by `compliancekit evidence`.
@@ -149,7 +149,7 @@ func loadTailoring(configPath, envName string, w io.Writer) (*frameworks.Tailori
 // findings.json. The JSON reporter wraps the array in an envelope
 // (schema, generated_at, summary, findings); we only need findings.
 type findingsEnvelope struct {
-	Findings []core.Finding `json:"findings"`
+	Findings []compliancekit.Finding `json:"findings"`
 }
 
 // loadFindings reads either a wrapped scan envelope or a raw findings
@@ -157,7 +157,7 @@ type findingsEnvelope struct {
 // subset file with `jq` and still feed it to `evidence`. The shape
 // is detected from the first non-whitespace byte: '{' means envelope,
 // '[' means raw array; anything else is rejected.
-func loadFindings(path string) ([]core.Finding, error) {
+func loadFindings(path string) ([]compliancekit.Finding, error) {
 	// G304: path is operator-supplied; this is the documented input.
 	//nolint:gosec // operator-supplied input path
 	data, err := os.ReadFile(path)
@@ -176,7 +176,7 @@ func loadFindings(path string) ([]core.Finding, error) {
 		}
 		return env.Findings, nil
 	case '[':
-		var raw []core.Finding
+		var raw []compliancekit.Finding
 		if err := json.Unmarshal(data, &raw); err != nil {
 			return nil, fmt.Errorf("parse %s: %w", path, err)
 		}

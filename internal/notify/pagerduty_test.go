@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 func TestPagerDuty_NotConfigured(t *testing.T) {
@@ -22,13 +22,13 @@ func TestPagerDuty_DefaultsToCriticalThreshold(t *testing.T) {
 	// PD pages humans — default must be critical-only so a fresh
 	// install doesn't wake on-call on medium findings.
 	sink := NewPagerDuty(PagerDutyConfig{IntegrationKey: "key"})
-	if sink.Threshold() != core.SeverityCritical {
+	if sink.Threshold() != compliancekit.SeverityCritical {
 		t.Errorf("Threshold = %v, want critical (default)", sink.Threshold())
 	}
 
 	// Explicit override is honored.
-	custom := NewPagerDuty(PagerDutyConfig{IntegrationKey: "key", SeverityFloor: core.SeverityHigh})
-	if custom.Threshold() != core.SeverityHigh {
+	custom := NewPagerDuty(PagerDutyConfig{IntegrationKey: "key", SeverityFloor: compliancekit.SeverityHigh})
+	if custom.Threshold() != compliancekit.SeverityHigh {
 		t.Errorf("explicit override should win: %v", custom.Threshold())
 	}
 }
@@ -47,10 +47,10 @@ func TestPagerDuty_EventShape(t *testing.T) {
 		IntegrationKey: "00112233445566778899aabbccddeeff",
 		Source:         "compliancekit-test",
 		EventsURL:      srv.URL,
-		SeverityFloor:  core.SeverityInfo,
+		SeverityFloor:  compliancekit.SeverityInfo,
 		HTTPClient:     srv.Client(),
 	})
-	notifications := BuildNotifications([]core.Finding{
+	notifications := BuildNotifications([]compliancekit.Finding{
 		sampleFinding("aws-iam-root-mfa", "critical"),
 	}, BuildOptions{URLPrefix: "https://compliance.x"})
 
@@ -84,13 +84,13 @@ func TestPagerDuty_EventShape(t *testing.T) {
 
 func TestPDSeverityMapping(t *testing.T) {
 	cases := []struct {
-		in  core.Severity
+		in  compliancekit.Severity
 		out string
 	}{
-		{core.SeverityCritical, "critical"},
-		{core.SeverityHigh, "error"},
-		{core.SeverityMedium, "warning"},
-		{core.SeverityLow, "info"},
+		{compliancekit.SeverityCritical, "critical"},
+		{compliancekit.SeverityHigh, "error"},
+		{compliancekit.SeverityMedium, "warning"},
+		{compliancekit.SeverityLow, "info"},
 	}
 	for _, c := range cases {
 		if got := pdSeverity(c.in); got != c.out {

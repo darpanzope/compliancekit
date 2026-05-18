@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	docol "github.com/darpanzope/compliancekit/internal/collectors/digitalocean"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.19 phase 3 — DNS depth: DMARC policy strictness, subdomain
@@ -25,8 +25,8 @@ import (
 
 // ----- shared helpers ---------------------------------------------------
 
-func newDomainFinding(check core.Check, domain core.Resource) core.Finding {
-	return core.Finding{
+func newDomainFinding(check compliancekit.Check, domain compliancekit.Resource) compliancekit.Finding {
+	return compliancekit.Finding{
 		CheckID:  check.ID,
 		Severity: check.Severity,
 		Resource: domain.Ref(),
@@ -57,7 +57,7 @@ func parseDMARC(body string) map[string]string {
 
 // firstDMARC returns the first non-empty DMARC record body for a
 // domain, or "" if none.
-func firstDMARC(domain core.Resource) string {
+func firstDMARC(domain compliancekit.Resource) string {
 	recs, _ := domain.Attributes["dmarc_records"].([]string)
 	for _, r := range recs {
 		if r != "" {
@@ -68,7 +68,7 @@ func firstDMARC(domain core.Resource) string {
 }
 
 // firstSPF returns the first non-empty SPF record body for a domain.
-func firstSPF(domain core.Resource) string {
+func firstSPF(domain compliancekit.Resource) string {
 	recs, _ := domain.Attributes["spf_records"].([]string)
 	for _, r := range recs {
 		if r != "" {
@@ -80,10 +80,10 @@ func firstSPF(domain core.Resource) string {
 
 // ----- 1. DMARC policy strict (p= quarantine|reject) --------------------
 
-var CheckDomainDMARCPolicyStrict = core.Check{
+var CheckDomainDMARCPolicyStrict = compliancekit.Check{
 	ID:           "do-domain-dmarc-policy-not-strict",
 	Title:        "DMARC policy must be quarantine or reject",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "digitalocean",
 	Service:      "domains",
 	ResourceType: docol.DomainType,
@@ -105,8 +105,8 @@ var CheckDomainDMARCPolicyStrict = core.Check{
 	Scanner: "domains.DMARCPolicyStrict",
 }
 
-func DomainDMARCPolicyStrict(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func DomainDMARCPolicyStrict(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, d := range g.ByType(docol.DomainType) {
 		body := firstDMARC(d)
 		if body == "" {
@@ -116,10 +116,10 @@ func DomainDMARCPolicyStrict(_ context.Context, g *core.ResourceGraph) ([]core.F
 		tags := parseDMARC(body)
 		switch strings.ToLower(tags["p"]) {
 		case "quarantine", "reject":
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("domain %q: DMARC p=%s", d.Name, tags["p"])
 		default:
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("domain %q: DMARC p=%q (not enforced)", d.Name, tags["p"])
 		}
 		findings = append(findings, f)
@@ -129,10 +129,10 @@ func DomainDMARCPolicyStrict(_ context.Context, g *core.ResourceGraph) ([]core.F
 
 // ----- 2. DMARC subdomain policy --------------------------------------
 
-var CheckDomainDMARCSubdomainPolicy = core.Check{
+var CheckDomainDMARCSubdomainPolicy = compliancekit.Check{
 	ID:           "do-domain-dmarc-subdomain-policy",
 	Title:        "DMARC sp= (subdomain policy) must be set",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "digitalocean",
 	Service:      "domains",
 	ResourceType: docol.DomainType,
@@ -153,8 +153,8 @@ var CheckDomainDMARCSubdomainPolicy = core.Check{
 	Scanner: "domains.DMARCSubdomainPolicy",
 }
 
-func DomainDMARCSubdomainPolicy(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func DomainDMARCSubdomainPolicy(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, d := range g.ByType(docol.DomainType) {
 		body := firstDMARC(d)
 		if body == "" {
@@ -164,13 +164,13 @@ func DomainDMARCSubdomainPolicy(_ context.Context, g *core.ResourceGraph) ([]cor
 		f := newDomainFinding(CheckDomainDMARCSubdomainPolicy, d)
 		switch strings.ToLower(tags["sp"]) {
 		case "quarantine", "reject":
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("domain %q: DMARC sp=%s", d.Name, tags["sp"])
 		case "none":
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("domain %q: DMARC sp=none (subdomains unprotected)", d.Name)
 		default:
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("domain %q: DMARC sp= not set; subdomain policy unspecified", d.Name)
 		}
 		findings = append(findings, f)
@@ -180,10 +180,10 @@ func DomainDMARCSubdomainPolicy(_ context.Context, g *core.ResourceGraph) ([]cor
 
 // ----- 3. DMARC pct full -----------------------------------------------
 
-var CheckDomainDMARCPctFull = core.Check{
+var CheckDomainDMARCPctFull = compliancekit.Check{
 	ID:           "do-domain-dmarc-pct-not-full",
 	Title:        "DMARC pct= should be 100 once monitoring is complete",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "digitalocean",
 	Service:      "domains",
 	ResourceType: docol.DomainType,
@@ -205,8 +205,8 @@ var CheckDomainDMARCPctFull = core.Check{
 	Scanner: "domains.DMARCPctFull",
 }
 
-func DomainDMARCPctFull(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func DomainDMARCPctFull(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, d := range g.ByType(docol.DomainType) {
 		body := firstDMARC(d)
 		if body == "" {
@@ -216,7 +216,7 @@ func DomainDMARCPctFull(_ context.Context, g *core.ResourceGraph) ([]core.Findin
 		raw, ok := tags["pct"]
 		f := newDomainFinding(CheckDomainDMARCPctFull, d)
 		if !ok {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("domain %q: DMARC pct omitted (defaults to 100)", d.Name)
 			findings = append(findings, f)
 			continue
@@ -224,13 +224,13 @@ func DomainDMARCPctFull(_ context.Context, g *core.ResourceGraph) ([]core.Findin
 		pct, err := strconv.Atoi(raw)
 		switch {
 		case err != nil:
-			f.Status = core.StatusError
+			f.Status = compliancekit.StatusError
 			f.Message = fmt.Sprintf("domain %q: DMARC pct=%q is not an integer", d.Name, raw)
 		case pct == 100:
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("domain %q: DMARC pct=100", d.Name)
 		default:
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("domain %q: DMARC pct=%d (rollout incomplete)", d.Name, pct)
 		}
 		findings = append(findings, f)
@@ -240,10 +240,10 @@ func DomainDMARCPctFull(_ context.Context, g *core.ResourceGraph) ([]core.Findin
 
 // ----- 4. DMARC rua present --------------------------------------------
 
-var CheckDomainDMARCRUAPresent = core.Check{
+var CheckDomainDMARCRUAPresent = compliancekit.Check{
 	ID:           "do-domain-dmarc-no-rua",
 	Title:        "DMARC rua= (aggregate reporting) must be configured",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "digitalocean",
 	Service:      "domains",
 	ResourceType: docol.DomainType,
@@ -264,8 +264,8 @@ var CheckDomainDMARCRUAPresent = core.Check{
 	Scanner: "domains.DMARCRUAPresent",
 }
 
-func DomainDMARCRUAPresent(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func DomainDMARCRUAPresent(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, d := range g.ByType(docol.DomainType) {
 		body := firstDMARC(d)
 		if body == "" {
@@ -274,10 +274,10 @@ func DomainDMARCRUAPresent(_ context.Context, g *core.ResourceGraph) ([]core.Fin
 		tags := parseDMARC(body)
 		f := newDomainFinding(CheckDomainDMARCRUAPresent, d)
 		if rua := strings.TrimSpace(tags["rua"]); rua != "" {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("domain %q: DMARC rua=%s", d.Name, rua)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("domain %q: DMARC has no rua= reporting URI", d.Name)
 		}
 		findings = append(findings, f)
@@ -287,10 +287,10 @@ func DomainDMARCRUAPresent(_ context.Context, g *core.ResourceGraph) ([]core.Fin
 
 // ----- 5. DMARC ruf present (forensic reports) -------------------------
 
-var CheckDomainDMARCRUFPresent = core.Check{
+var CheckDomainDMARCRUFPresent = compliancekit.Check{
 	ID:           "do-domain-dmarc-no-ruf",
 	Title:        "DMARC ruf= (forensic reporting) should be configured",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "digitalocean",
 	Service:      "domains",
 	ResourceType: docol.DomainType,
@@ -311,8 +311,8 @@ var CheckDomainDMARCRUFPresent = core.Check{
 	Scanner: "domains.DMARCRUFPresent",
 }
 
-func DomainDMARCRUFPresent(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func DomainDMARCRUFPresent(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, d := range g.ByType(docol.DomainType) {
 		body := firstDMARC(d)
 		if body == "" {
@@ -321,10 +321,10 @@ func DomainDMARCRUFPresent(_ context.Context, g *core.ResourceGraph) ([]core.Fin
 		tags := parseDMARC(body)
 		f := newDomainFinding(CheckDomainDMARCRUFPresent, d)
 		if ruf := strings.TrimSpace(tags["ruf"]); ruf != "" {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("domain %q: DMARC ruf=%s", d.Name, ruf)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("domain %q: DMARC has no ruf= forensic URI", d.Name)
 		}
 		findings = append(findings, f)
@@ -334,10 +334,10 @@ func DomainDMARCRUFPresent(_ context.Context, g *core.ResourceGraph) ([]core.Fin
 
 // ----- 6. SPF qualifier strict (-all) ----------------------------------
 
-var CheckDomainSPFStrictAll = core.Check{
+var CheckDomainSPFStrictAll = compliancekit.Check{
 	ID:           "do-domain-spf-not-strict-fail",
 	Title:        "SPF must end in -all (hard fail), not ~all or ?all",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "digitalocean",
 	Service:      "domains",
 	ResourceType: docol.DomainType,
@@ -360,8 +360,8 @@ var CheckDomainSPFStrictAll = core.Check{
 	Scanner: "domains.SPFStrictAll",
 }
 
-func DomainSPFStrictAll(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func DomainSPFStrictAll(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, d := range g.ByType(docol.DomainType) {
 		body := firstSPF(d)
 		if body == "" {
@@ -371,19 +371,19 @@ func DomainSPFStrictAll(_ context.Context, g *core.ResourceGraph) ([]core.Findin
 		lower := strings.ToLower(body)
 		switch {
 		case strings.HasSuffix(strings.TrimSpace(lower), "-all"):
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("domain %q: SPF ends in -all", d.Name)
 		case strings.Contains(lower, "~all"):
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("domain %q: SPF ends in ~all (soft fail)", d.Name)
 		case strings.Contains(lower, "?all"):
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("domain %q: SPF ends in ?all (neutral)", d.Name)
 		case strings.Contains(lower, "+all"):
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("domain %q: SPF ends in +all (pass-all — open relay)", d.Name)
 		default:
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("domain %q: SPF has no terminating all qualifier", d.Name)
 		}
 		findings = append(findings, f)
@@ -393,10 +393,10 @@ func DomainSPFStrictAll(_ context.Context, g *core.ResourceGraph) ([]core.Findin
 
 // ----- 7. SPF no redirect= ---------------------------------------------
 
-var CheckDomainSPFNoRedirect = core.Check{
+var CheckDomainSPFNoRedirect = compliancekit.Check{
 	ID:           "do-domain-spf-uses-redirect",
 	Title:        "SPF should not use redirect= for primary policy",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "digitalocean",
 	Service:      "domains",
 	ResourceType: docol.DomainType,
@@ -419,8 +419,8 @@ var CheckDomainSPFNoRedirect = core.Check{
 	Scanner: "domains.SPFNoRedirect",
 }
 
-func DomainSPFNoRedirect(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func DomainSPFNoRedirect(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, d := range g.ByType(docol.DomainType) {
 		body := firstSPF(d)
 		if body == "" {
@@ -428,10 +428,10 @@ func DomainSPFNoRedirect(_ context.Context, g *core.ResourceGraph) ([]core.Findi
 		}
 		f := newDomainFinding(CheckDomainSPFNoRedirect, d)
 		if strings.Contains(strings.ToLower(body), "redirect=") {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("domain %q: SPF uses redirect= (prefer include:)", d.Name)
 		} else {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("domain %q: SPF does not use redirect=", d.Name)
 		}
 		findings = append(findings, f)
@@ -441,10 +441,10 @@ func DomainSPFNoRedirect(_ context.Context, g *core.ResourceGraph) ([]core.Findi
 
 // ----- 8. DKIM selector present ----------------------------------------
 
-var CheckDomainDKIMSelectorPresent = core.Check{
+var CheckDomainDKIMSelectorPresent = compliancekit.Check{
 	ID:           "do-domain-dkim-no-selector",
 	Title:        "DKIM selector record(s) must be present",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "digitalocean",
 	Service:      "domains",
 	ResourceType: docol.DomainType,
@@ -467,8 +467,8 @@ var CheckDomainDKIMSelectorPresent = core.Check{
 	Scanner: "domains.DKIMSelectorPresent",
 }
 
-func DomainDKIMSelectorPresent(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func DomainDKIMSelectorPresent(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, d := range g.ByType(docol.DomainType) {
 		hasMX, _ := d.Attributes["has_mx"].(bool)
 		if !hasMX {
@@ -477,10 +477,10 @@ func DomainDKIMSelectorPresent(_ context.Context, g *core.ResourceGraph) ([]core
 		selectors, _ := d.Attributes["dkim_selectors"].([]string)
 		f := newDomainFinding(CheckDomainDKIMSelectorPresent, d)
 		if len(selectors) > 0 {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("domain %q: %d DKIM selector(s)", d.Name, len(selectors))
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("domain %q: MX present but no DKIM selectors found", d.Name)
 		}
 		findings = append(findings, f)
@@ -490,10 +490,10 @@ func DomainDKIMSelectorPresent(_ context.Context, g *core.ResourceGraph) ([]core
 
 // ----- 9. CAA iodef contact --------------------------------------------
 
-var CheckDomainCAAIodef = core.Check{
+var CheckDomainCAAIodef = compliancekit.Check{
 	ID:           "do-domain-caa-no-iodef",
 	Title:        "CAA records should declare an iodef= contact",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "digitalocean",
 	Service:      "domains",
 	ResourceType: docol.DomainType,
@@ -514,8 +514,8 @@ var CheckDomainCAAIodef = core.Check{
 	Scanner: "domains.CAAIodef",
 }
 
-func DomainCAAIodef(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func DomainCAAIodef(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, d := range g.ByType(docol.DomainType) {
 		caas, _ := d.Attributes["caa_records"].([]string)
 		if len(caas) == 0 {
@@ -530,10 +530,10 @@ func DomainCAAIodef(_ context.Context, g *core.ResourceGraph) ([]core.Finding, e
 		}
 		f := newDomainFinding(CheckDomainCAAIodef, d)
 		if hasIodef {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("domain %q: CAA has iodef contact", d.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("domain %q: CAA has %d records but no iodef= contact", d.Name, len(caas))
 		}
 		findings = append(findings, f)
@@ -543,10 +543,10 @@ func DomainCAAIodef(_ context.Context, g *core.ResourceGraph) ([]core.Finding, e
 
 // ----- 10. DNSSEC via registrar (manual-verify) ------------------------
 
-var CheckDomainDNSSECViaRegistrar = core.Check{
+var CheckDomainDNSSECViaRegistrar = compliancekit.Check{
 	ID:           "do-domain-dnssec-via-registrar",
 	Title:        "DNSSEC must be enabled at the registrar (DO does not manage DS records)",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "digitalocean",
 	Service:      "domains",
 	ResourceType: docol.DomainType,
@@ -572,11 +572,11 @@ var CheckDomainDNSSECViaRegistrar = core.Check{
 	Scanner: "domains.DNSSECViaRegistrar",
 }
 
-func DomainDNSSECViaRegistrar(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func DomainDNSSECViaRegistrar(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, d := range g.ByType(docol.DomainType) {
 		f := newDomainFinding(CheckDomainDNSSECViaRegistrar, d)
-		f.Status = core.StatusError
+		f.Status = compliancekit.StatusError
 		f.Message = fmt.Sprintf("domain %q: DO managed DNS does not serve signed zones — verify DS records at registrar (dig +dnssec %s ; check AD flag)",
 			d.Name, d.Name)
 		findings = append(findings, f)
@@ -585,14 +585,14 @@ func DomainDNSSECViaRegistrar(_ context.Context, g *core.ResourceGraph) ([]core.
 }
 
 func init() {
-	core.Register(CheckDomainDMARCPolicyStrict, DomainDMARCPolicyStrict)
-	core.Register(CheckDomainDMARCSubdomainPolicy, DomainDMARCSubdomainPolicy)
-	core.Register(CheckDomainDMARCPctFull, DomainDMARCPctFull)
-	core.Register(CheckDomainDMARCRUAPresent, DomainDMARCRUAPresent)
-	core.Register(CheckDomainDMARCRUFPresent, DomainDMARCRUFPresent)
-	core.Register(CheckDomainSPFStrictAll, DomainSPFStrictAll)
-	core.Register(CheckDomainSPFNoRedirect, DomainSPFNoRedirect)
-	core.Register(CheckDomainDKIMSelectorPresent, DomainDKIMSelectorPresent)
-	core.Register(CheckDomainCAAIodef, DomainCAAIodef)
-	core.Register(CheckDomainDNSSECViaRegistrar, DomainDNSSECViaRegistrar)
+	compliancekit.Register(CheckDomainDMARCPolicyStrict, DomainDMARCPolicyStrict)
+	compliancekit.Register(CheckDomainDMARCSubdomainPolicy, DomainDMARCSubdomainPolicy)
+	compliancekit.Register(CheckDomainDMARCPctFull, DomainDMARCPctFull)
+	compliancekit.Register(CheckDomainDMARCRUAPresent, DomainDMARCRUAPresent)
+	compliancekit.Register(CheckDomainDMARCRUFPresent, DomainDMARCRUFPresent)
+	compliancekit.Register(CheckDomainSPFStrictAll, DomainSPFStrictAll)
+	compliancekit.Register(CheckDomainSPFNoRedirect, DomainSPFNoRedirect)
+	compliancekit.Register(CheckDomainDKIMSelectorPresent, DomainDKIMSelectorPresent)
+	compliancekit.Register(CheckDomainCAAIodef, DomainCAAIodef)
+	compliancekit.Register(CheckDomainDNSSECViaRegistrar, DomainDNSSECViaRegistrar)
 }

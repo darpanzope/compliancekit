@@ -33,8 +33,8 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // strategyFunc is the common shape of every renderer in this package.
@@ -42,7 +42,7 @@ import (
 // though I claimed the CheckID" — operators see this only when a
 // strategy is buggy. The standard non-fix outcome is to return a
 // Snippet with Risk=RiskManual and Notes explaining why.
-type strategyFunc func(core.Finding) (remediate.Snippet, error)
+type strategyFunc func(compliancekit.Finding) (remediate.Snippet, error)
 
 // strategy is the shared adapter used by every register() call below.
 // It pins Format to FormatTerraform; strategies that need to emit
@@ -56,7 +56,7 @@ type strategy struct {
 func (s *strategy) Name() string                { return s.name }
 func (s *strategy) CheckIDs() []string          { return s.ids }
 func (s *strategy) Formats() []remediate.Format { return []remediate.Format{remediate.FormatTerraform} }
-func (s *strategy) Render(f core.Finding, format remediate.Format) (remediate.Snippet, error) {
+func (s *strategy) Render(f compliancekit.Finding, format remediate.Format) (remediate.Snippet, error) {
 	if format != remediate.FormatTerraform {
 		return remediate.Snippet{}, remediate.ErrFormatUnsupported
 	}

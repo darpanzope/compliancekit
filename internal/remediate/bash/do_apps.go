@@ -3,8 +3,8 @@ package bash
 import (
 	"fmt"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.19 phase 5 — bash strategies for the 10 App-Platform depth
@@ -33,7 +33,7 @@ func init() {
 		[]string{"do-app-cdn-attachment"}, renderBashAppCDN)
 }
 
-func bashAppID(f core.Finding) string {
+func bashAppID(f compliancekit.Finding) string {
 	if f.Resource.Name != "" {
 		return f.Resource.Name
 	}
@@ -47,7 +47,7 @@ yq eval -i %q spec.yaml
 doctl apps update "$app" --spec spec.yaml`, id, yqExpr)
 }
 
-func renderBashAppHealthcheck(f core.Finding) (remediate.Snippet, error) {
+func renderBashAppHealthcheck(f compliancekit.Finding) (remediate.Snippet, error) {
 	id := bashAppID(f)
 	body := appSpecPatch(id, `.services[] |= (.health_check = {"http_path":"/healthz","initial_delay_seconds":5,"period_seconds":10,"timeout_seconds":5,"failure_threshold":3})`)
 	return remediate.Snippet{
@@ -57,7 +57,7 @@ func renderBashAppHealthcheck(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderBashAppLogDest(f core.Finding) (remediate.Snippet, error) {
+func renderBashAppLogDest(f compliancekit.Finding) (remediate.Snippet, error) {
 	id := bashAppID(f)
 	body := appSpecPatch(id, `.services[] |= (.log_destinations = [{"name":"prod-datadog","datadog":{"api_key":"${DATADOG_API_KEY}","endpoint":"https://http-intake.logs.datadoghq.com/v1/input"}}])`)
 	return remediate.Snippet{
@@ -66,7 +66,7 @@ func renderBashAppLogDest(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderBashAppServiceAlerts(f core.Finding) (remediate.Snippet, error) {
+func renderBashAppServiceAlerts(f compliancekit.Finding) (remediate.Snippet, error) {
 	id := bashAppID(f)
 	body := appSpecPatch(id, `.services[] |= (.alerts = [{"rule":"CPU_UTILIZATION","operator":"GREATER_THAN","value":80,"window":"FIVE_MINUTES"},{"rule":"DEPLOYMENT_FAILED","operator":"GREATER_THAN","value":0,"window":"FIVE_MINUTES"}])`)
 	return remediate.Snippet{
@@ -74,7 +74,7 @@ func renderBashAppServiceAlerts(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderBashAppTier(f core.Finding) (remediate.Snippet, error) {
+func renderBashAppTier(f compliancekit.Finding) (remediate.Snippet, error) {
 	id := bashAppID(f)
 	body := appSpecPatch(id, `.services[] |= (.instance_size_slug = "professional-xs" | .instance_count = 2)`)
 	return remediate.Snippet{
@@ -83,7 +83,7 @@ func renderBashAppTier(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderBashAppDatabase(f core.Finding) (remediate.Snippet, error) {
+func renderBashAppDatabase(f compliancekit.Finding) (remediate.Snippet, error) {
 	id := bashAppID(f)
 	body := appSpecPatch(id, `.databases[] |= (.production = true)`)
 	return remediate.Snippet{
@@ -92,14 +92,14 @@ func renderBashAppDatabase(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderBashAppDeployProtection(_ core.Finding) (remediate.Snippet, error) {
+func renderBashAppDeployProtection(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return renderBashManualOnly(
 		"deploy-branch protection",
 		"https://github.com/settings",
 		"GitHub Settings → Branches → require reviews + status checks on the deploy branch")
 }
 
-func renderBashAppDomainTLS13(f core.Finding) (remediate.Snippet, error) {
+func renderBashAppDomainTLS13(f compliancekit.Finding) (remediate.Snippet, error) {
 	id := bashAppID(f)
 	body := appSpecPatch(id, `.domains[] |= (.minimum_tls_version = "1.3")`)
 	return remediate.Snippet{
@@ -107,21 +107,21 @@ func renderBashAppDomainTLS13(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderBashAppBuildSecretScan(_ core.Finding) (remediate.Snippet, error) {
+func renderBashAppBuildSecretScan(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return renderBashManualOnly(
 		"build-time secret scan",
 		"https://github.com/gitleaks/gitleaks",
 		"Add gitleaks/trufflehog gate in source-repo CI BEFORE the DO build webhook fires")
 }
 
-func renderBashAppCertRotation(_ core.Finding) (remediate.Snippet, error) {
+func renderBashAppCertRotation(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return renderBashManualOnly(
 		"custom-domain cert provenance",
 		"https://cloud.digitalocean.com/apps",
 		"Drop cert_id from the domain block to use auto-renewing Let's Encrypt")
 }
 
-func renderBashAppCDN(_ core.Finding) (remediate.Snippet, error) {
+func renderBashAppCDN(_ compliancekit.Finding) (remediate.Snippet, error) {
 	body := `# 1. Create the bucket.
 aws s3api create-bucket --bucket app-static-assets --endpoint-url https://nyc3.digitaloceanspaces.com
 

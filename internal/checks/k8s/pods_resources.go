@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	k8scol "github.com/darpanzope/compliancekit/internal/collectors/k8s"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.22 phase 2 — reliability + ServiceAccount-projection pod checks
@@ -18,10 +18,10 @@ import (
 
 // ----- 11. Resource limits ----------------------------------------
 
-var CheckPodResourceLimits = core.Check{
+var CheckPodResourceLimits = compliancekit.Check{
 	ID:           "k8s-pod-resource-limits",
 	Title:        "Containers should declare CPU and memory limits",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "kubernetes",
 	Service:      "pod-security",
 	ResourceType: k8scol.PodType,
@@ -42,8 +42,8 @@ var CheckPodResourceLimits = core.Check{
 	Scanner: "pods.ResourceLimits",
 }
 
-func PodResourceLimits(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func PodResourceLimits(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, p := range g.ByType(k8scol.PodType) {
 		bad := violatingContainers(p, func(c map[string]any) bool {
 			cpu, _ := c["has_cpu_limit"].(bool)
@@ -59,10 +59,10 @@ func PodResourceLimits(_ context.Context, g *core.ResourceGraph) ([]core.Finding
 
 // ----- 12. Resource requests --------------------------------------
 
-var CheckPodResourceRequests = core.Check{
+var CheckPodResourceRequests = compliancekit.Check{
 	ID:           "k8s-pod-resource-requests",
 	Title:        "Containers should declare CPU and memory requests",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "kubernetes",
 	Service:      "pod-security",
 	ResourceType: k8scol.PodType,
@@ -84,8 +84,8 @@ var CheckPodResourceRequests = core.Check{
 	Scanner: "pods.ResourceRequests",
 }
 
-func PodResourceRequests(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func PodResourceRequests(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, p := range g.ByType(k8scol.PodType) {
 		bad := violatingContainers(p, func(c map[string]any) bool {
 			cpu, _ := c["has_cpu_request"].(bool)
@@ -101,10 +101,10 @@ func PodResourceRequests(_ context.Context, g *core.ResourceGraph) ([]core.Findi
 
 // ----- 15. automountServiceAccountToken ---------------------------
 
-var CheckPodAutomountSAToken = core.Check{
+var CheckPodAutomountSAToken = compliancekit.Check{
 	ID:           "k8s-pod-automount-sa-token",
 	Title:        "Pods that don't call the API should disable SA token mount",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "kubernetes",
 	Service:      "pod-security",
 	ResourceType: k8scol.PodType,
@@ -127,21 +127,21 @@ var CheckPodAutomountSAToken = core.Check{
 	Scanner: "pods.AutomountSAToken",
 }
 
-func PodAutomountSAToken(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func PodAutomountSAToken(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, p := range g.ByType(k8scol.PodType) {
 		mount, _ := p.Attributes["automount_sa_token"].(string)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckPodAutomountSAToken.ID,
 			Severity: CheckPodAutomountSAToken.Severity,
 			Resource: p.Ref(),
 			Tags:     CheckPodAutomountSAToken.Tags,
 		}
 		if mount == "false" {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("pod %q: SA token mount disabled", podDesc(p))
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("pod %q: SA token mounted (automount=%s)", podDesc(p), mount)
 		}
 		findings = append(findings, f)
@@ -151,10 +151,10 @@ func PodAutomountSAToken(_ context.Context, g *core.ResourceGraph) ([]core.Findi
 
 // ----- 18. Liveness probe -----------------------------------------
 
-var CheckPodLivenessProbe = core.Check{
+var CheckPodLivenessProbe = compliancekit.Check{
 	ID:           "k8s-pod-liveness-probe",
 	Title:        "Containers should declare a liveness probe",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "kubernetes",
 	Service:      "pod-security",
 	ResourceType: k8scol.PodType,
@@ -175,8 +175,8 @@ var CheckPodLivenessProbe = core.Check{
 	Scanner: "pods.LivenessProbe",
 }
 
-func PodLivenessProbe(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func PodLivenessProbe(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, p := range g.ByType(k8scol.PodType) {
 		bad := violatingContainers(p, func(c map[string]any) bool {
 			kind, _ := c["kind"].(string)
@@ -194,8 +194,8 @@ func PodLivenessProbe(_ context.Context, g *core.ResourceGraph) ([]core.Finding,
 }
 
 func init() {
-	core.Register(CheckPodResourceLimits, PodResourceLimits)
-	core.Register(CheckPodResourceRequests, PodResourceRequests)
-	core.Register(CheckPodAutomountSAToken, PodAutomountSAToken)
-	core.Register(CheckPodLivenessProbe, PodLivenessProbe)
+	compliancekit.Register(CheckPodResourceLimits, PodResourceLimits)
+	compliancekit.Register(CheckPodResourceRequests, PodResourceRequests)
+	compliancekit.Register(CheckPodAutomountSAToken, PodAutomountSAToken)
+	compliancekit.Register(CheckPodLivenessProbe, PodLivenessProbe)
 }

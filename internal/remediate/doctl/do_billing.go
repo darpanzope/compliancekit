@@ -3,8 +3,8 @@ package doctl
 import (
 	"fmt"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 func init() {
@@ -30,7 +30,7 @@ func init() {
 		[]string{"do-billing-cdn-traffic-cost"}, renderDoctlBillingDashboard)
 }
 
-func renderDoctlDropletStopped(f core.Finding) (remediate.Snippet, error) {
+func renderDoctlDropletStopped(f compliancekit.Finding) (remediate.Snippet, error) {
 	name := f.Resource.Name
 	if name == "" {
 		name = "DROPLET"
@@ -43,7 +43,7 @@ doctl compute droplet delete %s --force`, name, name, name)
 	}, nil
 }
 
-func renderDoctlProjectPurpose(f core.Finding) (remediate.Snippet, error) {
+func renderDoctlProjectPurpose(f compliancekit.Finding) (remediate.Snippet, error) {
 	name := f.Resource.Name
 	if name == "" {
 		name = "PROJECT_ID"
@@ -57,7 +57,7 @@ func renderDoctlProjectPurpose(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderDoctlDropletRightsize(f core.Finding) (remediate.Snippet, error) {
+func renderDoctlDropletRightsize(f compliancekit.Finding) (remediate.Snippet, error) {
 	name := f.Resource.Name
 	if name == "" {
 		name = "DROPLET"
@@ -71,14 +71,14 @@ doctl monitoring metrics droplet --droplet-id %s --duration 30d --metric cpu_use
 	}, nil
 }
 
-func renderDoctlBillingDashboard(_ core.Finding) (remediate.Snippet, error) {
+func renderDoctlBillingDashboard(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return renderDoctlManualOnly(
 		"billing dashboard control",
 		"https://cloud.digitalocean.com/account/billing",
 		"Quarterly review; capture screenshots for audit evidence")
 }
 
-func renderDoctlInvoicePull(_ core.Finding) (remediate.Snippet, error) {
+func renderDoctlInvoicePull(_ compliancekit.Finding) (remediate.Snippet, error) {
 	body := `# Monthly invoice + per-project breakout export.
 doctl invoice list --format InvoiceUUID,Amount,InvoicePeriod
 # Fetch the line items:
@@ -90,7 +90,7 @@ doctl invoice get-csv <invoice-uuid> > invoice.csv
 	}, nil
 }
 
-func renderDoctlDBPauseAudit(_ core.Finding) (remediate.Snippet, error) {
+func renderDoctlDBPauseAudit(_ compliancekit.Finding) (remediate.Snippet, error) {
 	body := `# List paused databases (still billed at standard rate).
 doctl databases list --format ID,Name,Engine,Status \
   | awk '$4 == "offline"'`
@@ -99,7 +99,7 @@ doctl databases list --format ID,Name,Engine,Status \
 	}, nil
 }
 
-func renderDoctlSnapshotRetention(_ core.Finding) (remediate.Snippet, error) {
+func renderDoctlSnapshotRetention(_ compliancekit.Finding) (remediate.Snippet, error) {
 	body := `# Delete snapshots older than 90 days.
 threshold="$(date -u -d '90 days ago' +%s 2>/dev/null || date -u -v-90d +%s)"
 doctl compute snapshot list -o json \

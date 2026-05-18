@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // DiscordConfig configures the Discord sink. Discord uses webhook
@@ -19,7 +19,7 @@ import (
 // Env: DISCORD_WEBHOOK_URL, DISCORD_THRESHOLD.
 type DiscordConfig struct {
 	WebhookURL    string
-	SeverityFloor core.Severity
+	SeverityFloor compliancekit.Severity
 	HTTPClient    *http.Client
 }
 
@@ -36,7 +36,7 @@ func (d *Discord) Name() string { return "discord" }
 func (d *Discord) Configured() bool { return d.cfg.WebhookURL != "" }
 
 // Threshold returns the per-sink severity floor.
-func (d *Discord) Threshold() core.Severity { return d.cfg.SeverityFloor }
+func (d *Discord) Threshold() compliancekit.Severity { return d.cfg.SeverityFloor }
 
 // Send dispatches the notifications via the webhook. Per-notification
 // failures accumulate; top-level error only when every send failed.
@@ -113,15 +113,15 @@ func (d *Discord) postJSON(ctx context.Context, body map[string]any) error {
 // discordSeverityColor maps severity onto the 24-bit RGB int Discord
 // expects. Critical = red, high = orange, medium = yellow, low =
 // blue, info/unknown = gray.
-func discordSeverityColor(s core.Severity) int {
+func discordSeverityColor(s compliancekit.Severity) int {
 	switch s {
-	case core.SeverityCritical:
+	case compliancekit.SeverityCritical:
 		return 0xD7263D
-	case core.SeverityHigh:
+	case compliancekit.SeverityHigh:
 		return 0xF46036
-	case core.SeverityMedium:
+	case compliancekit.SeverityMedium:
 		return 0xF7B538
-	case core.SeverityLow:
+	case compliancekit.SeverityLow:
 		return 0x2E86AB
 	}
 	return 0x808080
@@ -130,7 +130,7 @@ func discordSeverityColor(s core.Severity) int {
 func init() {
 	cfg := DiscordConfig{WebhookURL: os.Getenv("DISCORD_WEBHOOK_URL")}
 	if t := os.Getenv("DISCORD_THRESHOLD"); t != "" {
-		if sev, err := core.ParseSeverity(t); err == nil {
+		if sev, err := compliancekit.ParseSeverity(t); err == nil {
 			cfg.SeverityFloor = sev
 		}
 	}

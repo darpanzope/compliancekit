@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	docol "github.com/darpanzope/compliancekit/internal/collectors/digitalocean"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // CheckVPCDefaultNotInUse flags accounts where any non-default VPC
@@ -13,10 +13,10 @@ import (
 // VPC is shared by every droplet a new account creates; production
 // workloads belong in a named VPC for segmentation + naming
 // hygiene.
-var CheckVPCDefaultNotInUse = core.Check{
+var CheckVPCDefaultNotInUse = compliancekit.Check{
 	ID:           "do-vpc-default-not-in-use",
 	Title:        "Default VPC should not host production droplets",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "digitalocean",
 	Service:      "vpcs",
 	ResourceType: docol.VPCType,
@@ -39,10 +39,10 @@ var CheckVPCDefaultNotInUse = core.Check{
 	Scanner: "vpcs.DefaultNotInUse",
 }
 
-func VPCDefaultNotInUse(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func VPCDefaultNotInUse(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, v := range g.ByType(docol.VPCType) {
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckVPCDefaultNotInUse.ID,
 			Severity: CheckVPCDefaultNotInUse.Severity,
 			Resource: v.Ref(),
@@ -51,16 +51,16 @@ func VPCDefaultNotInUse(_ context.Context, g *core.ResourceGraph) ([]core.Findin
 		isDefault, _ := v.Attributes["is_default"].(bool)
 		members, _ := v.Attributes["member_count"].(int)
 		if !isDefault {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("vpc %q: not the default VPC", v.Name)
 			findings = append(findings, f)
 			continue
 		}
 		if members <= 0 {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("vpc %q: default VPC has no members", v.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("vpc %q: default VPC has %d member(s) (should use a named VPC)", v.Name, members)
 		}
 		findings = append(findings, f)
@@ -70,10 +70,10 @@ func VPCDefaultNotInUse(_ context.Context, g *core.ResourceGraph) ([]core.Findin
 
 // CheckVPCOrphan flags non-default VPCs with zero members. They
 // were created and then forgotten; either delete or attach.
-var CheckVPCOrphan = core.Check{
+var CheckVPCOrphan = compliancekit.Check{
 	ID:           "do-vpc-orphan",
 	Title:        "Non-default VPCs should have at least one member",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "digitalocean",
 	Service:      "vpcs",
 	ResourceType: docol.VPCType,
@@ -93,15 +93,15 @@ var CheckVPCOrphan = core.Check{
 	Scanner: "vpcs.Orphan",
 }
 
-func VPCOrphan(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func VPCOrphan(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, v := range g.ByType(docol.VPCType) {
 		isDefault, _ := v.Attributes["is_default"].(bool)
 		if isDefault {
 			continue
 		}
 		members, _ := v.Attributes["member_count"].(int)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckVPCOrphan.ID,
 			Severity: CheckVPCOrphan.Severity,
 			Resource: v.Ref(),
@@ -110,13 +110,13 @@ func VPCOrphan(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error)
 		switch {
 		case members < 0:
 			// member_count = -1 means lookup failed.
-			f.Status = core.StatusSkip
+			f.Status = compliancekit.StatusSkip
 			f.Message = fmt.Sprintf("vpc %q: member count unavailable (permission denied?)", v.Name)
 		case members == 0:
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("vpc %q: zero members", v.Name)
 		default:
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("vpc %q: %d member(s)", v.Name, members)
 		}
 		findings = append(findings, f)
@@ -127,10 +127,10 @@ func VPCOrphan(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error)
 // CheckVPCPeeringActive flags VPC peerings whose status is not
 // "ACTIVE". Stuck-in-PENDING peerings are usually a sign of a
 // half-completed setup, often by a former operator.
-var CheckVPCPeeringActive = core.Check{
+var CheckVPCPeeringActive = compliancekit.Check{
 	ID:           "do-vpc-peering-not-active",
 	Title:        "VPC peerings should be in ACTIVE status",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "digitalocean",
 	Service:      "vpcs",
 	ResourceType: docol.VPCPeeringType,
@@ -151,21 +151,21 @@ var CheckVPCPeeringActive = core.Check{
 	Scanner: "vpcs.PeeringActive",
 }
 
-func VPCPeeringActive(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func VPCPeeringActive(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, p := range g.ByType(docol.VPCPeeringType) {
 		status, _ := p.Attributes["status"].(string)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckVPCPeeringActive.ID,
 			Severity: CheckVPCPeeringActive.Severity,
 			Resource: p.Ref(),
 			Tags:     CheckVPCPeeringActive.Tags,
 		}
 		if status == "ACTIVE" {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("peering %q: ACTIVE", p.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("peering %q: status=%q", p.Name, status)
 		}
 		findings = append(findings, f)
@@ -174,7 +174,7 @@ func VPCPeeringActive(_ context.Context, g *core.ResourceGraph) ([]core.Finding,
 }
 
 func init() {
-	core.Register(CheckVPCDefaultNotInUse, VPCDefaultNotInUse)
-	core.Register(CheckVPCOrphan, VPCOrphan)
-	core.Register(CheckVPCPeeringActive, VPCPeeringActive)
+	compliancekit.Register(CheckVPCDefaultNotInUse, VPCDefaultNotInUse)
+	compliancekit.Register(CheckVPCOrphan, VPCOrphan)
+	compliancekit.Register(CheckVPCPeeringActive, VPCPeeringActive)
 }

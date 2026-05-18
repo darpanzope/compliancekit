@@ -1,7 +1,7 @@
 // Package hetzner is the Hetzner Cloud Collector.
 //
 // It uses the official hcloud-go/v2 SDK to fetch resources via the
-// Hetzner Cloud API and emits typed core.Resource values into the
+// Hetzner Cloud API and emits typed compliancekit.Resource values into the
 // engine's ResourceGraph. See ROADMAP.md § v0.10 for the per-service
 // check breakdown.
 //
@@ -23,7 +23,7 @@ import (
 	"github.com/hetznercloud/hcloud-go/v2/hcloud"
 
 	"github.com/darpanzope/compliancekit/internal/collectors/cloudcommon"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 const (
@@ -89,7 +89,7 @@ func projectFingerprint(token string) string {
 }
 
 // Collect fetches every supported resource type and emits a flat
-// slice of core.Resource values.
+// slice of compliancekit.Resource values.
 //
 // Order of operations:
 //
@@ -97,12 +97,12 @@ func projectFingerprint(token string) string {
 //  2. Run per-service collectors sequentially. Each captures its
 //     own errors as hetzner.collect_error placeholders and
 //     continues to the next service.
-func (c *Collector) Collect(ctx context.Context) ([]core.Resource, error) {
-	out := []core.Resource{c.projectResource()}
+func (c *Collector) Collect(ctx context.Context) ([]compliancekit.Resource, error) {
+	out := []compliancekit.Resource{c.projectResource()}
 
 	type subCollector struct {
 		service string
-		run     func(context.Context) ([]core.Resource, error)
+		run     func(context.Context) ([]compliancekit.Resource, error)
 	}
 	subs := []subCollector{
 		{"servers", c.collectServers},
@@ -127,8 +127,8 @@ func (c *Collector) Collect(ctx context.Context) ([]core.Resource, error) {
 // projectResource emits the singleton anchor. Account-level
 // checks (none today, room for billing-alerts / quota-headroom
 // later) attach here.
-func (c *Collector) projectResource() core.Resource {
-	r := core.Resource{
+func (c *Collector) projectResource() compliancekit.Resource {
+	r := compliancekit.Resource{
 		ID:       fmt.Sprintf("%s.%s", ProjectType, c.projectID),
 		Type:     ProjectType,
 		Name:     c.projectID,
@@ -143,8 +143,8 @@ func (c *Collector) projectResource() core.Resource {
 
 // collectError emits a placeholder when a per-service collector
 // fails outright.
-func (c *Collector) collectError(service string, err error) core.Resource {
-	r := core.Resource{
+func (c *Collector) collectError(service string, err error) compliancekit.Resource {
+	r := compliancekit.Resource{
 		ID:       fmt.Sprintf("%s.%s", CollectErrorType, service),
 		Type:     CollectErrorType,
 		Name:     service,

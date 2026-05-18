@@ -5,11 +5,11 @@ import (
 	"testing"
 
 	docol "github.com/darpanzope/compliancekit/internal/collectors/digitalocean"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
-func mkVPC(name string, isDefault bool, members int) core.Resource {
-	return core.Resource{
+func mkVPC(name string, isDefault bool, members int) compliancekit.Resource {
+	return compliancekit.Resource{
 		ID:       "digitalocean.vpc." + name,
 		Type:     docol.VPCType,
 		Name:     name,
@@ -21,8 +21,8 @@ func mkVPC(name string, isDefault bool, members int) core.Resource {
 	}
 }
 
-func mkLB(name string, attrs map[string]any) core.Resource {
-	return core.Resource{
+func mkLB(name string, attrs map[string]any) compliancekit.Resource {
+	return compliancekit.Resource{
 		ID:         "digitalocean.load_balancer." + name,
 		Type:       docol.LoadBalancerType,
 		Name:       name,
@@ -36,11 +36,11 @@ func TestVPCDefaultNotInUse(t *testing.T) {
 		name      string
 		isDefault bool
 		members   int
-		want      core.Status
+		want      compliancekit.Status
 	}{
-		{"named-vpc", false, 3, core.StatusPass},
-		{"empty-default", true, 0, core.StatusPass},
-		{"populated-default", true, 5, core.StatusFail},
+		{"named-vpc", false, 3, compliancekit.StatusPass},
+		{"empty-default", true, 0, compliancekit.StatusPass},
+		{"populated-default", true, 5, compliancekit.StatusFail},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -69,7 +69,7 @@ func TestLBRedirectHTTPToHTTPS(t *testing.T) {
 	cases := []struct {
 		name  string
 		attrs map[string]any
-		want  core.Status
+		want  compliancekit.Status
 	}{
 		{
 			"no-http",
@@ -78,7 +78,7 @@ func TestLBRedirectHTTPToHTTPS(t *testing.T) {
 					{"entry_protocol": "https", "entry_port": 443},
 				},
 			},
-			core.StatusPass,
+			compliancekit.StatusPass,
 		},
 		{
 			"http-with-redirect",
@@ -89,7 +89,7 @@ func TestLBRedirectHTTPToHTTPS(t *testing.T) {
 				},
 				"redirect_http_to_https": true,
 			},
-			core.StatusPass,
+			compliancekit.StatusPass,
 		},
 		{
 			"http-no-redirect",
@@ -99,7 +99,7 @@ func TestLBRedirectHTTPToHTTPS(t *testing.T) {
 				},
 				"redirect_http_to_https": false,
 			},
-			core.StatusFail,
+			compliancekit.StatusFail,
 		},
 	}
 	for _, c := range cases {
@@ -124,9 +124,9 @@ func TestLBHasHTTPS(t *testing.T) {
 	)
 	findings, _ := LBHasHTTPS(context.Background(), g)
 	for _, f := range findings {
-		want := core.StatusPass
+		want := compliancekit.StatusPass
 		if f.Resource.Name == "http-only" {
-			want = core.StatusFail
+			want = compliancekit.StatusFail
 		}
 		if f.Status != want {
 			t.Errorf("%s: got %v", f.Resource.Name, f.Status)
@@ -151,9 +151,9 @@ func TestLBHealthCheckProtocol(t *testing.T) {
 	)
 	findings, _ := LBHealthCheckProtocol(context.Background(), g)
 	for _, f := range findings {
-		want := core.StatusPass
+		want := compliancekit.StatusPass
 		if f.Resource.Name == "https-http-hc" {
-			want = core.StatusFail
+			want = compliancekit.StatusFail
 		}
 		if f.Status != want {
 			t.Errorf("%s: got %v: %s", f.Resource.Name, f.Status, f.Message)
@@ -168,9 +168,9 @@ func TestLBInVPC(t *testing.T) {
 	)
 	findings, _ := LBInVPC(context.Background(), g)
 	for _, f := range findings {
-		want := core.StatusPass
+		want := compliancekit.StatusPass
 		if f.Resource.Name == "legacy-lb" {
-			want = core.StatusFail
+			want = compliancekit.StatusFail
 		}
 		if f.Status != want {
 			t.Errorf("%s: got %v", f.Resource.Name, f.Status)
@@ -186,9 +186,9 @@ func TestLBOrphan(t *testing.T) {
 	)
 	findings, _ := LBOrphan(context.Background(), g)
 	for _, f := range findings {
-		want := core.StatusPass
+		want := compliancekit.StatusPass
 		if f.Resource.Name == "orphan" {
-			want = core.StatusFail
+			want = compliancekit.StatusFail
 		}
 		if f.Status != want {
 			t.Errorf("%s: got %v", f.Resource.Name, f.Status)

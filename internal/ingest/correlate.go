@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // CorrelateImageSHA expands a finding slice with cross-references:
@@ -31,15 +31,15 @@ import (
 // The correlation runs in O(findings × resources) — fine for our
 // scale (typical scans: ~100 findings × ~5000 resources). v0.15+ can
 // add a SHA index on the graph if this becomes a bottleneck.
-func CorrelateImageSHA(findings []core.Finding, graph *core.ResourceGraph) (out []core.Finding, added int) {
+func CorrelateImageSHA(findings []compliancekit.Finding, graph *compliancekit.ResourceGraph) (out []compliancekit.Finding, added int) {
 	out = findings
 	if graph == nil || len(findings) == 0 {
 		return out, 0
 	}
 
 	// Build a SHA → []Resource index once.
-	bySHA := map[string][]core.Resource{}
-	byImageName := map[string][]core.Resource{}
+	bySHA := map[string][]compliancekit.Resource{}
+	byImageName := map[string][]compliancekit.Resource{}
 	for _, r := range graph.All() {
 		if sha := stringAttr(r, "image_sha"); sha != "" {
 			bySHA[normalizeSHA(sha)] = append(bySHA[normalizeSHA(sha)], r)
@@ -67,13 +67,13 @@ func CorrelateImageSHA(findings []core.Finding, graph *core.ResourceGraph) (out 
 		imageName := extractFindingImageName(f)
 
 		seen := map[string]bool{f.Resource.ID: true}
-		add := func(target core.Resource) {
+		add := func(target compliancekit.Resource) {
 			if seen[target.ID] {
 				return
 			}
 			seen[target.ID] = true
 			clone := f
-			clone.Resource = core.ResourceRef{
+			clone.Resource = compliancekit.ResourceRef{
 				ID:       target.ID,
 				Type:     target.Type,
 				Name:     target.Name,
@@ -102,7 +102,7 @@ func CorrelateImageSHA(findings []core.Finding, graph *core.ResourceGraph) (out 
 	return out, added
 }
 
-func extractFindingSHA(f core.Finding) string {
+func extractFindingSHA(f compliancekit.Finding) string {
 	// Direct path: Resource.ID with container-image:// prefix.
 	if strings.HasPrefix(f.Resource.ID, "container-image://") {
 		return strings.TrimPrefix(f.Resource.ID, "container-image://")
@@ -112,14 +112,14 @@ func extractFindingSHA(f core.Finding) string {
 	return ""
 }
 
-func extractFindingImageName(f core.Finding) string {
+func extractFindingImageName(f compliancekit.Finding) string {
 	if f.Vulnerability != nil && f.Vulnerability.Image != "" {
 		return f.Vulnerability.Image
 	}
 	return ""
 }
 
-func stringAttr(r core.Resource, key string) string {
+func stringAttr(r compliancekit.Resource, key string) string {
 	if r.Attributes == nil {
 		return ""
 	}

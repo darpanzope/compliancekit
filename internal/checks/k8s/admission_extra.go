@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	k8scol "github.com/darpanzope/compliancekit/internal/collectors/k8s"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.21 phase 6 — admission webhook + policy-engine depth. 8 checks
@@ -16,10 +16,10 @@ import (
 
 // ----- 1. webhook timeoutSeconds bounded ---------------------------
 
-var CheckWebhookTimeoutBounded = core.Check{
+var CheckWebhookTimeoutBounded = compliancekit.Check{
 	ID:           "k8s-admission-webhook-timeout-bounded",
 	Title:        "Admission webhooks must set timeoutSeconds ≤ 10",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "kubernetes",
 	Service:      "admission",
 	ResourceType: k8scol.ValidatingWebhookConfigType,
@@ -41,8 +41,8 @@ var CheckWebhookTimeoutBounded = core.Check{
 	Scanner: "admission.WebhookTimeoutBounded",
 }
 
-func WebhookTimeoutBounded(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func WebhookTimeoutBounded(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, t := range []string{k8scol.ValidatingWebhookConfigType, k8scol.MutatingWebhookConfigType} {
 		for _, w := range g.ByType(t) {
 			webhooks, _ := w.Attributes["webhooks"].([]any)
@@ -58,15 +58,15 @@ func WebhookTimeoutBounded(_ context.Context, g *core.ResourceGraph) ([]core.Fin
 					bad = append(bad, fmt.Sprintf("%s(timeout=%ds)", name, timeout))
 				}
 			}
-			f := core.Finding{
+			f := compliancekit.Finding{
 				CheckID: CheckWebhookTimeoutBounded.ID, Severity: CheckWebhookTimeoutBounded.Severity,
 				Resource: w.Ref(), Tags: CheckWebhookTimeoutBounded.Tags,
 			}
 			if len(bad) == 0 {
-				f.Status = core.StatusPass
+				f.Status = compliancekit.StatusPass
 				f.Message = fmt.Sprintf("webhook config %q: all webhooks ≤10s", w.Name)
 			} else {
-				f.Status = core.StatusFail
+				f.Status = compliancekit.StatusFail
 				f.Message = fmt.Sprintf("webhook config %q: %s", w.Name, strings.Join(bad, ", "))
 			}
 			findings = append(findings, f)
@@ -77,10 +77,10 @@ func WebhookTimeoutBounded(_ context.Context, g *core.ResourceGraph) ([]core.Fin
 
 // ----- 2. mutating webhook side effects -------------------------
 
-var CheckMutatingWebhookSideEffectsNone = core.Check{
+var CheckMutatingWebhookSideEffectsNone = compliancekit.Check{
 	ID:           "k8s-mutating-webhook-side-effects-none",
 	Title:        "MutatingWebhooks should declare sideEffects=None (or NoneOnDryRun)",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "kubernetes",
 	Service:      "admission",
 	ResourceType: k8scol.MutatingWebhookConfigType,
@@ -103,8 +103,8 @@ var CheckMutatingWebhookSideEffectsNone = core.Check{
 	Scanner: "admission.MutatingWebhookSideEffects",
 }
 
-func MutatingWebhookSideEffectsNone(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func MutatingWebhookSideEffectsNone(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, w := range g.ByType(k8scol.MutatingWebhookConfigType) {
 		webhooks, _ := w.Attributes["webhooks"].([]any)
 		bad := []string{}
@@ -119,15 +119,15 @@ func MutatingWebhookSideEffectsNone(_ context.Context, g *core.ResourceGraph) ([
 				bad = append(bad, fmt.Sprintf("%s(sideEffects=%s)", name, se))
 			}
 		}
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID: CheckMutatingWebhookSideEffectsNone.ID, Severity: CheckMutatingWebhookSideEffectsNone.Severity,
 			Resource: w.Ref(), Tags: CheckMutatingWebhookSideEffectsNone.Tags,
 		}
 		if len(bad) == 0 {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("mutating webhook %q: all sideEffects None / NoneOnDryRun", w.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("mutating webhook %q: %s", w.Name, strings.Join(bad, ", "))
 		}
 		findings = append(findings, f)
@@ -137,10 +137,10 @@ func MutatingWebhookSideEffectsNone(_ context.Context, g *core.ResourceGraph) ([
 
 // ----- 3. webhook scoped (no kube-system bypass) -------------------
 
-var CheckWebhookExcludesKubeSystem = core.Check{
+var CheckWebhookExcludesKubeSystem = compliancekit.Check{
 	ID:           "k8s-admission-webhook-excludes-kube-system",
 	Title:        "Admission webhooks should exclude kube-system via namespaceSelector",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "kubernetes",
 	Service:      "admission",
 	ResourceType: k8scol.ValidatingWebhookConfigType,
@@ -162,8 +162,8 @@ var CheckWebhookExcludesKubeSystem = core.Check{
 	Scanner: "admission.WebhookExcludesKubeSystem",
 }
 
-func WebhookExcludesKubeSystem(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func WebhookExcludesKubeSystem(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, t := range []string{k8scol.ValidatingWebhookConfigType, k8scol.MutatingWebhookConfigType} {
 		for _, w := range g.ByType(t) {
 			webhooks, _ := w.Attributes["webhooks"].([]any)
@@ -179,15 +179,15 @@ func WebhookExcludesKubeSystem(_ context.Context, g *core.ResourceGraph) ([]core
 					bad = append(bad, name)
 				}
 			}
-			f := core.Finding{
+			f := compliancekit.Finding{
 				CheckID: CheckWebhookExcludesKubeSystem.ID, Severity: CheckWebhookExcludesKubeSystem.Severity,
 				Resource: w.Ref(), Tags: CheckWebhookExcludesKubeSystem.Tags,
 			}
 			if len(bad) == 0 {
-				f.Status = core.StatusPass
+				f.Status = compliancekit.StatusPass
 				f.Message = fmt.Sprintf("webhook config %q: all webhooks scope by namespace", w.Name)
 			} else {
-				f.Status = core.StatusFail
+				f.Status = compliancekit.StatusFail
 				f.Message = fmt.Sprintf("webhook config %q: webhooks without namespaceSelector: %s", w.Name, strings.Join(bad, ", "))
 			}
 			findings = append(findings, f)
@@ -198,10 +198,10 @@ func WebhookExcludesKubeSystem(_ context.Context, g *core.ResourceGraph) ([]core
 
 // ----- 4. policy engine — Gatekeeper installed (manual-verify) ----
 
-var CheckGatekeeperInstalled = core.Check{
+var CheckGatekeeperInstalled = compliancekit.Check{
 	ID:           "k8s-cluster-gatekeeper-installed",
 	Title:        "OPA Gatekeeper should be installed for policy enforcement",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "kubernetes",
 	Service:      "policy",
 	ResourceType: k8scol.ClusterType,
@@ -223,17 +223,17 @@ var CheckGatekeeperInstalled = core.Check{
 	Scanner: "admission.GatekeeperInstalled",
 }
 
-func GatekeeperInstalled(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func GatekeeperInstalled(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	return clusterManualVerify(g, CheckGatekeeperInstalled,
 		"check for Gatekeeper: `kubectl get crd | grep gatekeeper.sh` should list constrainttemplates.templates.gatekeeper.sh + constrainttemplates.constraints.gatekeeper.sh")
 }
 
 // ----- 5. policy engine — Kyverno installed (manual-verify) ------
 
-var CheckKyvernoInstalled = core.Check{
+var CheckKyvernoInstalled = compliancekit.Check{
 	ID:           "k8s-cluster-kyverno-installed",
 	Title:        "Kyverno should be installed for policy enforcement",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "kubernetes",
 	Service:      "policy",
 	ResourceType: k8scol.ClusterType,
@@ -254,17 +254,17 @@ var CheckKyvernoInstalled = core.Check{
 	Scanner: "admission.KyvernoInstalled",
 }
 
-func KyvernoInstalled(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func KyvernoInstalled(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	return clusterManualVerify(g, CheckKyvernoInstalled,
 		"check for Kyverno: `kubectl get crd | grep kyverno.io` should list clusterpolicies.kyverno.io + policies.kyverno.io")
 }
 
 // ----- 6. policy enforcement mode (manual-verify) ------------------
 
-var CheckPolicyEnforceMode = core.Check{
+var CheckPolicyEnforceMode = compliancekit.Check{
 	ID:           "k8s-cluster-policy-engine-enforce-mode",
 	Title:        "Policy-engine policies should be in enforce mode (not audit-only) in production",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "kubernetes",
 	Service:      "policy",
 	ResourceType: k8scol.ClusterType,
@@ -285,17 +285,17 @@ var CheckPolicyEnforceMode = core.Check{
 	Scanner: "admission.PolicyEnforceMode",
 }
 
-func PolicyEnforceMode(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func PolicyEnforceMode(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	return clusterManualVerify(g, CheckPolicyEnforceMode,
 		"`kubectl get constraints.constraints.gatekeeper.sh -A -o jsonpath='{.items[*].spec.enforcementAction}'` should not be `dryrun`; for Kyverno `kubectl get clusterpolicy -o jsonpath='{.items[*].spec.validationFailureAction}'` should be `enforce`")
 }
 
 // ----- 7. OLM installed (manual-verify) ---------------------------
 
-var CheckOLMInstalled = core.Check{
+var CheckOLMInstalled = compliancekit.Check{
 	ID:           "k8s-cluster-olm-installed",
 	Title:        "Operator Lifecycle Manager (OLM) should be installed for operator hygiene",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "kubernetes",
 	Service:      "operator",
 	ResourceType: k8scol.ClusterType,
@@ -317,17 +317,17 @@ var CheckOLMInstalled = core.Check{
 	Scanner: "operator.OLMInstalled",
 }
 
-func OLMInstalled(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func OLMInstalled(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	return clusterManualVerify(g, CheckOLMInstalled,
 		"check for OLM: `kubectl get crd subscriptions.operators.coreos.com clusterserviceversions.operators.coreos.com` should both exist if OLM is installed")
 }
 
 // ----- 8. operator subscription approval mode (manual-verify) -----
 
-var CheckOperatorSubscriptionApproval = core.Check{
+var CheckOperatorSubscriptionApproval = compliancekit.Check{
 	ID:           "k8s-operator-subscription-manual-approval",
 	Title:        "OLM Subscriptions should use Manual approval (not Automatic) for production",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "kubernetes",
 	Service:      "operator",
 	ResourceType: k8scol.ClusterType,
@@ -350,18 +350,18 @@ var CheckOperatorSubscriptionApproval = core.Check{
 	Scanner: "operator.SubscriptionApproval",
 }
 
-func OperatorSubscriptionApproval(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func OperatorSubscriptionApproval(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	return clusterManualVerify(g, CheckOperatorSubscriptionApproval,
 		"`kubectl get subscriptions.operators.coreos.com -A -o jsonpath='{.items[*].spec.installPlanApproval}'` should be Manual for production subscriptions")
 }
 
 func init() {
-	core.Register(CheckWebhookTimeoutBounded, WebhookTimeoutBounded)
-	core.Register(CheckMutatingWebhookSideEffectsNone, MutatingWebhookSideEffectsNone)
-	core.Register(CheckWebhookExcludesKubeSystem, WebhookExcludesKubeSystem)
-	core.Register(CheckGatekeeperInstalled, GatekeeperInstalled)
-	core.Register(CheckKyvernoInstalled, KyvernoInstalled)
-	core.Register(CheckPolicyEnforceMode, PolicyEnforceMode)
-	core.Register(CheckOLMInstalled, OLMInstalled)
-	core.Register(CheckOperatorSubscriptionApproval, OperatorSubscriptionApproval)
+	compliancekit.Register(CheckWebhookTimeoutBounded, WebhookTimeoutBounded)
+	compliancekit.Register(CheckMutatingWebhookSideEffectsNone, MutatingWebhookSideEffectsNone)
+	compliancekit.Register(CheckWebhookExcludesKubeSystem, WebhookExcludesKubeSystem)
+	compliancekit.Register(CheckGatekeeperInstalled, GatekeeperInstalled)
+	compliancekit.Register(CheckKyvernoInstalled, KyvernoInstalled)
+	compliancekit.Register(CheckPolicyEnforceMode, PolicyEnforceMode)
+	compliancekit.Register(CheckOLMInstalled, OLMInstalled)
+	compliancekit.Register(CheckOperatorSubscriptionApproval, OperatorSubscriptionApproval)
 }

@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/ingest"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 func mustOpen(t *testing.T, name string) *os.File {
@@ -61,7 +61,7 @@ func TestIngest_ImageScan(t *testing.T) {
 	if !strings.HasPrefix(f.Resource.ID, "container-image://") {
 		t.Errorf("Resource.ID = %q", f.Resource.ID)
 	}
-	if f.Severity != core.SeverityHigh {
+	if f.Severity != compliancekit.SeverityHigh {
 		t.Errorf("Severity = %v", f.Severity)
 	}
 }
@@ -69,14 +69,14 @@ func TestIngest_ImageScan(t *testing.T) {
 func TestSeverityFromGrype(t *testing.T) {
 	cases := []struct {
 		in   string
-		want core.Severity
+		want compliancekit.Severity
 	}{
-		{"Critical", core.SeverityCritical},
-		{"high", core.SeverityHigh},
-		{"Medium", core.SeverityMedium},
-		{"low", core.SeverityLow},
-		{"Negligible", core.SeverityInfo},
-		{"", core.SeverityInfo},
+		{"Critical", compliancekit.SeverityCritical},
+		{"high", compliancekit.SeverityHigh},
+		{"Medium", compliancekit.SeverityMedium},
+		{"low", compliancekit.SeverityLow},
+		{"Negligible", compliancekit.SeverityInfo},
+		{"", compliancekit.SeverityInfo},
 	}
 	for _, c := range cases {
 		got := severityFromGrype(c.in)

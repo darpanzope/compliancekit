@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	k8scol "github.com/darpanzope/compliancekit/internal/collectors/k8s"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.22 phase 4 — ResourceQuota + LimitRange checks split out of
@@ -13,10 +13,10 @@ import (
 
 // ----- ResourceQuota pod limit -----------------------------------
 
-var CheckRQPodLimit = core.Check{
+var CheckRQPodLimit = compliancekit.Check{
 	ID:           "k8s-resourcequota-pod-limit",
 	Title:        "ResourceQuotas should cap pod counts",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "kubernetes",
 	Service:      "cluster",
 	ResourceType: k8scol.ResourceQuotaType,
@@ -35,16 +35,16 @@ var CheckRQPodLimit = core.Check{
 	Scanner: "cluster.RQPodLimit",
 }
 
-func RQPodLimit(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func RQPodLimit(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	return rqAttrCheck(g, CheckRQPodLimit, "has_pods", "pods cap set", "no pod count cap"), nil
 }
 
 // ----- ResourceQuota CPU/memory ----------------------------------
 
-var CheckRQComputeLimit = core.Check{
+var CheckRQComputeLimit = compliancekit.Check{
 	ID:           "k8s-resourcequota-compute-limit",
 	Title:        "ResourceQuotas should cap CPU and memory",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "kubernetes",
 	Service:      "cluster",
 	ResourceType: k8scol.ResourceQuotaType,
@@ -63,22 +63,22 @@ var CheckRQComputeLimit = core.Check{
 	Scanner: "cluster.RQComputeLimit",
 }
 
-func RQComputeLimit(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func RQComputeLimit(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, rq := range g.ByType(k8scol.ResourceQuotaType) {
 		cpu, _ := rq.Attributes["has_cpu"].(bool)
 		mem, _ := rq.Attributes["has_memory"].(bool)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckRQComputeLimit.ID,
 			Severity: CheckRQComputeLimit.Severity,
 			Resource: rq.Ref(),
 			Tags:     CheckRQComputeLimit.Tags,
 		}
 		if cpu && mem {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("resourcequota %q: cpu+memory caps set", workloadDesc(rq))
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("resourcequota %q: missing %s cap(s)", workloadDesc(rq), missingResourceList(cpu, mem))
 		}
 		findings = append(findings, f)
@@ -88,10 +88,10 @@ func RQComputeLimit(_ context.Context, g *core.ResourceGraph) ([]core.Finding, e
 
 // ----- ResourceQuota object counts -------------------------------
 
-var CheckRQObjectCounts = core.Check{
+var CheckRQObjectCounts = compliancekit.Check{
 	ID:           "k8s-resourcequota-object-counts",
 	Title:        "ResourceQuotas should cap object counts",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "kubernetes",
 	Service:      "cluster",
 	ResourceType: k8scol.ResourceQuotaType,
@@ -109,16 +109,16 @@ var CheckRQObjectCounts = core.Check{
 	Scanner: "cluster.RQObjectCounts",
 }
 
-func RQObjectCounts(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func RQObjectCounts(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	return rqAttrCheck(g, CheckRQObjectCounts, "has_objects", "object count cap set", "no object count cap"), nil
 }
 
 // ----- LimitRange default set -----------------------------------
 
-var CheckLRDefaultSet = core.Check{
+var CheckLRDefaultSet = compliancekit.Check{
 	ID:           "k8s-limitrange-container-defaults",
 	Title:        "LimitRanges should set container default requests/limits",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "kubernetes",
 	Service:      "cluster",
 	ResourceType: k8scol.LimitRangeType,
@@ -138,21 +138,21 @@ var CheckLRDefaultSet = core.Check{
 	Scanner: "cluster.LRDefaultSet",
 }
 
-func LRDefaultSet(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func LRDefaultSet(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, lr := range g.ByType(k8scol.LimitRangeType) {
 		has, _ := lr.Attributes["has_container_defaults"].(bool)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckLRDefaultSet.ID,
 			Severity: CheckLRDefaultSet.Severity,
 			Resource: lr.Ref(),
 			Tags:     CheckLRDefaultSet.Tags,
 		}
 		if has {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("limitrange %q: container defaults set", workloadDesc(lr))
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("limitrange %q: no container defaults", workloadDesc(lr))
 		}
 		findings = append(findings, f)
@@ -161,8 +161,8 @@ func LRDefaultSet(_ context.Context, g *core.ResourceGraph) ([]core.Finding, err
 }
 
 func init() {
-	core.Register(CheckRQPodLimit, RQPodLimit)
-	core.Register(CheckRQComputeLimit, RQComputeLimit)
-	core.Register(CheckRQObjectCounts, RQObjectCounts)
-	core.Register(CheckLRDefaultSet, LRDefaultSet)
+	compliancekit.Register(CheckRQPodLimit, RQPodLimit)
+	compliancekit.Register(CheckRQComputeLimit, RQComputeLimit)
+	compliancekit.Register(CheckRQObjectCounts, RQObjectCounts)
+	compliancekit.Register(CheckLRDefaultSet, LRDefaultSet)
 }

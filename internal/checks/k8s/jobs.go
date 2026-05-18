@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	k8scol "github.com/darpanzope/compliancekit/internal/collectors/k8s"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // jobBackoffLimitCeiling is the largest backoffLimit we accept without
@@ -15,10 +15,10 @@ const jobBackoffLimitCeiling = 10
 
 // ----- Job backoff limit -----------------------------------------
 
-var CheckJobBackoffLimit = core.Check{
+var CheckJobBackoffLimit = compliancekit.Check{
 	ID:           "k8s-job-backoff-limit",
 	Title:        "Jobs should set a sensible backoffLimit",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "kubernetes",
 	Service:      "jobs",
 	ResourceType: k8scol.JobType,
@@ -39,12 +39,12 @@ var CheckJobBackoffLimit = core.Check{
 	Scanner: "jobs.JobBackoffLimit",
 }
 
-func JobBackoffLimit(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func JobBackoffLimit(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, j := range g.ByType(k8scol.JobType) {
 		bl := readInt32(j.Attributes["backoff_limit"])
 		owner, _ := j.Attributes["owner_kind"].(string)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckJobBackoffLimit.ID,
 			Severity: CheckJobBackoffLimit.Severity,
 			Resource: j.Ref(),
@@ -53,20 +53,20 @@ func JobBackoffLimit(_ context.Context, g *core.ResourceGraph) ([]core.Finding, 
 		// CronJob-owned Jobs inherit jobTemplate.spec.backoffLimit so
 		// the policy lives on the parent. Skip transient cronjob jobs.
 		if owner == "CronJob" {
-			f.Status = core.StatusSkip
+			f.Status = compliancekit.StatusSkip
 			f.Message = fmt.Sprintf("job %q: owned by CronJob (parent policy applies)", workloadDesc(j))
 			findings = append(findings, f)
 			continue
 		}
 		switch {
 		case bl < 0:
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("job %q: no backoffLimit set", workloadDesc(j))
 		case bl > jobBackoffLimitCeiling:
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("job %q: backoffLimit=%d exceeds ceiling of %d", workloadDesc(j), bl, jobBackoffLimitCeiling)
 		default:
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("job %q: backoffLimit=%d", workloadDesc(j), bl)
 		}
 		findings = append(findings, f)
@@ -76,10 +76,10 @@ func JobBackoffLimit(_ context.Context, g *core.ResourceGraph) ([]core.Finding, 
 
 // ----- CronJob concurrency policy --------------------------------
 
-var CheckCronJobConcurrency = core.Check{
+var CheckCronJobConcurrency = compliancekit.Check{
 	ID:           "k8s-cronjob-concurrency",
 	Title:        "CronJobs should not allow concurrent executions",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "kubernetes",
 	Service:      "jobs",
 	ResourceType: k8scol.CronJobType,
@@ -100,24 +100,24 @@ var CheckCronJobConcurrency = core.Check{
 	Scanner: "jobs.CronJobConcurrency",
 }
 
-func CronJobConcurrency(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func CronJobConcurrency(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, cj := range g.ByType(k8scol.CronJobType) {
 		policy, _ := cj.Attributes["concurrency_policy"].(string)
 		if policy == "" {
 			policy = "Allow"
 		}
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckCronJobConcurrency.ID,
 			Severity: CheckCronJobConcurrency.Severity,
 			Resource: cj.Ref(),
 			Tags:     CheckCronJobConcurrency.Tags,
 		}
 		if policy == "Forbid" || policy == "Replace" {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("cronjob %q: concurrencyPolicy=%s", workloadDesc(cj), policy)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("cronjob %q: concurrencyPolicy=Allow permits overlapping runs", workloadDesc(cj))
 		}
 		findings = append(findings, f)
@@ -127,10 +127,10 @@ func CronJobConcurrency(_ context.Context, g *core.ResourceGraph) ([]core.Findin
 
 // ----- CronJob history limits ------------------------------------
 
-var CheckCronJobHistoryLimit = core.Check{
+var CheckCronJobHistoryLimit = compliancekit.Check{
 	ID:           "k8s-cronjob-history-limit",
 	Title:        "CronJobs should set successful and failed history limits",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "kubernetes",
 	Service:      "jobs",
 	ResourceType: k8scol.CronJobType,
@@ -153,12 +153,12 @@ var CheckCronJobHistoryLimit = core.Check{
 	Scanner: "jobs.CronJobHistoryLimit",
 }
 
-func CronJobHistoryLimit(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func CronJobHistoryLimit(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, cj := range g.ByType(k8scol.CronJobType) {
 		success := readInt32(cj.Attributes["successful_jobs_history"])
 		failed := readInt32(cj.Attributes["failed_jobs_history"])
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckCronJobHistoryLimit.ID,
 			Severity: CheckCronJobHistoryLimit.Severity,
 			Resource: cj.Ref(),
@@ -167,10 +167,10 @@ func CronJobHistoryLimit(_ context.Context, g *core.ResourceGraph) ([]core.Findi
 		// -1 means the source value was unset; we want both set
 		// explicitly so the policy is intentional.
 		if success >= 0 && failed >= 0 {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("cronjob %q: history limits set (%d/%d)", workloadDesc(cj), success, failed)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("cronjob %q: missing history limits (success=%d, failed=%d)", workloadDesc(cj), success, failed)
 		}
 		findings = append(findings, f)
@@ -180,10 +180,10 @@ func CronJobHistoryLimit(_ context.Context, g *core.ResourceGraph) ([]core.Findi
 
 // ----- CronJob starting deadline ---------------------------------
 
-var CheckCronJobStartingDeadline = core.Check{
+var CheckCronJobStartingDeadline = compliancekit.Check{
 	ID:           "k8s-cronjob-starting-deadline",
 	Title:        "CronJobs should set startingDeadlineSeconds",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "kubernetes",
 	Service:      "jobs",
 	ResourceType: k8scol.CronJobType,
@@ -204,21 +204,21 @@ var CheckCronJobStartingDeadline = core.Check{
 	Scanner: "jobs.CronJobStartingDeadline",
 }
 
-func CronJobStartingDeadline(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func CronJobStartingDeadline(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, cj := range g.ByType(k8scol.CronJobType) {
 		deadline := readInt64(cj.Attributes["starting_deadline_seconds"])
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckCronJobStartingDeadline.ID,
 			Severity: CheckCronJobStartingDeadline.Severity,
 			Resource: cj.Ref(),
 			Tags:     CheckCronJobStartingDeadline.Tags,
 		}
 		if deadline > 0 {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("cronjob %q: startingDeadlineSeconds=%d", workloadDesc(cj), deadline)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("cronjob %q: startingDeadlineSeconds unset (cronjob can stall after 100 missed runs)", workloadDesc(cj))
 		}
 		findings = append(findings, f)
@@ -229,10 +229,10 @@ func CronJobStartingDeadline(_ context.Context, g *core.ResourceGraph) ([]core.F
 // ----- helpers + init --------------------------------------------
 
 func init() {
-	core.Register(CheckJobBackoffLimit, JobBackoffLimit)
-	core.Register(CheckCronJobConcurrency, CronJobConcurrency)
-	core.Register(CheckCronJobHistoryLimit, CronJobHistoryLimit)
-	core.Register(CheckCronJobStartingDeadline, CronJobStartingDeadline)
+	compliancekit.Register(CheckJobBackoffLimit, JobBackoffLimit)
+	compliancekit.Register(CheckCronJobConcurrency, CronJobConcurrency)
+	compliancekit.Register(CheckCronJobHistoryLimit, CronJobHistoryLimit)
+	compliancekit.Register(CheckCronJobStartingDeadline, CronJobStartingDeadline)
 }
 
 // readInt32 accepts the various integer types that may end up in the

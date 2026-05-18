@@ -5,11 +5,11 @@ import (
 	"testing"
 
 	hetznercol "github.com/darpanzope/compliancekit/internal/collectors/hetzner"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
-func mkNetwork(name string, attrs map[string]any) core.Resource {
-	return core.Resource{
+func mkNetwork(name string, attrs map[string]any) compliancekit.Resource {
+	return compliancekit.Resource{
 		ID:         "hetzner.network." + name,
 		Type:       hetznercol.NetworkType,
 		Name:       name,
@@ -25,9 +25,9 @@ func TestNetworkOrphan(t *testing.T) {
 	)
 	findings, _ := NetworkOrphan(context.Background(), g)
 	for _, f := range findings {
-		want := core.StatusPass
+		want := compliancekit.StatusPass
 		if f.Resource.Name == "empty" {
-			want = core.StatusFail
+			want = compliancekit.StatusFail
 		}
 		if f.Status != want {
 			t.Errorf("%s: got %v", f.Resource.Name, f.Status)
@@ -39,14 +39,14 @@ func TestNetworkRFC1918(t *testing.T) {
 	cases := []struct {
 		name string
 		cidr string
-		want core.Status
+		want compliancekit.Status
 	}{
-		{"10-range", "10.0.0.0/16", core.StatusPass},
-		{"172-private", "172.20.0.0/16", core.StatusPass},
-		{"192-168", "192.168.0.0/16", core.StatusPass},
-		{"public", "1.2.3.0/24", core.StatusFail},
-		{"172-public", "172.32.0.0/16", core.StatusFail},
-		{"empty", "", core.StatusSkip},
+		{"10-range", "10.0.0.0/16", compliancekit.StatusPass},
+		{"172-private", "172.20.0.0/16", compliancekit.StatusPass},
+		{"192-168", "192.168.0.0/16", compliancekit.StatusPass},
+		{"public", "1.2.3.0/24", compliancekit.StatusFail},
+		{"172-public", "172.32.0.0/16", compliancekit.StatusFail},
+		{"empty", "", compliancekit.StatusSkip},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {

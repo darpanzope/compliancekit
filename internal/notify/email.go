@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // EmailConfig configures the SMTP sink. Supports three TLS modes:
@@ -34,7 +34,7 @@ type EmailConfig struct {
 	TLSMode    string // starttls | tls | none
 	SkipVerify bool   // disable cert verification — test/dev only
 
-	SeverityFloor core.Severity
+	SeverityFloor compliancekit.Severity
 
 	// sendMail overrides the actual send call. Tests inject a stub
 	// so they don't need a live SMTP server.
@@ -72,7 +72,7 @@ func (e *Email) Configured() bool {
 }
 
 // Threshold returns the per-sink severity floor.
-func (e *Email) Threshold() core.Severity { return e.cfg.SeverityFloor }
+func (e *Email) Threshold() compliancekit.Severity { return e.cfg.SeverityFloor }
 
 // Send dispatches the notifications. One message per notification —
 // keeps subject lines targeted and lets recipients filter per check.
@@ -164,7 +164,7 @@ func init() {
 		}
 	}
 	if t := os.Getenv("SMTP_THRESHOLD"); t != "" {
-		if sev, err := core.ParseSeverity(t); err == nil {
+		if sev, err := compliancekit.ParseSeverity(t); err == nil {
 			cfg.SeverityFloor = sev
 		}
 	}

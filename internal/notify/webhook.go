@@ -12,7 +12,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // WebhookConfig configures the generic webhook sink. POSTs every
@@ -29,7 +29,7 @@ import (
 //	  "body":        "<CommonMark>",
 //	  "url":         "https://...",
 //	  "tags":        ["s3", "data-exposure"],
-//	  "finding":     { ...core.Finding... }
+//	  "finding":     { ...compliancekit.Finding... }
 //	}
 //
 // When Secret is set, the request includes an X-CompliancekitSignature
@@ -41,7 +41,7 @@ import (
 type WebhookConfig struct {
 	URL           string
 	Secret        string
-	SeverityFloor core.Severity
+	SeverityFloor compliancekit.Severity
 	HTTPClient    *http.Client
 }
 
@@ -58,7 +58,7 @@ func (w *Webhook) Name() string { return "webhook" }
 func (w *Webhook) Configured() bool { return w.cfg.URL != "" }
 
 // Threshold returns the per-sink severity floor.
-func (w *Webhook) Threshold() core.Severity { return w.cfg.SeverityFloor }
+func (w *Webhook) Threshold() compliancekit.Severity { return w.cfg.SeverityFloor }
 
 // Send dispatches the notifications. One POST per notification (not
 // a batch) so the receiver can correlate request ↔ finding without
@@ -136,7 +136,7 @@ func init() {
 		Secret: os.Getenv("COMPLIANCEKIT_WEBHOOK_SECRET"),
 	}
 	if t := os.Getenv("COMPLIANCEKIT_WEBHOOK_THRESHOLD"); t != "" {
-		if sev, err := core.ParseSeverity(t); err == nil {
+		if sev, err := compliancekit.ParseSeverity(t); err == nil {
 			cfg.SeverityFloor = sev
 		}
 	}

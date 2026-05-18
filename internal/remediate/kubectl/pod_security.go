@@ -3,9 +3,9 @@ package kubectl
 import (
 	"fmt"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate"
 	"github.com/darpanzope/compliancekit/internal/remediate/render"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 func init() {
@@ -44,7 +44,7 @@ func init() {
 		renderImagePullPolicy)
 }
 
-func renderRunAsNonRoot(f core.Finding) (remediate.Snippet, error) {
+func renderRunAsNonRoot(f compliancekit.Finding) (remediate.Snippet, error) {
 	kind, ns, name := workloadFromResource(f)
 	patch := `spec:
   template:
@@ -84,7 +84,7 @@ spec:
 	}, nil
 }
 
-func renderAllowPrivilegeEscalation(f core.Finding) (remediate.Snippet, error) {
+func renderAllowPrivilegeEscalation(f compliancekit.Finding) (remediate.Snippet, error) {
 	kind, ns, name := workloadFromResource(f)
 	patch := `spec:
   template:
@@ -106,7 +106,7 @@ securityContext:
 	}, nil
 }
 
-func renderReadOnlyRootFS(f core.Finding) (remediate.Snippet, error) {
+func renderReadOnlyRootFS(f compliancekit.Finding) (remediate.Snippet, error) {
 	kind, ns, name := workloadFromResource(f)
 	patch := `spec:
   template:
@@ -131,7 +131,7 @@ func renderReadOnlyRootFS(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderCapabilitiesDropAll(f core.Finding) (remediate.Snippet, error) {
+func renderCapabilitiesDropAll(f compliancekit.Finding) (remediate.Snippet, error) {
 	kind, ns, name := workloadFromResource(f)
 	patch := `spec:
   template:
@@ -151,7 +151,7 @@ func renderCapabilitiesDropAll(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderSeccompProfile(f core.Finding) (remediate.Snippet, error) {
+func renderSeccompProfile(f compliancekit.Finding) (remediate.Snippet, error) {
 	kind, ns, name := workloadFromResource(f)
 	patch := `spec:
   template:
@@ -168,7 +168,7 @@ func renderSeccompProfile(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderPrivileged(f core.Finding) (remediate.Snippet, error) {
+func renderPrivileged(f compliancekit.Finding) (remediate.Snippet, error) {
 	kind, ns, name := workloadFromResource(f)
 	patch := `spec:
   template:
@@ -186,7 +186,7 @@ func renderPrivileged(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderHostNamespaces(f core.Finding) (remediate.Snippet, error) {
+func renderHostNamespaces(f compliancekit.Finding) (remediate.Snippet, error) {
 	kind, ns, name := workloadFromResource(f)
 	patch := `spec:
   template:
@@ -203,7 +203,7 @@ func renderHostNamespaces(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderHostPathVolume(f core.Finding) (remediate.Snippet, error) {
+func renderHostPathVolume(f compliancekit.Finding) (remediate.Snippet, error) {
 	_, _, name := workloadFromResource(f)
 	return remediate.Snippet{
 		Risk:       remediate.RiskManual,
@@ -218,7 +218,7 @@ func renderHostPathVolume(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderAutomountSAToken(f core.Finding) (remediate.Snippet, error) {
+func renderAutomountSAToken(f compliancekit.Finding) (remediate.Snippet, error) {
 	kind, ns, name := workloadFromResource(f)
 	patch := `spec:
   template:
@@ -233,7 +233,7 @@ func renderAutomountSAToken(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderImageTagLatest(f core.Finding) (remediate.Snippet, error) {
+func renderImageTagLatest(f compliancekit.Finding) (remediate.Snippet, error) {
 	_, _, name := workloadFromResource(f)
 	return remediate.Snippet{
 		Risk:       remediate.RiskManual,
@@ -248,7 +248,7 @@ func renderImageTagLatest(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderImagePullPolicy(f core.Finding) (remediate.Snippet, error) {
+func renderImagePullPolicy(f compliancekit.Finding) (remediate.Snippet, error) {
 	kind, ns, name := workloadFromResource(f)
 	patch := `spec:
   template:

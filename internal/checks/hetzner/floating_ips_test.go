@@ -5,11 +5,11 @@ import (
 	"testing"
 
 	hetznercol "github.com/darpanzope/compliancekit/internal/collectors/hetzner"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
-func mkFloatingIP(name string, attached bool) core.Resource {
-	return core.Resource{
+func mkFloatingIP(name string, attached bool) compliancekit.Resource {
+	return compliancekit.Resource{
 		ID:       "hetzner.floating_ip." + name,
 		Type:     hetznercol.FloatingIPType,
 		Name:     name,
@@ -28,9 +28,9 @@ func TestFloatingIPOrphan(t *testing.T) {
 	)
 	findings, _ := FloatingIPOrphan(context.Background(), g)
 	for _, f := range findings {
-		want := core.StatusPass
+		want := compliancekit.StatusPass
 		if f.Resource.Name == "orphan" {
-			want = core.StatusFail
+			want = compliancekit.StatusFail
 		}
 		if f.Status != want {
 			t.Errorf("%s: got %v", f.Resource.Name, f.Status)

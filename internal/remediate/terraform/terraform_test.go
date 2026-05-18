@@ -4,15 +4,15 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // fixture is a small helper for table-driven tests below.
-func fixture(checkID, resourceName string) core.Finding {
-	return core.Finding{
+func fixture(checkID, resourceName string) compliancekit.Finding {
+	return compliancekit.Finding{
 		CheckID: checkID,
-		Resource: core.ResourceRef{
+		Resource: compliancekit.ResourceRef{
 			ID:   "aws.s3.bucket." + resourceName,
 			Name: resourceName,
 			Type: "aws.s3.bucket",
@@ -152,9 +152,9 @@ func TestRenderHCLDeterministic(t *testing.T) {
 }
 
 func TestRenderGCPStoragePAP(t *testing.T) {
-	f := core.Finding{
+	f := compliancekit.Finding{
 		CheckID:  "gcp-storage-public-access-prevention",
-		Resource: core.ResourceRef{Name: "data-lake-prod", Type: "gcp.storage.bucket"},
+		Resource: compliancekit.ResourceRef{Name: "data-lake-prod", Type: "gcp.storage.bucket"},
 	}
 	snip, err := remediate.Default.Render(f, remediate.FormatTerraform)
 	if err != nil {
@@ -166,9 +166,9 @@ func TestRenderGCPStoragePAP(t *testing.T) {
 }
 
 func TestRenderDOSpacesPrivate(t *testing.T) {
-	f := core.Finding{
+	f := compliancekit.Finding{
 		CheckID:  "do-spaces-public-acl",
-		Resource: core.ResourceRef{Name: "assets-cdn", Type: "digitalocean.spaces_bucket"},
+		Resource: compliancekit.ResourceRef{Name: "assets-cdn", Type: "digitalocean.spaces_bucket"},
 	}
 	snip, err := remediate.Default.Render(f, remediate.FormatTerraform)
 	if err != nil {
@@ -188,9 +188,9 @@ func TestRenderCloudTrailMultiCheck(t *testing.T) {
 	}
 	contents := make([]string, 0, len(cases))
 	for _, id := range cases {
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  id,
-			Resource: core.ResourceRef{Name: "main-trail"},
+			Resource: compliancekit.ResourceRef{Name: "main-trail"},
 		}
 		snip, err := remediate.Default.Render(f, remediate.FormatTerraform)
 		if err != nil {
@@ -208,9 +208,9 @@ func TestRenderCloudTrailMultiCheck(t *testing.T) {
 func TestRenderResourceIDFallback(t *testing.T) {
 	// When Resource.Name is empty, strategies should fall back to
 	// Resource.ID rather than emitting an empty bucket attribute.
-	f := core.Finding{
+	f := compliancekit.Finding{
 		CheckID: "aws-s3-public-access-block",
-		Resource: core.ResourceRef{
+		Resource: compliancekit.ResourceRef{
 			ID: "aws.s3.bucket.orphan-no-name",
 		},
 	}

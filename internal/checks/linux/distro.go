@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	docol "github.com/darpanzope/compliancekit/internal/collectors/linux"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.20 phase 1 — distro support gate. Asserts every host's
@@ -31,10 +31,10 @@ var supportedDistros = map[string]bool{
 	"amzn":      true,
 }
 
-var CheckDistroSupported = core.Check{
+var CheckDistroSupported = compliancekit.Check{
 	ID:           "linux-distro-supported",
 	Title:        "/etc/os-release ID must be on the supported-distro allowlist",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "linux",
 	Service:      "distro",
 	ResourceType: docol.HostType,
@@ -61,10 +61,10 @@ var CheckDistroSupported = core.Check{
 	Scanner: "linux.distro.Supported",
 }
 
-func DistroSupported(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func DistroSupported(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, h := range g.ByType(docol.HostType) {
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckDistroSupported.ID,
 			Severity: CheckDistroSupported.Severity,
 			Resource: h.Ref(),
@@ -72,7 +72,7 @@ func DistroSupported(_ context.Context, g *core.ResourceGraph) ([]core.Finding, 
 		}
 		reachable, _ := h.Attributes["reachable"].(bool)
 		if !reachable {
-			f.Status = core.StatusSkip
+			f.Status = compliancekit.StatusSkip
 			f.Message = fmt.Sprintf("host %q: unreachable; skipping distro check", h.Name)
 			findings = append(findings, f)
 			continue
@@ -81,17 +81,17 @@ func DistroSupported(_ context.Context, g *core.ResourceGraph) ([]core.Finding, 
 		pretty, _ := h.Attributes["distro_pretty_name"].(string)
 		if id == "" {
 			osErr, _ := h.Attributes["os_release_error"].(string)
-			f.Status = core.StatusError
+			f.Status = compliancekit.StatusError
 			f.Message = fmt.Sprintf("host %q: /etc/os-release unreadable: %s",
 				h.Name, ifEmpty(osErr, "no distro_id captured"))
 			findings = append(findings, f)
 			continue
 		}
 		if supportedDistros[strings.ToLower(id)] {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("host %q: distro %q is on the supported allowlist", h.Name, pretty)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("host %q: distro %q (id=%q) is NOT on the supported allowlist", h.Name, pretty, id)
 		}
 		findings = append(findings, f)
@@ -107,5 +107,5 @@ func ifEmpty(s, fallback string) string {
 }
 
 func init() {
-	core.Register(CheckDistroSupported, DistroSupported)
+	compliancekit.Register(CheckDistroSupported, DistroSupported)
 }

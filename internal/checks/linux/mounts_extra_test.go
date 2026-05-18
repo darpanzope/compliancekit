@@ -5,15 +5,15 @@ import (
 	"testing"
 
 	linuxcol "github.com/darpanzope/compliancekit/internal/collectors/linux"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.20 phase 3 — tests for the mount-separate + mount-option check
 // framework. One canonical pass/fail per shape covers every spec by
 // induction; per-distro fixture coverage lands in Phase 11.
 
-func mountsHost(name string, mounts []linuxcol.MountEntry) core.Resource {
-	return core.Resource{
+func mountsHost(name string, mounts []linuxcol.MountEntry) compliancekit.Resource {
+	return compliancekit.Resource{
 		ID:       "linux.host." + name,
 		Type:     linuxcol.HostType,
 		Name:     name,
@@ -37,13 +37,13 @@ func TestMountSeparate_PassFail(t *testing.T) {
 		mountsHost("good", withTmp),
 		mountsHost("bad", withoutTmp),
 	)
-	fn, _ := core.Lookup("linux-mount-tmp-separate")
+	fn, _ := compliancekit.Lookup("linux-mount-tmp-separate")
 	findings, _ := fn(context.Background(), g)
-	by := map[string]core.Status{}
+	by := map[string]compliancekit.Status{}
 	for _, f := range findings {
 		by[f.Resource.Name] = f.Status
 	}
-	if by["good"] != core.StatusPass || by["bad"] != core.StatusFail {
+	if by["good"] != compliancekit.StatusPass || by["bad"] != compliancekit.StatusFail {
 		t.Errorf("statuses=%+v", by)
 	}
 }
@@ -63,26 +63,26 @@ func TestMountOption_PassFailSkip(t *testing.T) {
 		mountsHost("fail", withoutNoexec),
 		mountsHost("skip", noTmpMount),
 	)
-	fn, _ := core.Lookup("linux-mount-tmp-noexec")
+	fn, _ := compliancekit.Lookup("linux-mount-tmp-noexec")
 	findings, _ := fn(context.Background(), g)
-	by := map[string]core.Status{}
+	by := map[string]compliancekit.Status{}
 	for _, f := range findings {
 		by[f.Resource.Name] = f.Status
 	}
-	if by["pass"] != core.StatusPass || by["fail"] != core.StatusFail || by["skip"] != core.StatusSkip {
+	if by["pass"] != compliancekit.StatusPass || by["fail"] != compliancekit.StatusFail || by["skip"] != compliancekit.StatusSkip {
 		t.Errorf("statuses=%+v", by)
 	}
 }
 
 func TestMountChecks_ErrorWhenMountsAttrMissing(t *testing.T) {
-	host := core.Resource{
+	host := compliancekit.Resource{
 		ID: "linux.host.h", Type: linuxcol.HostType, Name: "h", Provider: "linux",
 		Attributes: map[string]any{"reachable": true},
 	}
 	g := newGraph(t, host)
-	fn, _ := core.Lookup("linux-mount-tmp-separate")
+	fn, _ := compliancekit.Lookup("linux-mount-tmp-separate")
 	findings, _ := fn(context.Background(), g)
-	if findings[0].Status != core.StatusError {
+	if findings[0].Status != compliancekit.StatusError {
 		t.Errorf("status=%v want StatusError when mounts attr missing", findings[0].Status)
 	}
 }

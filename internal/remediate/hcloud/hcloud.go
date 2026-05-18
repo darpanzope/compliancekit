@@ -6,12 +6,12 @@ package hcloud
 import (
 	"fmt"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate"
 	"github.com/darpanzope/compliancekit/internal/remediate/render"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
-type strategyFunc func(core.Finding) (remediate.Snippet, error)
+type strategyFunc func(compliancekit.Finding) (remediate.Snippet, error)
 
 type strategy struct {
 	name string
@@ -22,7 +22,7 @@ type strategy struct {
 func (s *strategy) Name() string                { return s.name }
 func (s *strategy) CheckIDs() []string          { return s.ids }
 func (s *strategy) Formats() []remediate.Format { return []remediate.Format{remediate.FormatHcloud} }
-func (s *strategy) Render(f core.Finding, format remediate.Format) (remediate.Snippet, error) {
+func (s *strategy) Render(f compliancekit.Finding, format remediate.Format) (remediate.Snippet, error) {
 	if format != remediate.FormatHcloud {
 		return remediate.Snippet{}, remediate.ErrFormatUnsupported
 	}
@@ -45,7 +45,7 @@ func init() {
 		[]string{"hetzner-server-public-only"}, renderServerPrivateNetwork)
 }
 
-func renderFirewallInspect(f core.Finding) (remediate.Snippet, error) {
+func renderFirewallInspect(f compliancekit.Finding) (remediate.Snippet, error) {
 	id := f.Resource.Name
 	if id == "" {
 		id = "FIREWALL_ID"
@@ -64,7 +64,7 @@ hcloud firewall describe %s
 	}, nil
 }
 
-func renderServerBackups(f core.Finding) (remediate.Snippet, error) {
+func renderServerBackups(f compliancekit.Finding) (remediate.Snippet, error) {
 	id := f.Resource.Name
 	if id == "" {
 		id = "SERVER_ID"
@@ -78,7 +78,7 @@ func renderServerBackups(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderServerPrivateNetwork(f core.Finding) (remediate.Snippet, error) {
+func renderServerPrivateNetwork(f compliancekit.Finding) (remediate.Snippet, error) {
 	id := f.Resource.Name
 	if id == "" {
 		id = "SERVER_ID"

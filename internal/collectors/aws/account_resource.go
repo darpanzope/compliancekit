@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/darpanzope/compliancekit/internal/collectors/cloudcommon"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // AccountType is the resource type emitted for the synthetic AWS
@@ -19,8 +19,8 @@ const AccountType = "aws.account"
 // The Resource.Region is left empty because the account itself is
 // region-agnostic. Per-region resources stamp their own Region via
 // cloudcommon.Stamp.
-func (c *Collector) accountResource(regions []string) core.Resource {
-	r := core.Resource{
+func (c *Collector) accountResource(regions []string) compliancekit.Resource {
+	r := compliancekit.Resource{
 		ID:       fmt.Sprintf("aws.account.%s", c.accountID),
 		Type:     AccountType,
 		Name:     c.accountID,

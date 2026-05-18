@@ -9,14 +9,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/darpanzope/compliancekit/internal/collectors/cloudcommon"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // collectCluster fetches Namespaces (cluster-scoped), ResourceQuotas,
 // LimitRanges, ValidatingWebhookConfigurations, and
 // MutatingWebhookConfigurations. The cluster-level posture surface.
-func (c *Collector) collectCluster(ctx context.Context, scope *ContextScope) ([]core.Resource, error) {
-	out := make([]core.Resource, 0, 32)
+func (c *Collector) collectCluster(ctx context.Context, scope *ContextScope) ([]compliancekit.Resource, error) {
+	out := make([]compliancekit.Resource, 0, 32)
 
 	nss, err := scope.Client.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
 	if err != nil {
@@ -131,7 +131,7 @@ func filterLRByExclude(in []corev1.LimitRange, ex []string) []corev1.LimitRange 
 
 // ---- Resource builders ----
 
-func (c *Collector) namespaceResource(scope *ContextScope, ns *corev1.Namespace) core.Resource {
+func (c *Collector) namespaceResource(scope *ContextScope, ns *corev1.Namespace) compliancekit.Resource {
 	psaEnforce := ns.Labels["pod-security.kubernetes.io/enforce"]
 	psaAudit := ns.Labels["pod-security.kubernetes.io/audit"]
 	psaWarn := ns.Labels["pod-security.kubernetes.io/warn"]
@@ -145,7 +145,7 @@ func (c *Collector) namespaceResource(scope *ContextScope, ns *corev1.Namespace)
 		"is_system":   isSystemNamespaceK8s(ns.Name),
 		"finalizers":  namespaceFinalizers(ns),
 	}
-	r := core.Resource{
+	r := compliancekit.Resource{
 		ID:         fmt.Sprintf("%s.%s.%s", NamespaceType, scope.Name, ns.Name),
 		Type:       NamespaceType,
 		Name:       ns.Name,
@@ -156,7 +156,7 @@ func (c *Collector) namespaceResource(scope *ContextScope, ns *corev1.Namespace)
 	return r
 }
 
-func (c *Collector) resourceQuotaResource(scope *ContextScope, rq *corev1.ResourceQuota) core.Resource {
+func (c *Collector) resourceQuotaResource(scope *ContextScope, rq *corev1.ResourceQuota) compliancekit.Resource {
 	hard := map[string]string{}
 	for k, v := range rq.Spec.Hard {
 		hard[string(k)] = v.String()
@@ -170,7 +170,7 @@ func (c *Collector) resourceQuotaResource(scope *ContextScope, rq *corev1.Resour
 		"has_memory":  keyPresentAny(hard, "limits.memory", "requests.memory"),
 		"has_objects": keyPresentAny(hard, "count/configmaps", "count/secrets", "persistentvolumeclaims"),
 	}
-	r := core.Resource{
+	r := compliancekit.Resource{
 		ID:         fmt.Sprintf("%s.%s.%s.%s", ResourceQuotaType, scope.Name, rq.Namespace, rq.Name),
 		Type:       ResourceQuotaType,
 		Name:       rq.Name,
@@ -181,7 +181,7 @@ func (c *Collector) resourceQuotaResource(scope *ContextScope, rq *corev1.Resour
 	return r
 }
 
-func (c *Collector) limitRangeResource(scope *ContextScope, lr *corev1.LimitRange) core.Resource {
+func (c *Collector) limitRangeResource(scope *ContextScope, lr *corev1.LimitRange) compliancekit.Resource {
 	hasContainerDefaults := false
 	for _, lim := range lr.Spec.Limits {
 		if lim.Type == corev1.LimitTypeContainer {
@@ -196,7 +196,7 @@ func (c *Collector) limitRangeResource(scope *ContextScope, lr *corev1.LimitRang
 		"has_container_defaults": hasContainerDefaults,
 		"limit_count":            len(lr.Spec.Limits),
 	}
-	r := core.Resource{
+	r := compliancekit.Resource{
 		ID:         fmt.Sprintf("%s.%s.%s.%s", LimitRangeType, scope.Name, lr.Namespace, lr.Name),
 		Type:       LimitRangeType,
 		Name:       lr.Name,
@@ -207,14 +207,14 @@ func (c *Collector) limitRangeResource(scope *ContextScope, lr *corev1.LimitRang
 	return r
 }
 
-func (c *Collector) validatingWebhookResource(scope *ContextScope, w *admissionregistrationv1.ValidatingWebhookConfiguration) core.Resource {
+func (c *Collector) validatingWebhookResource(scope *ContextScope, w *admissionregistrationv1.ValidatingWebhookConfiguration) compliancekit.Resource {
 	webhooks := flattenValidatingWebhooks(w.Webhooks)
 	attrs := map[string]any{
 		"webhook_count":     len(w.Webhooks),
 		"webhooks":          webhooks,
 		"has_ignore_policy": webhooksHaveFailurePolicy(webhooks, "Ignore"),
 	}
-	r := core.Resource{
+	r := compliancekit.Resource{
 		ID:         fmt.Sprintf("%s.%s.%s", ValidatingWebhookConfigType, scope.Name, w.Name),
 		Type:       ValidatingWebhookConfigType,
 		Name:       w.Name,
@@ -225,7 +225,7 @@ func (c *Collector) validatingWebhookResource(scope *ContextScope, w *admissionr
 	return r
 }
 
-func (c *Collector) mutatingWebhookResource(scope *ContextScope, w *admissionregistrationv1.MutatingWebhookConfiguration) core.Resource {
+func (c *Collector) mutatingWebhookResource(scope *ContextScope, w *admissionregistrationv1.MutatingWebhookConfiguration) compliancekit.Resource {
 	webhooks := flattenMutatingWebhooks(w.Webhooks)
 	attrs := map[string]any{
 		"webhook_count":     len(w.Webhooks),
@@ -233,7 +233,7 @@ func (c *Collector) mutatingWebhookResource(scope *ContextScope, w *admissionreg
 		"has_ignore_policy": webhooksHaveFailurePolicy(webhooks, "Ignore"),
 		"has_side_effects":  webhooksHaveSideEffects(webhooks),
 	}
-	r := core.Resource{
+	r := compliancekit.Resource{
 		ID:         fmt.Sprintf("%s.%s.%s", MutatingWebhookConfigType, scope.Name, w.Name),
 		Type:       MutatingWebhookConfigType,
 		Name:       w.Name,

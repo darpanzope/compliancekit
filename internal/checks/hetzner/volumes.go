@@ -5,15 +5,15 @@ import (
 	"fmt"
 
 	hetznercol "github.com/darpanzope/compliancekit/internal/collectors/hetzner"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // CheckVolumeOrphan flags volumes with no attached server.
 // Hetzner volumes bill regardless of attachment status.
-var CheckVolumeOrphan = core.Check{
+var CheckVolumeOrphan = compliancekit.Check{
 	ID:           "hetzner-volume-orphan",
 	Title:        "Hetzner volumes should be attached to a server",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "hetzner",
 	Service:      "volumes",
 	ResourceType: hetznercol.VolumeType,
@@ -33,21 +33,21 @@ var CheckVolumeOrphan = core.Check{
 	Scanner: "volumes.Orphan",
 }
 
-func VolumeOrphan(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func VolumeOrphan(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, v := range g.ByType(hetznercol.VolumeType) {
 		attached, _ := v.Attributes["attached"].(bool)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckVolumeOrphan.ID,
 			Severity: CheckVolumeOrphan.Severity,
 			Resource: v.Ref(),
 			Tags:     CheckVolumeOrphan.Tags,
 		}
 		if attached {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("volume %q: attached", v.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("volume %q: orphan (unattached)", v.Name)
 		}
 		findings = append(findings, f)
@@ -57,10 +57,10 @@ func VolumeOrphan(_ context.Context, g *core.ResourceGraph) ([]core.Finding, err
 
 // CheckVolumeFormatted flags volumes with no filesystem format
 // AND no attached server. These are failed-provision artifacts.
-var CheckVolumeFormatted = core.Check{
+var CheckVolumeFormatted = compliancekit.Check{
 	ID:           "hetzner-volume-unformatted-orphan",
 	Title:        "Unformatted detached Hetzner volumes should be cleaned up",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "hetzner",
 	Service:      "volumes",
 	ResourceType: hetznercol.VolumeType,
@@ -80,22 +80,22 @@ var CheckVolumeFormatted = core.Check{
 	Scanner: "volumes.UnformattedOrphan",
 }
 
-func VolumeFormatted(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func VolumeFormatted(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, v := range g.ByType(hetznercol.VolumeType) {
 		attached, _ := v.Attributes["attached"].(bool)
 		format, _ := v.Attributes["format"].(string)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckVolumeFormatted.ID,
 			Severity: CheckVolumeFormatted.Severity,
 			Resource: v.Ref(),
 			Tags:     CheckVolumeFormatted.Tags,
 		}
 		if !attached && format == "" {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("volume %q: unformatted + unattached", v.Name)
 		} else {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("volume %q: formatted (%s) or attached", v.Name, format)
 		}
 		findings = append(findings, f)
@@ -104,6 +104,6 @@ func VolumeFormatted(_ context.Context, g *core.ResourceGraph) ([]core.Finding, 
 }
 
 func init() {
-	core.Register(CheckVolumeOrphan, VolumeOrphan)
-	core.Register(CheckVolumeFormatted, VolumeFormatted)
+	compliancekit.Register(CheckVolumeOrphan, VolumeOrphan)
+	compliancekit.Register(CheckVolumeFormatted, VolumeFormatted)
 }

@@ -3,14 +3,14 @@ package ingest
 import (
 	"testing"
 
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 func TestCorrelateImageSHA_KubernetesJoin(t *testing.T) {
-	graph := core.NewResourceGraph()
+	graph := compliancekit.NewResourceGraph()
 
 	// A K8s deployment running the same image SHA Trivy will report.
-	graph.Add(core.Resource{
+	graph.Add(compliancekit.Resource{
 		ID:       "k8s://prod/Deployment/checkout-api",
 		Type:     "k8s.deployment",
 		Name:     "checkout-api",
@@ -21,7 +21,7 @@ func TestCorrelateImageSHA_KubernetesJoin(t *testing.T) {
 		},
 	})
 	// Another K8s pod referencing same SHA.
-	graph.Add(core.Resource{
+	graph.Add(compliancekit.Resource{
 		ID:       "k8s://prod/Pod/checkout-api-65d8",
 		Type:     "k8s.pod",
 		Name:     "checkout-api-65d8",
@@ -32,7 +32,7 @@ func TestCorrelateImageSHA_KubernetesJoin(t *testing.T) {
 		},
 	})
 	// A pod with a different SHA — must NOT correlate.
-	graph.Add(core.Resource{
+	graph.Add(compliancekit.Resource{
 		ID:       "k8s://prod/Pod/web-ui-3a1",
 		Type:     "k8s.pod",
 		Name:     "web-ui-3a1",
@@ -43,22 +43,22 @@ func TestCorrelateImageSHA_KubernetesJoin(t *testing.T) {
 	})
 
 	// One Trivy-emitted CVE finding pinned to the image.
-	original := core.Finding{
+	original := compliancekit.Finding{
 		CheckID:  "ingest.trivy.CVE-2024-12345",
-		Status:   core.StatusFail,
-		Severity: core.SeverityHigh,
-		Resource: core.ResourceRef{
+		Status:   compliancekit.StatusFail,
+		Severity: compliancekit.SeverityHigh,
+		Resource: compliancekit.ResourceRef{
 			ID:   "container-image://abc123def456",
 			Type: "container.image",
 			Name: "acme/checkout:v1.4.2",
 		},
-		Vulnerability: &core.Vulnerability{
+		Vulnerability: &compliancekit.Vulnerability{
 			ID:    "CVE-2024-12345",
 			Image: "acme/checkout:v1.4.2",
 		},
 	}
 
-	out, added := CorrelateImageSHA([]core.Finding{original}, graph)
+	out, added := CorrelateImageSHA([]compliancekit.Finding{original}, graph)
 
 	if added != 2 {
 		t.Fatalf("added = %d, want 2 (Deployment + Pod)", added)
@@ -93,8 +93,8 @@ func TestCorrelateImageSHA_KubernetesJoin(t *testing.T) {
 }
 
 func TestCorrelateImageSHA_ImageNameFallback(t *testing.T) {
-	graph := core.NewResourceGraph()
-	graph.Add(core.Resource{
+	graph := compliancekit.NewResourceGraph()
+	graph.Add(compliancekit.Resource{
 		ID:       "do://apps/prod-api",
 		Type:     "do.app.service",
 		Name:     "prod-api",
@@ -104,16 +104,16 @@ func TestCorrelateImageSHA_ImageNameFallback(t *testing.T) {
 		},
 	})
 
-	f := core.Finding{
+	f := compliancekit.Finding{
 		CheckID:  "ingest.trivy.CVE-2024-1",
-		Severity: core.SeverityHigh,
-		Resource: core.ResourceRef{ID: "container-image://nonindexedsha"},
-		Vulnerability: &core.Vulnerability{
+		Severity: compliancekit.SeverityHigh,
+		Resource: compliancekit.ResourceRef{ID: "container-image://nonindexedsha"},
+		Vulnerability: &compliancekit.Vulnerability{
 			ID:    "CVE-2024-1",
 			Image: "ghcr.io/acme/api:v2.0.0",
 		},
 	}
-	out, added := CorrelateImageSHA([]core.Finding{f}, graph)
+	out, added := CorrelateImageSHA([]compliancekit.Finding{f}, graph)
 	if added != 1 {
 		t.Fatalf("added = %d, want 1 (image-name fallback)", added)
 	}
@@ -123,13 +123,13 @@ func TestCorrelateImageSHA_ImageNameFallback(t *testing.T) {
 }
 
 func TestCorrelateImageSHA_NilGraph(t *testing.T) {
-	out, added := CorrelateImageSHA([]core.Finding{{}}, nil)
+	out, added := CorrelateImageSHA([]compliancekit.Finding{{}}, nil)
 	if added != 0 || len(out) != 1 {
 		t.Errorf("nil graph should be no-op: added=%d out=%d", added, len(out))
 	}
 }
 
-func findByResourceType(findings []core.Finding, kind string) *core.Finding {
+func findByResourceType(findings []compliancekit.Finding, kind string) *compliancekit.Finding {
 	for i := range findings {
 		if findings[i].Resource.Type == kind {
 			return &findings[i]

@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	docol "github.com/darpanzope/compliancekit/internal/collectors/digitalocean"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // eolEngineVersions are engine versions DO still accepts at create
@@ -27,7 +27,7 @@ var eolEngineVersions = map[string]bool{
 
 // firewallRulesOf reads the per-DB firewall rules slice. Returns
 // nil if the collector couldn't fetch (no permission, etc.).
-func firewallRulesOf(d core.Resource) []map[string]any {
+func firewallRulesOf(d compliancekit.Resource) []map[string]any {
 	v, _ := d.Attributes["firewall_rules"].([]map[string]any)
 	return v
 }
@@ -35,10 +35,10 @@ func firewallRulesOf(d core.Resource) []map[string]any {
 // CheckDBHasFirewallRules requires the DB have at least one
 // trusted-source rule. An empty list means the cluster is
 // reachable from any source the public endpoint allows.
-var CheckDBHasFirewallRules = core.Check{
+var CheckDBHasFirewallRules = compliancekit.Check{
 	ID:           "do-db-no-firewall-rules",
 	Title:        "Managed databases should have at least one trusted source",
-	Severity:     core.SeverityCritical,
+	Severity:     compliancekit.SeverityCritical,
 	Provider:     "digitalocean",
 	Service:      "databases",
 	ResourceType: docol.DatabaseType,
@@ -59,21 +59,21 @@ var CheckDBHasFirewallRules = core.Check{
 	Scanner: "databases.HasFirewallRules",
 }
 
-func DBHasFirewallRules(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func DBHasFirewallRules(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, d := range g.ByType(docol.DatabaseType) {
 		count, _ := d.Attributes["firewall_rule_count"].(int)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckDBHasFirewallRules.ID,
 			Severity: CheckDBHasFirewallRules.Severity,
 			Resource: d.Ref(),
 			Tags:     CheckDBHasFirewallRules.Tags,
 		}
 		if count > 0 {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("db %q: %d trusted source(s)", d.Name, count)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("db %q: no trusted-sources allowlist (open to platform)", d.Name)
 		}
 		findings = append(findings, f)
@@ -84,10 +84,10 @@ func DBHasFirewallRules(_ context.Context, g *core.ResourceGraph) ([]core.Findin
 // CheckDBFirewallNoPublicCIDR forbids 0.0.0.0/0 or ::/0 in the
 // trusted-sources list. Those would be the same as no rules at
 // all but worse because they look intentional.
-var CheckDBFirewallNoPublicCIDR = core.Check{
+var CheckDBFirewallNoPublicCIDR = compliancekit.Check{
 	ID:           "do-db-firewall-includes-public",
 	Title:        "Managed databases must not allow public CIDRs in trusted sources",
-	Severity:     core.SeverityCritical,
+	Severity:     compliancekit.SeverityCritical,
 	Provider:     "digitalocean",
 	Service:      "databases",
 	ResourceType: docol.DatabaseType,
@@ -109,10 +109,10 @@ var CheckDBFirewallNoPublicCIDR = core.Check{
 	Scanner: "databases.FirewallNoPublicCIDR",
 }
 
-func DBFirewallNoPublicCIDR(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func DBFirewallNoPublicCIDR(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, d := range g.ByType(docol.DatabaseType) {
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckDBFirewallNoPublicCIDR.ID,
 			Severity: CheckDBFirewallNoPublicCIDR.Severity,
 			Resource: d.Ref(),
@@ -128,10 +128,10 @@ func DBFirewallNoPublicCIDR(_ context.Context, g *core.ResourceGraph) ([]core.Fi
 			}
 		}
 		if offender != "" {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("db %q: trusted source includes %s", d.Name, offender)
 		} else {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("db %q: no public CIDR in trusted sources", d.Name)
 		}
 		findings = append(findings, f)
@@ -143,10 +143,10 @@ func DBFirewallNoPublicCIDR(_ context.Context, g *core.ResourceGraph) ([]core.Fi
 // true. DO managed DBs do support SSL but the flag determines
 // whether unencrypted connections are accepted on the public
 // endpoint.
-var CheckDBTLSEnabled = core.Check{
+var CheckDBTLSEnabled = compliancekit.Check{
 	ID:           "do-db-tls-disabled",
 	Title:        "Managed databases must require TLS on public endpoints",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "digitalocean",
 	Service:      "databases",
 	ResourceType: docol.DatabaseType,
@@ -168,21 +168,21 @@ var CheckDBTLSEnabled = core.Check{
 	Scanner: "databases.TLSEnabled",
 }
 
-func DBTLSEnabled(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func DBTLSEnabled(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, d := range g.ByType(docol.DatabaseType) {
 		ssl, _ := d.Attributes["public_ssl"].(bool)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckDBTLSEnabled.ID,
 			Severity: CheckDBTLSEnabled.Severity,
 			Resource: d.Ref(),
 			Tags:     CheckDBTLSEnabled.Tags,
 		}
 		if ssl {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("db %q: SSL enabled on public endpoint", d.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("db %q: SSL DISABLED on public endpoint", d.Name)
 		}
 		findings = append(findings, f)
@@ -192,10 +192,10 @@ func DBTLSEnabled(_ context.Context, g *core.ResourceGraph) ([]core.Finding, err
 
 // CheckDBInVPC requires the DB sit in a VPC. Modern DO DBs do by
 // default; legacy DBs may not.
-var CheckDBInVPC = core.Check{
+var CheckDBInVPC = compliancekit.Check{
 	ID:           "do-db-no-vpc",
 	Title:        "Managed databases must belong to a VPC",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "digitalocean",
 	Service:      "databases",
 	ResourceType: docol.DatabaseType,
@@ -215,21 +215,21 @@ var CheckDBInVPC = core.Check{
 	Scanner: "databases.InVPC",
 }
 
-func DBInVPC(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func DBInVPC(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, d := range g.ByType(docol.DatabaseType) {
 		vpc, _ := d.Attributes["vpc_uuid"].(string)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckDBInVPC.ID,
 			Severity: CheckDBInVPC.Severity,
 			Resource: d.Ref(),
 			Tags:     CheckDBInVPC.Tags,
 		}
 		if vpc != "" {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("db %q: in VPC %s", d.Name, vpc)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("db %q: no VPC association", d.Name)
 		}
 		findings = append(findings, f)
@@ -238,10 +238,10 @@ func DBInVPC(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
 }
 
 // CheckDBEngineNotEOL flags engine versions known to be EOL.
-var CheckDBEngineNotEOL = core.Check{
+var CheckDBEngineNotEOL = compliancekit.Check{
 	ID:           "do-db-engine-eol",
 	Title:        "Managed databases should not run EOL engine versions",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "digitalocean",
 	Service:      "databases",
 	ResourceType: docol.DatabaseType,
@@ -262,8 +262,8 @@ var CheckDBEngineNotEOL = core.Check{
 	Scanner: "databases.EngineNotEOL",
 }
 
-func DBEngineNotEOL(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func DBEngineNotEOL(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, d := range g.ByType(docol.DatabaseType) {
 		engine, _ := d.Attributes["engine"].(string)
 		version, _ := d.Attributes["version"].(string)
@@ -271,17 +271,17 @@ func DBEngineNotEOL(_ context.Context, g *core.ResourceGraph) ([]core.Finding, e
 		// Also try matching just the major version prefix.
 		majorKey := strings.ToLower(engine + ":" + strings.SplitN(version, ".", 2)[0])
 
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckDBEngineNotEOL.ID,
 			Severity: CheckDBEngineNotEOL.Severity,
 			Resource: d.Ref(),
 			Tags:     CheckDBEngineNotEOL.Tags,
 		}
 		if eolEngineVersions[key] || eolEngineVersions[majorKey] {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("db %q: engine %s %s is EOL", d.Name, engine, version)
 		} else {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("db %q: engine %s %s", d.Name, engine, version)
 		}
 		findings = append(findings, f)
@@ -292,10 +292,10 @@ func DBEngineNotEOL(_ context.Context, g *core.ResourceGraph) ([]core.Finding, e
 // CheckDBMaintenanceWindow requires a maintenance window be
 // configured. Without one DO picks one for you, possibly during
 // peak hours.
-var CheckDBMaintenanceWindow = core.Check{
+var CheckDBMaintenanceWindow = compliancekit.Check{
 	ID:           "do-db-no-maintenance-window",
 	Title:        "Managed databases should have a configured maintenance window",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "digitalocean",
 	Service:      "databases",
 	ResourceType: docol.DatabaseType,
@@ -315,22 +315,22 @@ var CheckDBMaintenanceWindow = core.Check{
 	Scanner: "databases.MaintenanceWindow",
 }
 
-func DBMaintenanceWindow(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func DBMaintenanceWindow(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, d := range g.ByType(docol.DatabaseType) {
 		day, _ := d.Attributes["maintenance_day"].(string)
 		hour, _ := d.Attributes["maintenance_hour"].(string)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckDBMaintenanceWindow.ID,
 			Severity: CheckDBMaintenanceWindow.Severity,
 			Resource: d.Ref(),
 			Tags:     CheckDBMaintenanceWindow.Tags,
 		}
 		if day != "" && hour != "" {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("db %q: maintenance %s %s", d.Name, day, hour)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("db %q: no maintenance window configured", d.Name)
 		}
 		findings = append(findings, f)
@@ -340,10 +340,10 @@ func DBMaintenanceWindow(_ context.Context, g *core.ResourceGraph) ([]core.Findi
 
 // CheckDBMultiNode requires production DBs run with more than one
 // node (replicas). A single-node managed DB has no HA story.
-var CheckDBMultiNode = core.Check{
+var CheckDBMultiNode = compliancekit.Check{
 	ID:           "do-db-single-node",
 	Title:        "Production databases should run with replicas",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "digitalocean",
 	Service:      "databases",
 	ResourceType: docol.DatabaseType,
@@ -365,21 +365,21 @@ var CheckDBMultiNode = core.Check{
 	Scanner: "databases.MultiNode",
 }
 
-func DBMultiNode(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func DBMultiNode(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, d := range g.ByType(docol.DatabaseType) {
 		nodes, _ := d.Attributes["num_nodes"].(int)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckDBMultiNode.ID,
 			Severity: CheckDBMultiNode.Severity,
 			Resource: d.Ref(),
 			Tags:     CheckDBMultiNode.Tags,
 		}
 		if nodes >= 2 {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("db %q: %d nodes", d.Name, nodes)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("db %q: single-node (no HA)", d.Name)
 		}
 		findings = append(findings, f)
@@ -391,10 +391,10 @@ func DBMultiNode(_ context.Context, g *core.ResourceGraph) ([]core.Finding, erro
 // list contains ip_addr entries (vs droplet / k8s / tag refs).
 // Using IP allowlists for managed DBs is brittle -- droplet IPs
 // can change; named references are stable.
-var CheckDBOnlyDOTrustedSources = core.Check{
+var CheckDBOnlyDOTrustedSources = compliancekit.Check{
 	ID:           "do-db-ip-only-trust",
 	Title:        "Managed databases should trust named resources, not raw IPs",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "digitalocean",
 	Service:      "databases",
 	ResourceType: docol.DatabaseType,
@@ -416,8 +416,8 @@ var CheckDBOnlyDOTrustedSources = core.Check{
 	Scanner: "databases.NamedTrustedSources",
 }
 
-func DBOnlyDOTrustedSources(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func DBOnlyDOTrustedSources(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, d := range g.ByType(docol.DatabaseType) {
 		rules := firewallRulesOf(d)
 		if len(rules) == 0 {
@@ -430,17 +430,17 @@ func DBOnlyDOTrustedSources(_ context.Context, g *core.ResourceGraph) ([]core.Fi
 				break
 			}
 		}
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckDBOnlyDOTrustedSources.ID,
 			Severity: CheckDBOnlyDOTrustedSources.Severity,
 			Resource: d.Ref(),
 			Tags:     CheckDBOnlyDOTrustedSources.Tags,
 		}
 		if ipOnly {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("db %q: trusted sources are IP-only (use droplet/tag/k8s refs)", d.Name)
 		} else {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("db %q: uses named trusted sources", d.Name)
 		}
 		findings = append(findings, f)
@@ -449,12 +449,12 @@ func DBOnlyDOTrustedSources(_ context.Context, g *core.ResourceGraph) ([]core.Fi
 }
 
 func init() {
-	core.Register(CheckDBHasFirewallRules, DBHasFirewallRules)
-	core.Register(CheckDBFirewallNoPublicCIDR, DBFirewallNoPublicCIDR)
-	core.Register(CheckDBTLSEnabled, DBTLSEnabled)
-	core.Register(CheckDBInVPC, DBInVPC)
-	core.Register(CheckDBEngineNotEOL, DBEngineNotEOL)
-	core.Register(CheckDBMaintenanceWindow, DBMaintenanceWindow)
-	core.Register(CheckDBMultiNode, DBMultiNode)
-	core.Register(CheckDBOnlyDOTrustedSources, DBOnlyDOTrustedSources)
+	compliancekit.Register(CheckDBHasFirewallRules, DBHasFirewallRules)
+	compliancekit.Register(CheckDBFirewallNoPublicCIDR, DBFirewallNoPublicCIDR)
+	compliancekit.Register(CheckDBTLSEnabled, DBTLSEnabled)
+	compliancekit.Register(CheckDBInVPC, DBInVPC)
+	compliancekit.Register(CheckDBEngineNotEOL, DBEngineNotEOL)
+	compliancekit.Register(CheckDBMaintenanceWindow, DBMaintenanceWindow)
+	compliancekit.Register(CheckDBMultiNode, DBMultiNode)
+	compliancekit.Register(CheckDBOnlyDOTrustedSources, DBOnlyDOTrustedSources)
 }

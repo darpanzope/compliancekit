@@ -5,16 +5,16 @@ import (
 	"fmt"
 
 	awscol "github.com/darpanzope/compliancekit/internal/collectors/aws"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // CheckCloudTrailEnabled requires at least one trail to be actively
 // logging. Anchored on the account resource (cross-trail aggregate
 // check). CIS AWS Foundations 3.1.
-var CheckCloudTrailEnabled = core.Check{
+var CheckCloudTrailEnabled = compliancekit.Check{
 	ID:           "aws-cloudtrail-enabled",
 	Title:        "At least one CloudTrail trail must be actively logging",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "aws",
 	Service:      "cloudtrail",
 	ResourceType: awscol.AccountType,
@@ -36,8 +36,8 @@ var CheckCloudTrailEnabled = core.Check{
 	Scanner: "cloudtrail.Enabled",
 }
 
-func CloudTrailEnabled(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func CloudTrailEnabled(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	loggingTrails := 0
 	for _, t := range g.ByType(awscol.CloudTrailType) {
 		if logging, _ := t.Attributes["is_logging"].(bool); logging {
@@ -45,17 +45,17 @@ func CloudTrailEnabled(_ context.Context, g *core.ResourceGraph) ([]core.Finding
 		}
 	}
 	for _, acct := range g.ByType(awscol.AccountType) {
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckCloudTrailEnabled.ID,
 			Severity: CheckCloudTrailEnabled.Severity,
 			Resource: acct.Ref(),
 			Tags:     CheckCloudTrailEnabled.Tags,
 		}
 		if loggingTrails > 0 {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("account %q: %d trails actively logging", acct.Name, loggingTrails)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("account %q: no trails actively logging", acct.Name)
 		}
 		findings = append(findings, f)
@@ -65,10 +65,10 @@ func CloudTrailEnabled(_ context.Context, g *core.ResourceGraph) ([]core.Finding
 
 // CheckCloudTrailMultiRegion requires at least one multi-region
 // trail. CIS 3.1.
-var CheckCloudTrailMultiRegion = core.Check{
+var CheckCloudTrailMultiRegion = compliancekit.Check{
 	ID:           "aws-cloudtrail-multi-region",
 	Title:        "At least one CloudTrail trail must be multi-region",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "aws",
 	Service:      "cloudtrail",
 	ResourceType: awscol.AccountType,
@@ -89,8 +89,8 @@ var CheckCloudTrailMultiRegion = core.Check{
 	Scanner: "cloudtrail.MultiRegion",
 }
 
-func CloudTrailMultiRegion(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func CloudTrailMultiRegion(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	multi := 0
 	for _, t := range g.ByType(awscol.CloudTrailType) {
 		logging, _ := t.Attributes["is_logging"].(bool)
@@ -100,17 +100,17 @@ func CloudTrailMultiRegion(_ context.Context, g *core.ResourceGraph) ([]core.Fin
 		}
 	}
 	for _, acct := range g.ByType(awscol.AccountType) {
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckCloudTrailMultiRegion.ID,
 			Severity: CheckCloudTrailMultiRegion.Severity,
 			Resource: acct.Ref(),
 			Tags:     CheckCloudTrailMultiRegion.Tags,
 		}
 		if multi > 0 {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("account %q: %d multi-region trails logging", acct.Name, multi)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("account %q: no multi-region trails actively logging", acct.Name)
 		}
 		findings = append(findings, f)
@@ -120,10 +120,10 @@ func CloudTrailMultiRegion(_ context.Context, g *core.ResourceGraph) ([]core.Fin
 
 // CheckCloudTrailLogFileValidation requires every trail to have
 // log-file integrity validation. CIS 3.2.
-var CheckCloudTrailLogFileValidation = core.Check{
+var CheckCloudTrailLogFileValidation = compliancekit.Check{
 	ID:           "aws-cloudtrail-log-file-validation",
 	Title:        "CloudTrail trails must have log file validation enabled",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "aws",
 	Service:      "cloudtrail",
 	ResourceType: awscol.CloudTrailType,
@@ -143,21 +143,21 @@ var CheckCloudTrailLogFileValidation = core.Check{
 	Scanner: "cloudtrail.LogFileValidation",
 }
 
-func CloudTrailLogFileValidation(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func CloudTrailLogFileValidation(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, t := range g.ByType(awscol.CloudTrailType) {
 		v, _ := t.Attributes["log_file_validation_enabled"].(bool)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckCloudTrailLogFileValidation.ID,
 			Severity: CheckCloudTrailLogFileValidation.Severity,
 			Resource: t.Ref(),
 			Tags:     CheckCloudTrailLogFileValidation.Tags,
 		}
 		if v {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("trail %q: log file validation enabled", t.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("trail %q: log file validation disabled", t.Name)
 		}
 		findings = append(findings, f)
@@ -166,7 +166,7 @@ func CloudTrailLogFileValidation(_ context.Context, g *core.ResourceGraph) ([]co
 }
 
 func init() {
-	core.Register(CheckCloudTrailEnabled, CloudTrailEnabled)
-	core.Register(CheckCloudTrailMultiRegion, CloudTrailMultiRegion)
-	core.Register(CheckCloudTrailLogFileValidation, CloudTrailLogFileValidation)
+	compliancekit.Register(CheckCloudTrailEnabled, CloudTrailEnabled)
+	compliancekit.Register(CheckCloudTrailMultiRegion, CloudTrailMultiRegion)
+	compliancekit.Register(CheckCloudTrailLogFileValidation, CloudTrailLogFileValidation)
 }

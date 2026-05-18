@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	k8scol "github.com/darpanzope/compliancekit/internal/collectors/k8s"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // minReplicasForHA is the smallest replica count below which a workload
@@ -15,10 +15,10 @@ const minReplicasForHA = 2
 
 // ----- Deployment min replicas -----------------------------------
 
-var CheckDeploymentMinReplicas = core.Check{
+var CheckDeploymentMinReplicas = compliancekit.Check{
 	ID:           "k8s-deployment-min-replicas",
 	Title:        "Deployments should run with at least 2 replicas for HA",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "kubernetes",
 	Service:      "controllers",
 	ResourceType: k8scol.DeploymentType,
@@ -38,21 +38,21 @@ var CheckDeploymentMinReplicas = core.Check{
 	Scanner: "controllers.DeploymentMinReplicas",
 }
 
-func DeploymentMinReplicas(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func DeploymentMinReplicas(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, d := range g.ByType(k8scol.DeploymentType) {
 		replicas, _ := d.Attributes["replicas"].(int)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckDeploymentMinReplicas.ID,
 			Severity: CheckDeploymentMinReplicas.Severity,
 			Resource: d.Ref(),
 			Tags:     CheckDeploymentMinReplicas.Tags,
 		}
 		if replicas >= minReplicasForHA {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("deployment %q: %d replicas", workloadDesc(d), replicas)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("deployment %q: %d replica(s) — no HA", workloadDesc(d), replicas)
 		}
 		findings = append(findings, f)
@@ -62,10 +62,10 @@ func DeploymentMinReplicas(_ context.Context, g *core.ResourceGraph) ([]core.Fin
 
 // ----- Deployment rolling update strategy ------------------------
 
-var CheckDeploymentRollingUpdate = core.Check{
+var CheckDeploymentRollingUpdate = compliancekit.Check{
 	ID:           "k8s-deployment-rolling-update",
 	Title:        "Deployments should use the RollingUpdate strategy",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "kubernetes",
 	Service:      "controllers",
 	ResourceType: k8scol.DeploymentType,
@@ -86,11 +86,11 @@ var CheckDeploymentRollingUpdate = core.Check{
 	Scanner: "controllers.DeploymentRollingUpdate",
 }
 
-func DeploymentRollingUpdate(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func DeploymentRollingUpdate(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, d := range g.ByType(k8scol.DeploymentType) {
 		strategy, _ := d.Attributes["strategy_type"].(string)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckDeploymentRollingUpdate.ID,
 			Severity: CheckDeploymentRollingUpdate.Severity,
 			Resource: d.Ref(),
@@ -98,10 +98,10 @@ func DeploymentRollingUpdate(_ context.Context, g *core.ResourceGraph) ([]core.F
 		}
 		// Empty strategy defaults to RollingUpdate per the K8s API.
 		if strategy == "" || strategy == "RollingUpdate" {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("deployment %q: RollingUpdate strategy", workloadDesc(d))
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("deployment %q: strategy=%s (causes downtime)", workloadDesc(d), strategy)
 		}
 		findings = append(findings, f)
@@ -111,10 +111,10 @@ func DeploymentRollingUpdate(_ context.Context, g *core.ResourceGraph) ([]core.F
 
 // ----- Deployment / StatefulSet PDB missing ----------------------
 
-var CheckDeploymentPDB = core.Check{
+var CheckDeploymentPDB = compliancekit.Check{
 	ID:           "k8s-deployment-pdb-missing",
 	Title:        "Multi-replica Deployments should have a PodDisruptionBudget",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "kubernetes",
 	Service:      "controllers",
 	ResourceType: k8scol.DeploymentType,
@@ -136,14 +136,14 @@ var CheckDeploymentPDB = core.Check{
 	Scanner: "controllers.DeploymentPDB",
 }
 
-func DeploymentPDB(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func DeploymentPDB(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	return controllerPDB(g, CheckDeploymentPDB, k8scol.DeploymentType, "deployment"), nil
 }
 
-var CheckStatefulSetPDB = core.Check{
+var CheckStatefulSetPDB = compliancekit.Check{
 	ID:           "k8s-statefulset-pdb-missing",
 	Title:        "Multi-replica StatefulSets should have a PodDisruptionBudget",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "kubernetes",
 	Service:      "controllers",
 	ResourceType: k8scol.StatefulSetType,
@@ -163,7 +163,7 @@ var CheckStatefulSetPDB = core.Check{
 	Scanner: "controllers.StatefulSetPDB",
 }
 
-func StatefulSetPDB(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func StatefulSetPDB(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	return controllerPDB(g, CheckStatefulSetPDB, k8scol.StatefulSetType, "statefulset"), nil
 }
 
@@ -171,21 +171,21 @@ func StatefulSetPDB(_ context.Context, g *core.ResourceGraph) ([]core.Finding, e
 // StatefulSets. It looks for any PDB in the same namespace whose
 // selector is a subset of the controller's selector — that's how the
 // Kubernetes API decides which pods a PDB protects.
-func controllerPDB(g *core.ResourceGraph, check core.Check, controllerType, label string) []core.Finding {
-	findings := []core.Finding{}
+func controllerPDB(g *compliancekit.ResourceGraph, check compliancekit.Check, controllerType, label string) []compliancekit.Finding {
+	findings := []compliancekit.Finding{}
 	pdbsByNs := indexPDBs(g)
 
 	for _, ctrl := range g.ByType(controllerType) {
 		replicas, _ := ctrl.Attributes["replicas"].(int)
 		ns, _ := ctrl.Attributes["namespace"].(string)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  check.ID,
 			Severity: check.Severity,
 			Resource: ctrl.Ref(),
 			Tags:     check.Tags,
 		}
 		if replicas < minReplicasForHA {
-			f.Status = core.StatusSkip
+			f.Status = compliancekit.StatusSkip
 			f.Message = fmt.Sprintf("%s %q: single replica, PDB not applicable", label, workloadDesc(ctrl))
 			findings = append(findings, f)
 			continue
@@ -193,10 +193,10 @@ func controllerPDB(g *core.ResourceGraph, check core.Check, controllerType, labe
 		ctrlLabels, _ := ctrl.Attributes["selector_labels"].(map[string]string)
 		covered := pdbCovers(pdbsByNs[ns], ctrlLabels)
 		if covered {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("%s %q: PDB covers selector", label, workloadDesc(ctrl))
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("%s %q: %d replicas, no PDB protects the selector", label, workloadDesc(ctrl), replicas)
 		}
 		findings = append(findings, f)
@@ -204,8 +204,8 @@ func controllerPDB(g *core.ResourceGraph, check core.Check, controllerType, labe
 	return findings
 }
 
-func indexPDBs(g *core.ResourceGraph) map[string][]core.Resource {
-	out := map[string][]core.Resource{}
+func indexPDBs(g *compliancekit.ResourceGraph) map[string][]compliancekit.Resource {
+	out := map[string][]compliancekit.Resource{}
 	for _, p := range g.ByType(k8scol.PodDisruptionBudgetType) {
 		ns, _ := p.Attributes["namespace"].(string)
 		out[ns] = append(out[ns], p)
@@ -217,7 +217,7 @@ func indexPDBs(g *core.ResourceGraph) map[string][]core.Resource {
 // subset of ctrlLabels. The K8s API requires the PDB selector to match
 // the controller's pods, which means every (k, v) on the PDB must
 // appear on the controller labels.
-func pdbCovers(pdbs []core.Resource, ctrlLabels map[string]string) bool {
+func pdbCovers(pdbs []compliancekit.Resource, ctrlLabels map[string]string) bool {
 	if len(ctrlLabels) == 0 {
 		return false
 	}
@@ -244,10 +244,10 @@ func labelsSubset(sub, super map[string]string) bool {
 
 // ----- Deployment anti-affinity ----------------------------------
 
-var CheckDeploymentAntiAffinity = core.Check{
+var CheckDeploymentAntiAffinity = compliancekit.Check{
 	ID:           "k8s-deployment-anti-affinity",
 	Title:        "Multi-replica Deployments should set podAntiAffinity",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "kubernetes",
 	Service:      "controllers",
 	ResourceType: k8scol.DeploymentType,
@@ -269,28 +269,28 @@ var CheckDeploymentAntiAffinity = core.Check{
 	Scanner: "controllers.DeploymentAntiAffinity",
 }
 
-func DeploymentAntiAffinity(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func DeploymentAntiAffinity(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, d := range g.ByType(k8scol.DeploymentType) {
 		replicas, _ := d.Attributes["replicas"].(int)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckDeploymentAntiAffinity.ID,
 			Severity: CheckDeploymentAntiAffinity.Severity,
 			Resource: d.Ref(),
 			Tags:     CheckDeploymentAntiAffinity.Tags,
 		}
 		if replicas < minReplicasForHA {
-			f.Status = core.StatusSkip
+			f.Status = compliancekit.StatusSkip
 			f.Message = fmt.Sprintf("deployment %q: single replica, anti-affinity not applicable", workloadDesc(d))
 			findings = append(findings, f)
 			continue
 		}
 		has, _ := d.Attributes["has_pod_anti_affinity"].(bool)
 		if has {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("deployment %q: podAntiAffinity configured", workloadDesc(d))
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("deployment %q: %d replicas without podAntiAffinity (single-node failure risk)", workloadDesc(d), replicas)
 		}
 		findings = append(findings, f)
@@ -300,10 +300,10 @@ func DeploymentAntiAffinity(_ context.Context, g *core.ResourceGraph) ([]core.Fi
 
 // ----- DaemonSet control-plane tolerance -------------------------
 
-var CheckDaemonSetControlPlane = core.Check{
+var CheckDaemonSetControlPlane = compliancekit.Check{
 	ID:           "k8s-daemonset-control-plane-tolerance",
 	Title:        "Non-system DaemonSets should not tolerate control-plane taints",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "kubernetes",
 	Service:      "controllers",
 	ResourceType: k8scol.DaemonSetType,
@@ -325,29 +325,29 @@ var CheckDaemonSetControlPlane = core.Check{
 	Scanner: "controllers.DaemonSetControlPlane",
 }
 
-func DaemonSetControlPlane(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func DaemonSetControlPlane(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, d := range g.ByType(k8scol.DaemonSetType) {
 		tolerates, _ := d.Attributes["tolerates_control_plane"].(bool)
 		ns, _ := d.Attributes["namespace"].(string)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckDaemonSetControlPlane.ID,
 			Severity: CheckDaemonSetControlPlane.Severity,
 			Resource: d.Ref(),
 			Tags:     CheckDaemonSetControlPlane.Tags,
 		}
 		if !tolerates {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("daemonset %q: does not tolerate control-plane taint", workloadDesc(d))
 			findings = append(findings, f)
 			continue
 		}
 		// Allow infra namespaces.
 		if isSystemNamespace(ns) {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("daemonset %q: tolerates control-plane (system namespace)", workloadDesc(d))
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("daemonset %q: tolerates control-plane taint outside a system namespace", workloadDesc(d))
 		}
 		findings = append(findings, f)
@@ -366,17 +366,17 @@ func isSystemNamespace(ns string) bool {
 // ----- helpers + init --------------------------------------------
 
 func init() {
-	core.Register(CheckDeploymentMinReplicas, DeploymentMinReplicas)
-	core.Register(CheckDeploymentRollingUpdate, DeploymentRollingUpdate)
-	core.Register(CheckDeploymentPDB, DeploymentPDB)
-	core.Register(CheckStatefulSetPDB, StatefulSetPDB)
-	core.Register(CheckDeploymentAntiAffinity, DeploymentAntiAffinity)
-	core.Register(CheckDaemonSetControlPlane, DaemonSetControlPlane)
+	compliancekit.Register(CheckDeploymentMinReplicas, DeploymentMinReplicas)
+	compliancekit.Register(CheckDeploymentRollingUpdate, DeploymentRollingUpdate)
+	compliancekit.Register(CheckDeploymentPDB, DeploymentPDB)
+	compliancekit.Register(CheckStatefulSetPDB, StatefulSetPDB)
+	compliancekit.Register(CheckDeploymentAntiAffinity, DeploymentAntiAffinity)
+	compliancekit.Register(CheckDaemonSetControlPlane, DaemonSetControlPlane)
 }
 
 // workloadDesc renders "ns/name" for finding messages on any namespaced
 // workload resource.
-func workloadDesc(r core.Resource) string {
+func workloadDesc(r compliancekit.Resource) string {
 	ns, _ := r.Attributes["namespace"].(string)
 	if ns == "" {
 		return r.Name

@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	k8scol "github.com/darpanzope/compliancekit/internal/collectors/k8s"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.21 phase 4 — network depth. 10 new checks complementing the v0.11
@@ -16,10 +16,10 @@ import (
 
 // ----- 1. ingress configuration-snippet (RCE class) ----------------
 
-var CheckIngressConfigurationSnippet = core.Check{
+var CheckIngressConfigurationSnippet = compliancekit.Check{
 	ID:           "k8s-ingress-no-configuration-snippet",
 	Title:        "Ingress objects must not use nginx configuration-snippet (RCE — CVE-2021-25742)",
-	Severity:     core.SeverityCritical,
+	Severity:     compliancekit.SeverityCritical,
 	Provider:     "kubernetes",
 	Service:      "network",
 	ResourceType: k8scol.IngressType,
@@ -42,17 +42,17 @@ var CheckIngressConfigurationSnippet = core.Check{
 	Scanner: "network.IngressConfigurationSnippet",
 }
 
-func IngressConfigurationSnippet(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func IngressConfigurationSnippet(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	return ingressAnnotationCheck(g, CheckIngressConfigurationSnippet,
 		"nginx.ingress.kubernetes.io/configuration-snippet"), nil
 }
 
 // ----- 2. ingress server-snippet (sibling RCE annotation) ----------
 
-var CheckIngressServerSnippet = core.Check{
+var CheckIngressServerSnippet = compliancekit.Check{
 	ID:           "k8s-ingress-no-server-snippet",
 	Title:        "Ingress objects must not use nginx server-snippet (CVE-2021-25742 sibling)",
-	Severity:     core.SeverityCritical,
+	Severity:     compliancekit.SeverityCritical,
 	Provider:     "kubernetes",
 	Service:      "network",
 	ResourceType: k8scol.IngressType,
@@ -70,17 +70,17 @@ var CheckIngressServerSnippet = core.Check{
 	Scanner: "network.IngressServerSnippet",
 }
 
-func IngressServerSnippet(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func IngressServerSnippet(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	return ingressAnnotationCheck(g, CheckIngressServerSnippet,
 		"nginx.ingress.kubernetes.io/server-snippet"), nil
 }
 
 // ----- 3. ingress auth-snippet (CVE class) -------------------------
 
-var CheckIngressAuthSnippet = core.Check{
+var CheckIngressAuthSnippet = compliancekit.Check{
 	ID:           "k8s-ingress-no-auth-snippet",
 	Title:        "Ingress objects must not use nginx auth-snippet annotation",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "kubernetes",
 	Service:      "network",
 	ResourceType: k8scol.IngressType,
@@ -99,17 +99,17 @@ var CheckIngressAuthSnippet = core.Check{
 	Scanner: "network.IngressAuthSnippet",
 }
 
-func IngressAuthSnippet(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func IngressAuthSnippet(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	return ingressAnnotationCheck(g, CheckIngressAuthSnippet,
 		"nginx.ingress.kubernetes.io/auth-snippet"), nil
 }
 
 // ----- 4. service zero-CIDR source ranges --------------------------
 
-var CheckServiceZeroCIDRSourceRanges = core.Check{
+var CheckServiceZeroCIDRSourceRanges = compliancekit.Check{
 	ID:           "k8s-service-no-zero-cidr-source-range",
 	Title:        "Service loadBalancerSourceRanges must not contain 0.0.0.0/0",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "kubernetes",
 	Service:      "network",
 	ResourceType: k8scol.ServiceType,
@@ -130,16 +130,16 @@ var CheckServiceZeroCIDRSourceRanges = core.Check{
 	Scanner: "network.ServiceZeroCIDRSourceRange",
 }
 
-func ServiceZeroCIDRSourceRange(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func ServiceZeroCIDRSourceRange(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, s := range g.ByType(k8scol.ServiceType) {
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID: CheckServiceZeroCIDRSourceRanges.ID, Severity: CheckServiceZeroCIDRSourceRanges.Severity,
 			Resource: s.Ref(), Tags: CheckServiceZeroCIDRSourceRanges.Tags,
 		}
 		sType, _ := s.Attributes["type"].(string)
 		if sType != "LoadBalancer" {
-			f.Status = core.StatusSkip
+			f.Status = compliancekit.StatusSkip
 			f.Message = fmt.Sprintf("service %q: type=%s; loadBalancerSourceRanges not applicable", svcDesc(s), sType)
 			findings = append(findings, f)
 			continue
@@ -154,13 +154,13 @@ func ServiceZeroCIDRSourceRange(_ context.Context, g *core.ResourceGraph) ([]cor
 		}
 		switch {
 		case len(ranges) == 0:
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("service %q: LoadBalancer with no source ranges (open to internet)", svcDesc(s))
 		case hasZero:
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("service %q: loadBalancerSourceRanges contains 0.0.0.0/0 (defeats the field)", svcDesc(s))
 		default:
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("service %q: source ranges restricted: %s", svcDesc(s), strings.Join(ranges, ", "))
 		}
 		findings = append(findings, f)
@@ -170,10 +170,10 @@ func ServiceZeroCIDRSourceRange(_ context.Context, g *core.ResourceGraph) ([]cor
 
 // ----- 5. networkpolicy egress to cloud metadata service -----------
 
-var CheckNetworkPolicyMetadataEgress = core.Check{
+var CheckNetworkPolicyMetadataEgress = compliancekit.Check{
 	ID:           "k8s-networkpolicy-cloud-metadata-egress-blocked",
 	Title:        "NetworkPolicies should block egress to 169.254.169.254 (cloud metadata)",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "kubernetes",
 	Service:      "network",
 	ResourceType: k8scol.NetworkPolicyType,
@@ -196,19 +196,19 @@ var CheckNetworkPolicyMetadataEgress = core.Check{
 	Scanner: "network.NetworkPolicyMetadataEgress",
 }
 
-func NetworkPolicyMetadataEgress(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func NetworkPolicyMetadataEgress(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	// Manual-verify across the cluster — emits one Info finding per
 	// cluster-context resource so the auditor knows to check + waive.
-	findings := []core.Finding{}
+	findings := []compliancekit.Finding{}
 	contexts := g.ByType(k8scol.ClusterType)
 	if len(contexts) == 0 {
 		return findings, nil
 	}
 	for _, ctx := range contexts {
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID: CheckNetworkPolicyMetadataEgress.ID, Severity: CheckNetworkPolicyMetadataEgress.Severity,
 			Resource: ctx.Ref(), Tags: CheckNetworkPolicyMetadataEgress.Tags,
-			Status:  core.StatusError,
+			Status:  compliancekit.StatusError,
 			Message: fmt.Sprintf("cluster %q: audit NetworkPolicy egress rules block 169.254.169.254/32 (cloud metadata IMDS) — `kubectl get networkpolicy -A -o yaml | grep -A 5 ipBlock`", ctx.Name),
 		}
 		findings = append(findings, f)
@@ -218,10 +218,10 @@ func NetworkPolicyMetadataEgress(_ context.Context, g *core.ResourceGraph) ([]co
 
 // ----- 6. ingress dangerous lua-related annotations -----------------
 
-var CheckIngressLuaPlugins = core.Check{
+var CheckIngressLuaPlugins = compliancekit.Check{
 	ID:           "k8s-ingress-no-lua-plugins",
 	Title:        "Ingress objects must not enable nginx Lua plugins via annotation",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "kubernetes",
 	Service:      "network",
 	ResourceType: k8scol.IngressType,
@@ -242,10 +242,10 @@ var CheckIngressLuaPlugins = core.Check{
 	Scanner: "network.IngressLuaPlugins",
 }
 
-func IngressLuaPlugins(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func IngressLuaPlugins(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, ing := range g.ByType(k8scol.IngressType) {
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID: CheckIngressLuaPlugins.ID, Severity: CheckIngressLuaPlugins.Severity,
 			Resource: ing.Ref(), Tags: CheckIngressLuaPlugins.Tags,
 		}
@@ -258,10 +258,10 @@ func IngressLuaPlugins(_ context.Context, g *core.ResourceGraph) ([]core.Finding
 			}
 		}
 		if len(hit) == 0 {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("ingress %q: no lua-* annotations", ingDesc(ing))
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("ingress %q: lua/modsec snippet annotations: %s", ingDesc(ing), strings.Join(hit, ", "))
 		}
 		findings = append(findings, f)
@@ -271,10 +271,10 @@ func IngressLuaPlugins(_ context.Context, g *core.ResourceGraph) ([]core.Finding
 
 // ----- 7. service with publishNotReadyAddresses (manual-verify) ----
 
-var CheckServicePublishNotReady = core.Check{
+var CheckServicePublishNotReady = compliancekit.Check{
 	ID:           "k8s-service-no-publish-not-ready-addresses",
 	Title:        "Services should not enable publishNotReadyAddresses (bypasses readiness)",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "kubernetes",
 	Service:      "network",
 	ResourceType: k8scol.ServiceType,
@@ -296,13 +296,13 @@ var CheckServicePublishNotReady = core.Check{
 	Scanner: "network.ServicePublishNotReady",
 }
 
-func ServicePublishNotReady(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func ServicePublishNotReady(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, s := range g.ByType(k8scol.ServiceType) {
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID: CheckServicePublishNotReady.ID, Severity: CheckServicePublishNotReady.Severity,
 			Resource: s.Ref(), Tags: CheckServicePublishNotReady.Tags,
-			Status:  core.StatusError,
+			Status:  compliancekit.StatusError,
 			Message: fmt.Sprintf("service %q: audit publishNotReadyAddresses — `kubectl get svc -n <ns> %s -o yaml | grep publishNotReady`", svcDesc(s), s.Name),
 		}
 		findings = append(findings, f)
@@ -312,10 +312,10 @@ func ServicePublishNotReady(_ context.Context, g *core.ResourceGraph) ([]core.Fi
 
 // ----- 8. service with too-broad selector (manual-verify) ----------
 
-var CheckServiceSelectorBroad = core.Check{
+var CheckServiceSelectorBroad = compliancekit.Check{
 	ID:           "k8s-service-selector-too-broad",
 	Title:        "Services should not have empty / 1-label selectors (cross-workload exposure)",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "kubernetes",
 	Service:      "network",
 	ResourceType: k8scol.ServiceType,
@@ -337,16 +337,16 @@ var CheckServiceSelectorBroad = core.Check{
 	Scanner: "network.ServiceSelectorBroad",
 }
 
-func ServiceSelectorBroad(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func ServiceSelectorBroad(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, s := range g.ByType(k8scol.ServiceType) {
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID: CheckServiceSelectorBroad.ID, Severity: CheckServiceSelectorBroad.Severity,
 			Resource: s.Ref(), Tags: CheckServiceSelectorBroad.Tags,
 		}
 		sType, _ := s.Attributes["type"].(string)
 		if sType == "ExternalName" {
-			f.Status = core.StatusSkip
+			f.Status = compliancekit.StatusSkip
 			f.Message = fmt.Sprintf("service %q: type=ExternalName, no selector required", svcDesc(s))
 			findings = append(findings, f)
 			continue
@@ -354,15 +354,15 @@ func ServiceSelectorBroad(_ context.Context, g *core.ResourceGraph) ([]core.Find
 		sel, _ := s.Attributes["selector_labels"].(map[string]string)
 		switch {
 		case len(sel) == 0:
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("service %q: empty selector (routes to every matching Endpoints object)", svcDesc(s))
 		case len(sel) == 1:
 			for k, v := range sel {
-				f.Status = core.StatusFail
+				f.Status = compliancekit.StatusFail
 				f.Message = fmt.Sprintf("service %q: single-label selector %s=%s (collision risk)", svcDesc(s), k, v)
 			}
 		default:
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("service %q: %d-label selector", svcDesc(s), len(sel))
 		}
 		findings = append(findings, f)
@@ -372,10 +372,10 @@ func ServiceSelectorBroad(_ context.Context, g *core.ResourceGraph) ([]core.Find
 
 // ----- 9. ingress with no rules (default-backend-only catch-all) ---
 
-var CheckIngressNoRules = core.Check{
+var CheckIngressNoRules = compliancekit.Check{
 	ID:           "k8s-ingress-no-rules-defined",
 	Title:        "Ingress objects without rules expose every host via the controller's default-backend",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "kubernetes",
 	Service:      "network",
 	ResourceType: k8scol.IngressType,
@@ -397,10 +397,10 @@ var CheckIngressNoRules = core.Check{
 	Scanner: "network.IngressNoRules",
 }
 
-func IngressNoRules(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func IngressNoRules(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, ing := range g.ByType(k8scol.IngressType) {
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID: CheckIngressNoRules.ID, Severity: CheckIngressNoRules.Severity,
 			Resource: ing.Ref(), Tags: CheckIngressNoRules.Tags,
 		}
@@ -408,13 +408,13 @@ func IngressNoRules(_ context.Context, g *core.ResourceGraph) ([]core.Finding, e
 		hasDefault, _ := ing.Attributes["has_default_backend"].(bool)
 		switch {
 		case count > 0:
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("ingress %q: %d rules", ingDesc(ing), count)
 		case hasDefault:
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("ingress %q: no rules + has defaultBackend (catches every host)", ingDesc(ing))
 		default:
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("ingress %q: no rules defined", ingDesc(ing))
 		}
 		findings = append(findings, f)
@@ -424,10 +424,10 @@ func IngressNoRules(_ context.Context, g *core.ResourceGraph) ([]core.Finding, e
 
 // ----- 10. service with both TLS and plaintext on same port (audit) -
 
-var CheckServiceMixedTLSPlaintext = core.Check{
+var CheckServiceMixedTLSPlaintext = compliancekit.Check{
 	ID:           "k8s-service-mixed-tls-plaintext-ports",
 	Title:        "Services should not expose plaintext + TLS on overlapping ports",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "kubernetes",
 	Service:      "network",
 	ResourceType: k8scol.ServiceType,
@@ -450,10 +450,10 @@ var CheckServiceMixedTLSPlaintext = core.Check{
 	Scanner: "network.ServiceMixedTLSPlaintext",
 }
 
-func ServiceMixedTLSPlaintext(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func ServiceMixedTLSPlaintext(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, s := range g.ByType(k8scol.ServiceType) {
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID: CheckServiceMixedTLSPlaintext.ID, Severity: CheckServiceMixedTLSPlaintext.Severity,
 			Resource: s.Ref(), Tags: CheckServiceMixedTLSPlaintext.Tags,
 		}
@@ -474,10 +474,10 @@ func ServiceMixedTLSPlaintext(_ context.Context, g *core.ResourceGraph) ([]core.
 		}
 		switch {
 		case hasHTTP && hasHTTPS:
-			f.Status = core.StatusError
+			f.Status = compliancekit.StatusError
 			f.Message = fmt.Sprintf("service %q: exposes both port 80 and 443 — audit whether plaintext is intentional", svcDesc(s))
 		default:
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("service %q: no mixed-protocol port exposure", svcDesc(s))
 		}
 		findings = append(findings, f)
@@ -487,19 +487,19 @@ func ServiceMixedTLSPlaintext(_ context.Context, g *core.ResourceGraph) ([]core.
 
 // ---------- shared helpers --------------------------------------
 
-func ingressAnnotationCheck(g *core.ResourceGraph, check core.Check, annKey string) []core.Finding {
-	findings := []core.Finding{}
+func ingressAnnotationCheck(g *compliancekit.ResourceGraph, check compliancekit.Check, annKey string) []compliancekit.Finding {
+	findings := []compliancekit.Finding{}
 	for _, ing := range g.ByType(k8scol.IngressType) {
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID: check.ID, Severity: check.Severity,
 			Resource: ing.Ref(), Tags: check.Tags,
 		}
 		ann, _ := ing.Attributes["annotations"].(map[string]string)
 		if _, set := ann[annKey]; set {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("ingress %q: %s annotation set", ingDesc(ing), annKey)
 		} else {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("ingress %q: %s not set", ingDesc(ing), annKey)
 		}
 		findings = append(findings, f)
@@ -507,7 +507,7 @@ func ingressAnnotationCheck(g *core.ResourceGraph, check core.Check, annKey stri
 	return findings
 }
 
-func svcDesc(s core.Resource) string {
+func svcDesc(s compliancekit.Resource) string {
 	ns, _ := s.Attributes["namespace"].(string)
 	if ns == "" {
 		return s.Name
@@ -515,7 +515,7 @@ func svcDesc(s core.Resource) string {
 	return ns + "/" + s.Name
 }
 
-func ingDesc(ing core.Resource) string {
+func ingDesc(ing compliancekit.Resource) string {
 	ns, _ := ing.Attributes["namespace"].(string)
 	if ns == "" {
 		return ing.Name
@@ -524,14 +524,14 @@ func ingDesc(ing core.Resource) string {
 }
 
 func init() {
-	core.Register(CheckIngressConfigurationSnippet, IngressConfigurationSnippet)
-	core.Register(CheckIngressServerSnippet, IngressServerSnippet)
-	core.Register(CheckIngressAuthSnippet, IngressAuthSnippet)
-	core.Register(CheckServiceZeroCIDRSourceRanges, ServiceZeroCIDRSourceRange)
-	core.Register(CheckNetworkPolicyMetadataEgress, NetworkPolicyMetadataEgress)
-	core.Register(CheckIngressLuaPlugins, IngressLuaPlugins)
-	core.Register(CheckServicePublishNotReady, ServicePublishNotReady)
-	core.Register(CheckServiceSelectorBroad, ServiceSelectorBroad)
-	core.Register(CheckIngressNoRules, IngressNoRules)
-	core.Register(CheckServiceMixedTLSPlaintext, ServiceMixedTLSPlaintext)
+	compliancekit.Register(CheckIngressConfigurationSnippet, IngressConfigurationSnippet)
+	compliancekit.Register(CheckIngressServerSnippet, IngressServerSnippet)
+	compliancekit.Register(CheckIngressAuthSnippet, IngressAuthSnippet)
+	compliancekit.Register(CheckServiceZeroCIDRSourceRanges, ServiceZeroCIDRSourceRange)
+	compliancekit.Register(CheckNetworkPolicyMetadataEgress, NetworkPolicyMetadataEgress)
+	compliancekit.Register(CheckIngressLuaPlugins, IngressLuaPlugins)
+	compliancekit.Register(CheckServicePublishNotReady, ServicePublishNotReady)
+	compliancekit.Register(CheckServiceSelectorBroad, ServiceSelectorBroad)
+	compliancekit.Register(CheckIngressNoRules, IngressNoRules)
+	compliancekit.Register(CheckServiceMixedTLSPlaintext, ServiceMixedTLSPlaintext)
 }

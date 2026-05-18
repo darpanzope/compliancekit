@@ -3,8 +3,8 @@ package terraform
 import (
 	"fmt"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.19 phase 9 — shared helpers for the per-category legacy backfill
@@ -32,7 +32,7 @@ func registerLegacyTF(entries map[string]legacyTFEntry) {
 	for id, e := range entries {
 		e := e
 		id := id
-		register("tf-legacy-"+id, []string{id}, func(_ core.Finding) (remediate.Snippet, error) {
+		register("tf-legacy-"+id, []string{id}, func(_ compliancekit.Finding) (remediate.Snippet, error) {
 			s := remediate.Snippet{
 				Risk: e.risk, Idempotent: true,
 				Content: tfLegacyHintHeader + e.content,

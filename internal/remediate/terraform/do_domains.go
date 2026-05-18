@@ -3,8 +3,8 @@ package terraform
 import (
 	"fmt"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.19 phase 3 — Terraform strategies for the 10 DNS-depth checks.
@@ -49,7 +49,7 @@ func tfRecord(domain, recName, recType, data string) string {
 `, tfIdent(recName+"-"+recType), domain, recType, recName, data)
 }
 
-func renderTFDMARCPolicy(f core.Finding) (remediate.Snippet, error) {
+func renderTFDMARCPolicy(f compliancekit.Finding) (remediate.Snippet, error) {
 	domain := tfNameOrFallback(f, "DOMAIN")
 	body := tfRecord(domain, "_dmarc", "TXT",
 		"v=DMARC1; p=reject; sp=reject; pct=100; rua=mailto:dmarc-reports@"+domain+"; ruf=mailto:dmarc-forensics@"+domain)
@@ -61,24 +61,24 @@ func renderTFDMARCPolicy(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderTFDMARCSubdomain(f core.Finding) (remediate.Snippet, error) {
+func renderTFDMARCSubdomain(f compliancekit.Finding) (remediate.Snippet, error) {
 	// Same record; the rendered body includes sp=. Reuse the parent.
 	return renderTFDMARCPolicy(f)
 }
 
-func renderTFDMARCPct(f core.Finding) (remediate.Snippet, error) {
+func renderTFDMARCPct(f compliancekit.Finding) (remediate.Snippet, error) {
 	return renderTFDMARCPolicy(f)
 }
 
-func renderTFDMARCRUA(f core.Finding) (remediate.Snippet, error) {
+func renderTFDMARCRUA(f compliancekit.Finding) (remediate.Snippet, error) {
 	return renderTFDMARCPolicy(f)
 }
 
-func renderTFDMARCRUF(f core.Finding) (remediate.Snippet, error) {
+func renderTFDMARCRUF(f compliancekit.Finding) (remediate.Snippet, error) {
 	return renderTFDMARCPolicy(f)
 }
 
-func renderTFSPFStrict(f core.Finding) (remediate.Snippet, error) {
+func renderTFSPFStrict(f compliancekit.Finding) (remediate.Snippet, error) {
 	domain := tfNameOrFallback(f, "DOMAIN")
 	body := tfRecord(domain, "@", "TXT",
 		"v=spf1 include:_spf.google.com include:mailgun.org -all")
@@ -90,11 +90,11 @@ func renderTFSPFStrict(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderTFSPFNoRedirect(f core.Finding) (remediate.Snippet, error) {
+func renderTFSPFNoRedirect(f compliancekit.Finding) (remediate.Snippet, error) {
 	return renderTFSPFStrict(f)
 }
 
-func renderTFDKIMSelector(f core.Finding) (remediate.Snippet, error) {
+func renderTFDKIMSelector(f compliancekit.Finding) (remediate.Snippet, error) {
 	domain := tfNameOrFallback(f, "DOMAIN")
 	body := tfRecord(domain, "primary._domainkey", "TXT",
 		"v=DKIM1; k=rsa; p=YOUR_BASE64_PUBLIC_KEY_HERE")
@@ -106,7 +106,7 @@ func renderTFDKIMSelector(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderTFCAAIodef(f core.Finding) (remediate.Snippet, error) {
+func renderTFCAAIodef(f compliancekit.Finding) (remediate.Snippet, error) {
 	domain := tfNameOrFallback(f, "DOMAIN")
 	body := fmt.Sprintf(`resource "digitalocean_record" %q {
   domain = %q
@@ -126,7 +126,7 @@ func renderTFCAAIodef(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderTFDNSSECRegistrar(_ core.Finding) (remediate.Snippet, error) {
+func renderTFDNSSECRegistrar(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return renderTFManualOnly(
 		"DigitalOcean managed DNS does not serve signed zones; DNSSEC is a registrar-side control",
 		"https://dnssec-analyzer.verisignlabs.com",

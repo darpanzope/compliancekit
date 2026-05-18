@@ -11,7 +11,7 @@ import (
 	"google.golang.org/api/iterator"
 
 	"github.com/darpanzope/compliancekit/internal/collectors/cloudcommon"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 const (
@@ -29,7 +29,7 @@ const (
 // networks, firewalls, and project metadata for each project.
 // Per-project errors emit a placeholder and continue to the next
 // project.
-func (c *Collector) collectCompute(ctx context.Context, out []core.Resource) []core.Resource {
+func (c *Collector) collectCompute(ctx context.Context, out []compliancekit.Resource) []compliancekit.Resource {
 	for _, projectID := range c.projects {
 		updated, err := c.collectComputeForProject(ctx, projectID, out)
 		if err != nil {
@@ -41,7 +41,7 @@ func (c *Collector) collectCompute(ctx context.Context, out []core.Resource) []c
 	return out
 }
 
-func (c *Collector) collectComputeForProject(ctx context.Context, projectID string, out []core.Resource) ([]core.Resource, error) {
+func (c *Collector) collectComputeForProject(ctx context.Context, projectID string, out []compliancekit.Resource) ([]compliancekit.Resource, error) {
 	var err error
 	if out, err = c.collectComputeInstances(ctx, projectID, out); err != nil {
 		return out, fmt.Errorf("compute %s: %w", projectID, err)
@@ -58,7 +58,7 @@ func (c *Collector) collectComputeForProject(ctx context.Context, projectID stri
 	return out, nil
 }
 
-func (c *Collector) collectComputeInstances(ctx context.Context, projectID string, out []core.Resource) ([]core.Resource, error) {
+func (c *Collector) collectComputeInstances(ctx context.Context, projectID string, out []compliancekit.Resource) ([]compliancekit.Resource, error) {
 	client, err := compute.NewInstancesRESTClient(ctx, c.clientOption())
 	if err != nil {
 		return out, fmt.Errorf("new instances client: %w", err)
@@ -85,10 +85,10 @@ func (c *Collector) collectComputeInstances(ctx context.Context, projectID strin
 	return out, nil
 }
 
-func (c *Collector) computeInstanceResource(projectID string, inst *computepb.Instance) core.Resource {
+func (c *Collector) computeInstanceResource(projectID string, inst *computepb.Instance) compliancekit.Resource {
 	name := safeString(inst.Name)
 	zone := lastPathSegment(safeString(inst.Zone))
-	r := core.Resource{
+	r := compliancekit.Resource{
 		ID:       fmt.Sprintf("gcp.compute.instance.%s.%s.%s", projectID, zone, name),
 		Type:     ComputeInstanceType,
 		Name:     name,
@@ -155,7 +155,7 @@ func metadataToMap(md *computepb.Metadata) map[string]string {
 	return out
 }
 
-func (c *Collector) collectComputeNetworks(ctx context.Context, projectID string, out []core.Resource) ([]core.Resource, error) {
+func (c *Collector) collectComputeNetworks(ctx context.Context, projectID string, out []compliancekit.Resource) ([]compliancekit.Resource, error) {
 	client, err := compute.NewNetworksRESTClient(ctx, c.clientOption())
 	if err != nil {
 		return out, fmt.Errorf("new networks client: %w", err)
@@ -172,7 +172,7 @@ func (c *Collector) collectComputeNetworks(ctx context.Context, projectID string
 			return out, fmt.Errorf("list networks: %w", err)
 		}
 		name := safeString(n.Name)
-		r := core.Resource{
+		r := compliancekit.Resource{
 			ID:       fmt.Sprintf("gcp.compute.network.%s.%s", projectID, name),
 			Type:     ComputeNetworkType,
 			Name:     name,
@@ -190,7 +190,7 @@ func (c *Collector) collectComputeNetworks(ctx context.Context, projectID string
 	return out, nil
 }
 
-func (c *Collector) collectComputeFirewalls(ctx context.Context, projectID string, out []core.Resource) ([]core.Resource, error) {
+func (c *Collector) collectComputeFirewalls(ctx context.Context, projectID string, out []compliancekit.Resource) ([]compliancekit.Resource, error) {
 	client, err := compute.NewFirewallsRESTClient(ctx, c.clientOption())
 	if err != nil {
 		return out, fmt.Errorf("new firewalls client: %w", err)
@@ -216,7 +216,7 @@ func (c *Collector) collectComputeFirewalls(ctx context.Context, projectID strin
 			})
 		}
 		sourceRanges := append([]string(nil), fw.SourceRanges...)
-		r := core.Resource{
+		r := compliancekit.Resource{
 			ID:       fmt.Sprintf("gcp.compute.firewall.%s.%s", projectID, name),
 			Type:     ComputeFirewallType,
 			Name:     name,
@@ -237,7 +237,7 @@ func (c *Collector) collectComputeFirewalls(ctx context.Context, projectID strin
 	return out, nil
 }
 
-func (c *Collector) collectComputeProjectMetadata(ctx context.Context, projectID string, out []core.Resource) ([]core.Resource, error) {
+func (c *Collector) collectComputeProjectMetadata(ctx context.Context, projectID string, out []compliancekit.Resource) ([]compliancekit.Resource, error) {
 	client, err := compute.NewProjectsRESTClient(ctx, c.clientOption())
 	if err != nil {
 		return out, fmt.Errorf("new projects client: %w", err)
@@ -254,7 +254,7 @@ func (c *Collector) collectComputeProjectMetadata(ctx context.Context, projectID
 			osLogin = true
 		}
 	}
-	r := core.Resource{
+	r := compliancekit.Resource{
 		ID:       fmt.Sprintf("gcp.compute.project_metadata.%s", projectID),
 		Type:     ComputeProjectType,
 		Name:     projectID,

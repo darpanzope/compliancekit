@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"sort"
 
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // waiversJSONName is the per-pack artifact filename. Lives at the
@@ -34,7 +34,7 @@ const waiversJSONName = "waivers.json"
 //	      "expires":     "2026-12-31T00:00:00Z",
 //	      "source":      "file" | "annotation",
 //	      "source_path": "waivers.yaml" or "main.tf:42",
-//	      "finding":     { full core.Finding for cross-reference }
+//	      "finding":     { full compliancekit.Finding for cross-reference }
 //	    }
 //	  ]
 //	}
@@ -43,7 +43,7 @@ const waiversJSONName = "waivers.json"
 // trace exactly which resources a waiver covered during this run.
 // Synthesized `compliancekit-waiver-expired` info-findings also
 // appear in this artifact so the lapse audit-trail is one file.
-func writeWaiversJSON(outDir string, findings []core.Finding) (string, error) {
+func writeWaiversJSON(outDir string, findings []compliancekit.Finding) (string, error) {
 	entries := make([]waiverEntry, 0)
 	for _, f := range findings {
 		if f.Waiver == nil {
@@ -95,12 +95,12 @@ type waiverDoc struct {
 }
 
 type waiverEntry struct {
-	CheckID    string       `json:"check_id"`
-	ResourceID string       `json:"resource_id"`
-	Reason     string       `json:"reason"`
-	Approver   string       `json:"approver"`
-	Expires    string       `json:"expires"`
-	Source     string       `json:"source,omitempty"`
-	SourcePath string       `json:"source_path,omitempty"`
-	Finding    core.Finding `json:"finding"`
+	CheckID    string                `json:"check_id"`
+	ResourceID string                `json:"resource_id"`
+	Reason     string                `json:"reason"`
+	Approver   string                `json:"approver"`
+	Expires    string                `json:"expires"`
+	Source     string                `json:"source,omitempty"`
+	SourcePath string                `json:"source_path,omitempty"`
+	Finding    compliancekit.Finding `json:"finding"`
 }

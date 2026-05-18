@@ -5,11 +5,11 @@ import (
 	"testing"
 
 	hetznercol "github.com/darpanzope/compliancekit/internal/collectors/hetzner"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
-func mkLB(name string, services []map[string]any) core.Resource {
-	return core.Resource{
+func mkLB(name string, services []map[string]any) compliancekit.Resource {
+	return compliancekit.Resource{
 		ID:         "hetzner.load_balancer." + name,
 		Type:       hetznercol.LoadBalancerType,
 		Name:       name,
@@ -26,9 +26,9 @@ func TestLBHTTPSListener(t *testing.T) {
 	)
 	findings, _ := LBHTTPSListener(context.Background(), g)
 	for _, f := range findings {
-		want := core.StatusFail
+		want := compliancekit.StatusFail
 		if f.Resource.Name == "https" {
-			want = core.StatusPass
+			want = compliancekit.StatusPass
 		}
 		if f.Status != want {
 			t.Errorf("%s: got %v", f.Resource.Name, f.Status)
@@ -44,9 +44,9 @@ func TestLBHTTPRedirect(t *testing.T) {
 	)
 	findings, _ := LBHTTPRedirect(context.Background(), g)
 	for _, f := range findings {
-		want := core.StatusPass
+		want := compliancekit.StatusPass
 		if f.Resource.Name == "http-cleartext" {
-			want = core.StatusFail
+			want = compliancekit.StatusFail
 		}
 		if f.Status != want {
 			t.Errorf("%s: got %v", f.Resource.Name, f.Status)

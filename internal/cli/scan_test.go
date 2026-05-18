@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 func TestBuildReporters_DefaultsToJSON(t *testing.T) {
@@ -28,24 +28,24 @@ func TestBuildReporters_UnknownFormatFails(t *testing.T) {
 }
 
 func TestHasActionableAtOrAbove(t *testing.T) {
-	findings := []core.Finding{
-		{Status: core.StatusPass, Severity: core.SeverityCritical}, // pass: not actionable
-		{Status: core.StatusFail, Severity: core.SeverityLow},      // below threshold
-		{Status: core.StatusFail, Severity: core.SeverityHigh},     // matches
+	findings := []compliancekit.Finding{
+		{Status: compliancekit.StatusPass, Severity: compliancekit.SeverityCritical}, // pass: not actionable
+		{Status: compliancekit.StatusFail, Severity: compliancekit.SeverityLow},      // below threshold
+		{Status: compliancekit.StatusFail, Severity: compliancekit.SeverityHigh},     // matches
 	}
-	if !hasActionableAtOrAbove(findings, core.SeverityHigh) {
+	if !hasActionableAtOrAbove(findings, compliancekit.SeverityHigh) {
 		t.Error("expected actionable high finding to count")
 	}
-	if hasActionableAtOrAbove(findings, core.SeverityCritical) {
+	if hasActionableAtOrAbove(findings, compliancekit.SeverityCritical) {
 		t.Error("no critical findings exist, but function returned true")
 	}
 }
 
 func TestHasActionableAtOrAbove_ErrorCounts(t *testing.T) {
-	findings := []core.Finding{
-		{Status: core.StatusError, Severity: core.SeverityMedium},
+	findings := []compliancekit.Finding{
+		{Status: compliancekit.StatusError, Severity: compliancekit.SeverityMedium},
 	}
-	if !hasActionableAtOrAbove(findings, core.SeverityMedium) {
+	if !hasActionableAtOrAbove(findings, compliancekit.SeverityMedium) {
 		t.Error("error findings should be actionable")
 	}
 }
@@ -59,12 +59,12 @@ func TestPrintSummary_NoFindings(t *testing.T) {
 }
 
 func TestPrintSummary_CountsBySeverity(t *testing.T) {
-	findings := []core.Finding{
-		{Status: core.StatusFail, Severity: core.SeverityCritical},
-		{Status: core.StatusFail, Severity: core.SeverityHigh},
-		{Status: core.StatusFail, Severity: core.SeverityHigh},
-		{Status: core.StatusFail, Severity: core.SeverityLow},
-		{Status: core.StatusPass, Severity: core.SeverityHigh}, // ignored
+	findings := []compliancekit.Finding{
+		{Status: compliancekit.StatusFail, Severity: compliancekit.SeverityCritical},
+		{Status: compliancekit.StatusFail, Severity: compliancekit.SeverityHigh},
+		{Status: compliancekit.StatusFail, Severity: compliancekit.SeverityHigh},
+		{Status: compliancekit.StatusFail, Severity: compliancekit.SeverityLow},
+		{Status: compliancekit.StatusPass, Severity: compliancekit.SeverityHigh}, // ignored
 	}
 	var buf bytes.Buffer
 	printSummary(&buf, findings)

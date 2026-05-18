@@ -6,16 +6,16 @@ import (
 	"strings"
 
 	k8scol "github.com/darpanzope/compliancekit/internal/collectors/k8s"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.22 phase 4 — init-container reliability checks split out of
 // reliability.go to satisfy the 600-LoC invariant.
 
-var CheckInitContainerResources = core.Check{
+var CheckInitContainerResources = compliancekit.Check{
 	ID:           "k8s-pod-init-container-resource-limits",
 	Title:        "Init containers should declare CPU + memory limits",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "kubernetes",
 	Service:      "reliability",
 	ResourceType: k8scol.PodType,
@@ -35,16 +35,16 @@ var CheckInitContainerResources = core.Check{
 	Scanner: "reliability.InitContainerResources",
 }
 
-func PodInitContainerResources(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func PodInitContainerResources(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, p := range g.ByType(k8scol.PodType) {
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID: CheckInitContainerResources.ID, Severity: CheckInitContainerResources.Severity,
 			Resource: p.Ref(), Tags: CheckInitContainerResources.Tags,
 		}
 		count, _ := p.Attributes["init_container_count"].(int)
 		if count == 0 {
-			f.Status = core.StatusSkip
+			f.Status = compliancekit.StatusSkip
 			f.Message = fmt.Sprintf("pod %q: no init containers", podDesc(p))
 			findings = append(findings, f)
 			continue
@@ -68,10 +68,10 @@ func PodInitContainerResources(_ context.Context, g *core.ResourceGraph) ([]core
 			}
 		}
 		if len(missing) == 0 {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("pod %q: all init containers have CPU + memory limits", podDesc(p))
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("pod %q: init containers missing limits: %s", podDesc(p), strings.Join(missing, ", "))
 		}
 		findings = append(findings, f)
@@ -81,10 +81,10 @@ func PodInitContainerResources(_ context.Context, g *core.ResourceGraph) ([]core
 
 // ----- 8. init-container readonly root fs --------------------------
 
-var CheckInitContainerReadonlyFS = core.Check{
+var CheckInitContainerReadonlyFS = compliancekit.Check{
 	ID:           "k8s-pod-init-container-readonly-rootfs",
 	Title:        "Init containers should declare readOnlyRootFilesystem",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "kubernetes",
 	Service:      "pod-security",
 	ResourceType: k8scol.PodType,
@@ -105,16 +105,16 @@ var CheckInitContainerReadonlyFS = core.Check{
 	Scanner: "podsecurity.InitContainerReadonlyFS",
 }
 
-func PodInitContainerReadonlyFS(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func PodInitContainerReadonlyFS(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, p := range g.ByType(k8scol.PodType) {
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID: CheckInitContainerReadonlyFS.ID, Severity: CheckInitContainerReadonlyFS.Severity,
 			Resource: p.Ref(), Tags: CheckInitContainerReadonlyFS.Tags,
 		}
 		count, _ := p.Attributes["init_container_count"].(int)
 		if count == 0 {
-			f.Status = core.StatusSkip
+			f.Status = compliancekit.StatusSkip
 			f.Message = fmt.Sprintf("pod %q: no init containers", podDesc(p))
 			findings = append(findings, f)
 			continue
@@ -137,10 +137,10 @@ func PodInitContainerReadonlyFS(_ context.Context, g *core.ResourceGraph) ([]cor
 			}
 		}
 		if len(missing) == 0 {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("pod %q: all init containers have readOnlyRootFilesystem", podDesc(p))
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("pod %q: init containers without readOnlyRootFilesystem: %s", podDesc(p), strings.Join(missing, ", "))
 		}
 		findings = append(findings, f)
@@ -150,10 +150,10 @@ func PodInitContainerReadonlyFS(_ context.Context, g *core.ResourceGraph) ([]cor
 
 // ----- 9. init-container privilege escalation ---------------------
 
-var CheckInitContainerPrivEsc = core.Check{
+var CheckInitContainerPrivEsc = compliancekit.Check{
 	ID:           "k8s-pod-init-container-no-priv-escalation",
 	Title:        "Init containers should disable allowPrivilegeEscalation",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "kubernetes",
 	Service:      "pod-security",
 	ResourceType: k8scol.PodType,
@@ -172,16 +172,16 @@ var CheckInitContainerPrivEsc = core.Check{
 	Scanner: "podsecurity.InitContainerPrivEsc",
 }
 
-func PodInitContainerPrivEsc(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func PodInitContainerPrivEsc(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, p := range g.ByType(k8scol.PodType) {
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID: CheckInitContainerPrivEsc.ID, Severity: CheckInitContainerPrivEsc.Severity,
 			Resource: p.Ref(), Tags: CheckInitContainerPrivEsc.Tags,
 		}
 		count, _ := p.Attributes["init_container_count"].(int)
 		if count == 0 {
-			f.Status = core.StatusSkip
+			f.Status = compliancekit.StatusSkip
 			f.Message = fmt.Sprintf("pod %q: no init containers", podDesc(p))
 			findings = append(findings, f)
 			continue
@@ -204,10 +204,10 @@ func PodInitContainerPrivEsc(_ context.Context, g *core.ResourceGraph) ([]core.F
 			}
 		}
 		if len(bad) == 0 {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("pod %q: all init containers disable allowPrivilegeEscalation", podDesc(p))
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("pod %q: init containers allowing priv escalation (or unset): %s", podDesc(p), strings.Join(bad, ", "))
 		}
 		findings = append(findings, f)
@@ -216,7 +216,7 @@ func PodInitContainerPrivEsc(_ context.Context, g *core.ResourceGraph) ([]core.F
 }
 
 func init() {
-	core.Register(CheckInitContainerResources, PodInitContainerResources)
-	core.Register(CheckInitContainerReadonlyFS, PodInitContainerReadonlyFS)
-	core.Register(CheckInitContainerPrivEsc, PodInitContainerPrivEsc)
+	compliancekit.Register(CheckInitContainerResources, PodInitContainerResources)
+	compliancekit.Register(CheckInitContainerReadonlyFS, PodInitContainerReadonlyFS)
+	compliancekit.Register(CheckInitContainerPrivEsc, PodInitContainerPrivEsc)
 }

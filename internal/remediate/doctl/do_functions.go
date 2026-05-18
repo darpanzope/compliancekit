@@ -3,8 +3,8 @@ package doctl
 import (
 	"fmt"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.19 phase 6 — doctl strategies for the 10 Functions-depth checks.
@@ -32,14 +32,14 @@ func init() {
 		[]string{"do-functions-namespace-no-environment-tag"}, renderDoctlFnEnvTag)
 }
 
-func doctlFnNS(f core.Finding) string {
+func doctlFnNS(f compliancekit.Finding) string {
 	if f.Resource.Name != "" {
 		return f.Resource.Name
 	}
 	return "NAMESPACE"
 }
 
-func renderDoctlFnNamespaceRegion(f core.Finding) (remediate.Snippet, error) {
+func renderDoctlFnNamespaceRegion(f compliancekit.Finding) (remediate.Snippet, error) {
 	ns := doctlFnNS(f)
 	body := fmt.Sprintf("doctl serverless namespaces create --label %q --region nyc1", ns)
 	return remediate.Snippet{
@@ -48,7 +48,7 @@ func renderDoctlFnNamespaceRegion(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderDoctlFnTriggerRatio(f core.Finding) (remediate.Snippet, error) {
+func renderDoctlFnTriggerRatio(f compliancekit.Finding) (remediate.Snippet, error) {
 	ns := doctlFnNS(f)
 	body := fmt.Sprintf(`# List + audit triggers in %s.
 doctl serverless trigger list %s --format Name,Enabled,Type
@@ -62,7 +62,7 @@ doctl serverless trigger list %s --format Name,Enabled,Type
 	}, nil
 }
 
-func renderDoctlFnAccessKey(f core.Finding) (remediate.Snippet, error) {
+func renderDoctlFnAccessKey(f compliancekit.Finding) (remediate.Snippet, error) {
 	ns := doctlFnNS(f)
 	body := fmt.Sprintf("doctl serverless namespace add-key %s --label ci-key", ns)
 	return remediate.Snippet{
@@ -72,7 +72,7 @@ func renderDoctlFnAccessKey(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderDoctlFnKeyRotation(f core.Finding) (remediate.Snippet, error) {
+func renderDoctlFnKeyRotation(f compliancekit.Finding) (remediate.Snippet, error) {
 	ns := doctlFnNS(f)
 	body := fmt.Sprintf(`# List existing keys + last-used metadata (if available).
 doctl serverless namespace list-keys %s --format Label,Created
@@ -86,14 +86,14 @@ doctl serverless namespace list-keys %s --format Label,Created
 	}, nil
 }
 
-func renderDoctlFnRuntime(_ core.Finding) (remediate.Snippet, error) {
+func renderDoctlFnRuntime(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return renderDoctlManualOnly(
 		"Functions runtime version",
 		"https://docs.digitalocean.com/products/functions/reference/runtimes/",
 		"Update project.yml `runtime:` to a supported version, then `doctl serverless deploy`")
 }
 
-func renderDoctlFnEnvVars(_ core.Finding) (remediate.Snippet, error) {
+func renderDoctlFnEnvVars(_ compliancekit.Finding) (remediate.Snippet, error) {
 	body := `# Re-deploy with encrypted env file.
 doctl serverless deploy --env-file .env --encrypted
 
@@ -104,14 +104,14 @@ doctl serverless deploy --env-file .env --encrypted
 	}, nil
 }
 
-func renderDoctlFnSecretScan(_ core.Finding) (remediate.Snippet, error) {
+func renderDoctlFnSecretScan(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return renderDoctlManualOnly(
 		"pre-deploy source secret scan",
 		"https://github.com/gitleaks/gitleaks",
 		"Add gitleaks / trufflehog gate in CI BEFORE `doctl serverless deploy`")
 }
 
-func renderDoctlFnLogExport(_ core.Finding) (remediate.Snippet, error) {
+func renderDoctlFnLogExport(_ compliancekit.Finding) (remediate.Snippet, error) {
 	body := `# Cron-pull activations from doctl + ship to a long-retention sink.
 # Example (every 5 min, ships to a Datadog HTTP intake):
 
@@ -125,7 +125,7 @@ doctl serverless activations list -o json --last 5m \
 	}, nil
 }
 
-func renderDoctlFnColdStart(f core.Finding) (remediate.Snippet, error) {
+func renderDoctlFnColdStart(f compliancekit.Finding) (remediate.Snippet, error) {
 	ns := doctlFnNS(f)
 	body := fmt.Sprintf(`# Add a scheduled keepalive trigger for the latency-sensitive function.
 doctl serverless trigger create %s \
@@ -137,7 +137,7 @@ doctl serverless trigger create %s \
 	}, nil
 }
 
-func renderDoctlFnEnvTag(_ core.Finding) (remediate.Snippet, error) {
+func renderDoctlFnEnvTag(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return renderDoctlManualOnly(
 		"Functions namespace environment naming convention",
 		"https://docs.digitalocean.com/products/functions/",

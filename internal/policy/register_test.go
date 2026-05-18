@@ -5,17 +5,17 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // stubGoCheck registers a Go-backed check directly with
-// core.DefaultRegistry so the conflict-detection tests can assert
+// compliancekit.DefaultRegistry so the conflict-detection tests can assert
 // RegisterModule refuses to overwrite.
 func stubGoCheck(id string) {
-	core.Register(core.Check{
-		ID: id, Title: "stub", Severity: core.SeverityLow, Provider: "test",
+	compliancekit.Register(compliancekit.Check{
+		ID: id, Title: "stub", Severity: compliancekit.SeverityLow, Provider: "test",
 		Description: "stub", Scanner: "stub",
-	}, func(_ context.Context, _ *core.ResourceGraph) ([]core.Finding, error) {
+	}, func(_ context.Context, _ *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 		return nil, nil
 	})
 }
@@ -29,9 +29,9 @@ func TestRegisterModule_HappyPath(t *testing.T) {
 	if err := RegisterModule(m); err != nil {
 		t.Fatalf("RegisterModule: %v", err)
 	}
-	// Mirrored into core.DefaultRegistry?
-	if _, ok := core.LookupCheck("test-sample-bucket-public"); !ok {
-		t.Errorf("module not mirrored into core.DefaultRegistry")
+	// Mirrored into compliancekit.DefaultRegistry?
+	if _, ok := compliancekit.LookupCheck("test-sample-bucket-public"); !ok {
+		t.Errorf("module not mirrored into compliancekit.DefaultRegistry")
 	}
 	// Lookup returns the policy package's metadata?
 	got := Lookup("test-sample-bucket-public")
@@ -49,7 +49,7 @@ func TestRegisterModule_ConflictWithGoCheck(t *testing.T) {
 
 	// Pre-register a Go check under the same ID.
 	stubGoCheck(id)
-	t.Cleanup(func() { core.Unregister(id) })
+	t.Cleanup(func() { compliancekit.Unregister(id) })
 
 	// Build a Rego module with the same ID — must refuse.
 	body := `package x

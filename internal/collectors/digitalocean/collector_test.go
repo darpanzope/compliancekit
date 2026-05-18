@@ -8,11 +8,11 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
-// Compile-time assertion that *Collector satisfies core.Collector.
-var _ core.Collector = (*Collector)(nil)
+// Compile-time assertion that *Collector satisfies compliancekit.Collector.
+var _ compliancekit.Collector = (*Collector)(nil)
 
 func TestCollector_Collect_Droplets(t *testing.T) {
 	server := newFixtureServer(t, map[string]string{
@@ -132,11 +132,11 @@ func TestCollector_Collect_Droplets(t *testing.T) {
 }
 
 func TestLinkDropletsToFirewalls(t *testing.T) {
-	droplets := []core.Resource{
+	droplets := []compliancekit.Resource{
 		{ID: "digitalocean.droplet.1", Type: DropletType},
 		{ID: "digitalocean.droplet.2", Type: DropletType},
 	}
-	firewalls := []core.Resource{
+	firewalls := []compliancekit.Resource{
 		{
 			ID:   "digitalocean.firewall.fw1",
 			Type: FirewallType,

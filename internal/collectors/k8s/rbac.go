@@ -9,15 +9,15 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/darpanzope/compliancekit/internal/collectors/cloudcommon"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // collectRBAC fetches every RBAC primitive plus ServiceAccounts.
 // Roles/RoleBindings/SAs are namespaced; ClusterRoles/ClusterRoleBindings
 // are cluster-scoped. The check pack inspects rules + subjects against
 // flattened attribute maps so check code stays free of client-go.
-func (c *Collector) collectRBAC(ctx context.Context, scope *ContextScope) ([]core.Resource, error) {
-	out := make([]core.Resource, 0, 64)
+func (c *Collector) collectRBAC(ctx context.Context, scope *ContextScope) ([]compliancekit.Resource, error) {
+	out := make([]compliancekit.Resource, 0, 64)
 
 	crs, err := scope.Client.RbacV1().ClusterRoles().List(ctx, metav1.ListOptions{})
 	if err != nil {
@@ -160,13 +160,13 @@ func filterSAByExclude(in []corev1.ServiceAccount, ex []string) []corev1.Service
 
 // ---- Resource builders ----
 
-func (c *Collector) clusterRoleResource(scope *ContextScope, cr *rbacv1.ClusterRole) core.Resource {
+func (c *Collector) clusterRoleResource(scope *ContextScope, cr *rbacv1.ClusterRole) compliancekit.Resource {
 	attrs := map[string]any{
 		"rules":                flattenPolicyRules(cr.Rules),
 		"has_aggregation_rule": cr.AggregationRule != nil,
 		"labels":               copyStringMap(cr.Labels),
 	}
-	r := core.Resource{
+	r := compliancekit.Resource{
 		ID:         fmt.Sprintf("%s.%s.%s", ClusterRoleType, scope.Name, cr.Name),
 		Type:       ClusterRoleType,
 		Name:       cr.Name,
@@ -177,14 +177,14 @@ func (c *Collector) clusterRoleResource(scope *ContextScope, cr *rbacv1.ClusterR
 	return r
 }
 
-func (c *Collector) clusterRoleBindingResource(scope *ContextScope, crb *rbacv1.ClusterRoleBinding) core.Resource {
+func (c *Collector) clusterRoleBindingResource(scope *ContextScope, crb *rbacv1.ClusterRoleBinding) compliancekit.Resource {
 	attrs := map[string]any{
 		"role_kind":      crb.RoleRef.Kind,
 		"role_name":      crb.RoleRef.Name,
 		"role_api_group": crb.RoleRef.APIGroup,
 		"subjects":       flattenSubjects(crb.Subjects),
 	}
-	r := core.Resource{
+	r := compliancekit.Resource{
 		ID:         fmt.Sprintf("%s.%s.%s", ClusterRoleBindingType, scope.Name, crb.Name),
 		Type:       ClusterRoleBindingType,
 		Name:       crb.Name,
@@ -195,13 +195,13 @@ func (c *Collector) clusterRoleBindingResource(scope *ContextScope, crb *rbacv1.
 	return r
 }
 
-func (c *Collector) roleResource(scope *ContextScope, role *rbacv1.Role) core.Resource {
+func (c *Collector) roleResource(scope *ContextScope, role *rbacv1.Role) compliancekit.Resource {
 	attrs := map[string]any{
 		"namespace": role.Namespace,
 		"rules":     flattenPolicyRules(role.Rules),
 		"labels":    copyStringMap(role.Labels),
 	}
-	r := core.Resource{
+	r := compliancekit.Resource{
 		ID:         fmt.Sprintf("%s.%s.%s.%s", RoleType, scope.Name, role.Namespace, role.Name),
 		Type:       RoleType,
 		Name:       role.Name,
@@ -212,7 +212,7 @@ func (c *Collector) roleResource(scope *ContextScope, role *rbacv1.Role) core.Re
 	return r
 }
 
-func (c *Collector) roleBindingResource(scope *ContextScope, rb *rbacv1.RoleBinding) core.Resource {
+func (c *Collector) roleBindingResource(scope *ContextScope, rb *rbacv1.RoleBinding) compliancekit.Resource {
 	attrs := map[string]any{
 		"namespace":      rb.Namespace,
 		"role_kind":      rb.RoleRef.Kind,
@@ -220,7 +220,7 @@ func (c *Collector) roleBindingResource(scope *ContextScope, rb *rbacv1.RoleBind
 		"role_api_group": rb.RoleRef.APIGroup,
 		"subjects":       flattenSubjects(rb.Subjects),
 	}
-	r := core.Resource{
+	r := compliancekit.Resource{
 		ID:         fmt.Sprintf("%s.%s.%s.%s", RoleBindingType, scope.Name, rb.Namespace, rb.Name),
 		Type:       RoleBindingType,
 		Name:       rb.Name,
@@ -231,7 +231,7 @@ func (c *Collector) roleBindingResource(scope *ContextScope, rb *rbacv1.RoleBind
 	return r
 }
 
-func (c *Collector) serviceAccountResource(scope *ContextScope, sa *corev1.ServiceAccount) core.Resource {
+func (c *Collector) serviceAccountResource(scope *ContextScope, sa *corev1.ServiceAccount) compliancekit.Resource {
 	attrs := map[string]any{
 		"namespace":               sa.Namespace,
 		"automount_token":         automountValue(sa.AutomountServiceAccountToken),
@@ -239,7 +239,7 @@ func (c *Collector) serviceAccountResource(scope *ContextScope, sa *corev1.Servi
 		"secret_count":            len(sa.Secrets),
 		"labels":                  copyStringMap(sa.Labels),
 	}
-	r := core.Resource{
+	r := compliancekit.Resource{
 		ID:         fmt.Sprintf("%s.%s.%s.%s", ServiceAccountType, scope.Name, sa.Namespace, sa.Name),
 		Type:       ServiceAccountType,
 		Name:       sa.Name,

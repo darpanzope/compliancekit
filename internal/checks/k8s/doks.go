@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	docol "github.com/darpanzope/compliancekit/internal/collectors/digitalocean"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // DOKS enrichment checks. DOKS resources come from the DO collector
@@ -14,10 +14,10 @@ import (
 
 // ----- HA control plane -----------------------------------------
 
-var CheckDOKSHA = core.Check{
+var CheckDOKSHA = compliancekit.Check{
 	ID:           "k8s-doks-ha-control-plane",
 	Title:        "DOKS clusters should run with HA control plane",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "kubernetes",
 	Service:      "doks",
 	ResourceType: docol.DOKSClusterType,
@@ -37,17 +37,17 @@ var CheckDOKSHA = core.Check{
 	Scanner: "doks.HA",
 }
 
-func DOKSHA(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func DOKSHA(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	return doksBoolCheck(g, CheckDOKSHA, "ha",
 		"HA control plane enabled", "single-node control plane (no HA)"), nil
 }
 
 // ----- Auto-upgrade ----------------------------------------------
 
-var CheckDOKSAutoUpgrade = core.Check{
+var CheckDOKSAutoUpgrade = compliancekit.Check{
 	ID:           "k8s-doks-auto-upgrade",
 	Title:        "DOKS clusters should enable auto-upgrade",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "kubernetes",
 	Service:      "doks",
 	ResourceType: docol.DOKSClusterType,
@@ -66,17 +66,17 @@ var CheckDOKSAutoUpgrade = core.Check{
 	Scanner: "doks.AutoUpgrade",
 }
 
-func DOKSAutoUpgrade(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func DOKSAutoUpgrade(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	return doksBoolCheck(g, CheckDOKSAutoUpgrade, "auto_upgrade",
 		"auto-upgrade enabled", "auto-upgrade disabled"), nil
 }
 
 // ----- Surge upgrade ---------------------------------------------
 
-var CheckDOKSSurgeUpgrade = core.Check{
+var CheckDOKSSurgeUpgrade = compliancekit.Check{
 	ID:           "k8s-doks-surge-upgrade",
 	Title:        "DOKS clusters should enable surge upgrades",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "kubernetes",
 	Service:      "doks",
 	ResourceType: docol.DOKSClusterType,
@@ -94,17 +94,17 @@ var CheckDOKSSurgeUpgrade = core.Check{
 	Scanner: "doks.SurgeUpgrade",
 }
 
-func DOKSSurgeUpgrade(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func DOKSSurgeUpgrade(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	return doksBoolCheck(g, CheckDOKSSurgeUpgrade, "surge_upgrade",
 		"surge upgrade enabled", "surge upgrade disabled"), nil
 }
 
 // ----- Maintenance window -----------------------------------------
 
-var CheckDOKSMaintenanceWindow = core.Check{
+var CheckDOKSMaintenanceWindow = compliancekit.Check{
 	ID:           "k8s-doks-maintenance-window",
 	Title:        "DOKS clusters should configure a maintenance window",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "kubernetes",
 	Service:      "doks",
 	ResourceType: docol.DOKSClusterType,
@@ -123,21 +123,21 @@ var CheckDOKSMaintenanceWindow = core.Check{
 	Scanner: "doks.MaintenanceWindow",
 }
 
-func DOKSMaintenanceWindow(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func DOKSMaintenanceWindow(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, c := range g.ByType(docol.DOKSClusterType) {
 		mw, _ := c.Attributes["maintenance_window"].(string)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckDOKSMaintenanceWindow.ID,
 			Severity: CheckDOKSMaintenanceWindow.Severity,
 			Resource: c.Ref(),
 			Tags:     CheckDOKSMaintenanceWindow.Tags,
 		}
 		if mw != "" && mw != " " {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("doks cluster %q: maintenance window %s", c.Name, mw)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("doks cluster %q: no maintenance window configured", c.Name)
 		}
 		findings = append(findings, f)
@@ -147,10 +147,10 @@ func DOKSMaintenanceWindow(_ context.Context, g *core.ResourceGraph) ([]core.Fin
 
 // ----- VPC attached ----------------------------------------------
 
-var CheckDOKSVPC = core.Check{
+var CheckDOKSVPC = compliancekit.Check{
 	ID:           "k8s-doks-vpc-attached",
 	Title:        "DOKS clusters should attach to a non-default VPC",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "kubernetes",
 	Service:      "doks",
 	ResourceType: docol.DOKSClusterType,
@@ -170,21 +170,21 @@ var CheckDOKSVPC = core.Check{
 	Scanner: "doks.VPC",
 }
 
-func DOKSVPC(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func DOKSVPC(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, c := range g.ByType(docol.DOKSClusterType) {
 		vpc, _ := c.Attributes["vpc_uuid"].(string)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckDOKSVPC.ID,
 			Severity: CheckDOKSVPC.Severity,
 			Resource: c.Ref(),
 			Tags:     CheckDOKSVPC.Tags,
 		}
 		if vpc == "" {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("doks cluster %q: no VPC attached", c.Name)
 		} else {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("doks cluster %q: VPC=%s", c.Name, vpc)
 		}
 		findings = append(findings, f)
@@ -194,10 +194,10 @@ func DOKSVPC(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
 
 // ----- Registry integration --------------------------------------
 
-var CheckDOKSRegistry = core.Check{
+var CheckDOKSRegistry = compliancekit.Check{
 	ID:           "k8s-doks-registry-integration",
 	Title:        "DOKS clusters should integrate with DO Container Registry",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "kubernetes",
 	Service:      "doks",
 	ResourceType: docol.DOKSClusterType,
@@ -216,17 +216,17 @@ var CheckDOKSRegistry = core.Check{
 	Scanner: "doks.Registry",
 }
 
-func DOKSRegistry(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func DOKSRegistry(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	return doksBoolCheck(g, CheckDOKSRegistry, "registry_integrated",
 		"registry integration enabled", "registry integration disabled"), nil
 }
 
 // ----- Cluster active --------------------------------------------
 
-var CheckDOKSActive = core.Check{
+var CheckDOKSActive = compliancekit.Check{
 	ID:           "k8s-doks-cluster-running",
 	Title:        "DOKS clusters should be in running state",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "kubernetes",
 	Service:      "doks",
 	ResourceType: docol.DOKSClusterType,
@@ -243,21 +243,21 @@ var CheckDOKSActive = core.Check{
 	Scanner: "doks.Active",
 }
 
-func DOKSActive(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func DOKSActive(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, c := range g.ByType(docol.DOKSClusterType) {
 		status, _ := c.Attributes["status"].(string)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckDOKSActive.ID,
 			Severity: CheckDOKSActive.Severity,
 			Resource: c.Ref(),
 			Tags:     CheckDOKSActive.Tags,
 		}
 		if status == "running" {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("doks cluster %q: running", c.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("doks cluster %q: status=%s", c.Name, status)
 		}
 		findings = append(findings, f)
@@ -267,10 +267,10 @@ func DOKSActive(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error
 
 // ----- Nodepool autoscaling --------------------------------------
 
-var CheckDOKSNPAutoScale = core.Check{
+var CheckDOKSNPAutoScale = compliancekit.Check{
 	ID:           "k8s-doks-nodepool-autoscale",
 	Title:        "DOKS node pools should enable autoscaling",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "kubernetes",
 	Service:      "doks",
 	ResourceType: docol.DOKSNodePoolType,
@@ -289,21 +289,21 @@ var CheckDOKSNPAutoScale = core.Check{
 	Scanner: "doks.NPAutoScale",
 }
 
-func DOKSNPAutoScale(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func DOKSNPAutoScale(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, np := range g.ByType(docol.DOKSNodePoolType) {
 		as, _ := np.Attributes["auto_scale"].(bool)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckDOKSNPAutoScale.ID,
 			Severity: CheckDOKSNPAutoScale.Severity,
 			Resource: np.Ref(),
 			Tags:     CheckDOKSNPAutoScale.Tags,
 		}
 		if as {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("nodepool %q: autoscaling enabled", np.Name)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("nodepool %q: autoscaling disabled", np.Name)
 		}
 		findings = append(findings, f)
@@ -313,10 +313,10 @@ func DOKSNPAutoScale(_ context.Context, g *core.ResourceGraph) ([]core.Finding, 
 
 // ----- Nodepool min nodes -----------------------------------------
 
-var CheckDOKSNPMinNodes = core.Check{
+var CheckDOKSNPMinNodes = compliancekit.Check{
 	ID:           "k8s-doks-nodepool-min-nodes",
 	Title:        "DOKS node pools should have min_nodes >= 2",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "kubernetes",
 	Service:      "doks",
 	ResourceType: docol.DOKSNodePoolType,
@@ -335,8 +335,8 @@ var CheckDOKSNPMinNodes = core.Check{
 	Scanner: "doks.NPMinNodes",
 }
 
-func DOKSNPMinNodes(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func DOKSNPMinNodes(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, np := range g.ByType(docol.DOKSNodePoolType) {
 		minN, _ := np.Attributes["min_nodes"].(int)
 		count, _ := np.Attributes["count"].(int)
@@ -346,17 +346,17 @@ func DOKSNPMinNodes(_ context.Context, g *core.ResourceGraph) ([]core.Finding, e
 		if !as {
 			effective = count
 		}
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  CheckDOKSNPMinNodes.ID,
 			Severity: CheckDOKSNPMinNodes.Severity,
 			Resource: np.Ref(),
 			Tags:     CheckDOKSNPMinNodes.Tags,
 		}
 		if effective >= 2 {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("nodepool %q: effective floor=%d", np.Name, effective)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("nodepool %q: effective floor=%d (no HA)", np.Name, effective)
 		}
 		findings = append(findings, f)
@@ -367,32 +367,32 @@ func DOKSNPMinNodes(_ context.Context, g *core.ResourceGraph) ([]core.Finding, e
 // ----- init -----------------------------------------------------
 
 func init() {
-	core.Register(CheckDOKSHA, DOKSHA)
-	core.Register(CheckDOKSAutoUpgrade, DOKSAutoUpgrade)
-	core.Register(CheckDOKSSurgeUpgrade, DOKSSurgeUpgrade)
-	core.Register(CheckDOKSMaintenanceWindow, DOKSMaintenanceWindow)
-	core.Register(CheckDOKSVPC, DOKSVPC)
-	core.Register(CheckDOKSRegistry, DOKSRegistry)
-	core.Register(CheckDOKSActive, DOKSActive)
-	core.Register(CheckDOKSNPAutoScale, DOKSNPAutoScale)
-	core.Register(CheckDOKSNPMinNodes, DOKSNPMinNodes)
+	compliancekit.Register(CheckDOKSHA, DOKSHA)
+	compliancekit.Register(CheckDOKSAutoUpgrade, DOKSAutoUpgrade)
+	compliancekit.Register(CheckDOKSSurgeUpgrade, DOKSSurgeUpgrade)
+	compliancekit.Register(CheckDOKSMaintenanceWindow, DOKSMaintenanceWindow)
+	compliancekit.Register(CheckDOKSVPC, DOKSVPC)
+	compliancekit.Register(CheckDOKSRegistry, DOKSRegistry)
+	compliancekit.Register(CheckDOKSActive, DOKSActive)
+	compliancekit.Register(CheckDOKSNPAutoScale, DOKSNPAutoScale)
+	compliancekit.Register(CheckDOKSNPMinNodes, DOKSNPMinNodes)
 }
 
-func doksBoolCheck(g *core.ResourceGraph, check core.Check, attr, passMsg, failMsg string) []core.Finding {
-	findings := []core.Finding{}
+func doksBoolCheck(g *compliancekit.ResourceGraph, check compliancekit.Check, attr, passMsg, failMsg string) []compliancekit.Finding {
+	findings := []compliancekit.Finding{}
 	for _, c := range g.ByType(docol.DOKSClusterType) {
 		v, _ := c.Attributes[attr].(bool)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  check.ID,
 			Severity: check.Severity,
 			Resource: c.Ref(),
 			Tags:     check.Tags,
 		}
 		if v {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("doks cluster %q: %s", c.Name, passMsg)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("doks cluster %q: %s", c.Name, failMsg)
 		}
 		findings = append(findings, f)

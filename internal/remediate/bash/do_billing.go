@@ -3,8 +3,8 @@ package bash
 import (
 	"fmt"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 func init() {
@@ -30,7 +30,7 @@ func init() {
 		[]string{"do-billing-cdn-traffic-cost"}, renderBashBillingDashboard)
 }
 
-func renderBashDropletStopped(f core.Finding) (remediate.Snippet, error) {
+func renderBashDropletStopped(f compliancekit.Finding) (remediate.Snippet, error) {
 	name := f.Resource.Name
 	if name == "" {
 		name = "DROPLET"
@@ -43,7 +43,7 @@ doctl compute droplet delete "$name" --force`, name)
 	}, nil
 }
 
-func renderBashProjectPurpose(f core.Finding) (remediate.Snippet, error) {
+func renderBashProjectPurpose(f compliancekit.Finding) (remediate.Snippet, error) {
 	id := f.Resource.Name
 	if id == "" {
 		id = "PROJECT_ID"
@@ -54,7 +54,7 @@ func renderBashProjectPurpose(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderBashDropletRightsize(f core.Finding) (remediate.Snippet, error) {
+func renderBashDropletRightsize(f compliancekit.Finding) (remediate.Snippet, error) {
 	name := f.Resource.Name
 	if name == "" {
 		name = "DROPLET"
@@ -67,14 +67,14 @@ func renderBashDropletRightsize(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderBashBillingDashboard(_ core.Finding) (remediate.Snippet, error) {
+func renderBashBillingDashboard(_ compliancekit.Finding) (remediate.Snippet, error) {
 	return renderBashManualOnly(
 		"billing dashboard control",
 		"https://cloud.digitalocean.com/account/billing",
 		"Quarterly review; capture screenshots for audit evidence")
 }
 
-func renderBashInvoicePull(_ core.Finding) (remediate.Snippet, error) {
+func renderBashInvoicePull(_ compliancekit.Finding) (remediate.Snippet, error) {
 	body := `inv="$(doctl invoice list --no-header --format InvoiceUUID | head -1)"
 doctl invoice get-csv "$inv" > "invoice-$(date +%Y-%m).csv"`
 	return remediate.Snippet{
@@ -82,7 +82,7 @@ doctl invoice get-csv "$inv" > "invoice-$(date +%Y-%m).csv"`
 	}, nil
 }
 
-func renderBashDBPauseAudit(_ core.Finding) (remediate.Snippet, error) {
+func renderBashDBPauseAudit(_ compliancekit.Finding) (remediate.Snippet, error) {
 	body := `doctl databases list --format ID,Name,Engine,Status -o json \
   | jq -r '.[] | select(.status=="offline") | "\(.id)\t\(.name)\t\(.engine)"'`
 	return remediate.Snippet{
@@ -90,7 +90,7 @@ func renderBashDBPauseAudit(_ core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderBashSnapshotRetention(_ core.Finding) (remediate.Snippet, error) {
+func renderBashSnapshotRetention(_ compliancekit.Finding) (remediate.Snippet, error) {
 	body := `# Retire snapshots older than 90 days.
 threshold="$(date -u -d '90 days ago' +%s 2>/dev/null || date -u -v-90d +%s)"
 doctl compute snapshot list -o json \

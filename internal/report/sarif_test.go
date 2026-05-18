@@ -6,11 +6,11 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // Compile-time assertion.
-var _ core.Reporter = (*SARIFReporter)(nil)
+var _ compliancekit.Reporter = (*SARIFReporter)(nil)
 
 func TestSARIF_Format(t *testing.T) {
 	if got := NewSARIF().Format(); got != "sarif" {
@@ -40,19 +40,19 @@ func TestSARIF_RenderEmptyProducesValidShape(t *testing.T) {
 }
 
 func TestSARIF_RenderEmitsRulesAndResults(t *testing.T) {
-	findings := []core.Finding{
+	findings := []compliancekit.Finding{
 		{
 			CheckID:  "a-check",
-			Status:   core.StatusFail,
-			Severity: core.SeverityHigh,
-			Resource: core.ResourceRef{ID: "do.droplet.1", Name: "web", Type: "digitalocean.droplet"},
+			Status:   compliancekit.StatusFail,
+			Severity: compliancekit.SeverityHigh,
+			Resource: compliancekit.ResourceRef{ID: "do.droplet.1", Name: "web", Type: "digitalocean.droplet"},
 			Message:  "exposed",
 		},
 		{
 			CheckID:  "b-check",
-			Status:   core.StatusPass, // passes are NOT emitted as results
-			Severity: core.SeverityLow,
-			Resource: core.ResourceRef{ID: "x"},
+			Status:   compliancekit.StatusPass, // passes are NOT emitted as results
+			Severity: compliancekit.SeverityLow,
+			Resource: compliancekit.ResourceRef{ID: "x"},
 		},
 	}
 
@@ -122,12 +122,12 @@ func TestSARIF_RenderEmitsRulesAndResults(t *testing.T) {
 }
 
 func TestSARIF_SeverityLevelMapping(t *testing.T) {
-	cases := map[core.Severity]string{
-		core.SeverityCritical: "error",
-		core.SeverityHigh:     "error",
-		core.SeverityMedium:   "warning",
-		core.SeverityLow:      "note",
-		core.SeverityInfo:     "note",
+	cases := map[compliancekit.Severity]string{
+		compliancekit.SeverityCritical: "error",
+		compliancekit.SeverityHigh:     "error",
+		compliancekit.SeverityMedium:   "warning",
+		compliancekit.SeverityLow:      "note",
+		compliancekit.SeverityInfo:     "note",
 	}
 	for sev, want := range cases {
 		if got := sarifLevelFor(sev); got != want {

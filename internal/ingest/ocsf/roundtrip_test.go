@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/ingest"
 	"github.com/darpanzope/compliancekit/internal/report"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // TestRoundTrip_NativeOCSFEmitThenIngest exercises the path that
@@ -20,11 +20,11 @@ import (
 // Source.Type/Tool/Format, Message, Tags). Lossless across the trip
 // is the v0.13 invariant for OCSF as a wire format.
 func TestRoundTrip_NativeOCSFEmitThenIngest(t *testing.T) {
-	original := core.Finding{
+	original := compliancekit.Finding{
 		CheckID:  "aws.s3.bucket-public-read",
-		Status:   core.StatusFail,
-		Severity: core.SeverityCritical,
-		Resource: core.ResourceRef{
+		Status:   compliancekit.StatusFail,
+		Severity: compliancekit.SeverityCritical,
+		Resource: compliancekit.ResourceRef{
 			ID:        "arn:aws:s3:::acme-customer-backups",
 			Type:      "aws.s3.bucket",
 			Name:      "acme-customer-backups",
@@ -35,14 +35,14 @@ func TestRoundTrip_NativeOCSFEmitThenIngest(t *testing.T) {
 		Message:   "Bucket grants Read to AllUsers",
 		Tags:      []string{"s3", "public-access"},
 		Timestamp: time.Date(2026, 5, 15, 10, 0, 0, 0, time.UTC),
-		Source: &core.Source{
+		Source: &compliancekit.Source{
 			Type: "native",
 		},
 	}
 
 	// Emit via the existing report.OCSFReporter.
 	var buf bytes.Buffer
-	if err := report.NewOCSF().Render(context.Background(), []core.Finding{original}, nil, &buf); err != nil {
+	if err := report.NewOCSF().Render(context.Background(), []compliancekit.Finding{original}, nil, &buf); err != nil {
 		t.Fatalf("OCSF emit: %v", err)
 	}
 
@@ -118,11 +118,11 @@ func TestRoundTrip_NativeOCSFEmitThenIngest(t *testing.T) {
 // resources[0] = ResourceRef equivalent, unmapped.compliancekit_source
 // preserves the Source struct.
 func TestEmitContainsRoundTripFields(t *testing.T) {
-	f := core.Finding{
+	f := compliancekit.Finding{
 		CheckID:  "do.spaces.public-read",
-		Status:   core.StatusFail,
-		Severity: core.SeverityHigh,
-		Resource: core.ResourceRef{
+		Status:   compliancekit.StatusFail,
+		Severity: compliancekit.SeverityHigh,
+		Resource: compliancekit.ResourceRef{
 			ID:       "do://spaces/sfo3/customer-data",
 			Type:     "digitalocean.spaces.bucket",
 			Name:     "customer-data",
@@ -130,10 +130,10 @@ func TestEmitContainsRoundTripFields(t *testing.T) {
 			Region:   "sfo3",
 		},
 		Message: "Spaces bucket exposes public read",
-		Source:  &core.Source{Type: "native"},
+		Source:  &compliancekit.Source{Type: "native"},
 	}
 	var buf bytes.Buffer
-	if err := report.NewOCSF().Render(context.Background(), []core.Finding{f}, nil, &buf); err != nil {
+	if err := report.NewOCSF().Render(context.Background(), []compliancekit.Finding{f}, nil, &buf); err != nil {
 		t.Fatalf("emit: %v", err)
 	}
 

@@ -5,15 +5,15 @@ import (
 	"fmt"
 
 	k8scol "github.com/darpanzope/compliancekit/internal/collectors/k8s"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // ----- Service LoadBalancer public exposure ----------------------
 
-var CheckServiceLBPublic = core.Check{
+var CheckServiceLBPublic = compliancekit.Check{
 	ID:           "k8s-service-loadbalancer-source-ranges",
 	Title:        "LoadBalancer Services should restrict source ranges",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "kubernetes",
 	Service:      "network",
 	ResourceType: k8scol.ServiceType,
@@ -34,8 +34,8 @@ var CheckServiceLBPublic = core.Check{
 	Scanner: "network.ServiceLBPublic",
 }
 
-func ServiceLBPublic(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func ServiceLBPublic(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, s := range g.ByType(k8scol.ServiceType) {
 		t, _ := s.Attributes["type"].(string)
 		if t != "LoadBalancer" {
@@ -44,10 +44,10 @@ func ServiceLBPublic(_ context.Context, g *core.ResourceGraph) ([]core.Finding, 
 		sr, _ := s.Attributes["load_balancer_source_ranges"].([]string)
 		f := serviceFinding(CheckServiceLBPublic, s)
 		if len(sr) > 0 {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("service %q: LB restricted to %d source range(s)", networkDesc(s), len(sr))
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("service %q: LoadBalancer without source-range restriction", networkDesc(s))
 		}
 		findings = append(findings, f)
@@ -57,10 +57,10 @@ func ServiceLBPublic(_ context.Context, g *core.ResourceGraph) ([]core.Finding, 
 
 // ----- Service LoadBalancer plain HTTP ---------------------------
 
-var CheckServiceLBPlainHTTP = core.Check{
+var CheckServiceLBPlainHTTP = compliancekit.Check{
 	ID:           "k8s-service-loadbalancer-no-tls",
 	Title:        "LoadBalancer Services should not expose plain HTTP only",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "kubernetes",
 	Service:      "network",
 	ResourceType: k8scol.ServiceType,
@@ -81,8 +81,8 @@ var CheckServiceLBPlainHTTP = core.Check{
 	Scanner: "network.ServiceLBPlainHTTP",
 }
 
-func ServiceLBPlainHTTP(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func ServiceLBPlainHTTP(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, s := range g.ByType(k8scol.ServiceType) {
 		t, _ := s.Attributes["type"].(string)
 		if t != "LoadBalancer" {
@@ -93,10 +93,10 @@ func ServiceLBPlainHTTP(_ context.Context, g *core.ResourceGraph) ([]core.Findin
 		f := serviceFinding(CheckServiceLBPlainHTTP, s)
 		switch {
 		case has80 && !has443:
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("service %q: LB exposes port 80 without 443", networkDesc(s))
 		default:
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("service %q: LB ports OK", networkDesc(s))
 		}
 		findings = append(findings, f)
@@ -106,10 +106,10 @@ func ServiceLBPlainHTTP(_ context.Context, g *core.ResourceGraph) ([]core.Findin
 
 // ----- Service ExternalIPs --------------------------------------
 
-var CheckServiceExternalIPs = core.Check{
+var CheckServiceExternalIPs = compliancekit.Check{
 	ID:           "k8s-service-external-ips",
 	Title:        "Services should not set spec.externalIPs",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "kubernetes",
 	Service:      "network",
 	ResourceType: k8scol.ServiceType,
@@ -130,16 +130,16 @@ var CheckServiceExternalIPs = core.Check{
 	Scanner: "network.ServiceExternalIPs",
 }
 
-func ServiceExternalIPs(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func ServiceExternalIPs(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, s := range g.ByType(k8scol.ServiceType) {
 		ips, _ := s.Attributes["external_ips"].([]string)
 		f := serviceFinding(CheckServiceExternalIPs, s)
 		if len(ips) > 0 {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("service %q: externalIPs set: %v", networkDesc(s), ips)
 		} else {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("service %q: no externalIPs", networkDesc(s))
 		}
 		findings = append(findings, f)
@@ -149,10 +149,10 @@ func ServiceExternalIPs(_ context.Context, g *core.ResourceGraph) ([]core.Findin
 
 // ----- Service NodePort exposure --------------------------------
 
-var CheckServiceNodePort = core.Check{
+var CheckServiceNodePort = compliancekit.Check{
 	ID:           "k8s-service-nodeport",
 	Title:        "Services should generally not use type: NodePort",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "kubernetes",
 	Service:      "network",
 	ResourceType: k8scol.ServiceType,
@@ -174,8 +174,8 @@ var CheckServiceNodePort = core.Check{
 	Scanner: "network.ServiceNodePort",
 }
 
-func ServiceNodePort(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func ServiceNodePort(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, s := range g.ByType(k8scol.ServiceType) {
 		t, _ := s.Attributes["type"].(string)
 		if t == "" {
@@ -183,10 +183,10 @@ func ServiceNodePort(_ context.Context, g *core.ResourceGraph) ([]core.Finding, 
 		}
 		f := serviceFinding(CheckServiceNodePort, s)
 		if t == "NodePort" {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("service %q: type=NodePort", networkDesc(s))
 		} else {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("service %q: type=%s", networkDesc(s), t)
 		}
 		findings = append(findings, f)
@@ -196,10 +196,10 @@ func ServiceNodePort(_ context.Context, g *core.ResourceGraph) ([]core.Finding, 
 
 // ----- Service public without network policy ---------------------
 
-var CheckServicePublicNoNP = core.Check{
+var CheckServicePublicNoNP = compliancekit.Check{
 	ID:           "k8s-service-public-without-network-policy",
 	Title:        "Public Services should run in a namespace with at least one NetworkPolicy",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "kubernetes",
 	Service:      "network",
 	ResourceType: k8scol.ServiceType,
@@ -221,13 +221,13 @@ var CheckServicePublicNoNP = core.Check{
 	Scanner: "network.ServicePublicNoNP",
 }
 
-func ServicePublicNoNP(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
+func ServicePublicNoNP(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
 	npsByNs := map[string]int{}
 	for _, np := range g.ByType(k8scol.NetworkPolicyType) {
 		ns, _ := np.Attributes["namespace"].(string)
 		npsByNs[ns]++
 	}
-	findings := []core.Finding{}
+	findings := []compliancekit.Finding{}
 	for _, s := range g.ByType(k8scol.ServiceType) {
 		t, _ := s.Attributes["type"].(string)
 		ns, _ := s.Attributes["namespace"].(string)
@@ -236,10 +236,10 @@ func ServicePublicNoNP(_ context.Context, g *core.ResourceGraph) ([]core.Finding
 		}
 		f := serviceFinding(CheckServicePublicNoNP, s)
 		if npsByNs[ns] > 0 {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("service %q: namespace has %d NetworkPolicy resource(s)", networkDesc(s), npsByNs[ns])
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("service %q: %s exposed but namespace %q has no NetworkPolicy", networkDesc(s), t, ns)
 		}
 		findings = append(findings, f)
@@ -250,18 +250,18 @@ func ServicePublicNoNP(_ context.Context, g *core.ResourceGraph) ([]core.Finding
 // ----- helpers + init --------------------------------------------
 
 func init() {
-	core.Register(CheckServiceLBPublic, ServiceLBPublic)
-	core.Register(CheckServiceLBPlainHTTP, ServiceLBPlainHTTP)
-	core.Register(CheckServiceExternalIPs, ServiceExternalIPs)
-	core.Register(CheckServiceNodePort, ServiceNodePort)
-	core.Register(CheckServicePublicNoNP, ServicePublicNoNP)
+	compliancekit.Register(CheckServiceLBPublic, ServiceLBPublic)
+	compliancekit.Register(CheckServiceLBPlainHTTP, ServiceLBPlainHTTP)
+	compliancekit.Register(CheckServiceExternalIPs, ServiceExternalIPs)
+	compliancekit.Register(CheckServiceNodePort, ServiceNodePort)
+	compliancekit.Register(CheckServicePublicNoNP, ServicePublicNoNP)
 	// v0.22 phase 3 — Ingress checks moved to network_ingress.go;
 	// NetworkPolicy checks moved to network_policies.go.
 }
 
 // serviceFinding / ingressFinding wrap the common finding construction.
-func serviceFinding(check core.Check, svc core.Resource) core.Finding {
-	return core.Finding{
+func serviceFinding(check compliancekit.Check, svc compliancekit.Resource) compliancekit.Finding {
+	return compliancekit.Finding{
 		CheckID:  check.ID,
 		Severity: check.Severity,
 		Resource: svc.Ref(),
@@ -269,8 +269,8 @@ func serviceFinding(check core.Check, svc core.Resource) core.Finding {
 	}
 }
 
-func ingressFinding(check core.Check, ing core.Resource) core.Finding {
-	return core.Finding{
+func ingressFinding(check compliancekit.Check, ing compliancekit.Resource) compliancekit.Finding {
+	return compliancekit.Finding{
 		CheckID:  check.ID,
 		Severity: check.Severity,
 		Resource: ing.Ref(),
@@ -279,7 +279,7 @@ func ingressFinding(check core.Check, ing core.Resource) core.Finding {
 }
 
 // networkDesc returns "ns/name" for namespaced resources.
-func networkDesc(r core.Resource) string {
+func networkDesc(r compliancekit.Resource) string {
 	ns, _ := r.Attributes["namespace"].(string)
 	if ns == "" {
 		return r.Name
@@ -309,7 +309,7 @@ func portsHaveSpecific(ports []any, want ...int) (has0, has1 bool) {
 // namespace has at least one NetworkPolicy whose podSelector matches
 // all pods AND whose policyTypes includes the named type AND whose
 // rules are empty (= default-deny semantics).
-func namespaceNPCoverageCheck(g *core.ResourceGraph, check core.Check, policyType string) []core.Finding {
+func namespaceNPCoverageCheck(g *compliancekit.ResourceGraph, check compliancekit.Check, policyType string) []compliancekit.Finding {
 	coveredByNs := map[string]bool{}
 	for _, np := range g.ByType(k8scol.NetworkPolicyType) {
 		ns, _ := np.Attributes["namespace"].(string)
@@ -344,22 +344,22 @@ func namespaceNPCoverageCheck(g *core.ResourceGraph, check core.Check, policyTyp
 		}
 	}
 
-	findings := []core.Finding{}
+	findings := []compliancekit.Finding{}
 	for _, ns := range knownNamespaces(g) {
 		if isSystemNamespace(ns) {
 			continue
 		}
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  check.ID,
 			Severity: check.Severity,
-			Resource: core.ResourceRef{ID: "k8s.namespace." + ns, Type: k8scol.NamespaceType, Name: ns},
+			Resource: compliancekit.ResourceRef{ID: "k8s.namespace." + ns, Type: k8scol.NamespaceType, Name: ns},
 			Tags:     check.Tags,
 		}
 		if coveredByNs[ns] {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("namespace %q: default-deny %s NetworkPolicy in place", ns, policyType)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("namespace %q: no default-deny %s NetworkPolicy", ns, policyType)
 		}
 		findings = append(findings, f)
@@ -370,7 +370,7 @@ func namespaceNPCoverageCheck(g *core.ResourceGraph, check core.Check, policyTyp
 // knownNamespaces returns the set of namespaces referenced by any
 // namespaced resource in the graph. Until Phase 6 lands the explicit
 // k8s.namespace resource type, this is the inferred set.
-func knownNamespaces(g *core.ResourceGraph) []string {
+func knownNamespaces(g *compliancekit.ResourceGraph) []string {
 	seen := map[string]struct{}{}
 	for _, types := range [][]string{
 		{k8scol.PodType, k8scol.DeploymentType, k8scol.StatefulSetType, k8scol.DaemonSetType,
@@ -397,21 +397,21 @@ func knownNamespaces(g *core.ResourceGraph) []string {
 
 // npAttributeCheck flags any NetworkPolicy whose named bool attribute
 // is true.
-func npAttributeCheck(g *core.ResourceGraph, check core.Check, attr, failMsg, passMsg string) []core.Finding {
-	findings := []core.Finding{}
+func npAttributeCheck(g *compliancekit.ResourceGraph, check compliancekit.Check, attr, failMsg, passMsg string) []compliancekit.Finding {
+	findings := []compliancekit.Finding{}
 	for _, np := range g.ByType(k8scol.NetworkPolicyType) {
 		flag, _ := np.Attributes[attr].(bool)
-		f := core.Finding{
+		f := compliancekit.Finding{
 			CheckID:  check.ID,
 			Severity: check.Severity,
 			Resource: np.Ref(),
 			Tags:     check.Tags,
 		}
 		if flag {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("networkpolicy %q: %s", networkDesc(np), failMsg)
 		} else {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("networkpolicy %q: %s", networkDesc(np), passMsg)
 		}
 		findings = append(findings, f)

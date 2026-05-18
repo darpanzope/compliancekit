@@ -4,11 +4,11 @@ import (
 	"testing"
 
 	"github.com/darpanzope/compliancekit/internal/collectors/cloudcommon"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
-// Compile-time assertion that *Collector satisfies core.Collector.
-var _ core.Collector = (*Collector)(nil)
+// Compile-time assertion that *Collector satisfies compliancekit.Collector.
+var _ compliancekit.Collector = (*Collector)(nil)
 
 func TestNew_ProjectFingerprint(t *testing.T) {
 	c := New("hcloud-tok-abc12345-xyz")

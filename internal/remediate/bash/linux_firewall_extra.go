@@ -1,8 +1,8 @@
 package bash
 
 import (
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.20 phase 8 — bash strategies for the 10 firewall-depth checks.
@@ -10,7 +10,7 @@ import (
 func init() {
 	register("bash-linux-firewall-ufw-default-deny-outgoing",
 		[]string{"linux-firewall-ufw-default-deny-outgoing"},
-		func(_ core.Finding) (remediate.Snippet, error) {
+		func(_ compliancekit.Finding) (remediate.Snippet, error) {
 			return remediate.Snippet{
 				Risk: remediate.RiskReview, Idempotent: true,
 				Content: `# WARNING: this drops every outbound connection that isn't explicitly allowed.
@@ -27,7 +27,7 @@ sudo ufw reload`,
 
 	register("bash-linux-firewall-some-active",
 		[]string{"linux-firewall-some-active"},
-		func(_ core.Finding) (remediate.Snippet, error) {
+		func(_ compliancekit.Finding) (remediate.Snippet, error) {
 			return remediate.Snippet{
 				Risk: remediate.RiskReview, Idempotent: true,
 				Content: `# Enable the appropriate firewall per distro.
@@ -52,7 +52,7 @@ esac`,
 
 	register("bash-linux-firewall-nftables-on-rhel",
 		[]string{"linux-firewall-nftables-on-rhel"},
-		func(_ core.Finding) (remediate.Snippet, error) {
+		func(_ compliancekit.Finding) (remediate.Snippet, error) {
 			return remediate.Snippet{
 				Risk: remediate.RiskReview, Idempotent: true,
 				Content: `sudo systemctl enable --now nftables
@@ -77,7 +77,7 @@ sudo systemctl restart nftables`,
 	for id, hint := range manualFirewallHints {
 		id := id
 		hint := hint
-		register("bash-"+id, []string{id}, func(_ core.Finding) (remediate.Snippet, error) {
+		register("bash-"+id, []string{id}, func(_ compliancekit.Finding) (remediate.Snippet, error) {
 			return remediate.Snippet{
 				Risk: remediate.RiskManual, Idempotent: false,
 				Content: "# Manual-verify — inspect the current state, record evidence in waivers.yaml.\n" + hint + "\n",

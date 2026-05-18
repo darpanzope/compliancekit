@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // PagerDutyConfig configures the PagerDuty Events v2 sink. PagerDuty
@@ -34,7 +34,7 @@ type PagerDutyConfig struct {
 	// endpoint. Tests inject a stub here.
 	EventsURL string
 
-	SeverityFloor core.Severity
+	SeverityFloor compliancekit.Severity
 
 	HTTPClient *http.Client
 }
@@ -51,12 +51,12 @@ func NewPagerDuty(cfg PagerDutyConfig) *PagerDuty {
 	if cfg.EventsURL == "" {
 		cfg.EventsURL = "https://events.pagerduty.com/v2/enqueue"
 	}
-	if cfg.SeverityFloor == core.SeverityUnknown {
-		// Zero-value of core.Severity is SeverityUnknown.
+	if cfg.SeverityFloor == compliancekit.SeverityUnknown {
+		// Zero-value of compliancekit.Severity is SeverityUnknown.
 		// PagerDuty pages humans — default to critical-only to
 		// avoid waking on-call on noise. Operators with a different
 		// risk appetite override via PAGERDUTY_THRESHOLD.
-		cfg.SeverityFloor = core.SeverityCritical
+		cfg.SeverityFloor = compliancekit.SeverityCritical
 	}
 	return &PagerDuty{cfg: cfg}
 }
@@ -68,7 +68,7 @@ func (p *PagerDuty) Name() string { return "pagerduty" }
 func (p *PagerDuty) Configured() bool { return p.cfg.IntegrationKey != "" }
 
 // Threshold returns the per-sink severity floor.
-func (p *PagerDuty) Threshold() core.Severity { return p.cfg.SeverityFloor }
+func (p *PagerDuty) Threshold() compliancekit.Severity { return p.cfg.SeverityFloor }
 
 // Send dispatches one Events v2 enqueue per notification. PagerDuty
 // dedups on dedup_key — we use the notification.Fingerprint so a
@@ -153,13 +153,13 @@ func (p *PagerDuty) sendOne(ctx context.Context, n Notification) error {
 
 // pdSeverity maps compliancekit severity to PagerDuty's enum.
 // PagerDuty has only four levels: info, warning, error, critical.
-func pdSeverity(s core.Severity) string {
+func pdSeverity(s compliancekit.Severity) string {
 	switch s {
-	case core.SeverityCritical:
+	case compliancekit.SeverityCritical:
 		return "critical"
-	case core.SeverityHigh:
+	case compliancekit.SeverityHigh:
 		return "error"
-	case core.SeverityMedium:
+	case compliancekit.SeverityMedium:
 		return "warning"
 	}
 	return "info"
@@ -172,7 +172,7 @@ func init() {
 		Source:         os.Getenv("PAGERDUTY_SOURCE"),
 	}
 	if t := os.Getenv("PAGERDUTY_THRESHOLD"); t != "" {
-		if sev, err := core.ParseSeverity(t); err == nil {
+		if sev, err := compliancekit.ParseSeverity(t); err == nil {
 			cfg.SeverityFloor = sev
 		}
 	}

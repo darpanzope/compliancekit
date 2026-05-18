@@ -5,11 +5,11 @@ import (
 	"testing"
 
 	linuxcol "github.com/darpanzope/compliancekit/internal/collectors/linux"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
-func loginHost(name string, ld linuxcol.LoginDefs) core.Resource {
-	return core.Resource{
+func loginHost(name string, ld linuxcol.LoginDefs) compliancekit.Resource {
+	return compliancekit.Resource{
 		ID: "linux.host." + name, Type: linuxcol.HostType, Name: name, Provider: "linux",
 		Attributes: map[string]any{
 			"reachable":  true,
@@ -22,11 +22,11 @@ func TestPassMaxDays(t *testing.T) {
 	cases := []struct {
 		name string
 		ld   linuxcol.LoginDefs
-		want core.Status
+		want compliancekit.Status
 	}{
-		{"in range", linuxcol.LoginDefs{HasPassMaxDays: true, PassMaxDays: 90}, core.StatusPass},
-		{"too long", linuxcol.LoginDefs{HasPassMaxDays: true, PassMaxDays: 400}, core.StatusFail},
-		{"unset", linuxcol.LoginDefs{}, core.StatusFail},
+		{"in range", linuxcol.LoginDefs{HasPassMaxDays: true, PassMaxDays: 90}, compliancekit.StatusPass},
+		{"too long", linuxcol.LoginDefs{HasPassMaxDays: true, PassMaxDays: 400}, compliancekit.StatusFail},
+		{"unset", linuxcol.LoginDefs{}, compliancekit.StatusFail},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -43,12 +43,12 @@ func TestPassMinDays(t *testing.T) {
 	cases := []struct {
 		name string
 		ld   linuxcol.LoginDefs
-		want core.Status
+		want compliancekit.Status
 	}{
-		{"7 days → pass", linuxcol.LoginDefs{HasPassMinDays: true, PassMinDays: 7}, core.StatusPass},
-		{"1 day → pass (boundary)", linuxcol.LoginDefs{HasPassMinDays: true, PassMinDays: 1}, core.StatusPass},
-		{"0 days → fail (must be ≥1)", linuxcol.LoginDefs{HasPassMinDays: true, PassMinDays: 0}, core.StatusFail},
-		{"unset → fail", linuxcol.LoginDefs{}, core.StatusFail},
+		{"7 days → pass", linuxcol.LoginDefs{HasPassMinDays: true, PassMinDays: 7}, compliancekit.StatusPass},
+		{"1 day → pass (boundary)", linuxcol.LoginDefs{HasPassMinDays: true, PassMinDays: 1}, compliancekit.StatusPass},
+		{"0 days → fail (must be ≥1)", linuxcol.LoginDefs{HasPassMinDays: true, PassMinDays: 0}, compliancekit.StatusFail},
+		{"unset → fail", linuxcol.LoginDefs{}, compliancekit.StatusFail},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -65,12 +65,12 @@ func TestPassWarnAge(t *testing.T) {
 	cases := []struct {
 		name string
 		ld   linuxcol.LoginDefs
-		want core.Status
+		want compliancekit.Status
 	}{
-		{"14 days → pass", linuxcol.LoginDefs{HasPassWarnAge: true, PassWarnAge: 14}, core.StatusPass},
-		{"7 days → pass (boundary)", linuxcol.LoginDefs{HasPassWarnAge: true, PassWarnAge: 7}, core.StatusPass},
-		{"3 days → fail (must be ≥7)", linuxcol.LoginDefs{HasPassWarnAge: true, PassWarnAge: 3}, core.StatusFail},
-		{"unset → fail", linuxcol.LoginDefs{}, core.StatusFail},
+		{"14 days → pass", linuxcol.LoginDefs{HasPassWarnAge: true, PassWarnAge: 14}, compliancekit.StatusPass},
+		{"7 days → pass (boundary)", linuxcol.LoginDefs{HasPassWarnAge: true, PassWarnAge: 7}, compliancekit.StatusPass},
+		{"3 days → fail (must be ≥7)", linuxcol.LoginDefs{HasPassWarnAge: true, PassWarnAge: 3}, compliancekit.StatusFail},
+		{"unset → fail", linuxcol.LoginDefs{}, compliancekit.StatusFail},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -86,14 +86,14 @@ func TestPassWarnAge(t *testing.T) {
 func TestLoginDefsUnreadable_AllReturnError(t *testing.T) {
 	// Host without login_defs attr → every login-defs check should
 	// surface StatusError so operators know data collection failed.
-	host := core.Resource{
+	host := compliancekit.Resource{
 		ID: "linux.host.h", Type: linuxcol.HostType, Name: "h", Provider: "linux",
 		Attributes: map[string]any{"reachable": true},
 	}
 	g := newGraph(t, host)
-	for _, fn := range []core.CheckFunc{PassMaxDays, PassMinDays, PassWarnAge, EncryptMethod, UmaskCheck} {
+	for _, fn := range []compliancekit.CheckFunc{PassMaxDays, PassMinDays, PassWarnAge, EncryptMethod, UmaskCheck} {
 		findings, _ := fn(context.Background(), g)
-		if findings[0].Status != core.StatusError {
+		if findings[0].Status != compliancekit.StatusError {
 			t.Errorf("status=%v want StatusError when login_defs absent", findings[0].Status)
 		}
 	}
@@ -102,12 +102,12 @@ func TestLoginDefsUnreadable_AllReturnError(t *testing.T) {
 func TestEncryptMethod(t *testing.T) {
 	cases := []struct {
 		method string
-		want   core.Status
+		want   compliancekit.Status
 	}{
-		{"SHA512", core.StatusPass},
-		{"YESCRYPT", core.StatusPass},
-		{"MD5", core.StatusFail},
-		{"", core.StatusFail},
+		{"SHA512", compliancekit.StatusPass},
+		{"YESCRYPT", compliancekit.StatusPass},
+		{"MD5", compliancekit.StatusFail},
+		{"", compliancekit.StatusFail},
 	}
 	for _, c := range cases {
 		t.Run(c.method, func(t *testing.T) {
@@ -123,12 +123,12 @@ func TestEncryptMethod(t *testing.T) {
 func TestUmaskCheck(t *testing.T) {
 	cases := []struct {
 		umask string
-		want  core.Status
+		want  compliancekit.Status
 	}{
-		{"027", core.StatusPass},
-		{"077", core.StatusPass},
-		{"022", core.StatusFail},
-		{"000", core.StatusFail},
+		{"027", compliancekit.StatusPass},
+		{"077", compliancekit.StatusPass},
+		{"022", compliancekit.StatusFail},
+		{"000", compliancekit.StatusFail},
 	}
 	for _, c := range cases {
 		t.Run(c.umask, func(t *testing.T) {
@@ -142,19 +142,19 @@ func TestUmaskCheck(t *testing.T) {
 }
 
 func TestManualLoginChecks(t *testing.T) {
-	host := core.Resource{
+	host := compliancekit.Resource{
 		ID: "linux.host.h", Type: linuxcol.HostType, Name: "h", Provider: "linux",
 		Attributes: map[string]any{"reachable": true},
 	}
 	g := newGraph(t, host)
 	for _, spec := range manualLoginChecks {
 		t.Run(spec.id, func(t *testing.T) {
-			fn, ok := core.Lookup(spec.id)
+			fn, ok := compliancekit.Lookup(spec.id)
 			if !ok {
 				t.Fatalf("check %q not registered", spec.id)
 			}
 			findings, _ := fn(context.Background(), g)
-			if findings[0].Status != core.StatusError {
+			if findings[0].Status != compliancekit.StatusError {
 				t.Errorf("status=%v want StatusError (manual-verify)", findings[0].Status)
 			}
 		})

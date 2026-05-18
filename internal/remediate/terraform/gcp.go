@@ -3,9 +3,9 @@ package terraform
 import (
 	"fmt"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate"
 	"github.com/darpanzope/compliancekit/internal/remediate/render"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 func init() {
@@ -44,7 +44,7 @@ func init() {
 		renderGCPIAMPrimitiveManual)
 }
 
-func renderGCPStoragePAP(f core.Finding) (remediate.Snippet, error) {
+func renderGCPStoragePAP(f compliancekit.Finding) (remediate.Snippet, error) {
 	bucket := f.Resource.Name
 	if bucket == "" {
 		bucket = f.Resource.ID
@@ -66,7 +66,7 @@ func renderGCPStoragePAP(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderGCPStorageUBLA(f core.Finding) (remediate.Snippet, error) {
+func renderGCPStorageUBLA(f compliancekit.Finding) (remediate.Snippet, error) {
 	bucket := f.Resource.Name
 	if bucket == "" {
 		bucket = f.Resource.ID
@@ -88,7 +88,7 @@ func renderGCPStorageUBLA(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderGCPStorageVersioning(f core.Finding) (remediate.Snippet, error) {
+func renderGCPStorageVersioning(f compliancekit.Finding) (remediate.Snippet, error) {
 	bucket := f.Resource.Name
 	if bucket == "" {
 		bucket = f.Resource.ID
@@ -111,7 +111,7 @@ func renderGCPStorageVersioning(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderGCPStorageLogging(f core.Finding) (remediate.Snippet, error) {
+func renderGCPStorageLogging(f compliancekit.Finding) (remediate.Snippet, error) {
 	bucket := f.Resource.Name
 	if bucket == "" {
 		bucket = f.Resource.ID
@@ -134,7 +134,7 @@ func renderGCPStorageLogging(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderGCPSQLNoPublic(f core.Finding) (remediate.Snippet, error) {
+func renderGCPSQLNoPublic(f compliancekit.Finding) (remediate.Snippet, error) {
 	name := f.Resource.Name
 	if name == "" {
 		name = f.Resource.ID
@@ -158,7 +158,7 @@ func renderGCPSQLNoPublic(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderGCPSQLDeletionProtection(f core.Finding) (remediate.Snippet, error) {
+func renderGCPSQLDeletionProtection(f compliancekit.Finding) (remediate.Snippet, error) {
 	name := f.Resource.Name
 	if name == "" {
 		name = f.Resource.ID
@@ -179,7 +179,7 @@ func renderGCPSQLDeletionProtection(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderGCPSQLBackups(f core.Finding) (remediate.Snippet, error) {
+func renderGCPSQLBackups(f compliancekit.Finding) (remediate.Snippet, error) {
 	name := f.Resource.Name
 	if name == "" {
 		name = f.Resource.ID
@@ -208,7 +208,7 @@ func renderGCPSQLBackups(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderGCPComputeShieldedVM(f core.Finding) (remediate.Snippet, error) {
+func renderGCPComputeShieldedVM(f compliancekit.Finding) (remediate.Snippet, error) {
 	name := f.Resource.Name
 	if name == "" {
 		name = f.Resource.ID
@@ -232,7 +232,7 @@ func renderGCPComputeShieldedVM(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderGCPBigQueryCMEK(f core.Finding) (remediate.Snippet, error) {
+func renderGCPBigQueryCMEK(f compliancekit.Finding) (remediate.Snippet, error) {
 	name := f.Resource.Name
 	if name == "" {
 		name = f.Resource.ID
@@ -253,7 +253,7 @@ func renderGCPBigQueryCMEK(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderGCPKMSRotation(f core.Finding) (remediate.Snippet, error) {
+func renderGCPKMSRotation(f compliancekit.Finding) (remediate.Snippet, error) {
 	name := f.Resource.Name
 	if name == "" {
 		name = f.Resource.ID
@@ -275,7 +275,7 @@ func renderGCPKMSRotation(f core.Finding) (remediate.Snippet, error) {
 	}, nil
 }
 
-func renderGCPIAMPrimitiveManual(f core.Finding) (remediate.Snippet, error) {
+func renderGCPIAMPrimitiveManual(f compliancekit.Finding) (remediate.Snippet, error) {
 	return remediate.Snippet{
 		Risk:       remediate.RiskManual,
 		Idempotent: false,

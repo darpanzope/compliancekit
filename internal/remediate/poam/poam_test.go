@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/remediate"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 func fixedTime() time.Time {
@@ -21,16 +21,16 @@ func TestWrite_ProducesValidJSON(t *testing.T) {
 	snippets := []remediate.Snippet{
 		{
 			CheckID:  "aws-iam-root-mfa",
-			Resource: core.ResourceRef{ID: "aws.account.123", Type: "aws.account", Name: "123"},
+			Resource: compliancekit.ResourceRef{ID: "aws.account.123", Type: "aws.account", Name: "123"},
 			Risk:     remediate.RiskManual,
 			Notes:    "Root MFA must be enabled via console.",
 		},
 	}
-	unmatched := []core.Finding{
+	unmatched := []compliancekit.Finding{
 		{
 			CheckID:  "ingest.trivy.AVD-AWS-9999",
-			Resource: core.ResourceRef{ID: "trivy:image:foo"},
-			Severity: core.SeverityHigh,
+			Resource: compliancekit.ResourceRef{ID: "trivy:image:foo"},
+			Severity: compliancekit.SeverityHigh,
 			Message:  "vulnerable package — manual review",
 		},
 	}
@@ -64,7 +64,7 @@ func TestWrite_ProducesValidJSON(t *testing.T) {
 
 func TestBuildIsDeterministic(t *testing.T) {
 	snippets := []remediate.Snippet{
-		{CheckID: "x", Resource: core.ResourceRef{ID: "r1"}, Risk: remediate.RiskManual, Notes: "note"},
+		{CheckID: "x", Resource: compliancekit.ResourceRef{ID: "r1"}, Risk: remediate.RiskManual, Notes: "note"},
 	}
 	opts := Options{GeneratedAt: fixedTime(), Project: "p", Period: "2026-Q2"}
 	first := build(snippets, nil, opts)
@@ -80,8 +80,8 @@ func TestBuildIsDeterministic(t *testing.T) {
 func TestSkipNonManualSnippets(t *testing.T) {
 	// A RiskSafe snippet must not appear in the POA&M.
 	snippets := []remediate.Snippet{
-		{CheckID: "safe", Resource: core.ResourceRef{ID: "r"}, Risk: remediate.RiskSafe},
-		{CheckID: "manual", Resource: core.ResourceRef{ID: "r"}, Risk: remediate.RiskManual, Notes: "manual"},
+		{CheckID: "safe", Resource: compliancekit.ResourceRef{ID: "r"}, Risk: remediate.RiskSafe},
+		{CheckID: "manual", Resource: compliancekit.ResourceRef{ID: "r"}, Risk: remediate.RiskManual, Notes: "manual"},
 	}
 	doc := build(snippets, nil, Options{GeneratedAt: fixedTime()})
 	if len(doc.PlanOfActionAndMilestones.Items) != 1 {
@@ -95,8 +95,8 @@ func TestSkipNonManualSnippets(t *testing.T) {
 func TestSortStable(t *testing.T) {
 	// Same checks given in scrambled order produce sorted output.
 	snippets := []remediate.Snippet{
-		{CheckID: "z-check", Resource: core.ResourceRef{ID: "r-2"}, Risk: remediate.RiskManual},
-		{CheckID: "a-check", Resource: core.ResourceRef{ID: "r-1"}, Risk: remediate.RiskManual},
+		{CheckID: "z-check", Resource: compliancekit.ResourceRef{ID: "r-2"}, Risk: remediate.RiskManual},
+		{CheckID: "a-check", Resource: compliancekit.ResourceRef{ID: "r-1"}, Risk: remediate.RiskManual},
 	}
 	doc := build(snippets, nil, Options{GeneratedAt: fixedTime()})
 	if len(doc.PlanOfActionAndMilestones.Items) != 2 {

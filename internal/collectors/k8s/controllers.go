@@ -11,17 +11,17 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/darpanzope/compliancekit/internal/collectors/cloudcommon"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // collectControllers emits Deployments, StatefulSets, DaemonSets, Jobs,
 // CronJobs, and PodDisruptionBudgets — every workload controller that
 // owns Pods plus the policy resource that constrains voluntary
 // disruptions. Pods themselves come from collectWorkloads (phase 1).
-func (c *Collector) collectControllers(ctx context.Context, scope *ContextScope) ([]core.Resource, error) {
+func (c *Collector) collectControllers(ctx context.Context, scope *ContextScope) ([]compliancekit.Resource, error) {
 	// Initial capacity is a guess — six kinds with some pods is in the
 	// neighborhood of 32 resources on a small cluster.
-	out := make([]core.Resource, 0, 32)
+	out := make([]compliancekit.Resource, 0, 32)
 
 	deps, err := listDeployments(ctx, scope)
 	if err != nil {
@@ -271,7 +271,7 @@ func filterPDBsByExclude(in []policyv1.PodDisruptionBudget, ex []string) []polic
 
 // ---- Resource builders ----
 
-func (c *Collector) deploymentResource(scope *ContextScope, d *appsv1.Deployment) core.Resource {
+func (c *Collector) deploymentResource(scope *ContextScope, d *appsv1.Deployment) compliancekit.Resource {
 	replicas := int32Or(d.Spec.Replicas, 1)
 	maxUnavail, maxSurge := rollingParams(d.Spec.Strategy.RollingUpdate)
 	attrs := map[string]any{
@@ -286,7 +286,7 @@ func (c *Collector) deploymentResource(scope *ContextScope, d *appsv1.Deployment
 		"min_ready_seconds":     int(d.Spec.MinReadySeconds),
 		"has_pod_anti_affinity": hasPodAntiAffinity(&d.Spec.Template.Spec),
 	}
-	r := core.Resource{
+	r := compliancekit.Resource{
 		ID:         fmt.Sprintf("%s.%s.%s.%s", DeploymentType, scope.Name, d.Namespace, d.Name),
 		Type:       DeploymentType,
 		Name:       d.Name,
@@ -300,7 +300,7 @@ func (c *Collector) deploymentResource(scope *ContextScope, d *appsv1.Deployment
 	return r
 }
 
-func (c *Collector) statefulSetResource(scope *ContextScope, s *appsv1.StatefulSet) core.Resource {
+func (c *Collector) statefulSetResource(scope *ContextScope, s *appsv1.StatefulSet) compliancekit.Resource {
 	replicas := int32Or(s.Spec.Replicas, 1)
 	attrs := map[string]any{
 		"namespace":             s.Namespace,
@@ -312,7 +312,7 @@ func (c *Collector) statefulSetResource(scope *ContextScope, s *appsv1.StatefulS
 		"update_strategy_type":  string(s.Spec.UpdateStrategy.Type),
 		"has_pod_anti_affinity": hasPodAntiAffinity(&s.Spec.Template.Spec),
 	}
-	r := core.Resource{
+	r := compliancekit.Resource{
 		ID:         fmt.Sprintf("%s.%s.%s.%s", StatefulSetType, scope.Name, s.Namespace, s.Name),
 		Type:       StatefulSetType,
 		Name:       s.Name,
@@ -326,7 +326,7 @@ func (c *Collector) statefulSetResource(scope *ContextScope, s *appsv1.StatefulS
 	return r
 }
 
-func (c *Collector) daemonSetResource(scope *ContextScope, d *appsv1.DaemonSet) core.Resource {
+func (c *Collector) daemonSetResource(scope *ContextScope, d *appsv1.DaemonSet) compliancekit.Resource {
 	attrs := map[string]any{
 		"namespace":               d.Namespace,
 		"desired_count":           int(d.Status.DesiredNumberScheduled),
@@ -336,7 +336,7 @@ func (c *Collector) daemonSetResource(scope *ContextScope, d *appsv1.DaemonSet) 
 		"update_strategy_type":    string(d.Spec.UpdateStrategy.Type),
 		"tolerates_control_plane": tolerantOfControlPlane(d.Spec.Template.Spec.Tolerations),
 	}
-	r := core.Resource{
+	r := compliancekit.Resource{
 		ID:         fmt.Sprintf("%s.%s.%s.%s", DaemonSetType, scope.Name, d.Namespace, d.Name),
 		Type:       DaemonSetType,
 		Name:       d.Name,
@@ -350,7 +350,7 @@ func (c *Collector) daemonSetResource(scope *ContextScope, d *appsv1.DaemonSet) 
 	return r
 }
 
-func (c *Collector) jobResource(scope *ContextScope, j *batchv1.Job) core.Resource {
+func (c *Collector) jobResource(scope *ContextScope, j *batchv1.Job) compliancekit.Resource {
 	attrs := map[string]any{
 		"namespace":               j.Namespace,
 		"selector_labels":         selectorLabels(j.Spec.Selector),
@@ -361,7 +361,7 @@ func (c *Collector) jobResource(scope *ContextScope, j *batchv1.Job) core.Resour
 		"owner_kind":              firstOwnerKind(j.OwnerReferences),
 		"owner_name":              firstOwnerName(j.OwnerReferences),
 	}
-	r := core.Resource{
+	r := compliancekit.Resource{
 		ID:         fmt.Sprintf("%s.%s.%s.%s", JobType, scope.Name, j.Namespace, j.Name),
 		Type:       JobType,
 		Name:       j.Name,
@@ -375,7 +375,7 @@ func (c *Collector) jobResource(scope *ContextScope, j *batchv1.Job) core.Resour
 	return r
 }
 
-func (c *Collector) cronJobResource(scope *ContextScope, cj *batchv1.CronJob) core.Resource {
+func (c *Collector) cronJobResource(scope *ContextScope, cj *batchv1.CronJob) compliancekit.Resource {
 	attrs := map[string]any{
 		"namespace":                 cj.Namespace,
 		"labels":                    copyStringMap(cj.Labels),
@@ -387,7 +387,7 @@ func (c *Collector) cronJobResource(scope *ContextScope, cj *batchv1.CronJob) co
 		"failed_jobs_history":       int32Or(cj.Spec.FailedJobsHistoryLimit, -1),
 		"job_backoff_limit":         int32Or(cj.Spec.JobTemplate.Spec.BackoffLimit, -1),
 	}
-	r := core.Resource{
+	r := compliancekit.Resource{
 		ID:         fmt.Sprintf("%s.%s.%s.%s", CronJobType, scope.Name, cj.Namespace, cj.Name),
 		Type:       CronJobType,
 		Name:       cj.Name,
@@ -401,14 +401,14 @@ func (c *Collector) cronJobResource(scope *ContextScope, cj *batchv1.CronJob) co
 	return r
 }
 
-func (c *Collector) pdbResource(scope *ContextScope, p *policyv1.PodDisruptionBudget) core.Resource {
+func (c *Collector) pdbResource(scope *ContextScope, p *policyv1.PodDisruptionBudget) compliancekit.Resource {
 	attrs := map[string]any{
 		"namespace":       p.Namespace,
 		"selector_labels": selectorLabels(p.Spec.Selector),
 		"min_available":   intOrStringValue(p.Spec.MinAvailable),
 		"max_unavailable": intOrStringValue(p.Spec.MaxUnavailable),
 	}
-	r := core.Resource{
+	r := compliancekit.Resource{
 		ID:         fmt.Sprintf("%s.%s.%s.%s", PodDisruptionBudgetType, scope.Name, p.Namespace, p.Name),
 		Type:       PodDisruptionBudgetType,
 		Name:       p.Name,

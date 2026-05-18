@@ -14,7 +14,7 @@ import (
 	"github.com/aws/smithy-go"
 
 	"github.com/darpanzope/compliancekit/internal/collectors/cloudcommon"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // IAMUserType is the resource type for per-user IAM resources.
@@ -48,11 +48,11 @@ type iamClient interface {
 // resource (the checks treat missing fields as "unknown"). Errors
 // from the account-summary / password-policy calls DO abort because
 // without them the account-level checks have no input.
-func (c *Collector) collectIAM(ctx context.Context, account *core.Resource, out []core.Resource) ([]core.Resource, error) {
+func (c *Collector) collectIAM(ctx context.Context, account *compliancekit.Resource, out []compliancekit.Resource) ([]compliancekit.Resource, error) {
 	return c.collectIAMWithClient(ctx, iam.NewFromConfig(c.cfg), account, out)
 }
 
-func (c *Collector) collectIAMWithClient(ctx context.Context, client iamClient, account *core.Resource, out []core.Resource) ([]core.Resource, error) {
+func (c *Collector) collectIAMWithClient(ctx context.Context, client iamClient, account *compliancekit.Resource, out []compliancekit.Resource) ([]compliancekit.Resource, error) {
 	if err := c.enrichAccountWithIAM(ctx, client, account); err != nil {
 		return nil, err
 	}
@@ -68,7 +68,7 @@ func (c *Collector) collectIAMWithClient(ctx context.Context, client iamClient, 
 //     fields the v0.7 password-policy check
 //     reads; nil if no policy is set on the
 //     account)
-func (c *Collector) enrichAccountWithIAM(ctx context.Context, client iamClient, account *core.Resource) error {
+func (c *Collector) enrichAccountWithIAM(ctx context.Context, client iamClient, account *compliancekit.Resource) error {
 	sum, err := client.GetAccountSummary(ctx, &iam.GetAccountSummaryInput{})
 	if err != nil {
 		return fmt.Errorf("aws: iam.GetAccountSummary: %w", err)
@@ -121,7 +121,7 @@ func passwordPolicyMap(p iamtypes.PasswordPolicy) map[string]any {
 // resource carries access keys, console-access info, MFA status,
 // attached managed policies, and inline policies inline so the
 // per-check code reads from a single struct.
-func (c *Collector) collectIAMUsers(ctx context.Context, client iamClient, out []core.Resource) ([]core.Resource, error) {
+func (c *Collector) collectIAMUsers(ctx context.Context, client iamClient, out []compliancekit.Resource) ([]compliancekit.Resource, error) {
 	users, err := listAllUsers(ctx, client)
 	if err != nil {
 		return nil, fmt.Errorf("aws: iam.ListUsers: %w", err)
@@ -156,10 +156,10 @@ func listAllUsers(ctx context.Context, client iamClient) ([]iamtypes.User, error
 	return out, nil
 }
 
-func (c *Collector) buildIAMUserResource(ctx context.Context, client iamClient, u iamtypes.User) (core.Resource, error) {
+func (c *Collector) buildIAMUserResource(ctx context.Context, client iamClient, u iamtypes.User) (compliancekit.Resource, error) {
 	userName := awssdk.ToString(u.UserName)
 	arn := awssdk.ToString(u.Arn)
-	r := core.Resource{
+	r := compliancekit.Resource{
 		ID:       fmt.Sprintf("aws.iam.user.%s", url.PathEscape(arn)),
 		Type:     IAMUserType,
 		Name:     userName,

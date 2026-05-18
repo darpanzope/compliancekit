@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/ingest"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 func mustOpen(t *testing.T, name string) *os.File {
@@ -57,7 +57,7 @@ func TestIngest_Sample(t *testing.T) {
 
 	// aws-access-key-id rule → critical severity per heuristic.
 	awsFinding := r.Findings[0]
-	if awsFinding.Severity != core.SeverityCritical {
+	if awsFinding.Severity != compliancekit.SeverityCritical {
 		t.Errorf("aws-access-key-id severity = %v, want critical", awsFinding.Severity)
 	}
 
@@ -70,14 +70,14 @@ func TestIngest_Sample(t *testing.T) {
 func TestSeverityFromGitleaks(t *testing.T) {
 	cases := []struct {
 		ruleID string
-		want   core.Severity
+		want   compliancekit.Severity
 	}{
-		{"aws-access-key-id", core.SeverityCritical},
-		{"stripe-secret-key", core.SeverityCritical},
-		{"private-key", core.SeverityCritical},
-		{"github-pat-token", core.SeverityHigh},
-		{"generic-api-key", core.SeverityHigh},
-		{"weird-rule", core.SeverityMedium},
+		{"aws-access-key-id", compliancekit.SeverityCritical},
+		{"stripe-secret-key", compliancekit.SeverityCritical},
+		{"private-key", compliancekit.SeverityCritical},
+		{"github-pat-token", compliancekit.SeverityHigh},
+		{"generic-api-key", compliancekit.SeverityHigh},
+		{"weird-rule", compliancekit.SeverityMedium},
 	}
 	for _, c := range cases {
 		got := severityFromGitleaks(c.ruleID)

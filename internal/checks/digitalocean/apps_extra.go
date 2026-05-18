@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	docol "github.com/darpanzope/compliancekit/internal/collectors/digitalocean"
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // v0.19 phase 5 — App Platform depth: alert coverage on every service,
@@ -19,8 +19,8 @@ import (
 // extension. Manual-verify checks fire when DO does not surface the
 // underlying state.
 
-func newAppFinding(check core.Check, app core.Resource) core.Finding {
-	return core.Finding{
+func newAppFinding(check compliancekit.Check, app compliancekit.Resource) compliancekit.Finding {
+	return compliancekit.Finding{
 		CheckID:  check.ID,
 		Severity: check.Severity,
 		Resource: app.Ref(),
@@ -28,9 +28,9 @@ func newAppFinding(check core.Check, app core.Resource) core.Finding {
 	}
 }
 
-func appManualVerify(check core.Check, app core.Resource, control, url string) core.Finding {
+func appManualVerify(check compliancekit.Check, app compliancekit.Resource, control, url string) compliancekit.Finding {
 	f := newAppFinding(check, app)
-	f.Status = core.StatusError
+	f.Status = compliancekit.StatusError
 	f.Message = fmt.Sprintf("app %q: %s — DO API does not expose this state; verify at %s",
 		app.Name, control, url)
 	return f
@@ -38,10 +38,10 @@ func appManualVerify(check core.Check, app core.Resource, control, url string) c
 
 // ----- 1. every service must have a healthcheck -----------------------
 
-var CheckAppServicesHealthcheck = core.Check{
+var CheckAppServicesHealthcheck = compliancekit.Check{
 	ID:           "do-app-services-no-healthcheck",
 	Title:        "Every App Platform service must declare a HealthCheck",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "digitalocean",
 	Service:      "apps",
 	ResourceType: docol.AppType,
@@ -62,8 +62,8 @@ var CheckAppServicesHealthcheck = core.Check{
 	Scanner: "apps.ServicesHealthcheck",
 }
 
-func AppServicesHealthcheck(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func AppServicesHealthcheck(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, a := range g.ByType(docol.AppType) {
 		total, _ := a.Attributes["service_count"].(int)
 		if total == 0 {
@@ -72,10 +72,10 @@ func AppServicesHealthcheck(_ context.Context, g *core.ResourceGraph) ([]core.Fi
 		covered, _ := a.Attributes["services_with_healthcheck"].(int)
 		f := newAppFinding(CheckAppServicesHealthcheck, a)
 		if covered == total {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("app %q: %d/%d services have healthchecks", a.Name, covered, total)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("app %q: %d/%d services missing healthchecks", a.Name, total-covered, total)
 		}
 		findings = append(findings, f)
@@ -85,10 +85,10 @@ func AppServicesHealthcheck(_ context.Context, g *core.ResourceGraph) ([]core.Fi
 
 // ----- 2. log forwarding configured on every service -----------------
 
-var CheckAppServicesLogDest = core.Check{
+var CheckAppServicesLogDest = compliancekit.Check{
 	ID:           "do-app-services-no-log-destinations",
 	Title:        "App Platform services should forward logs to a long-retention sink",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "digitalocean",
 	Service:      "apps",
 	ResourceType: docol.AppType,
@@ -109,8 +109,8 @@ var CheckAppServicesLogDest = core.Check{
 	Scanner: "apps.ServicesLogDest",
 }
 
-func AppServicesLogDest(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func AppServicesLogDest(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, a := range g.ByType(docol.AppType) {
 		total, _ := a.Attributes["service_count"].(int)
 		if total == 0 {
@@ -119,10 +119,10 @@ func AppServicesLogDest(_ context.Context, g *core.ResourceGraph) ([]core.Findin
 		covered, _ := a.Attributes["services_with_log_dest"].(int)
 		f := newAppFinding(CheckAppServicesLogDest, a)
 		if covered == total {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("app %q: %d/%d services forward logs", a.Name, covered, total)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("app %q: %d/%d services have no log destination", a.Name, total-covered, total)
 		}
 		findings = append(findings, f)
@@ -132,10 +132,10 @@ func AppServicesLogDest(_ context.Context, g *core.ResourceGraph) ([]core.Findin
 
 // ----- 3. per-service alert policies -----------------------------------
 
-var CheckAppServicesAlerts = core.Check{
+var CheckAppServicesAlerts = compliancekit.Check{
 	ID:           "do-app-services-no-service-alerts",
 	Title:        "App Platform services should each declare their own alerts",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "digitalocean",
 	Service:      "apps",
 	ResourceType: docol.AppType,
@@ -155,8 +155,8 @@ var CheckAppServicesAlerts = core.Check{
 	Scanner: "apps.ServicesAlerts",
 }
 
-func AppServicesAlerts(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func AppServicesAlerts(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, a := range g.ByType(docol.AppType) {
 		total, _ := a.Attributes["service_count"].(int)
 		if total == 0 {
@@ -165,10 +165,10 @@ func AppServicesAlerts(_ context.Context, g *core.ResourceGraph) ([]core.Finding
 		covered, _ := a.Attributes["services_with_alerts"].(int)
 		f := newAppFinding(CheckAppServicesAlerts, a)
 		if covered == total {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("app %q: %d/%d services have per-service alerts", a.Name, covered, total)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("app %q: %d/%d services have no per-service alerts", a.Name, total-covered, total)
 		}
 		findings = append(findings, f)
@@ -182,10 +182,10 @@ func AppServicesAlerts(_ context.Context, g *core.ResourceGraph) ([]core.Finding
 // shared infrastructure — fine for prototypes, wrong for prod.
 var appBelowProdTiers = []string{"basic-xxs", "basic-xs", "basic-s", "basic-m"}
 
-var CheckAppTierProdGrade = core.Check{
+var CheckAppTierProdGrade = compliancekit.Check{
 	ID:           "do-app-tier-below-production",
 	Title:        "Apps tagged production should run on professional tier or above",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "digitalocean",
 	Service:      "apps",
 	ResourceType: docol.AppType,
@@ -205,8 +205,8 @@ var CheckAppTierProdGrade = core.Check{
 	Scanner: "apps.TierProdGrade",
 }
 
-func AppTierProdGrade(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func AppTierProdGrade(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, a := range g.ByType(docol.AppType) {
 		tier, _ := a.Attributes["tier_slug"].(string)
 		f := newAppFinding(CheckAppTierProdGrade, a)
@@ -218,10 +218,10 @@ func AppTierProdGrade(_ context.Context, g *core.ResourceGraph) ([]core.Finding,
 			}
 		}
 		if below {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("app %q: tier=%q below production grade", a.Name, tier)
 		} else {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("app %q: tier=%q acceptable for production", a.Name, tier)
 		}
 		findings = append(findings, f)
@@ -231,10 +231,10 @@ func AppTierProdGrade(_ context.Context, g *core.ResourceGraph) ([]core.Finding,
 
 // ----- 5. databases must be production-marked when present -----------
 
-var CheckAppDatabaseProduction = core.Check{
+var CheckAppDatabaseProduction = compliancekit.Check{
 	ID:           "do-app-database-not-production-marked",
 	Title:        "App Platform databases must be marked production",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "digitalocean",
 	Service:      "apps",
 	ResourceType: docol.AppType,
@@ -256,8 +256,8 @@ var CheckAppDatabaseProduction = core.Check{
 	Scanner: "apps.DatabaseProduction",
 }
 
-func AppDatabaseProduction(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func AppDatabaseProduction(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, a := range g.ByType(docol.AppType) {
 		total, _ := a.Attributes["database_count"].(int)
 		if total == 0 {
@@ -266,10 +266,10 @@ func AppDatabaseProduction(_ context.Context, g *core.ResourceGraph) ([]core.Fin
 		managed, _ := a.Attributes["managed_db_count"].(int)
 		f := newAppFinding(CheckAppDatabaseProduction, a)
 		if managed == total {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("app %q: %d/%d databases marked production", a.Name, managed, total)
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("app %q: %d/%d databases NOT production (dev/shared)", a.Name, total-managed, total)
 		}
 		findings = append(findings, f)
@@ -279,10 +279,10 @@ func AppDatabaseProduction(_ context.Context, g *core.ResourceGraph) ([]core.Fin
 
 // ----- 6. deploy-on-push without protection (manual-verify) ----------
 
-var CheckAppDeployOnPushProtection = core.Check{
+var CheckAppDeployOnPushProtection = compliancekit.Check{
 	ID:           "do-app-deploy-on-push-no-branch-protection",
 	Title:        "Deploy-on-push services must target protected branches",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "digitalocean",
 	Service:      "apps",
 	ResourceType: docol.AppType,
@@ -305,8 +305,8 @@ var CheckAppDeployOnPushProtection = core.Check{
 	Scanner: "apps.DeployOnPushProtection",
 }
 
-func AppDeployOnPushProtection(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func AppDeployOnPushProtection(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, a := range g.ByType(docol.AppType) {
 		dop, _ := a.Attributes["services_deploy_on_push"].(int)
 		if dop == 0 {
@@ -322,10 +322,10 @@ func AppDeployOnPushProtection(_ context.Context, g *core.ResourceGraph) ([]core
 
 // ----- 7. domain TLS minimum 1.3 ---------------------------------------
 
-var CheckAppDomainTLS13 = core.Check{
+var CheckAppDomainTLS13 = compliancekit.Check{
 	ID:           "do-app-domain-tls-below-1-3",
 	Title:        "App Platform custom domains should enforce TLS 1.3",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "digitalocean",
 	Service:      "apps",
 	ResourceType: docol.AppType,
@@ -347,8 +347,8 @@ var CheckAppDomainTLS13 = core.Check{
 	Scanner: "apps.DomainTLS13",
 }
 
-func AppDomainTLS13(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func AppDomainTLS13(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, a := range g.ByType(docol.AppType) {
 		raw, _ := a.Attributes["domains"].([]map[string]any)
 		if len(raw) == 0 {
@@ -364,10 +364,10 @@ func AppDomainTLS13(_ context.Context, g *core.ResourceGraph) ([]core.Finding, e
 		}
 		f := newAppFinding(CheckAppDomainTLS13, a)
 		if len(below) == 0 {
-			f.Status = core.StatusPass
+			f.Status = compliancekit.StatusPass
 			f.Message = fmt.Sprintf("app %q: all %d domain(s) at TLS 1.3", a.Name, len(raw))
 		} else {
-			f.Status = core.StatusFail
+			f.Status = compliancekit.StatusFail
 			f.Message = fmt.Sprintf("app %q: domains below TLS 1.3: %s", a.Name, strings.Join(below, ", "))
 		}
 		findings = append(findings, f)
@@ -377,10 +377,10 @@ func AppDomainTLS13(_ context.Context, g *core.ResourceGraph) ([]core.Finding, e
 
 // ----- 8. manual: build-time secret scanning --------------------------
 
-var CheckAppBuildSecretScan = core.Check{
+var CheckAppBuildSecretScan = compliancekit.Check{
 	ID:           "do-app-build-secret-scan",
 	Title:        "App Platform builds must scan for committed secrets",
-	Severity:     core.SeverityHigh,
+	Severity:     compliancekit.SeverityHigh,
 	Provider:     "digitalocean",
 	Service:      "apps",
 	ResourceType: docol.AppType,
@@ -403,8 +403,8 @@ var CheckAppBuildSecretScan = core.Check{
 	Scanner: "apps.BuildSecretScan",
 }
 
-func AppBuildSecretScan(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func AppBuildSecretScan(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, a := range g.ByType(docol.AppType) {
 		findings = append(findings,
 			appManualVerify(CheckAppBuildSecretScan, a,
@@ -416,10 +416,10 @@ func AppBuildSecretScan(_ context.Context, g *core.ResourceGraph) ([]core.Findin
 
 // ----- 9. manual: domain cert rotation -------------------------------
 
-var CheckAppDomainCertRotation = core.Check{
+var CheckAppDomainCertRotation = compliancekit.Check{
 	ID:           "do-app-domain-cert-rotation",
 	Title:        "Custom-domain certs must auto-renew (Let's Encrypt or uploaded with auto-rotation)",
-	Severity:     core.SeverityMedium,
+	Severity:     compliancekit.SeverityMedium,
 	Provider:     "digitalocean",
 	Service:      "apps",
 	ResourceType: docol.AppType,
@@ -442,8 +442,8 @@ var CheckAppDomainCertRotation = core.Check{
 	Scanner: "apps.DomainCertRotation",
 }
 
-func AppDomainCertRotation(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func AppDomainCertRotation(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, a := range g.ByType(docol.AppType) {
 		hasDomains, _ := a.Attributes["has_custom_domains"].(bool)
 		if !hasDomains {
@@ -459,10 +459,10 @@ func AppDomainCertRotation(_ context.Context, g *core.ResourceGraph) ([]core.Fin
 
 // ----- 10. manual: CDN attachment for static sites --------------------
 
-var CheckAppCDNAttachment = core.Check{
+var CheckAppCDNAttachment = compliancekit.Check{
 	ID:           "do-app-cdn-attachment",
 	Title:        "Public-facing apps should consider DO Spaces CDN for static asset delivery",
-	Severity:     core.SeverityLow,
+	Severity:     compliancekit.SeverityLow,
 	Provider:     "digitalocean",
 	Service:      "apps",
 	ResourceType: docol.AppType,
@@ -483,8 +483,8 @@ var CheckAppCDNAttachment = core.Check{
 	Scanner: "apps.CDNAttachment",
 }
 
-func AppCDNAttachment(_ context.Context, g *core.ResourceGraph) ([]core.Finding, error) {
-	findings := []core.Finding{}
+func AppCDNAttachment(_ context.Context, g *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+	findings := []compliancekit.Finding{}
 	for _, a := range g.ByType(docol.AppType) {
 		findings = append(findings,
 			appManualVerify(CheckAppCDNAttachment, a,
@@ -495,14 +495,14 @@ func AppCDNAttachment(_ context.Context, g *core.ResourceGraph) ([]core.Finding,
 }
 
 func init() {
-	core.Register(CheckAppServicesHealthcheck, AppServicesHealthcheck)
-	core.Register(CheckAppServicesLogDest, AppServicesLogDest)
-	core.Register(CheckAppServicesAlerts, AppServicesAlerts)
-	core.Register(CheckAppTierProdGrade, AppTierProdGrade)
-	core.Register(CheckAppDatabaseProduction, AppDatabaseProduction)
-	core.Register(CheckAppDeployOnPushProtection, AppDeployOnPushProtection)
-	core.Register(CheckAppDomainTLS13, AppDomainTLS13)
-	core.Register(CheckAppBuildSecretScan, AppBuildSecretScan)
-	core.Register(CheckAppDomainCertRotation, AppDomainCertRotation)
-	core.Register(CheckAppCDNAttachment, AppCDNAttachment)
+	compliancekit.Register(CheckAppServicesHealthcheck, AppServicesHealthcheck)
+	compliancekit.Register(CheckAppServicesLogDest, AppServicesLogDest)
+	compliancekit.Register(CheckAppServicesAlerts, AppServicesAlerts)
+	compliancekit.Register(CheckAppTierProdGrade, AppTierProdGrade)
+	compliancekit.Register(CheckAppDatabaseProduction, AppDatabaseProduction)
+	compliancekit.Register(CheckAppDeployOnPushProtection, AppDeployOnPushProtection)
+	compliancekit.Register(CheckAppDomainTLS13, AppDomainTLS13)
+	compliancekit.Register(CheckAppBuildSecretScan, AppBuildSecretScan)
+	compliancekit.Register(CheckAppDomainCertRotation, AppDomainCertRotation)
+	compliancekit.Register(CheckAppCDNAttachment, AppCDNAttachment)
 }

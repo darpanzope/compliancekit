@@ -12,7 +12,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 func TestWebhook_NotConfigured(t *testing.T) {
@@ -36,10 +36,10 @@ func TestWebhook_HappyPath_NoSecret(t *testing.T) {
 
 	sink := NewWebhook(WebhookConfig{
 		URL:           srv.URL,
-		SeverityFloor: core.SeverityInfo,
+		SeverityFloor: compliancekit.SeverityInfo,
 		HTTPClient:    srv.Client(),
 	})
-	notifications := BuildNotifications([]core.Finding{
+	notifications := BuildNotifications([]compliancekit.Finding{
 		sampleFinding("aws-s3-public-access-block", "critical"),
 	}, BuildOptions{})
 
@@ -73,10 +73,10 @@ func TestWebhook_HMACSignaturePresent(t *testing.T) {
 	sink := NewWebhook(WebhookConfig{
 		URL:           srv.URL,
 		Secret:        secret,
-		SeverityFloor: core.SeverityInfo,
+		SeverityFloor: compliancekit.SeverityInfo,
 		HTTPClient:    srv.Client(),
 	})
-	notifications := BuildNotifications([]core.Finding{sampleFinding("x", "critical")}, BuildOptions{})
+	notifications := BuildNotifications([]compliancekit.Finding{sampleFinding("x", "critical")}, BuildOptions{})
 	if _, err := sink.Send(context.Background(), notifications); err != nil {
 		t.Fatalf("Send: %v", err)
 	}
@@ -100,10 +100,10 @@ func TestWebhook_AuthFailure(t *testing.T) {
 	sink := NewWebhook(WebhookConfig{
 		URL:           srv.URL,
 		Secret:        "x",
-		SeverityFloor: core.SeverityInfo,
+		SeverityFloor: compliancekit.SeverityInfo,
 		HTTPClient:    srv.Client(),
 	})
-	notifications := BuildNotifications([]core.Finding{sampleFinding("x", "critical")}, BuildOptions{})
+	notifications := BuildNotifications([]compliancekit.Finding{sampleFinding("x", "critical")}, BuildOptions{})
 	res, _ := sink.Send(context.Background(), notifications)
 	if res.Errors != 1 {
 		t.Errorf("Errors = %d, want 1", res.Errors)

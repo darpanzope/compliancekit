@@ -6,7 +6,7 @@ import (
 
 	"github.com/digitalocean/godo"
 
-	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // DOKS resource types. v0.11 holds back DOKS from v0.9 specifically
@@ -17,12 +17,12 @@ const (
 )
 
 // collectDOKS enumerates DOKS clusters and their node pools.
-func (c *Collector) collectDOKS(ctx context.Context) ([]core.Resource, error) {
+func (c *Collector) collectDOKS(ctx context.Context) ([]compliancekit.Resource, error) {
 	clusters, err := listAllDOKSClusters(ctx, c.client)
 	if err != nil {
 		return nil, fmt.Errorf("list doks clusters: %w", err)
 	}
-	out := make([]core.Resource, 0, len(clusters))
+	out := make([]compliancekit.Resource, 0, len(clusters))
 	for i := range clusters {
 		cl := &clusters[i]
 		out = append(out, c.doksClusterResource(cl))
@@ -59,7 +59,7 @@ func listAllDOKSClusters(ctx context.Context, client *godo.Client) ([]godo.Kuber
 	return all, nil
 }
 
-func (c *Collector) doksClusterResource(cl *godo.KubernetesCluster) core.Resource {
+func (c *Collector) doksClusterResource(cl *godo.KubernetesCluster) compliancekit.Resource {
 	status := ""
 	if cl.Status != nil {
 		status = string(cl.Status.State)
@@ -81,7 +81,7 @@ func (c *Collector) doksClusterResource(cl *godo.KubernetesCluster) core.Resourc
 		"node_pool_count":     len(cl.NodePools),
 		"tags":                append([]string{}, cl.Tags...),
 	}
-	r := core.Resource{
+	r := compliancekit.Resource{
 		ID:         fmt.Sprintf("%s.%s.%s", DOKSClusterType, cl.RegionSlug, cl.Name),
 		Type:       DOKSClusterType,
 		Name:       cl.Name,
@@ -93,7 +93,7 @@ func (c *Collector) doksClusterResource(cl *godo.KubernetesCluster) core.Resourc
 	return r
 }
 
-func (c *Collector) doksNodePoolResource(cl *godo.KubernetesCluster, np *godo.KubernetesNodePool) core.Resource {
+func (c *Collector) doksNodePoolResource(cl *godo.KubernetesCluster, np *godo.KubernetesNodePool) compliancekit.Resource {
 	taints := make([]map[string]string, 0, len(np.Taints))
 	for _, t := range np.Taints {
 		taints = append(taints, map[string]string{
@@ -114,7 +114,7 @@ func (c *Collector) doksNodePoolResource(cl *godo.KubernetesCluster, np *godo.Ku
 		"tags":            append([]string{}, np.Tags...),
 		"node_count_live": len(np.Nodes),
 	}
-	r := core.Resource{
+	r := compliancekit.Resource{
 		ID:         fmt.Sprintf("%s.%s.%s.%s", DOKSNodePoolType, cl.RegionSlug, cl.Name, np.Name),
 		Type:       DOKSNodePoolType,
 		Name:       np.Name,
