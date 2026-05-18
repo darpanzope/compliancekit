@@ -33,6 +33,8 @@ method (*ResourceGraph) Related(r Resource, edge string) []Resource
 method (*Severity) UnmarshalJSON(b []byte) error
 method (*WaiverRef) DaysUntilExpiry(t time.Time) int
 method (*WaiverRef) IsActive(t time.Time) bool
+method (Finding) Fingerprint() string
+method (Finding) IsNative() bool
 method (Resource) Attr(key string) string
 method (Resource) AttrBool(key string) bool
 method (Resource) AttrInt(key string) int
@@ -42,12 +44,14 @@ method (Severity) MarshalJSON() ([]byte, error)
 method (Severity) String() string
 method (Status) IsActionable() bool
 type EvidencePtr struct
+type Finding struct
 type Package struct
 type Resource struct
 type ResourceGraph struct
 type ResourceRef struct
 type Secret struct
 type Severity int
+type Source struct
 type Status string
 type Vulnerability struct
 type WaiverRef struct
