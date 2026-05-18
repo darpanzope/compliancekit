@@ -23,8 +23,17 @@ pre-commit:
 
     lint:
       glob: "*.go"
-      # Lint only staged packages, not the whole tree, so commits stay fast.
-      run: golangci-lint run --new-from-rev=HEAD~1 ./...
+      # Lint only the packages containing staged files, not the whole
+      # tree. The previous `--new-from-rev=HEAD~1 ./...` form was meant
+      # to be fast but actually triggered full-tree analysis on both
+      # HEAD and HEAD~1 to compute the diff, and at the v0.22 codebase
+      # size (~50k LoC, 60+ packages) it ran for 40+ minutes wall-
+      # clock per commit even under the 5m golangci-lint timeout. The
+      # full-tree gate still runs at pre-push (make check) so nothing
+      # CI would reject can slip through.
+      run: |
+        dirs=$(printf '%s\n' {staged_files} | xargs -n1 dirname | sort -u | sed 's|^|./|')
+        [ -z "$dirs" ] || golangci-lint run $dirs
       fail_text: "golangci-lint failures. Run 'make lint' to reproduce."
 
     vet:
