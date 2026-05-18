@@ -10,6 +10,7 @@ import (
 
 	"github.com/darpanzope/compliancekit/internal/core"
 	"github.com/darpanzope/compliancekit/internal/frameworks"
+	"github.com/darpanzope/compliancekit/internal/remediate"
 	"github.com/darpanzope/compliancekit/internal/score"
 )
 
@@ -87,6 +88,7 @@ type htmlFinding struct {
 	Description   string
 	Remediation   string
 	Frameworks    []frameworkRef
+	Snippets      []htmlSnippet // v0.22.1 — bespoke per-format remediation snippets
 }
 
 // frameworkRef is one (framework, control) pair attributed to a finding.
@@ -95,6 +97,20 @@ type frameworkRef struct {
 	FrameworkName string
 	ControlID     string
 	ControlName   string
+}
+
+// htmlSnippet is one bespoke remediation snippet for a finding,
+// pulled from the remediate registry at render time. v0.22.1 surfaces
+// these inline in findings.html so operators no longer need to run
+// `compliancekit remediate` separately and cross-reference by CheckID.
+type htmlSnippet struct {
+	Format    string // bash / terraform / kubectl / doctl / helm / etc.
+	Risk      string // safe / review / manual
+	RiskClass string // CSS class derived from Risk
+	Content   string
+	VerifyCmd string
+	Notes     string
+	Refs      []string
 }
 
 // buildHTMLView assembles the template view from a flat findings slice.
@@ -192,7 +208,60 @@ func findingToHTML(f core.Finding) htmlFinding {
 			})
 		}
 	}
+
+	// v0.22.1 — pull bespoke per-format remediation snippets from the
+	// strategy registry. Only emits entries whose Strategy explicitly
+	// claims this CheckID (wildcard "*" fallback strategies excluded
+	// so the HTML doesn't fill with "no strategy registered" stubs).
+	view.Snippets = htmlSnippetsForCheck(f)
 	return view
+}
+
+// htmlSnippetsForCheck queries the default remediate registry for
+// every bespoke Strategy covering the finding's CheckID, renders each
+// Strategy in every Format it supports, and returns the rendered
+// snippets in a stable order (sorted by Format).
+//
+// Wildcard "*" fallback strategies are excluded — they produce a
+// generic "see message" stub that's noise inline. The runbook
+// produced by `compliancekit remediate` is where the fallback shows
+// up; the HTML stays clean.
+func htmlSnippetsForCheck(f core.Finding) []htmlSnippet {
+	var out []htmlSnippet
+	seen := map[remediate.Format]bool{}
+	for _, s := range remediate.Default.StrategiesFor(f.CheckID) {
+		bespoke := false
+		for _, id := range s.CheckIDs() {
+			if id == f.CheckID {
+				bespoke = true
+				break
+			}
+		}
+		if !bespoke {
+			continue
+		}
+		for _, fmtID := range s.Formats() {
+			if seen[fmtID] {
+				continue // dedup: same format across multiple strategies
+			}
+			snip, err := s.Render(f, fmtID)
+			if err != nil {
+				continue
+			}
+			seen[fmtID] = true
+			out = append(out, htmlSnippet{
+				Format:    string(fmtID),
+				Risk:      string(snip.Risk),
+				RiskClass: string(snip.Risk),
+				Content:   snip.Content,
+				VerifyCmd: snip.VerifyCmd,
+				Notes:     snip.Notes,
+				Refs:      append([]string(nil), snip.Refs...),
+			})
+		}
+	}
+	sort.SliceStable(out, func(i, j int) bool { return out[i].Format < out[j].Format })
+	return out
 }
 
 // capitalize maps a lowercase severity name to its display form. The

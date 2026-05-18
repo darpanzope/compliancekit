@@ -212,6 +212,72 @@ article.finding ul.frameworks {
   padding: 0;
   margin: 0;
 }
+article.finding .snippets {
+  margin-top: 8px;
+}
+article.finding .snippets .tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 4px;
+}
+article.finding .snippets .tab {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-bottom: none;
+  padding: 4px 10px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  color: var(--muted);
+  border-radius: 3px 3px 0 0;
+}
+article.finding .snippets .tab.active {
+  background: var(--panel);
+  color: var(--fg);
+  border-bottom: 1px solid var(--panel);
+  margin-bottom: -1px;
+}
+article.finding .snippets .panel {
+  display: none;
+  background: var(--panel-2);
+  border-radius: 0 4px 4px 4px;
+  padding: 10px 12px;
+}
+article.finding .snippets .panel.active { display: block; }
+article.finding .snippets .panel .risk {
+  display: inline-block;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 2px 7px;
+  border-radius: 3px;
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+article.finding .snippets .risk.safe   { background: rgba(76, 175, 80, .15);  color: #4caf50; }
+article.finding .snippets .risk.review { background: rgba(255, 165, 0, .15);  color: #ffa500; }
+article.finding .snippets .risk.manual { background: rgba(244, 67, 54, .15);  color: #f44336; }
+article.finding .snippets pre {
+  margin: 0;
+  white-space: pre-wrap;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  color: var(--fg);
+}
+article.finding .snippets .notes,
+article.finding .snippets .verify {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 6px;
+}
+article.finding .snippets .verify code {
+  background: var(--panel);
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
 article.finding ul.frameworks li {
   font-size: 13px;
   padding: 4px 0;
@@ -284,12 +350,30 @@ footer.report-foot {
       <span class="status-badge">{{.Status}}</span>
     </header>
     {{if .Message}}<p class="message">{{.Message}}</p>{{end}}
-    {{if or .Description .Remediation .Frameworks}}
+    {{if or .Description .Remediation .Frameworks .Snippets}}
     <details>
       <summary>Details</summary>
       {{if .Title}}<p class="field-label">Title</p><p>{{.Title}}</p>{{end}}
       {{if .Description}}<p class="field-label">Description</p><div class="description">{{.Description}}</div>{{end}}
       {{if .Remediation}}<p class="field-label">Remediation</p><div class="remediation">{{.Remediation}}</div>{{end}}
+      {{if .Snippets}}
+      <p class="field-label">Remediation snippets</p>
+      <div class="snippets">
+        <div class="tabs" role="tablist">
+        {{- range $i, $s := .Snippets }}
+          <button type="button" class="tab{{if eq $i 0}} active{{end}}" data-snippet-tab="{{$s.Format}}">{{$s.Format}}</button>
+        {{- end }}
+        </div>
+        {{- range $i, $s := .Snippets }}
+        <div class="panel{{if eq $i 0}} active{{end}}" data-snippet-panel="{{$s.Format}}">
+          <span class="risk {{$s.RiskClass}}">{{$s.Risk}}</span>
+          <pre>{{$s.Content}}</pre>
+          {{if $s.VerifyCmd}}<div class="verify">Verify: <code>{{$s.VerifyCmd}}</code></div>{{end}}
+          {{if $s.Notes}}<div class="notes">{{$s.Notes}}</div>{{end}}
+        </div>
+        {{- end }}
+      </div>
+      {{end}}
       {{if .Frameworks}}
       <p class="field-label">Frameworks</p>
       <ul class="frameworks">
@@ -338,6 +422,23 @@ footer.report-foot {
       });
     });
   }
+
+  // v0.22.1 — remediation-snippet tabs. One button per format under
+  // each finding; click to switch the active panel. Event delegation
+  // off document so dynamic re-renders keep working.
+  document.addEventListener('click', function(e) {
+    var btn = e.target.closest('[data-snippet-tab]');
+    if (!btn) return;
+    var tabID = btn.getAttribute('data-snippet-tab');
+    var container = btn.closest('.snippets');
+    if (!container) return;
+    container.querySelectorAll('[data-snippet-tab]').forEach(function(b) {
+      b.classList.toggle('active', b.getAttribute('data-snippet-tab') === tabID);
+    });
+    container.querySelectorAll('[data-snippet-panel]').forEach(function(p) {
+      p.classList.toggle('active', p.getAttribute('data-snippet-panel') === tabID);
+    });
+  });
 })();
 </script>
 

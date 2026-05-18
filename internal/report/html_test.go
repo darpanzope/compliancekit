@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/darpanzope/compliancekit/internal/core"
+	"github.com/darpanzope/compliancekit/internal/remediate"
 )
 
 // Compile-time assertion.
@@ -149,4 +150,86 @@ func TestCapitalize(t *testing.T) {
 			t.Errorf("capitalize(%q) = %q, want %q", in, got, want)
 		}
 	}
+}
+
+// v0.22.1 — inline remediation-snippet rendering. Registers a fake
+// Strategy for a fixed CheckID + verifies the HTML carries the
+// snippet's Format, Risk class, Content, VerifyCmd, and Notes inline
+// under the per-finding Details block.
+func TestHTML_RendersRemediationSnippetsInline(t *testing.T) {
+	fakeStrategy := &fakeHTMLStrategy{
+		name:    "html-test-fake",
+		checkID: "html-test-check",
+		formats: []remediate.Format{remediate.FormatBash, remediate.FormatTerraform},
+		snippets: map[remediate.Format]remediate.Snippet{
+			remediate.FormatBash: {
+				Risk:      remediate.RiskSafe,
+				Content:   "echo 'fix me'",
+				VerifyCmd: "echo verify",
+				Notes:     "test note",
+			},
+			remediate.FormatTerraform: {
+				Risk:    remediate.RiskReview,
+				Content: `resource "fake" "x" {}`,
+			},
+		},
+	}
+	remediate.Default.Register(fakeStrategy)
+	t.Cleanup(func() { remediate.Default = remediate.NewRegistry() })
+
+	findings := []core.Finding{
+		{
+			CheckID:  "html-test-check",
+			Status:   core.StatusFail,
+			Severity: core.SeverityHigh,
+			Resource: core.ResourceRef{ID: "r1", Name: "demo", Type: "fake.type"},
+			Message:  "failing for the test",
+		},
+	}
+	var buf bytes.Buffer
+	if err := NewHTML().Render(context.Background(), findings, nil, &buf); err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+	out := buf.String()
+
+	cases := []struct {
+		needle string
+		desc   string
+	}{
+		{`class="snippets"`, "snippets container present"},
+		{`data-snippet-tab="bash"`, "bash tab button"},
+		{`data-snippet-tab="terraform"`, "terraform tab button"},
+		{`<pre>echo &#39;fix me&#39;</pre>`, "bash content HTML-escaped"},
+		{`<pre>resource &#34;fake&#34; &#34;x&#34; {}</pre>`, "terraform content HTML-escaped"},
+		{`class="risk safe"`, "safe risk class applied"},
+		{`class="risk review"`, "review risk class applied"},
+		{`<code>echo verify</code>`, "verify command rendered"},
+		{`test note`, "notes rendered"},
+	}
+	for _, c := range cases {
+		if !strings.Contains(out, c.needle) {
+			t.Errorf("%s: missing %q in HTML output", c.desc, c.needle)
+		}
+	}
+}
+
+// fakeHTMLStrategy is a minimal remediate.Strategy for the snippet-
+// inline test above. Lives in this file (not a shared testutil) so
+// the test's contract is self-contained.
+type fakeHTMLStrategy struct {
+	name     string
+	checkID  string
+	formats  []remediate.Format
+	snippets map[remediate.Format]remediate.Snippet
+}
+
+func (s *fakeHTMLStrategy) Name() string                { return s.name }
+func (s *fakeHTMLStrategy) CheckIDs() []string          { return []string{s.checkID} }
+func (s *fakeHTMLStrategy) Formats() []remediate.Format { return s.formats }
+func (s *fakeHTMLStrategy) Render(_ core.Finding, f remediate.Format) (remediate.Snippet, error) {
+	snip, ok := s.snippets[f]
+	if !ok {
+		return remediate.Snippet{}, remediate.ErrFormatUnsupported
+	}
+	return snip, nil
 }

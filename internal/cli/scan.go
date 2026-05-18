@@ -21,6 +21,23 @@ import (
 	"github.com/darpanzope/compliancekit/internal/profile"
 	"github.com/darpanzope/compliancekit/internal/report"
 	"github.com/darpanzope/compliancekit/internal/score"
+
+	// v0.22.1 — side-effect imports register every remediation
+	// Strategy with remediate.Default so the HTML reporter can pull
+	// per-format snippets inline (one tab per format under the
+	// "Remediation" details block per finding). Without these imports
+	// the registry would be empty at scan time + the HTML report
+	// would surface only the static Check.Remediation text.
+	_ "github.com/darpanzope/compliancekit/internal/remediate/ansible"
+	_ "github.com/darpanzope/compliancekit/internal/remediate/awscli"
+	_ "github.com/darpanzope/compliancekit/internal/remediate/azcli"
+	_ "github.com/darpanzope/compliancekit/internal/remediate/bash"
+	_ "github.com/darpanzope/compliancekit/internal/remediate/doctl"
+	_ "github.com/darpanzope/compliancekit/internal/remediate/gcloud"
+	_ "github.com/darpanzope/compliancekit/internal/remediate/hcloud"
+	_ "github.com/darpanzope/compliancekit/internal/remediate/helm"
+	_ "github.com/darpanzope/compliancekit/internal/remediate/kubectl"
+	_ "github.com/darpanzope/compliancekit/internal/remediate/terraform"
 )
 
 type scanOptions struct {
