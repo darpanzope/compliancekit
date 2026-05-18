@@ -734,14 +734,117 @@ footer.report-foot {
   text-align: center;
 }
 
-/* ─── Responsive (filled in phase 7) ───────────────────────────── */
-/* @media (max-width: 400px) lives here in phase 7 — collapses chips,
-   stacks counts vertically, swaps sidebar for hamburger. */
+/* ─── Responsive (phase 7) ─────────────────────────────────────
+   The 800px breakpoint already collapses the sidebar (phase 5); the
+   600px + 400px breakpoints below handle the tablet-narrow and
+   phone-narrow reflow: cards stack to one column, chip groups
+   collapse their leading label so the row stays compact, the report
+   header lays out vertically. */
+@media (max-width: 600px) {
+  body { padding: 0 14px 48px; }
+  header.report-head .head-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .summary-cards {
+    grid-template-columns: 1fr;
+  }
+  .counts { gap: 8px; }
+  .counts li {
+    flex: 1 1 calc(50% - 8px);
+    min-width: 0;
+  }
+  nav.controls .chip-group {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+  }
+  nav.controls .chip-group-label {
+    min-width: 0;
+  }
+}
+@media (max-width: 400px) {
+  body { padding: 0 10px 40px; }
+  header.report-head { padding: 16px 0 12px; }
+  header.report-head h1 { font-size: 18px; }
+  .counts li { flex: 1 1 100%; }
+  article.finding { padding: 12px; }
+  article.finding header { gap: 4px 8px; }
+  article.finding .check-id { font-size: 12px; }
+  article.finding .resource { font-size: 12px; }
+  nav.controls .chip { font-size: 11px; padding: 3px 8px; }
+  .card-title { font-size: 10px; }
+  .card { padding: 12px; min-height: 160px; }
+}
 
-/* ─── Print (filled in phase 7) ────────────────────────────────── */
-/* @media print lives here in phase 7 — drops sticky chrome, expands
-   <details>, keeps charts as inline SVG so Chrome's "Save as PDF" path
-   produces a clean A4 layout. */
+/* ─── Print (phase 7) ──────────────────────────────────────────
+   Auditor flow: open findings.html in Chrome → File → Save as PDF
+   → A4. Print stylesheet drops sticky chrome, hides controls the
+   auditor can't operate on paper, forces the light palette + black
+   text for print, expands every <details> so embedded content
+   prints, and lets the charts render as inline SVG (already
+   painted at DOM-ready). break-inside on articles avoids splitting
+   one finding across pages whenever it fits. */
+@media print {
+  :root, [data-theme="dark"], [data-theme="light"] {
+    --bg: #ffffff;
+    --panel: #ffffff;
+    --panel-2: #f5f5f5;
+    --border: #cccccc;
+    --text: #111111;
+    --muted: #555555;
+    --accent: #2563eb;
+    --shadow: none;
+  }
+  html, body {
+    background: #ffffff;
+    color: #111111;
+    color-scheme: light;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  body { padding: 0 10mm 10mm; font-size: 11pt; }
+  /* Drop everything the auditor can't click on paper. */
+  .theme-toggle,
+  nav.controls,
+  aside.sidebar,
+  .sidebar-toggle,
+  .card .spark {
+    display: none !important;
+  }
+  /* Collapse the sidebar grid back to a single column. */
+  .layout {
+    display: block;
+  }
+  /* Print-friendly chrome: no sticky positioning, no borders that
+     vanish on white paper. */
+  header.report-head,
+  .card,
+  article.finding,
+  nav.controls {
+    border: 1px solid #ccc;
+    box-shadow: none;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  .summary-cards { grid-template-columns: repeat(2, 1fr); page-break-after: avoid; }
+  /* Open every <details> so nothing important hides. */
+  details {
+    display: block;
+  }
+  details > summary {
+    display: none;
+  }
+  /* Hyperlinks: keep visible but don't underline the auditor into
+     visual noise. */
+  a { color: #111; text-decoration: none; }
+  /* Footer is just chrome; print can drop it to save a line. */
+  footer.report-foot { font-size: 9pt; color: #666; }
+  /* Charts stay as inline SVG — the JS already painted them at
+     DOMContentLoaded before the print event fires; Chrome captures
+     the live DOM. */
+}
 </style>
 </head>
 <body>
@@ -1182,6 +1285,26 @@ footer.report-foot {
         toggle.setAttribute("aria-expanded", open ? "true" : "false");
       });
     }
+  })();
+
+  // v1.2 phase 7 — open every <details> before printing so the
+  // auditor's PDF shows finding descriptions, remediation, framework
+  // mappings, and the sidebar contents instead of just headers.
+  // Restores prior state after the print dialog closes.
+  (function printHelpers() {
+    var prior = null;
+    window.addEventListener("beforeprint", function () {
+      prior = [];
+      document.querySelectorAll("details").forEach(function (d) {
+        prior.push({ el: d, open: d.open });
+        d.open = true;
+      });
+    });
+    window.addEventListener("afterprint", function () {
+      if (!prior) return;
+      prior.forEach(function (p) { p.el.open = p.open; });
+      prior = null;
+    });
   })();
 
   // v0.22.1 — remediation-snippet tabs. One button per format under
