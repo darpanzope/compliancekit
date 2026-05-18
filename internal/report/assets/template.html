@@ -716,13 +716,65 @@ article.finding ul.frameworks li strong {
   margin-right: 8px;
 }
 
-/* ─── Empty state ──────────────────────────────────────────────── */
+/* ─── Empty + all-clear states (phase 8) ──────────────────────── */
 .empty {
   text-align: center;
   color: var(--muted);
   padding: 64px 0;
 }
 .empty p { margin: 4px 0; }
+
+.all-clear {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 28px 32px;
+  margin: 0 0 24px;
+  background: var(--panel);
+  border: 1px solid var(--status-pass);
+  border-left-width: 4px;
+  border-radius: 8px;
+  position: relative;
+  overflow: hidden;
+}
+.all-clear::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 0% 50%, rgba(107, 223, 142, .10), transparent 60%);
+  pointer-events: none;
+}
+.all-clear .all-clear-icon {
+  flex-shrink: 0;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--status-pass);
+  color: var(--panel);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+.all-clear .all-clear-icon .icon { width: 32px; height: 32px; }
+.all-clear .all-clear-body { position: relative; }
+.all-clear .all-clear-headline {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0 0 4px;
+  color: var(--text);
+  letter-spacing: -0.01em;
+}
+.all-clear .all-clear-sub {
+  font-size: 13px;
+  color: var(--muted);
+  margin: 0;
+}
+.all-clear .all-clear-sub strong {
+  color: var(--text);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
 
 /* ─── Footer ───────────────────────────────────────────────────── */
 footer.report-foot {
@@ -985,6 +1037,15 @@ footer.report-foot {
 
 {{ block "findings" . -}}
 <main id="findings">
+{{- if .IsAllClear }}
+<div class="all-clear" role="status" aria-label="All checks passed">
+  <div class="all-clear-icon" aria-hidden="true"><svg class="icon"><use href="#i-status-pass"/></svg></div>
+  <div class="all-clear-body">
+    <p class="all-clear-headline">All clear</p>
+    <p class="all-clear-sub"><strong>{{.PassCount}}</strong> of <strong>{{.TotalCount}}</strong> checks pass &middot; zero actionable findings &middot; hardening score <strong>{{.Score}}/100</strong></p>
+  </div>
+</div>
+{{- end }}
 {{- if not .HasFindings }}
 <div class="empty">
   <p>No findings.</p>

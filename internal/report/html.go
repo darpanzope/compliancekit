@@ -114,7 +114,9 @@ type htmlView struct {
 	Generated       string
 	TotalCount      int
 	ActionableCount int
+	PassCount       int // v1.2 phase 8 — for the "X / Y pass" celebration
 	HasFindings     bool
+	IsAllClear      bool           // v1.2 phase 8 — HasFindings && ActionableCount == 0
 	Score           int            // v0.6 hardening score per DECISIONS.md ADR-008
 	Coverage        int            // v0.6 parallel metric: % of finding weight evaluable
 	Counts          map[string]int // by lowercase severity name
@@ -280,10 +282,13 @@ func buildHTMLView(findings []compliancekit.Finding) htmlView {
 		"critical": 0, "high": 0, "medium": 0, "low": 0, "info": 0,
 	}
 	actionable := 0
+	pass := 0
 	for _, f := range findings {
 		if f.Status.IsActionable() {
 			actionable++
 			counts[f.Severity.String()]++
+		} else if f.Status == compliancekit.StatusPass {
+			pass++
 		}
 	}
 
@@ -294,7 +299,9 @@ func buildHTMLView(findings []compliancekit.Finding) htmlView {
 		Generated:       time.Now().UTC().Format(time.RFC3339),
 		TotalCount:      len(findings),
 		ActionableCount: actionable,
+		PassCount:       pass,
 		HasFindings:     len(findings) > 0,
+		IsAllClear:      len(findings) > 0 && actionable == 0,
 		Score:           s.Score,
 		Coverage:        s.Coverage,
 		Counts:          counts,
