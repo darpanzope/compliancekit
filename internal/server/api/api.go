@@ -54,6 +54,7 @@ func (a *API) Mount(r chi.Router) {
 		r.Get("/scans", a.scopeGate(auth.ScopeScansRead, a.listScans))
 		r.Get("/scans/{id}", a.scopeGate(auth.ScopeScansRead, a.getScan))
 		r.Get("/scans/{id}/findings", a.scopeGate(auth.ScopeScansRead, a.listScanFindings))
+		r.Post("/scans", a.scopeGate(auth.ScopeScansWrite, a.triggerScan))
 
 		r.Get("/findings", a.scopeGate(auth.ScopeFindingsRead, a.listFindings))
 		r.Get("/findings/{id}", a.scopeGate(auth.ScopeFindingsRead, a.getFinding))
@@ -62,8 +63,15 @@ func (a *API) Mount(r chi.Router) {
 		r.Get("/resources/{id}", a.scopeGate(auth.ScopeScansRead, a.getResource))
 
 		r.Get("/providers", a.scopeGate(auth.ScopeSettingsRead, a.listProviders))
+		r.Put("/providers/{id}", a.scopeGate(auth.ScopeSettingsWrite, a.updateProvider))
+
 		r.Get("/checks", a.scopeGate(auth.ScopeSettingsRead, a.listChecks))
+		r.Post("/checks/{id}/toggle", a.scopeGate(auth.ScopeSettingsWrite, a.toggleCheck))
+
 		r.Get("/waivers", a.scopeGate(auth.ScopeWaiversRead, a.listWaivers))
+		r.Post("/waivers", a.scopeGate(auth.ScopeWaiversWrite, a.createWaiver))
+		r.Put("/waivers/{id}", a.scopeGate(auth.ScopeWaiversWrite, a.updateWaiver))
+		r.Delete("/waivers/{id}", a.scopeGate(auth.ScopeWaiversWrite, a.revokeWaiver))
 	})
 }
 
