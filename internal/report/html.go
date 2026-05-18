@@ -3,6 +3,7 @@ package report
 import (
 	"context"
 	"embed"
+	"encoding/json"
 	"html/template"
 	"io"
 	"sort"
@@ -17,7 +18,7 @@ import (
 // FormatHTML is the lowercase identifier used in config / CLI.
 const FormatHTML = "html"
 
-//go:embed assets/template.html assets/icons/sprite.svg
+//go:embed assets/template.html assets/icons/sprite.svg assets/chart.js
 var htmlAssets embed.FS
 
 // htmlTemplate is parsed once at init; subsequent Render calls execute it.
@@ -36,6 +37,16 @@ var htmlIconSprite = func() template.HTML {
 		return ""
 	}
 	return template.HTML(b) //nolint:gosec // sprite is build-time embedded
+}()
+
+// htmlChartJS is the vanilla-JS SVG chart-primitives source, inlined
+// into the bottom of <body> as a second <script>. v1.2 phase 3.
+var htmlChartJS = func() template.JS {
+	b, err := htmlAssets.ReadFile("assets/chart.js")
+	if err != nil {
+		return ""
+	}
+	return template.JS(b) //nolint:gosec // chart.js is build-time embedded
 }()
 
 // HTMLReporter renders findings as a single self-contained HTML
@@ -81,6 +92,32 @@ type htmlView struct {
 	Counts          map[string]int // by lowercase severity name
 	Sections        []htmlSection
 	IconSprite      template.HTML // v1.2 phase 2 — inlined <symbol> sheet
+	ChartJS         template.JS   // v1.2 phase 3 — vanilla-JS SVG primitives
+
+	// v1.2 phase 3 — summary cards. DonutJSON is the per-severity
+	// segment list, HBarJSON is per-framework pass/fail tallies.
+	// Pre-rendered as JSON strings; the template emits them in
+	// data-* attribute context so html/template's auto-escape handles
+	// any quote characters. JSON.parse on the JS side reverses the
+	// escaping.
+	DonutJSON string
+	HBarJSON  string
+}
+
+// htmlDonutSegment is one wedge in the severity donut card.
+type htmlDonutSegment struct {
+	Key   string `json:"key"`   // severity slug (matches --sev-<key>)
+	Label string `json:"label"` // display name
+	Value int    `json:"value"` // actionable count
+}
+
+// htmlFrameworkRow is one row in the framework-coverage horizontal-
+// bar card. Pass + Fail count distinct (CheckID, ResourceID) pairs
+// attributed to the framework via the check registry.
+type htmlFrameworkRow struct {
+	Label string `json:"label"`
+	Pass  int    `json:"pass"`
+	Fail  int    `json:"fail"`
 }
 
 // htmlSection groups findings by severity for rendering.
@@ -157,7 +194,78 @@ func buildHTMLView(findings []compliancekit.Finding) htmlView {
 		Counts:          counts,
 		Sections:        sections,
 		IconSprite:      htmlIconSprite,
+		ChartJS:         htmlChartJS,
+		DonutJSON:       buildDonutJSON(counts),
+		HBarJSON:        buildFrameworkJSON(findings),
 	}
+}
+
+// buildDonutJSON renders the per-severity actionable counts as a JSON
+// array suitable for the donut chart's data-segments attribute. Order
+// matches display order so the wedges paint Critical → Info clockwise.
+func buildDonutJSON(counts map[string]int) string {
+	segs := []htmlDonutSegment{
+		{Key: "critical", Label: "Critical", Value: counts["critical"]},
+		{Key: "high", Label: "High", Value: counts["high"]},
+		{Key: "medium", Label: "Medium", Value: counts["medium"]},
+		{Key: "low", Label: "Low", Value: counts["low"]},
+		{Key: "info", Label: "Info", Value: counts["info"]},
+	}
+	b, err := json.Marshal(segs)
+	if err != nil {
+		return "[]"
+	}
+	return string(b)
+}
+
+// buildFrameworkJSON aggregates findings by attributed framework and
+// renders a JSON array for the framework-coverage horizontal-bar
+// card. A finding contributes one tally per framework it maps to
+// (multi-framework checks count in each). Pass/Skip rolls into Pass
+// (the operator just wants to see "this control didn't fail");
+// Fail/Error rolls into Fail.
+func buildFrameworkJSON(findings []compliancekit.Finding) string {
+	type tally struct {
+		name       string
+		pass, fail int
+	}
+	byFW := map[string]*tally{}
+	for _, f := range findings {
+		check, ok := compliancekit.LookupCheck(f.CheckID)
+		if !ok {
+			continue
+		}
+		for _, rc := range frameworks.ResolveCheckControls(check.Frameworks) {
+			t, exists := byFW[rc.Framework.ID]
+			if !exists {
+				t = &tally{name: rc.Framework.Name}
+				byFW[rc.Framework.ID] = t
+			}
+			if f.Status.IsActionable() {
+				t.fail++
+			} else {
+				t.pass++
+			}
+		}
+	}
+	if len(byFW) == 0 {
+		return "[]"
+	}
+	ids := make([]string, 0, len(byFW))
+	for id := range byFW {
+		ids = append(ids, id)
+	}
+	sort.Strings(ids)
+	rows := make([]htmlFrameworkRow, 0, len(ids))
+	for _, id := range ids {
+		t := byFW[id]
+		rows = append(rows, htmlFrameworkRow{Label: t.name, Pass: t.pass, Fail: t.fail})
+	}
+	b, err := json.Marshal(rows)
+	if err != nil {
+		return "[]"
+	}
+	return string(b)
 }
 
 // buildHTMLSections buckets findings by severity in display order

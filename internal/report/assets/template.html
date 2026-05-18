@@ -201,10 +201,62 @@ header.report-head .meta {
 .counts li.low      .value { color: var(--sev-low); }
 .counts li.info     .value { color: var(--sev-info); }
 
-/* ─── Summary cards row (filled in phase 3) ────────────────────── */
-/* Phase 3 introduces .summary-cards with score gauge + severity donut
-   + framework coverage bar. Selectors land below this comment to keep
-   the file readable. */
+/* ─── Summary cards row (phase 3) ──────────────────────────────── */
+.summary-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+  margin: 0 0 24px;
+}
+.card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  min-height: 200px;
+}
+.card-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  margin: 0 0 8px;
+}
+.card-body {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+}
+.card svg[data-chart] {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 200px;
+}
+.card-legend {
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--muted);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}
+.card-legend span { display: inline-flex; align-items: center; gap: 4px; }
+.card-legend .dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.card-legend .dot.sev-critical { background: var(--sev-critical); }
+.card-legend .dot.sev-high     { background: var(--sev-high); }
+.card-legend .dot.sev-medium   { background: var(--sev-medium); }
+.card-legend .dot.sev-low      { background: var(--sev-low); }
+.card-legend .dot.sev-info     { background: var(--sev-info); }
 
 /* ─── Controls (search + severity chips) ───────────────────────── */
 nav.controls {
@@ -501,8 +553,34 @@ footer.report-foot {
 {{- end }}
 
 {{ block "summary-cards" . -}}
-{{- /* Phase 3 lands the SVG donut + gauge + framework-coverage bar
-       cards here. Empty by default so phase 0 is a pure no-op. */ -}}
+<section class="summary-cards" aria-label="Scan summary">
+  <div class="card card-score">
+    <p class="card-title">Hardening score</p>
+    <div class="card-body">
+      <svg data-chart="gauge" data-value="{{.Score}}" data-max="100" aria-label="Hardening score {{.Score}} of 100"></svg>
+    </div>
+    <div class="card-legend"><span>{{.Coverage}}% coverage</span></div>
+  </div>
+  <div class="card card-donut">
+    <p class="card-title">Severity breakdown</p>
+    <div class="card-body">
+      <svg data-chart="donut" data-segments="{{.DonutJSON}}" aria-label="Actionable findings by severity"></svg>
+    </div>
+    <div class="card-legend">
+      <span><i class="dot sev-critical"></i> Critical {{.Counts.critical}}</span>
+      <span><i class="dot sev-high"></i> High {{.Counts.high}}</span>
+      <span><i class="dot sev-medium"></i> Medium {{.Counts.medium}}</span>
+      <span><i class="dot sev-low"></i> Low {{.Counts.low}}</span>
+      <span><i class="dot sev-info"></i> Info {{.Counts.info}}</span>
+    </div>
+  </div>
+  <div class="card card-frameworks">
+    <p class="card-title">Framework coverage</p>
+    <div class="card-body">
+      <svg data-chart="hbar" data-items="{{.HBarJSON}}" aria-label="Per-framework pass rate"></svg>
+    </div>
+  </div>
+</section>
 {{- end }}
 
 {{ block "controls" . -}}
@@ -677,6 +755,14 @@ footer.report-foot {
     });
   });
 })();
+</script>
+
+{{/* v1.2 phase 3 — vanilla-JS SVG chart primitives (gauge, donut,
+     hbar). Inlined from internal/report/assets/chart.js. Reads palette
+     from CSS variables at paint time so theme flips re-paint without
+     any data-attr churn. */}}
+<script>
+{{.ChartJS}}
 </script>
 
 </body>
