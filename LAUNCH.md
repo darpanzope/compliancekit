@@ -179,7 +179,7 @@ comment is harder to anchor at the top):**
 > at v0.9, Hetzner at v0.10, K8s + EKS / GKE / DOKS at v0.11 (the
 > current release — 139 K8s checks, biggest single-release jump in
 > the project's history). serve mode (continuous monitoring without
-> the SaaS bill) at v1.1.
+> the SaaS bill) at v1.3.
 >
 > MIT licence. Happy to answer anything.
 
