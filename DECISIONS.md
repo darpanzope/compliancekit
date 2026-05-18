@@ -487,6 +487,50 @@ When to use which:
 
 ---
 
+## ADR-014 — v1.0 API freeze: pkg/compliancekit is the SemVer surface
+**Date:** 2026-05-18 (v1.0 release)
+**Status:** Accepted
+
+### Question
+The v0.x line carried no stability promise: every release could rename a method, drop a field, or move a type without notice, and embedders relying on the Go API had to pin a commit and accept whatever follow-on churn each version brought. By v0.22 the load-bearing types (Finding, Resource, ResourceGraph, Check, Framework, Severity, Status, Reporter, Collector, Evaluator) had iterated four times — v0.1 → v0.6 → v0.12 → v0.18 — and the shapes had stabilized. What does v1.0 actually commit to, and how do we enforce it?
+
+### Decision
+v1.0 promotes the load-bearing types into a new top-level package, `pkg/compliancekit`, and commits to SemVer 2.0 on that package — and ONLY that package — for the entire v1.x line.
+
+Concretely:
+
+- **What's in:** Severity, Status, Resource, ResourceRef, EvidencePtr, ResourceGraph (including the Query DSL), Vulnerability, Package, Secret, WaiverRef, Source, Finding, Check, CheckFunc, Registry, Reporter, Collector, Evaluator, Framework, Control, Tactic, ResolvedControl, plus their constructors / helpers / consts. Every exported identifier is enumerated in `pkg/compliancekit/api.txt`.
+- **What's out:** Everything under `internal/`. The check registry implementations, the engine, the collectors, the ingest adapters, the remediation strategies, the reporters' internals, the policy evaluator, the notify sinks, the waivers loader — all stay internal and may change in any release.
+- **What's machine-enforced:** A `cmd/genapi` tool re-derives the public surface on every CI run and diffs it against the committed `api.txt`. Adding, renaming, or removing any exported identifier under `pkg/compliancekit` fails CI unless `api.txt` is regenerated in the same PR. The reviewer sees the contract diff before the merge button.
+- **What's behaviourally enforced:** A `//go:build external`-gated test file under `package compliancekit_test` exercises the canonical embedding shape from the perspective of a downstream consumer. CI runs `go test -tags=external` so a refactor that accidentally narrows the contract (e.g. drops an unexported helper an embedder was reaching for via package-private access) fails to compile.
+- **What the promise covers:** Security patches land on the last two minor versions of v1.x for at least two years from each minor's release date, per SECURITY.md. The Go module path stays `github.com/darpanzope/compliancekit` for all of v1.x; a hypothetical v2.0 lives under `/v2/` per Go module conventions.
+
+### Reasoning
+- **Stability is what embedders are buying.** Pre-v1.0 the value proposition was "the CLI works"; the API was incidental. Post-v1.0 it becomes "build on us without a pinning treadmill" — which is the only way a third-party tool can take a hard dependency.
+- **The promotion bar is "survived four iterations."** Every graduating type was reshaped multiple times in the v0.x line and converged to its current form by v0.18. That's strong evidence the shape is right. Types that hadn't iterated that many times (the engine, the collectors, the registry implementations) stay internal — graduating them prematurely would force a v2.0 that nobody wants.
+- **Machine-enforced contracts beat policy.** A maintainer cannot widen, narrow, or rename the public surface by accident if CI fails the build. The api.txt diff in the PR is the proof the contract change was intentional. This is the same shape Go's own standard library uses (cmd/api enforces the same gate on stdlib).
+- **External-tagged tests catch what api.txt misses.** A reduction in the contract (e.g. an exported helper becoming unexported, a constructor signature changing in a backwards-incompatible way) shows up in api.txt — but a refactor that breaks the canonical *usage shape* without changing any identifier signatures wouldn't. The compile-time external test catches that class.
+- **Two minors × two years is a real promise, not a marketing line.** It maps to "we'll backport one security fix every six months on average" — sustainable for an indie OSS project, generous enough for an embedder to plan upgrades.
+- **internal/ stays open for change.** Locking the engine + collectors + reporters at v1.0 would have forced premature decisions about evolution we haven't earned. Keeping them internal preserves the freedom to ship the v0.22 deferred backlog (spec-pattern lifts, fake-API-server coverage, cookbook) under v1.0.x without a v2.0.
+
+### Rejected alternatives
+- **Promote everything: engine, collectors, reporters, ingest adapters.** Rejected. Most of those have iterated only once or twice and the shapes are demonstrably still moving (the collector interface gained a context.Context parameter in v0.7, the reporter interface gained the graph argument in v0.11). Locking now forces a v2.0 within 12 months. The audience asking for embedability wants the types, not the runtime — and the runtime is exposed through the CLI either way.
+- **Promote nothing; keep pinning by commit hash.** Rejected. That signal — "we won't commit to a contract" — kills the "embed compliancekit in your own tool" use case at the door. The v1.0 release has to mean something concrete; "we've stopped renaming Finding" is concrete.
+- **Sub-packages: pkg/compliancekit/finding, pkg/compliancekit/registry, etc.** Rejected. The types form one coherent surface (Finding references Resource references ResourceGraph references Check); splitting them into subpackages creates an artificial barrier embedders have to chase across multiple import lines. A flat pkg/ matches what consumers actually want.
+- **One-year compat instead of two.** Rejected. One year doesn't survive a contract embedder's annual planning cycle ("we adopted v1.x in Q2, can we wait until the following Q3 to upgrade?"). Two years is the next sustainable floor; it also matches the rough rhythm at which one minor per quarter ships, so we'll always have two relevant supported minors.
+- **API freeze includes the YAML schemas (frameworks/checks/waivers).** Rejected for v1.0; deferred. The Go API is one contract; the YAML schemas are another and have their own audience (operators writing custom catalogs, not Go embedders). They'll get their own ADR if/when an explicit schema freeze becomes worth it.
+- **Auto-generate the embedding example from the test file.** Rejected. The contract test and the documentation example are different artifacts: the test asserts shape preservation, the example shows narrative usage. Keeping them separate lets each be the right shape for its audience.
+
+### Consequences
+- `pkg/compliancekit/` is the v1.0 public package. 13 source files, ~1200 LoC including doc comments. Every exported identifier is documented in godoc, machine-enumerated in api.txt, and behaviourally exercised under `-tags=external`.
+- `internal/core/` is deleted at v1.0. Every internal caller imports `pkg/compliancekit` directly; the alias-shim period that bridged the migration is gone.
+- `cmd/genapi/` ships as a maintainer tool. The `make api-check` target wraps `go run ./cmd/genapi -check`, runs in the pre-push hook and on CI, and fails when api.txt is stale.
+- SECURITY.md gains a "Two-year compatibility commitment" section with the per-minor expiry dates expressed concretely (the v0.22.x sunset is 2026-11-18 — six months from v0.22.1 release).
+- A maintainer adding a new check or provider — the v0.x workflow — still happens entirely under `internal/`. No new public types ship at v1.0; v1.0 is a contract release, not a feature release. The v0.22.x deferred backlog (spec-pattern lifts, fake API server coverage, deep cookbook, ADR index, CHANGELOG backfill, lint v2) stays valid and can land as v1.0.x or v1.1 in parallel.
+- The Go module path stays `github.com/darpanzope/compliancekit`. A hypothetical v2.0 (plugin marketplace, fundamentally new evaluator interface, etc.) lives at `/v2/` and is a separate import path so v1.x embedders are unaffected.
+
+---
+
 ## Open questions (not yet decided)
 
 - **Plugin host model:** subprocess gRPC (Terraform-provider pattern), WASM via wazero, or both? Decision at v2.0.

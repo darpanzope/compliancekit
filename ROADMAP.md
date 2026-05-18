@@ -187,7 +187,7 @@ to the v0.1-v0.5 audience that put compliancekit on the map.
 | ~~v0.20~~ ✅ | Linux hardening — production grade — 15 → 119 checks across 9 spec frameworks; CIS Linux Server Benchmark v8 catalog (90+ sections, L1/L2 tagged); per-distro detection (Debian, RHEL, Alpine, AL2/AL2023); every check ships bespoke bash + Ansible (238 strategies, parity gate at 0/0); checks-package coverage 90.6% | Linux hardening at OpenSCAP/Lynis depth |
 | ~~v0.21~~ ✅ | Kubernetes + DOKS deepening — production grade — 149 → 241 checks (+92 / +61%) across 12 phases; NSA/CISA Kubernetes Hardening Guide v1.2 framework yaml; every K8s check ships bespoke kubectl (102 backfilled, strict-equality parity gate at 0); checks-package coverage 52.4% | Production-grade K8s posture across CIS + NSA/CISA |
 | ~~v0.22~~ ✅ | Internal refactor + toolchain refresh + action-repo polish — 600-LoC check-file CI gate (internal/repocheck); 9 oversize files split (rbac/pods/network/cluster/reliability/eks/aws-iam/pods_extra/tail.go) into 11 new per-category siblings; Ubuntu 24.04 explicit pin in all 3 workflows; godo + k8s.io v0.34→0.36 + cobra + viper + opa dep sweep; compliancekit-action multi-provider input loop + jq-merged findings + opt-in evidence-pack workflow-artifact upload. **No new user-facing checks; sets up v1.0 API freeze.** Spec-pattern lifts + fake-API-server coverage + lint v2 + deep cookbook deferred to v0.22.x. | Structure debt paid down |
-| **v1.0** | API stability — `pkg/compliancekit` frozen | Embed compliancekit in your own tools |
+| ~~v1.0~~ ✅ | API stability — `pkg/compliancekit` frozen — 10 type families graduated out of `internal/core` (Severity, Status, Resource, ResourceGraph + Query, Vulnerability/Package/Secret/WaiverRef, Source + Finding, Check + CheckFunc + Registry, Reporter/Collector/Evaluator interfaces, Framework/Control/Tactic); machine-enforced contract via `cmd/genapi` + `pkg/compliancekit/api.txt` CI gate; behavioural contract via `-tags=external` embed test; SECURITY.md two-year compat language for the last two minors; ADR-014 codifies what's in / out / why. 13 phases over one weekend; `internal/core` deleted, 432 files updated to import `pkg/compliancekit` directly. | Embed compliancekit in your own tools |
 | v1.1 | `serve` mode + SQLite/Postgres backend + REST API + webhook receivers | Continuous monitoring without the SaaS bill |
 | v1.2 | Multi-tenant / organizations | MSP-friendly: one binary, many clients |
 | v1.3 | Trust Center generator | Your public security page, generated |
@@ -1922,9 +1922,17 @@ exists to recognize the shape worth lifting out.
 
 ---
 
-### v1.0 — API stability — `pkg/compliancekit` frozen
+### v1.0 — API stability — `pkg/compliancekit` frozen — ✅ shipped 2026-05-18
 
 **Goal:** anyone embedding compliancekit gets a real contract.
+
+**Shipped as 13 phase-per-commit commits over one weekend.** See
+[ADR-014](DECISIONS.md#adr-014--v10-api-freeze-pkgcompliancekit-is-the-semver-surface)
+for the full scope rationale + rejected alternatives. The actual
+public surface is enumerated in
+[`pkg/compliancekit/api.txt`](pkg/compliancekit/api.txt) and is
+machine-enforced by the `make api-check` CI gate. Per-minor support
+windows are in [SECURITY.md](SECURITY.md#two-year-compatibility-commitment-v10).
 
 **Deliverables**
 

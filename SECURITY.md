@@ -6,14 +6,40 @@ and respond quickly.
 
 ## Supported versions
 
-| Version  | Status         | Security fixes |
-|----------|----------------|----------------|
-| `0.5.x`  | active         | yes            |
-| `0.4.x`  | last minor     | yes (60 days)  |
-| `< 0.4`  | unsupported    | no             |
+| Version  | Status                 | Security fixes |
+|----------|------------------------|----------------|
+| `1.0.x`  | active                 | yes            |
+| `0.22.x` | last pre-1.0 minor     | yes (until 2026-11-18) |
+| `< 0.22` | unsupported            | no             |
 
-Once compliancekit reaches `1.0` we will commit to maintaining the previous
-major for 12 months in addition to the active one.
+### Two-year compatibility commitment (v1.0+)
+
+Once a release reaches `v1.0`, security patches land on the **last two
+minor versions** for at least **two years** from that minor's release
+date. For the v1.x line this means:
+
+- The active minor always receives security patches.
+- The previous minor receives security patches for two years after
+  its own release.
+- Behavioural changes that break the public API surface
+  (`pkg/compliancekit`) require a major-version bump per SemVer 2.0;
+  they cannot ship as a patch or minor.
+
+The two-year window is a floor, not a ceiling — minors with active
+embedders may be extended on request. Pre-`v1.0` versions did not
+carry a stability promise; the table above reflects the actual
+end-of-support dates the project commits to.
+
+### Public API stability
+
+`pkg/compliancekit` is the SemVer-stable surface. The contract is
+machine-enforced by `go run ./cmd/genapi -check` in CI — adding,
+renaming, or removing any exported identifier under that package
+requires a paired diff to `pkg/compliancekit/api.txt`. Anything under
+`internal/` is explicitly NOT covered by the SemVer promise and may
+change in any release; consumers who reach across that boundary do so
+at their own risk. See [ADR-014](DECISIONS.md#adr-014--v10-api-freeze)
+for the full scope rationale.
 
 ## What counts as a vulnerability
 
