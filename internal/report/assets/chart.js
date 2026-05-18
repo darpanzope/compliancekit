@@ -118,7 +118,45 @@
     el.innerHTML = html;
   }
 
-  var drawers = { gauge: drawGauge, donut: drawDonut, hbar: drawHBar };
+  function drawSparkline(el) {
+    var pts;
+    try { pts = JSON.parse(el.getAttribute('data-points') || '[]'); } catch (e) { pts = []; }
+    var W = 60, H = 16;
+    el.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+    if (pts.length === 0) {
+      el.innerHTML = '';
+      return;
+    }
+    if (pts.length === 1) {
+      el.innerHTML = '<circle cx="' + (W / 2) + '" cy="' + (H / 2) + '" r="2" fill="' + cssVar('--muted') + '"/>';
+      return;
+    }
+    var min = Math.min.apply(null, pts);
+    var max = Math.max.apply(null, pts);
+    var range = max - min || 1;
+    var stepX = pts.length > 1 ? W / (pts.length - 1) : 0;
+    var pad = 2;
+    var d = '';
+    for (var i = 0; i < pts.length; i++) {
+      var x = i * stepX;
+      var y = H - ((pts[i] - min) / range) * (H - 2 * pad) - pad;
+      d += (i === 0 ? 'M' : ' L') + x.toFixed(2) + ' ' + y.toFixed(2);
+    }
+    var lastX = (pts.length - 1) * stepX;
+    var lastY = H - ((pts[pts.length - 1] - min) / range) * (H - 2 * pad) - pad;
+    // direction: data-direction="lower-better" flips the up/down color
+    // mapping (e.g. for actionable counts, less is better).
+    var lowerBetter = el.getAttribute('data-direction') === 'lower-better';
+    var delta = pts[pts.length - 1] - pts[0];
+    var goodColor = cssVar('--status-pass');
+    var badColor = cssVar('--sev-high');
+    var color = (lowerBetter ? delta <= 0 : delta >= 0) ? goodColor : badColor;
+    el.innerHTML =
+      '<path d="' + d + '" fill="none" stroke="' + color + '" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>' +
+      '<circle cx="' + lastX.toFixed(2) + '" cy="' + lastY.toFixed(2) + '" r="1.8" fill="' + color + '"/>';
+  }
+
+  var drawers = { gauge: drawGauge, donut: drawDonut, hbar: drawHBar, sparkline: drawSparkline };
 
   function renderAll() {
     document.querySelectorAll('[data-chart]').forEach(function (el) {

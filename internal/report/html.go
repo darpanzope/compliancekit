@@ -6,10 +6,13 @@ import (
 	"encoding/json"
 	"html/template"
 	"io"
+	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 	"time"
 
+	"github.com/darpanzope/compliancekit/internal/baseline"
 	"github.com/darpanzope/compliancekit/internal/frameworks"
 	"github.com/darpanzope/compliancekit/internal/remediate"
 	"github.com/darpanzope/compliancekit/internal/score"
@@ -58,10 +61,31 @@ var htmlChartJS = func() template.JS {
 // Per ARCHITECTURE.md §10 the v0.4 evidence pack reporter also writes
 // HTML for the auditor-readable index; that reporter will share
 // chrome with this one once both exist.
-type HTMLReporter struct{}
+type HTMLReporter struct {
+	// baselines is the optional history of baseline snapshots used to
+	// render trend sparklines on the summary cards. Oldest first,
+	// newest last. Empty = no trend section / no drift card. v1.2
+	// phase 6.
+	baselines []baseline.Baseline
+}
 
 // NewHTML returns an HTML reporter.
 func NewHTML() *HTMLReporter { return &HTMLReporter{} }
+
+// WithBaselines returns the reporter with a baseline history attached.
+// Callers pass the history in chronological order (oldest first). When
+// non-empty, the rendered report includes a "Drift vs baseline" card,
+// per-card delta indicators, sparklines on the score / severity /
+// framework cards, and a "new" badge on findings that were not
+// fingerprinted in the most recent baseline.
+//
+// Mutates + returns r so the call site stays a one-liner:
+//
+//	r := report.NewHTML().WithBaselines(history)
+func (r *HTMLReporter) WithBaselines(b []baseline.Baseline) *HTMLReporter {
+	r.baselines = b
+	return r
+}
 
 // Format implements compliancekit.Reporter.
 func (r *HTMLReporter) Format() string { return FormatHTML }
@@ -79,6 +103,9 @@ func (r *HTMLReporter) Format() string { return FormatHTML }
 // will read raw resource detail through it.
 func (r *HTMLReporter) Render(_ context.Context, findings []compliancekit.Finding, _ *compliancekit.ResourceGraph, w io.Writer) error {
 	view := buildHTMLView(findings)
+	if len(r.baselines) > 0 {
+		applyBaselineHistory(&view, findings, r.baselines)
+	}
 	return htmlTemplate.Execute(w, view)
 }
 
@@ -115,6 +142,23 @@ type htmlView struct {
 	// rendering. Sidebar links scroll to the first article for that
 	// resource (anchor IDs are wired by client-side JS on load).
 	SidebarGroups []htmlSidebarGroup
+
+	// v1.2 phase 6 — baseline trend. HasBaseline gates every drift-
+	// related piece of UI: if no baseline was passed to the reporter,
+	// these fields are zero values and the template skips their
+	// blocks. NewIDs is the set of fingerprints absent from the most
+	// recent baseline; the per-article template stamps "new since
+	// baseline" when its fingerprint appears here.
+	HasBaseline     bool
+	BaselineLabel   string // human-readable "captured 5 days ago" or capture date
+	DriftNew        int
+	DriftResolved   int
+	DriftExisting   int
+	ScoreTrend      string          // JSON array of 7 (or fewer) ints
+	ActionableTrend string          // JSON array of 7 (or fewer) ints
+	ScoreDelta      int             // signed (current - earliest)
+	ActionableDelta int             // signed (current - earliest); negative is good
+	NewIDs          map[string]bool // fingerprint set; per-article template uses {{ index .NewIDs .Fingerprint }}
 }
 
 // htmlSidebarGroup is the top-level provider bucket in the resource
@@ -187,6 +231,7 @@ type htmlSection struct {
 // resolved at render time.
 type htmlFinding struct {
 	CheckID          string
+	Fingerprint      string // v1.2 phase 6 — for the "new since baseline" lookup
 	Status           string
 	Severity         string
 	SeverityClass    string
@@ -584,6 +629,7 @@ func findingToHTML(f compliancekit.Finding) htmlFinding {
 	}
 	view := htmlFinding{
 		CheckID:          f.CheckID,
+		Fingerprint:      f.Fingerprint(),
 		Status:           string(f.Status),
 		Severity:         f.Severity.String(),
 		SeverityClass:    f.Severity.String(),
@@ -691,4 +737,161 @@ func capitalize(s string) string {
 		return "Info"
 	}
 	return s
+}
+
+// applyBaselineHistory enriches the view with the baseline-driven
+// fields: drift counts, the "new" fingerprint set, summary-card
+// deltas, and the sparkline series for score + actionable counts.
+// The newest entry in baselines is treated as the immediate
+// comparison point; the full slice drives the 7-point sparklines.
+// v1.2 phase 6.
+func applyBaselineHistory(view *htmlView, current []compliancekit.Finding, baselines []baseline.Baseline) {
+	if len(baselines) == 0 {
+		return
+	}
+	// Newest baseline is the immediate comparison point. Diff is in
+	// fingerprint space, matching internal/diff and the baseline
+	// drift workflow.
+	latest := baselines[len(baselines)-1]
+	latestFP := latest.FingerprintSet()
+	currentFP := map[string]bool{}
+	view.NewIDs = map[string]bool{}
+	for _, f := range current {
+		fp := f.Fingerprint()
+		currentFP[fp] = true
+		if _, hit := latestFP[fp]; !hit {
+			view.NewIDs[fp] = true
+		}
+	}
+	var resolved int
+	for fp := range latestFP {
+		if !currentFP[fp] {
+			resolved++
+		}
+	}
+	view.HasBaseline = true
+	view.DriftNew = len(view.NewIDs)
+	view.DriftResolved = resolved
+	view.DriftExisting = len(latestFP) - resolved
+	view.BaselineLabel = baselineLabel(latest.CapturedAt)
+
+	// Sparkline series — score + actionable count across the history,
+	// with the current scan tacked on as the final point.
+	scoreSeries := make([]int, 0, len(baselines)+1)
+	actSeries := make([]int, 0, len(baselines)+1)
+	for _, b := range baselines {
+		scoreSeries = append(scoreSeries, b.Score)
+		var actionable int
+		for _, e := range b.Entries {
+			if e.Status.IsActionable() {
+				actionable++
+			}
+		}
+		actSeries = append(actSeries, actionable)
+	}
+	scoreSeries = append(scoreSeries, view.Score)
+	actSeries = append(actSeries, view.ActionableCount)
+
+	if data, err := json.Marshal(scoreSeries); err == nil {
+		view.ScoreTrend = string(data)
+	} else {
+		view.ScoreTrend = "[]"
+	}
+	if data, err := json.Marshal(actSeries); err == nil {
+		view.ActionableTrend = string(data)
+	} else {
+		view.ActionableTrend = "[]"
+	}
+	if len(scoreSeries) >= 2 {
+		view.ScoreDelta = scoreSeries[len(scoreSeries)-1] - scoreSeries[0]
+		view.ActionableDelta = actSeries[len(actSeries)-1] - actSeries[0]
+	}
+}
+
+// baselineLabel returns a short human-readable description of how old
+// the baseline is. "captured today" / "captured 3 days ago" / the raw
+// date for anything older than 14 days.
+func baselineLabel(at time.Time) string {
+	if at.IsZero() {
+		return ""
+	}
+	days := int(time.Since(at).Hours() / 24)
+	switch {
+	case days <= 0:
+		return "captured today"
+	case days == 1:
+		return "captured yesterday"
+	case days <= 14:
+		return "captured " + intToStr(days) + " days ago"
+	default:
+		return "captured " + at.Format("2 Jan 2006")
+	}
+}
+
+// intToStr is a tiny strconv.Itoa alias to keep the import list lean.
+func intToStr(i int) string {
+	if i == 0 {
+		return "0"
+	}
+	var buf [20]byte
+	n := len(buf)
+	neg := i < 0
+	if neg {
+		i = -i
+	}
+	for i > 0 {
+		n--
+		buf[n] = byte('0' + i%10)
+		i /= 10
+	}
+	if neg {
+		n--
+		buf[n] = '-'
+	}
+	return string(buf[n:])
+}
+
+// LoadBaselineHistory loads either a single baseline file or every
+// *.json baseline in a directory, returning them in chronological
+// order (oldest first). Used by the render subcommand's --baseline
+// flag. Single-file inputs return a 1-element slice; directories with
+// no baselines return (nil, nil) so the reporter renders without a
+// trend section rather than erroring.
+func LoadBaselineHistory(path string) ([]baseline.Baseline, error) {
+	info, err := os.Stat(path)
+	if err != nil {
+		return nil, err
+	}
+	if !info.IsDir() {
+		b, err := baseline.Load(path)
+		if err != nil {
+			return nil, err
+		}
+		return []baseline.Baseline{b}, nil
+	}
+	entries, err := os.ReadDir(path)
+	if err != nil {
+		return nil, err
+	}
+	loaded := make([]baseline.Baseline, 0, len(entries))
+	for _, e := range entries {
+		if e.IsDir() || !strings.HasSuffix(e.Name(), ".json") {
+			continue
+		}
+		b, err := baseline.Load(filepath.Join(path, e.Name()))
+		if err != nil {
+			// Skip files that don't parse as baselines; the directory
+			// may carry other JSON artifacts (findings exports, etc.).
+			continue
+		}
+		loaded = append(loaded, b)
+	}
+	sort.Slice(loaded, func(i, j int) bool {
+		return loaded[i].CapturedAt.Before(loaded[j].CapturedAt)
+	})
+	// Keep the most recent 7 — sparklines are 7-point per the spec.
+	if len(loaded) > 7 {
+		loaded = loaded[len(loaded)-7:]
+	}
+	return loaded, nil
 }

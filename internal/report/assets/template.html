@@ -202,6 +202,49 @@ header.report-head .meta {
 .counts li.low      .value { color: var(--sev-low); }
 .counts li.info     .value { color: var(--sev-info); }
 
+/* ─── Drift indicators + sparklines (phase 6) ───────────────────
+   Tiny visual primitives layered onto the summary cards when a
+   baseline is loaded: a Δ pill next to the headline number + a
+   60×16 sparkline below the chart. Color logic lives in chart.js
+   so the palette flips with the theme. */
+.card .delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 999px;
+  margin-left: 6px;
+  font-variant-numeric: tabular-nums;
+}
+.card .delta.up    { color: var(--status-pass); background: rgba(107, 223, 142, .12); }
+.card .delta.down  { color: var(--sev-high);    background: rgba(255, 138, 61, .12); }
+.card .delta.flat  { color: var(--muted);       background: var(--panel-2); }
+.card .spark {
+  display: block;
+  width: 100%;
+  max-width: 80px;
+  height: 16px;
+  margin-top: 6px;
+}
+
+/* "New since baseline" badge on per-finding cards. */
+article.finding.is-new {
+  border-color: var(--sev-high);
+  box-shadow: -2px 0 0 var(--sev-high);
+}
+article.finding .new-badge {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(255, 138, 61, .15);
+  color: var(--sev-high);
+  font-weight: 600;
+}
+
 /* ─── Summary cards row (phase 3) ──────────────────────────────── */
 .summary-cards {
   display: grid;
@@ -739,14 +782,14 @@ footer.report-foot {
 {{ block "summary-cards" . -}}
 <section class="summary-cards" aria-label="Scan summary">
   <div class="card card-score">
-    <p class="card-title">Hardening score</p>
+    <p class="card-title">Hardening score{{if .HasBaseline}}{{if gt .ScoreDelta 0}} <span class="delta up">▲ +{{.ScoreDelta}}</span>{{else if lt .ScoreDelta 0}} <span class="delta down">▼ {{.ScoreDelta}}</span>{{else}} <span class="delta flat">±0</span>{{end}}{{end}}</p>
     <div class="card-body">
       <svg data-chart="gauge" data-value="{{.Score}}" data-max="100" aria-label="Hardening score {{.Score}} of 100"></svg>
     </div>
-    <div class="card-legend"><span>{{.Coverage}}% coverage</span></div>
+    <div class="card-legend"><span>{{.Coverage}}% coverage</span>{{if .HasBaseline}}<svg class="spark" data-chart="sparkline" data-points="{{.ScoreTrend}}" data-direction="higher-better" aria-label="Score trend"></svg>{{end}}</div>
   </div>
   <div class="card card-donut">
-    <p class="card-title">Severity breakdown</p>
+    <p class="card-title">Severity breakdown{{if .HasBaseline}}{{if lt .ActionableDelta 0}} <span class="delta up">▼ {{.ActionableDelta}}</span>{{else if gt .ActionableDelta 0}} <span class="delta down">▲ +{{.ActionableDelta}}</span>{{else}} <span class="delta flat">±0</span>{{end}}{{end}}</p>
     <div class="card-body">
       <svg data-chart="donut" data-segments="{{.DonutJSON}}" aria-label="Actionable findings by severity"></svg>
     </div>
@@ -757,6 +800,7 @@ footer.report-foot {
       <span><i class="dot sev-low"></i> Low {{.Counts.low}}</span>
       <span><i class="dot sev-info"></i> Info {{.Counts.info}}</span>
     </div>
+    {{- if .HasBaseline }}<svg class="spark" data-chart="sparkline" data-points="{{.ActionableTrend}}" data-direction="lower-better" aria-label="Actionable count trend"></svg>{{ end }}
   </div>
   <div class="card card-frameworks">
     <p class="card-title">Framework coverage</p>
@@ -764,6 +808,17 @@ footer.report-foot {
       <svg data-chart="hbar" data-items="{{.HBarJSON}}" aria-label="Per-framework pass rate"></svg>
     </div>
   </div>
+  {{- if .HasBaseline }}
+  <div class="card card-drift">
+    <p class="card-title">Drift vs baseline</p>
+    <div class="card-body" style="flex-direction:column;align-items:flex-start;gap:6px;font-size:13px;">
+      <div><strong style="color:var(--sev-high);font-size:22px;">{{.DriftNew}}</strong> <span style="color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:0.06em;margin-left:4px;">new</span></div>
+      <div><strong style="color:var(--status-pass);font-size:22px;">{{.DriftResolved}}</strong> <span style="color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:0.06em;margin-left:4px;">resolved</span></div>
+      <div><strong style="color:var(--text);font-size:22px;">{{.DriftExisting}}</strong> <span style="color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:0.06em;margin-left:4px;">carried over</span></div>
+    </div>
+    <div class="card-legend"><span>baseline {{.BaselineLabel}}</span></div>
+  </div>
+  {{- end }}
 </section>
 {{- end }}
 
@@ -838,11 +893,12 @@ footer.report-foot {
 <section class="severity-section {{.SeverityClass}}" data-sev="{{.SeverityClass}}">
   <h2><svg class="icon sev-icon" aria-hidden="true"><use href="#i-sev-{{.SeverityClass}}"/></svg> {{.SeverityName}} ({{len .Findings}})</h2>
   {{- range .Findings }}
-  <article class="finding" data-sev="{{.SeverityClass}}" data-status="{{.Status}}" data-provider="{{.Provider}}" data-fws="{{.FrameworkIDsCSV}}" data-resource-id="{{.ResourceID}}" data-resource-anchor="{{.ResourceAnchorID}}">
+  <article class="finding{{if and $.HasBaseline (index $.NewIDs .Fingerprint)}} is-new{{end}}" data-sev="{{.SeverityClass}}" data-status="{{.Status}}" data-provider="{{.Provider}}" data-fws="{{.FrameworkIDsCSV}}" data-resource-id="{{.ResourceID}}" data-resource-anchor="{{.ResourceAnchorID}}">
     <header>
       <span class="check-id">{{.CheckID}}</span>
       <span class="resource">on <span class="name">{{.ResourceName}}</span>{{if .ResourceType}} <small>({{.ResourceType}})</small>{{end}}</span>
       <span class="status-badge"><svg class="icon" aria-hidden="true"><use href="#i-status-{{.Status}}"/></svg> {{.Status}}</span>
+      {{if and $.HasBaseline (index $.NewIDs .Fingerprint)}}<span class="new-badge">New</span>{{end}}
     </header>
     {{if .Message}}<p class="message">{{.Message}}</p>{{end}}
     {{if or .Description .Remediation .Frameworks .Snippets}}
