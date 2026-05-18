@@ -68,6 +68,14 @@ jobs:
       - name: Check catalogue freshness
         run: go run ./cmd/gencheckdocs -check
 
+      # v1.0 SemVer gate. Fails when the committed pkg/compliancekit/
+      # api.txt drifts from the public package's exported surface, so
+      # an accidental addition / rename / removal cannot land without
+      # an explicit, reviewed diff to api.txt. The api.txt diff in the
+      # PR is the proof the contract was intentionally changed.
+      - name: Check public API surface freshness
+        run: go run ./cmd/genapi -check
+
       - name: Build (linux/amd64)
         env:
           CGO_ENABLED: "0"

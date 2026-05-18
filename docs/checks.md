@@ -3,7 +3,7 @@
 <!--
   AUTO-GENERATED FILE -- DO NOT EDIT BY HAND.
   Regenerate with: make docs
-  Source of truth: internal/checks/**/*.go (the core.Check vars).
+  Source of truth: internal/checks/**/*.go (the compliancekit.Check vars).
 -->
 
 This catalog is generated from the live registry on each release. At the current revision, compliancekit ships **574 checks** across the providers below.

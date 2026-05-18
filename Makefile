@@ -1,4 +1,4 @@
-.PHONY: build run test lint fmt tidy clean setup check docs docs-check help
+.PHONY: build run test lint fmt tidy clean setup check docs docs-check api api-check help
 .DEFAULT_GOAL := help
 
 # Tools installed via `go install` land in $GOPATH/bin which is often
@@ -62,7 +62,13 @@ docs: ## regenerate docs/checks.md from the live registry
 docs-check: ## fail if docs/checks.md is stale (CI gate)
 	go run ./cmd/gencheckdocs -check
 
-check: lint test build docs-check ## pre-push gate: lint + test + build + docs freshness
+api: ## regenerate pkg/compliancekit/api.txt from the public surface
+	go run ./cmd/genapi
+
+api-check: ## fail if pkg/compliancekit/api.txt is stale (v1.0 SemVer gate)
+	go run ./cmd/genapi -check
+
+check: lint test build docs-check api-check ## pre-push gate: lint + test + build + docs + api freshness
 
 help: ## show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
