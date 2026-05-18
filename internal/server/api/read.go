@@ -1,0 +1,438 @@
+package api
+
+import (
+	"context"
+	"database/sql"
+	"errors"
+	"fmt"
+	"net/http"
+	"strings"
+
+	"github.com/go-chi/chi/v5"
+
+	"github.com/darpanzope/compliancekit/internal/server/store"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
+)
+
+// scanRow is the JSON shape returned by GET /api/v1/scans and
+// GET /api/v1/scans/:id. Fields mirror the scans table; rendered
+// with snake_case keys for consistency with the rest of the JSON
+// API + compliancekit.yaml.
+type scanRow struct {
+	ID                 string `json:"id"`
+	CreatedAt          string `json:"created_at"`
+	StartedAt          string `json:"started_at,omitempty"`
+	FinishedAt         string `json:"finished_at,omitempty"`
+	Source             string `json:"source"`
+	Status             string `json:"status"`
+	ProvidersScanned   string `json:"providers_scanned"`
+	FrameworksScanned  string `json:"frameworks_scanned"`
+	Score              int    `json:"score"`
+	Coverage           int    `json:"coverage"`
+	TotalFindings      int    `json:"total_findings"`
+	ActionableFindings int    `json:"actionable_findings"`
+	DurationMS         int    `json:"duration_ms,omitempty"`
+	ErrorMessage       string `json:"error_message,omitempty"`
+}
+
+// page wraps a list response with pagination metadata.
+type page[T any] struct {
+	Items   []T `json:"items"`
+	Page    int `json:"page"`
+	PerPage int `json:"per_page"`
+	Total   int `json:"total"`
+}
+
+// listScans returns the paginated scan history.
+func (a *API) listScans(w http.ResponseWriter, r *http.Request) {
+	pageN, per := parsePage(r)
+	offset := (pageN - 1) * per
+	ctx := r.Context()
+
+	q := fmt.Sprintf( //nolint:gosec // placeholders only; no user input
+		`SELECT id, created_at, COALESCE(started_at,''), COALESCE(finished_at,''), source, status,
+		        providers_scanned, frameworks_scanned, COALESCE(score, 0), COALESCE(coverage, 0),
+		        total_findings, actionable_findings, COALESCE(duration_ms, 0), COALESCE(error_message,'')
+		 FROM scans ORDER BY created_at DESC LIMIT %s OFFSET %s`,
+		a.ph(1), a.ph(2))
+	rows, err := a.store.DB().QueryContext(ctx, q, per, offset)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "list scans: "+err.Error())
+		return
+	}
+	defer func() { _ = rows.Close() }()
+
+	items := make([]scanRow, 0, per)
+	for rows.Next() {
+		var s scanRow
+		if err := rows.Scan(&s.ID, &s.CreatedAt, &s.StartedAt, &s.FinishedAt, &s.Source, &s.Status,
+			&s.ProvidersScanned, &s.FrameworksScanned, &s.Score, &s.Coverage,
+			&s.TotalFindings, &s.ActionableFindings, &s.DurationMS, &s.ErrorMessage); err != nil {
+			respondError(w, http.StatusInternalServerError, "scan row: "+err.Error())
+			return
+		}
+		items = append(items, s)
+	}
+	total := a.count(ctx, "scans", "")
+	respondJSON(w, r, http.StatusOK, page[scanRow]{Items: items, Page: pageN, PerPage: per, Total: total})
+}
+
+// getScan returns a single scan by ID.
+func (a *API) getScan(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	q := fmt.Sprintf( //nolint:gosec // placeholders only; no user input
+		`SELECT id, created_at, COALESCE(started_at,''), COALESCE(finished_at,''), source, status,
+		        providers_scanned, frameworks_scanned, COALESCE(score, 0), COALESCE(coverage, 0),
+		        total_findings, actionable_findings, COALESCE(duration_ms, 0), COALESCE(error_message,'')
+		 FROM scans WHERE id = %s`, a.ph(1))
+	var s scanRow
+	err := a.store.DB().QueryRowContext(r.Context(), q, id).Scan(
+		&s.ID, &s.CreatedAt, &s.StartedAt, &s.FinishedAt, &s.Source, &s.Status,
+		&s.ProvidersScanned, &s.FrameworksScanned, &s.Score, &s.Coverage,
+		&s.TotalFindings, &s.ActionableFindings, &s.DurationMS, &s.ErrorMessage)
+	if errors.Is(err, sql.ErrNoRows) {
+		respondError(w, http.StatusNotFound, "scan not found")
+		return
+	}
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "get scan: "+err.Error())
+		return
+	}
+	respondJSON(w, r, http.StatusOK, s)
+}
+
+// findingRow is the JSON shape returned by /api/v1/findings + nested
+// /api/v1/scans/:id/findings.
+type findingRow struct {
+	ID           string `json:"id"`
+	ScanID       string `json:"scan_id"`
+	Fingerprint  string `json:"fingerprint"`
+	CheckID      string `json:"check_id"`
+	Severity     string `json:"severity"`
+	Status       string `json:"status"`
+	Provider     string `json:"provider"`
+	ResourceID   string `json:"resource_id"`
+	ResourceName string `json:"resource_name"`
+	ResourceType string `json:"resource_type"`
+	Message      string `json:"message,omitempty"`
+	FrameworkIDs string `json:"framework_ids"`
+	FirstSeenAt  string `json:"first_seen_at"`
+	LastSeenAt   string `json:"last_seen_at"`
+	CreatedAt    string `json:"created_at"`
+}
+
+// listFindings returns the paginated global findings list with
+// optional filter knobs that v1.5's explorer will rely on more
+// heavily.
+func (a *API) listFindings(w http.ResponseWriter, r *http.Request) {
+	pageN, per := parsePage(r)
+	offset := (pageN - 1) * per
+
+	// Filter parser: each of these maps to a column.
+	type filterDef struct{ key, col string }
+	filters := []filterDef{
+		{"severity", "severity"},
+		{"status", "status"},
+		{"provider", "provider"},
+		{"resource_type", "resource_type"},
+		{"check_id", "check_id"},
+		{"scan_id", "scan_id"},
+	}
+	var (
+		where []string
+		args  []any
+		i     = 1
+	)
+	for _, f := range filters {
+		if v := r.URL.Query().Get(f.key); v != "" {
+			where = append(where, f.col+" = "+a.ph(i))
+			args = append(args, v)
+			i++
+		}
+	}
+	whereSQL := ""
+	if len(where) > 0 {
+		whereSQL = " WHERE " + strings.Join(where, " AND ")
+	}
+	q := fmt.Sprintf( //nolint:gosec // dialect-aware placeholders; column names are this package's constants
+		`SELECT id, scan_id, fingerprint, check_id, severity, status, provider,
+		        resource_id, resource_name, resource_type, COALESCE(message,''),
+		        framework_ids, first_seen_at, last_seen_at, created_at
+		 FROM findings%s ORDER BY created_at DESC LIMIT %s OFFSET %s`,
+		whereSQL, a.ph(i), a.ph(i+1))
+	args = append(args, per, offset)
+
+	rows, err := a.store.DB().QueryContext(r.Context(), q, args...)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "list findings: "+err.Error())
+		return
+	}
+	defer func() { _ = rows.Close() }()
+
+	items := make([]findingRow, 0, per)
+	for rows.Next() {
+		var f findingRow
+		if err := rows.Scan(&f.ID, &f.ScanID, &f.Fingerprint, &f.CheckID, &f.Severity, &f.Status, &f.Provider,
+			&f.ResourceID, &f.ResourceName, &f.ResourceType, &f.Message,
+			&f.FrameworkIDs, &f.FirstSeenAt, &f.LastSeenAt, &f.CreatedAt); err != nil {
+			respondError(w, http.StatusInternalServerError, "finding row: "+err.Error())
+			return
+		}
+		items = append(items, f)
+	}
+	total := a.count(r.Context(), "findings", whereSQL, args[:i-1]...)
+	respondJSON(w, r, http.StatusOK, page[findingRow]{Items: items, Page: pageN, PerPage: per, Total: total})
+}
+
+// listScanFindings is the scoped-to-scan variant: GET
+// /api/v1/scans/:id/findings.
+func (a *API) listScanFindings(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	// Reuse listFindings logic by forcing scan_id into the query.
+	q := r.URL.Query()
+	q.Set("scan_id", id)
+	r.URL.RawQuery = q.Encode()
+	a.listFindings(w, r)
+}
+
+// getFinding returns a single finding by ID.
+func (a *API) getFinding(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	q := fmt.Sprintf( //nolint:gosec // placeholders only; no user input
+		`SELECT id, scan_id, fingerprint, check_id, severity, status, provider,
+		        resource_id, resource_name, resource_type, COALESCE(message,''),
+		        framework_ids, first_seen_at, last_seen_at, created_at
+		 FROM findings WHERE id = %s`, a.ph(1))
+	var f findingRow
+	err := a.store.DB().QueryRowContext(r.Context(), q, id).Scan(
+		&f.ID, &f.ScanID, &f.Fingerprint, &f.CheckID, &f.Severity, &f.Status, &f.Provider,
+		&f.ResourceID, &f.ResourceName, &f.ResourceType, &f.Message,
+		&f.FrameworkIDs, &f.FirstSeenAt, &f.LastSeenAt, &f.CreatedAt)
+	if errors.Is(err, sql.ErrNoRows) {
+		respondError(w, http.StatusNotFound, "finding not found")
+		return
+	}
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "get finding: "+err.Error())
+		return
+	}
+	respondJSON(w, r, http.StatusOK, f)
+}
+
+// resourceRow is the JSON shape for /api/v1/resources.
+type resourceRow struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Type        string `json:"type"`
+	Provider    string `json:"provider"`
+	FirstSeenAt string `json:"first_seen_at"`
+	LastSeenAt  string `json:"last_seen_at"`
+}
+
+// listResources returns the paginated resource inventory.
+func (a *API) listResources(w http.ResponseWriter, r *http.Request) {
+	pageN, per := parsePage(r)
+	offset := (pageN - 1) * per
+	q := fmt.Sprintf( //nolint:gosec // placeholders only; no user input
+		`SELECT id, name, type, provider, first_seen_at, last_seen_at
+		 FROM resources ORDER BY last_seen_at DESC LIMIT %s OFFSET %s`,
+		a.ph(1), a.ph(2))
+	rows, err := a.store.DB().QueryContext(r.Context(), q, per, offset)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "list resources: "+err.Error())
+		return
+	}
+	defer func() { _ = rows.Close() }()
+	items := make([]resourceRow, 0, per)
+	for rows.Next() {
+		var res resourceRow
+		if err := rows.Scan(&res.ID, &res.Name, &res.Type, &res.Provider, &res.FirstSeenAt, &res.LastSeenAt); err != nil {
+			respondError(w, http.StatusInternalServerError, "resource row: "+err.Error())
+			return
+		}
+		items = append(items, res)
+	}
+	respondJSON(w, r, http.StatusOK, page[resourceRow]{Items: items, Page: pageN, PerPage: per, Total: a.count(r.Context(), "resources", "")})
+}
+
+// getResource returns one resource by ID.
+func (a *API) getResource(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	q := fmt.Sprintf( //nolint:gosec // placeholders only; no user input
+		`SELECT id, name, type, provider, first_seen_at, last_seen_at
+		 FROM resources WHERE id = %s`, a.ph(1))
+	var res resourceRow
+	err := a.store.DB().QueryRowContext(r.Context(), q, id).Scan(
+		&res.ID, &res.Name, &res.Type, &res.Provider, &res.FirstSeenAt, &res.LastSeenAt)
+	if errors.Is(err, sql.ErrNoRows) {
+		respondError(w, http.StatusNotFound, "resource not found")
+		return
+	}
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "get resource: "+err.Error())
+		return
+	}
+	respondJSON(w, r, http.StatusOK, res)
+}
+
+// providerRow is what /api/v1/providers returns. Lists every
+// configured provider with its current auth status.
+type providerRow struct {
+	ID              string `json:"id"`
+	Enabled         bool   `json:"enabled"`
+	LastAuthCheckAt string `json:"last_auth_check_at,omitempty"`
+	LastAuthStatus  string `json:"last_auth_status,omitempty"`
+	LastAuthError   string `json:"last_auth_error,omitempty"`
+	UpdatedAt       string `json:"updated_at"`
+}
+
+func (a *API) listProviders(w http.ResponseWriter, r *http.Request) {
+	rows, err := a.store.DB().QueryContext(r.Context(),
+		`SELECT id, enabled, COALESCE(last_auth_check_at,''), COALESCE(last_auth_status,''), COALESCE(last_auth_error,''), updated_at
+		 FROM providers ORDER BY id ASC`)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "list providers: "+err.Error())
+		return
+	}
+	defer func() { _ = rows.Close() }()
+	items := make([]providerRow, 0, 8)
+	for rows.Next() {
+		var p providerRow
+		var enabled int
+		if err := rows.Scan(&p.ID, &enabled, &p.LastAuthCheckAt, &p.LastAuthStatus, &p.LastAuthError, &p.UpdatedAt); err != nil {
+			respondError(w, http.StatusInternalServerError, "provider row: "+err.Error())
+			return
+		}
+		p.Enabled = enabled != 0
+		items = append(items, p)
+	}
+	respondJSON(w, r, http.StatusOK, page[providerRow]{Items: items, Page: 1, PerPage: len(items), Total: len(items)})
+}
+
+// checkRow is the JSON shape returned by /api/v1/checks. Pulled
+// straight from the compiled-in registry rather than the DB so the
+// list always reflects the active binary.
+type checkRow struct {
+	ID          string   `json:"id"`
+	Title       string   `json:"title"`
+	Description string   `json:"description,omitempty"`
+	Severity    string   `json:"severity"`
+	Provider    string   `json:"provider"`
+	Service     string   `json:"service,omitempty"`
+	Resource    string   `json:"resource,omitempty"`
+	Tags        []string `json:"tags,omitempty"`
+	Enabled     bool     `json:"enabled"`
+}
+
+// listChecks reads from compliancekit.RegisteredChecks() and
+// overlays the per-check enabled/disabled state from the
+// checks_state table.
+func (a *API) listChecks(w http.ResponseWriter, r *http.Request) {
+	checks := compliancekit.RegisteredChecks()
+	overrides, err := a.checkOverrides(r.Context())
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "load check overrides: "+err.Error())
+		return
+	}
+
+	// Optional filters: ?provider=, ?framework=, ?severity=
+	wantProvider := r.URL.Query().Get("provider")
+	wantSeverity := r.URL.Query().Get("severity")
+	items := make([]checkRow, 0, len(checks))
+	for _, c := range checks {
+		if wantProvider != "" && c.Provider != wantProvider {
+			continue
+		}
+		if wantSeverity != "" && c.Severity.String() != wantSeverity {
+			continue
+		}
+		enabled := true
+		if v, ok := overrides[c.ID]; ok {
+			enabled = v
+		}
+		items = append(items, checkRow{
+			ID: c.ID, Title: c.Title, Description: c.Description,
+			Severity: c.Severity.String(), Provider: c.Provider,
+			Service: c.Service, Resource: c.ResourceType, Tags: c.Tags, Enabled: enabled,
+		})
+	}
+	respondJSON(w, r, http.StatusOK, page[checkRow]{Items: items, Page: 1, PerPage: len(items), Total: len(items)})
+}
+
+// checkOverrides reads checks_state into a map[checkID]enabled. An
+// absent row means "use shipped default (enabled)".
+func (a *API) checkOverrides(ctx context.Context) (map[string]bool, error) {
+	rows, err := a.store.DB().QueryContext(ctx, `SELECT check_id, enabled FROM checks_state`)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+	out := map[string]bool{}
+	for rows.Next() {
+		var id string
+		var e int
+		if err := rows.Scan(&id, &e); err != nil {
+			return nil, err
+		}
+		out[id] = e != 0
+	}
+	return out, rows.Err()
+}
+
+// waiverRow is the JSON shape returned by /api/v1/waivers.
+type waiverRow struct {
+	ID         string `json:"id"`
+	CheckID    string `json:"check_id"`
+	ResourceID string `json:"resource_id"`
+	Reason     string `json:"reason"`
+	Approver   string `json:"approver"`
+	CreatedAt  string `json:"created_at"`
+	ExpiresAt  string `json:"expires_at,omitempty"`
+	RevokedAt  string `json:"revoked_at,omitempty"`
+}
+
+func (a *API) listWaivers(w http.ResponseWriter, r *http.Request) {
+	pageN, per := parsePage(r)
+	offset := (pageN - 1) * per
+	q := fmt.Sprintf( //nolint:gosec // placeholders only; no user input
+		`SELECT id, check_id, resource_id, reason, approver, created_at,
+		        COALESCE(expires_at,''), COALESCE(revoked_at,'')
+		 FROM waivers ORDER BY created_at DESC LIMIT %s OFFSET %s`,
+		a.ph(1), a.ph(2))
+	rows, err := a.store.DB().QueryContext(r.Context(), q, per, offset)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "list waivers: "+err.Error())
+		return
+	}
+	defer func() { _ = rows.Close() }()
+	items := make([]waiverRow, 0, per)
+	for rows.Next() {
+		var wv waiverRow
+		if err := rows.Scan(&wv.ID, &wv.CheckID, &wv.ResourceID, &wv.Reason, &wv.Approver, &wv.CreatedAt, &wv.ExpiresAt, &wv.RevokedAt); err != nil {
+			respondError(w, http.StatusInternalServerError, "waiver row: "+err.Error())
+			return
+		}
+		items = append(items, wv)
+	}
+	respondJSON(w, r, http.StatusOK, page[waiverRow]{Items: items, Page: pageN, PerPage: per, Total: a.count(r.Context(), "waivers", "")})
+}
+
+// count runs SELECT COUNT(*) FROM <table><whereSQL> and returns the
+// scalar. Best-effort; on error returns 0 (so list endpoints don't
+// fail just because counting failed).
+func (a *API) count(ctx context.Context, table, whereSQL string, args ...any) int {
+	q := "SELECT COUNT(*) FROM " + table + whereSQL //nolint:gosec // table from constants; whereSQL composed via placeholder()
+	var n int
+	if err := a.store.DB().QueryRowContext(ctx, q, args...).Scan(&n); err != nil {
+		return 0
+	}
+	return n
+}
+
+// ph returns the dialect-aware placeholder for arg N.
+func (a *API) ph(n int) string {
+	if a.store.Driver() == store.DriverPostgres {
+		return fmt.Sprintf("$%d", n)
+	}
+	return "?"
+}

@@ -3,12 +3,18 @@ package cli
 import (
 	"context"
 	"fmt"
+	"os"
 	"os/signal"
+	"path/filepath"
+	"strings"
 	"syscall"
 
 	"github.com/spf13/cobra"
 
 	"github.com/darpanzope/compliancekit/internal/server"
+	"github.com/darpanzope/compliancekit/internal/server/api"
+	"github.com/darpanzope/compliancekit/internal/server/auth"
+	"github.com/darpanzope/compliancekit/internal/server/store"
 )
 
 // newServeCmd builds `compliancekit serve`, the v1.3 daemon entry
@@ -21,6 +27,7 @@ import (
 // landing serve here is a feature add, not a rewrite.
 func newServeCmd() *cobra.Command {
 	cfg := server.Default()
+	var dbPath string
 	cmd := &cobra.Command{
 		Use:   "serve",
 		Short: "Run the compliancekit daemon (HTTP server + web UI)",
@@ -50,11 +57,12 @@ period for in-flight requests to drain.`,
   compliancekit serve --port=9000
   compliancekit serve --addr=0.0.0.0 --port=8080  # bind all interfaces (review your firewall)`,
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			return runServe(cmd.Context(), cmd.OutOrStdout(), cfg)
+			return runServe(cmd.Context(), cmd.OutOrStdout(), cfg, dbPath)
 		},
 	}
 	cmd.Flags().StringVar(&cfg.Addr, "addr", cfg.Addr, "bind interface (use 0.0.0.0 to expose on every NIC)")
 	cmd.Flags().IntVar(&cfg.Port, "port", cfg.Port, "TCP port")
+	cmd.Flags().StringVar(&dbPath, "db", "./.compliancekit/serve.db", "SQLite file path (or postgres://... DSN; see CONFIGURATION.md)")
 	return cmd
 }
 
@@ -63,8 +71,27 @@ period for in-flight requests to drain.`,
 // the same code path without going through cobra.
 func runServe(ctx context.Context, stdout interface {
 	Write([]byte) (int, error)
-}, cfg server.Config) error {
+}, cfg server.Config, dbPath string) error {
+	// Open the persistent store. SQLite path or postgres:// DSN —
+	// both backends behind the same Store interface (phase 1 + 2).
+	st, err := openStore(ctx, dbPath)
+	if err != nil {
+		return fmt.Errorf("open store: %w", err)
+	}
+	defer func() { _ = st.Close() }()
+	if err := st.MigrateUp(ctx); err != nil {
+		return fmt.Errorf("migrate: %w", err)
+	}
+
+	// Auth subjects.
+	users := auth.NewUsers(st)
+	sessions := auth.NewSessions(st)
+	tokens := auth.NewTokens(st)
+
 	srv := server.New(cfg)
+	// Mount the v1.3 REST API on the daemon's chi router.
+	apiH := api.New(st, users, tokens, sessions)
+	apiH.Mount(srv.Router())
 
 	// Install signal handlers on the parent context. When the user
 	// hits Ctrl-C or systemd sends SIGTERM, the signal-aware context
@@ -76,6 +103,39 @@ func runServe(ctx context.Context, stdout interface {
 	fmt.Fprintf(stdout, "compliancekit daemon listening on http://%s\n", srv.Addr())
 	fmt.Fprintf(stdout, "  health:  http://%s/health\n", srv.Addr())
 	fmt.Fprintf(stdout, "  metrics: http://%s/metrics\n", srv.Addr())
+	fmt.Fprintf(stdout, "  api:     http://%s/api/v1/\n", srv.Addr())
+	fmt.Fprintf(stdout, "  store:   %s (driver=%s)\n", dbPath, st.Driver())
 	fmt.Fprintln(stdout, "(Ctrl-C to stop)")
 	return srv.Run(ctx)
+}
+
+// openStore picks SQLite vs Postgres based on the dbPath prefix. A
+// "postgres://" or "postgresql://" DSN selects Postgres; anything
+// else is treated as a SQLite file path (parent directory created
+// on demand).
+func openStore(ctx context.Context, dbPath string) (*store.Store, error) {
+	if isPostgresDSN(dbPath) {
+		return store.OpenPostgres(ctx, dbPath)
+	}
+	if err := makeParentDir(dbPath); err != nil {
+		return nil, err
+	}
+	return store.OpenSQLite(ctx, dbPath)
+}
+
+func isPostgresDSN(s string) bool {
+	return strings.HasPrefix(s, "postgres://") ||
+		strings.HasPrefix(s, "postgresql://") ||
+		strings.HasPrefix(s, "host=")
+}
+
+// makeParentDir creates the directory holding path with 0o750 perms.
+// No-op when the parent already exists. Lets `compliancekit serve`
+// run against a fresh checkout without a separate `mkdir` step.
+func makeParentDir(path string) error {
+	dir := filepath.Dir(path)
+	if dir == "" || dir == "." {
+		return nil
+	}
+	return os.MkdirAll(dir, 0o750)
 }
