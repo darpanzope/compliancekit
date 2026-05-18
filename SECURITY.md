@@ -59,7 +59,7 @@ The non-exhaustive list:
   signature, an SBOM that omits a real dependency.
 
 Bug-bounty-style findings outside the scope above (general DoS via large
-inputs, slow loris on the future `serve` mode at v1.1, etc.) are valid bug
+inputs, slow loris on the future `serve` mode at v1.3, etc.) are valid bug
 reports but go to the public issue tracker, not the disclosure channel
 below.
 

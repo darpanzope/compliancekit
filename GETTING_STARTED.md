@@ -113,9 +113,19 @@ Hardening score: 67/100 (coverage 100%)
 findings at or above high severity present
 ```
 
-Open `out/findings.html` in your browser — search/filter, dark mode, drill
-into any finding. `out/findings.json` is the machine-readable shape your
-CI consumes. `out/findings.markdown` is the human-readable summary.
+Open `out/findings.html` in your browser. v1.2 adds summary cards (score
+gauge + severity donut + framework coverage bars), filter chips that
+encode their selection in the URL fragment for share-views, a sticky
+resource sidebar, dark/light/system theme toggle, and `@media print`
+for clean PDF export. Pass `--baseline=...` to a re-render to add a
+"Drift vs baseline" card + score/actionable sparklines + "New" badges:
+
+```sh
+compliancekit render --in=out/findings.json --baseline=.compliancekit/baseline.json --out=out/trend.html
+```
+
+`out/findings.json` is the machine-readable shape your CI consumes.
+`out/findings.markdown` is the human-readable summary.
 
 ---
 
@@ -325,7 +335,7 @@ it easier to read:
 
 | File | Best for |
 |---|---|
-| `findings.html` | Human review — dark mode, search, filter |
+| `findings.html` | Human review — light/dark/system theme, filter chips, sticky resource sidebar, baseline-drift card + sparklines (via `--baseline`), print-friendly |
 | `findings.markdown` | PR comments, Slack messages, code reviews |
 | `findings.json` | Programmatic ingest, CI gates, evidence pack |
 

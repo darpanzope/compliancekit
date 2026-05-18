@@ -92,7 +92,10 @@ binary
 └── embedded files (go:embed)
     ├── internal/checks/<provider>/*.yaml         check metadata
     ├── internal/frameworks/*.yaml                control mappings (9 frameworks)
-    └── internal/report/assets/*.html             HTML report template + inline CSS/JS
+    └── internal/report/assets/                   HTML report assets (v1.2 quad)
+        ├── template.html                         named-block layout + inline CSS
+        ├── chart.js                              vanilla-JS SVG drawers (gauge/donut/hbar/sparkline)
+        └── icons/sprite.svg                      22-symbol icon sheet (severity/status/theme/providers)
 ```
 
 **Why embedded:** one binary, zero install steps, no "missing config" failure mode. Updating the check catalogue means a new release — which is the right cadence for compliance content anyway.

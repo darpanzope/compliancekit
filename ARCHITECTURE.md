@@ -256,7 +256,8 @@ compliancekit scan digitalocean    # scan one provider
 compliancekit scan linux --inventory=inventory.yaml
 compliancekit scan --output=json --out=findings.json
 
-compliancekit report --format=html --in=findings.json --out=./report
+compliancekit render --format=html --in=findings.json --out=./report.html
+compliancekit render --in=findings.json --baseline=.compliancekit/baseline.json --out=./trend.html
 compliancekit evidence --in=findings.json --out=./evidence/2026-Q2/
 
 compliancekit checks list                          # full catalogue
