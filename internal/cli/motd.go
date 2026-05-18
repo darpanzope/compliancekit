@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -70,7 +71,15 @@ func runMotd(w io.Writer, st *ui.Styler, in, baselinePath string) error {
 }
 
 // readFindingsFile loads a findings.json (or '-' for stdin) into
-// the slice of public Findings.
+// the slice of public Findings. Accepts both shapes the JSON reporter
+// has emitted historically:
+//
+//   - a bare `[]Finding` array (legacy / test fixtures)
+//   - the v1 envelope `{schema, generated_at, summary, findings: [...]}`
+//     produced by the current json reporter
+//
+// The envelope shape always wins when present; bare-array fixtures
+// stay supported so doc snippets + smoke tests don't need an envelope.
 func readFindingsFile(path string) ([]compliancekit.Finding, error) {
 	var r io.Reader = os.Stdin
 	if path != "-" {
@@ -81,11 +90,30 @@ func readFindingsFile(path string) ([]compliancekit.Finding, error) {
 		defer func() { _ = f.Close() }()
 		r = f
 	}
-	var findings []compliancekit.Finding
-	if err := json.NewDecoder(r).Decode(&findings); err != nil {
+	raw, err := io.ReadAll(r)
+	if err != nil {
 		return nil, err
 	}
-	return findings, nil
+	// Trim the leading whitespace so the first non-space byte tells us
+	// whether we have an array (`[`) or an object envelope (`{`).
+	trimmed := bytes.TrimLeft(raw, " \t\r\n")
+	if len(trimmed) == 0 {
+		return nil, nil
+	}
+	if trimmed[0] == '[' {
+		var findings []compliancekit.Finding
+		if err := json.Unmarshal(raw, &findings); err != nil {
+			return nil, err
+		}
+		return findings, nil
+	}
+	var env struct {
+		Findings []compliancekit.Finding `json:"findings"`
+	}
+	if err := json.Unmarshal(raw, &env); err != nil {
+		return nil, err
+	}
+	return env.Findings, nil
 }
 
 // renderMotdHeader writes the top card: total findings + severity

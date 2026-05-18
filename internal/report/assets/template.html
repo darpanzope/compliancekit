@@ -1,11 +1,17 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>compliancekit scan report</title>
 <style>
-:root {
+/* ─── Palette ─────────────────────────────────────────────────────
+   Single source of truth for color. Every component below reads from
+   these CSS variables so phase 1's dark/light/system toggle is a
+   one-line attribute flip on <html>. The dark palette is the default;
+   phase 1 will introduce the [data-theme="light"] counterpart. */
+:root,
+[data-theme="dark"] {
   --bg: #0f1115;
   --panel: #1a1d23;
   --panel-2: #232830;
@@ -26,6 +32,7 @@
   --status-error: #ff8a3d;
 }
 
+/* ─── Base ──────────────────────────────────────────────────────── */
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); }
 body {
@@ -34,6 +41,8 @@ body {
   line-height: 1.5;
   padding: 0 24px 64px;
 }
+
+/* ─── Header (title + meta + counts) ───────────────────────────── */
 header.report-head {
   padding: 32px 0 16px;
   border-bottom: 1px solid var(--border);
@@ -83,6 +92,12 @@ header.report-head .meta {
 .counts li.low      .value { color: var(--sev-low); }
 .counts li.info     .value { color: var(--sev-info); }
 
+/* ─── Summary cards row (filled in phase 3) ────────────────────── */
+/* Phase 3 introduces .summary-cards with score gauge + severity donut
+   + framework coverage bar. Selectors land below this comment to keep
+   the file readable. */
+
+/* ─── Controls (search + severity chips) ───────────────────────── */
 nav.controls {
   display: flex;
   flex-wrap: wrap;
@@ -122,6 +137,19 @@ nav.controls button[data-sev="medium"]   { color: var(--sev-medium);   border-co
 nav.controls button[data-sev="low"]      { color: var(--sev-low);      border-color: var(--sev-low); }
 nav.controls button[data-sev="info"]     { color: var(--sev-info);     border-color: var(--sev-info); }
 
+/* ─── Layout (sidebar + main) ───────────────────────────────────
+   Phase 5 splits the layout into a sticky sidebar + main column. For
+   now the layout container is a passthrough so the existing single-
+   column flow renders identically. */
+.layout {
+  display: block;
+}
+
+/* ─── Sidebar (filled in phase 5) ──────────────────────────────── */
+/* Phase 5 introduces .sidebar with resources grouped by type/provider
+   and a scroll-to anchor per resource. Empty for now. */
+
+/* ─── Findings list ────────────────────────────────────────────── */
 section.severity-section {
   margin-bottom: 32px;
 }
@@ -212,6 +240,8 @@ article.finding ul.frameworks {
   padding: 0;
   margin: 0;
 }
+
+/* ─── Remediation snippets (v0.22.1) ───────────────────────────── */
 article.finding .snippets {
   margin-top: 8px;
 }
@@ -235,7 +265,7 @@ article.finding .snippets .tab {
 }
 article.finding .snippets .tab.active {
   background: var(--panel);
-  color: var(--fg);
+  color: var(--text);
   border-bottom: 1px solid var(--panel);
   margin-bottom: -1px;
 }
@@ -264,7 +294,7 @@ article.finding .snippets pre {
   white-space: pre-wrap;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 12px;
-  color: var(--fg);
+  color: var(--text);
 }
 article.finding .snippets .notes,
 article.finding .snippets .verify {
@@ -290,6 +320,7 @@ article.finding ul.frameworks li strong {
   margin-right: 8px;
 }
 
+/* ─── Empty state ──────────────────────────────────────────────── */
 .empty {
   text-align: center;
   color: var(--muted);
@@ -297,6 +328,7 @@ article.finding ul.frameworks li strong {
 }
 .empty p { margin: 4px 0; }
 
+/* ─── Footer ───────────────────────────────────────────────────── */
 footer.report-foot {
   margin-top: 48px;
   padding-top: 24px;
@@ -305,10 +337,25 @@ footer.report-foot {
   font-size: 12px;
   text-align: center;
 }
+
+/* ─── Responsive (filled in phase 7) ───────────────────────────── */
+/* @media (max-width: 400px) lives here in phase 7 — collapses chips,
+   stacks counts vertically, swaps sidebar for hamburger. */
+
+/* ─── Print (filled in phase 7) ────────────────────────────────── */
+/* @media print lives here in phase 7 — drops sticky chrome, expands
+   <details>, keeps charts as inline SVG so Chrome's "Save as PDF" path
+   produces a clean A4 layout. */
 </style>
 </head>
 <body>
 
+{{- /* Named blocks below mark structural sections so contributors can
+       override individual pieces (head, summary-cards, controls,
+       sidebar, findings, footer) without touching the whole template.
+       Per ROADMAP v1.2 Plumbing. */ -}}
+
+{{ block "report-head" . -}}
 <header class="report-head">
   <h1>compliancekit scan report</h1>
   <div class="meta">Generated {{.Generated}} &middot; {{.TotalCount}} findings ({{.ActionableCount}} actionable)</div>
@@ -321,7 +368,14 @@ footer.report-foot {
     <li class="info"><span class="label">Info</span><span class="value">{{.Counts.info}}</span></li>
   </ul>
 </header>
+{{- end }}
 
+{{ block "summary-cards" . -}}
+{{- /* Phase 3 lands the SVG donut + gauge + framework-coverage bar
+       cards here. Empty by default so phase 0 is a pure no-op. */ -}}
+{{- end }}
+
+{{ block "controls" . -}}
 <nav class="controls">
   <input type="search" id="search" placeholder="Filter findings by text...">
   <button data-sev="critical">Critical</button>
@@ -330,7 +384,16 @@ footer.report-foot {
   <button data-sev="low">Low</button>
   <button data-sev="info">Info</button>
 </nav>
+{{- end }}
 
+<div class="layout">
+{{ block "sidebar" . -}}
+{{- /* Phase 5 lands the sticky resource sidebar here. Empty by
+       default; the .layout container collapses to a single column
+       when no sidebar is present. */ -}}
+{{- end }}
+
+{{ block "findings" . -}}
 <main id="findings">
 {{- if not .HasFindings }}
 <div class="empty">
@@ -390,10 +453,14 @@ footer.report-foot {
 {{- end }}
 {{- end }}
 </main>
+{{- end }}
+</div>
 
+{{ block "footer" . -}}
 <footer class="report-foot">
   Rendered by compliancekit. <a href="https://github.com/darpanzope/compliancekit" style="color: var(--muted);">github.com/darpanzope/compliancekit</a>
 </footer>
+{{- end }}
 
 <script>
 (function () {
