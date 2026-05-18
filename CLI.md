@@ -405,4 +405,69 @@ Every flag is overridable via env var. The mapping is `COMPLIANCEKIT_<UPPER_FLAG
 compliancekit completion bash > /etc/bash_completion.d/compliancekit
 compliancekit completion zsh  > "${fpath[1]}/_compliancekit"
 compliancekit completion fish > ~/.config/fish/completions/compliancekit.fish
+compliancekit completion powershell | Out-String | Invoke-Expression
 ```
+
+Generated via the Cobra default; each shell's `completion --help` prints
+the install path appropriate for that shell.
+
+## Color palette + glyph reference (v1.1+)
+
+Every subcommand routes its styled output through a single Styler
+(`internal/ui/style.go`) so the visual language stays consistent.
+Three switches disable color, in this precedence order — first
+negative wins:
+
+1. `--no-color` global flag (forces plain even on a TTY)
+2. `NO_COLOR` environment variable (any value disables, per
+   [no-color.org](https://no-color.org))
+3. `CLICOLOR=0` (legacy BSD / git convention)
+4. Non-TTY stdout (pipes, redirects, CI runners)
+
+### Severity palette
+
+| Severity   | Color (TTY)            | Chip      | Glyph |
+| ---------- | ---------------------- | --------- | ----- |
+| `critical` | red bold               | `[CRITICAL]` | `✗` (fail-rendered) |
+| `high`     | orange bold            | `[HIGH]`     |       |
+| `medium`   | yellow                 | `[MEDIUM]`   |       |
+| `low`      | blue                   | `[LOW]`      |       |
+| `info`     | grey                   | `[INFO]`     | `·`   |
+| `unknown`  | muted grey             | `[UNKNOWN]`  |       |
+
+The `bold` modifier kicks in at `high` so the eye lands on
+high + critical first.
+
+### Status palette
+
+| Status   | Color (TTY) | Glyph (TTY) | ASCII fallback |
+| -------- | ----------- | ----------- | -------------- |
+| `pass`   | green dim   | `✓`         | `ok`           |
+| `fail`   | red         | `✗`         | `X`            |
+| `skip`   | grey        | `–`         | `-`            |
+| `error`  | orange      | `⚠`         | `!`            |
+
+### Diff palette
+
+| Kind       | Color (TTY)             | Glyph |
+| ---------- | ----------------------- | ----- |
+| `added`    | bold green              | `+`   |
+| `removed`  | dim grey strikethrough  | `-`   |
+| `existing` | muted grey              | `=`   |
+
+### Frame characters (table renderer)
+
+| Mode  | Corners | Edges | Junctions |
+| ----- | ------- | ----- | --------- |
+| TTY   | `┌ ┐ └ ┘` | `─ │` | `┬ ┴ ├ ┤ ┼` |
+| Plain | `+`      | `- |`  | `+`       |
+
+Frame characters render in the muted color so the eye lands on
+the row content, not the table chrome.
+
+### Width stability
+
+ASCII fallbacks for status / diff glyphs are intentionally width-
+matched to their unicode counterparts so column layouts stay
+stable across modes. A table that lines up in TTY mode lines up
+in plain mode without re-padding.
