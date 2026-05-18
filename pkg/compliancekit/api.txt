@@ -23,8 +23,16 @@ const StatusSkip Status
 func ParseSeverity(s string) (Severity, error)
 func ParseStatus(s string) (Status, error)
 method (*Severity) UnmarshalJSON(b []byte) error
+method (Resource) Attr(key string) string
+method (Resource) AttrBool(key string) bool
+method (Resource) AttrInt(key string) int
+method (Resource) HasTag(tag string) bool
+method (Resource) Ref() ResourceRef
 method (Severity) MarshalJSON() ([]byte, error)
 method (Severity) String() string
 method (Status) IsActionable() bool
+type EvidencePtr struct
+type Resource struct
+type ResourceRef struct
 type Severity int
 type Status string
