@@ -10,6 +10,8 @@
 # initial Phase 0 commit ships the gate and an empty contract;
 # subsequent phases promote one type family at a time.
 
+const CategoryCompliance = "compliance"
+const CategoryThreatModel = "threat_model"
 const SeverityCritical
 const SeverityHigh
 const SeverityInfo
@@ -32,6 +34,7 @@ func RegisteredChecks() []Check
 func RegisteredCount() int
 func RegisteredIDs() []string
 func Unregister(id string) bool
+method (*Framework) IsThreatModel() bool
 method (*Registry) Check(id string) (Check, bool)
 method (*Registry) Checks() []Check
 method (*Registry) Count() int
@@ -49,6 +52,7 @@ method (*ResourceGraph) Related(r Resource, edge string) []Resource
 method (*Severity) UnmarshalJSON(b []byte) error
 method (*WaiverRef) DaysUntilExpiry(t time.Time) int
 method (*WaiverRef) IsActive(t time.Time) bool
+method (Control) HasTag(tag string) bool
 method (Finding) Fingerprint() string
 method (Finding) IsNative() bool
 method (Resource) Attr(key string) string
@@ -62,12 +66,15 @@ method (Status) IsActionable() bool
 type Check struct
 type CheckFunc func(ctx context.Context, graph *ResourceGraph) ([]Finding, error)
 type Collector interface
+type Control struct
 type Evaluator interface
 type EvidencePtr struct
 type Finding struct
+type Framework struct
 type Package struct
 type Registry struct
 type Reporter interface
+type ResolvedControl struct
 type Resource struct
 type ResourceGraph struct
 type ResourceRef struct
@@ -75,5 +82,6 @@ type Secret struct
 type Severity int
 type Source struct
 type Status string
+type Tactic struct
 type Vulnerability struct
 type WaiverRef struct
