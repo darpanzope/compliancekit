@@ -48,6 +48,9 @@ severity:
   min_report: low
 
 output:
-  format: [json, markdown, html]
+  format:
+    - json
+    - markdown
+    - html
   out_dir: ./out
   evidence: true

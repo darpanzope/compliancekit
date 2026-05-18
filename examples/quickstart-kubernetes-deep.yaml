@@ -35,6 +35,13 @@ providers:
       - kube-public
       - kube-node-lease
 
+output:
+  format:
+    - json
+    - html
+    - markdown
+  out_dir: ./out
+
 scan:
   parallel_checks: 16
   fail_on: high                 # any High / Critical finding exits non-zero

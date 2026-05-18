@@ -76,6 +76,11 @@ severity:
   min_report: low
 
 output:
-  format: [json, markdown, sarif, ocsf, html]
+  format:
+    - json
+    - markdown
+    - sarif
+    - ocsf
+    - html
   out_dir: ./out
   evidence: true

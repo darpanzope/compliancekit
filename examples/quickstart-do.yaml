@@ -21,5 +21,8 @@ severity:
   min_report: info
 
 output:
-  format: [json, html, markdown]
+  format:
+    - json
+    - html
+    - markdown
   out_dir: ./out

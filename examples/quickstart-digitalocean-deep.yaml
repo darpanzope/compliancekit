@@ -32,6 +32,13 @@ providers:
     # since DOKS clusters are control-plane resources; DOKS checks
     # register under provider="kubernetes" / service="doks".
 
+output:
+  format:
+    - json
+    - html
+    - markdown
+  out_dir: ./out
+
 scan:
   parallel_checks: 8
   fail_on: high      # any High / Critical finding exits non-zero

@@ -23,7 +23,7 @@
 providers:
   linux:
     enabled: true
-    inventory_file: inventory.yaml
+    inventory: inventory.yaml
     ssh:
       # Defaults inherited by every host in inventory.yaml unless
       # overridden per-host.
@@ -38,6 +38,13 @@ providers:
         host: bastion.acme.com
         user: $LINUX_BASTION_USER
         key_file: ~/.ssh/bastion_rsa
+
+output:
+  format:
+    - json
+    - html
+    - markdown
+  out_dir: ./out
 
 scan:
   parallel_checks: 16            # 119 checks × N hosts — bump for big fleets

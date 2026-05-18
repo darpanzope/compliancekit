@@ -77,7 +77,10 @@ severity:
   min_report: low
 
 output:
-  format: [json, html, markdown]
+  format:
+    - json
+    - html
+    - markdown
   out_dir: ./out
   evidence: true                # write the evidence pack alongside
                                 # findings; v0.12 evidence-pack ships
