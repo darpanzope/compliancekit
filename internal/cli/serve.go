@@ -15,6 +15,7 @@ import (
 	"github.com/darpanzope/compliancekit/internal/server/api"
 	"github.com/darpanzope/compliancekit/internal/server/auth"
 	"github.com/darpanzope/compliancekit/internal/server/store"
+	"github.com/darpanzope/compliancekit/internal/server/webhook"
 	"github.com/darpanzope/compliancekit/internal/server/worker"
 )
 
@@ -29,6 +30,7 @@ import (
 func newServeCmd() *cobra.Command {
 	cfg := server.Default()
 	var dbPath string
+	var githubSecret string
 	cmd := &cobra.Command{
 		Use:   "serve",
 		Short: "Run the compliancekit daemon (HTTP server + web UI)",
@@ -58,12 +60,13 @@ period for in-flight requests to drain.`,
   compliancekit serve --port=9000
   compliancekit serve --addr=0.0.0.0 --port=8080  # bind all interfaces (review your firewall)`,
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			return runServe(cmd.Context(), cmd.OutOrStdout(), cfg, dbPath)
+			return runServe(cmd.Context(), cmd.OutOrStdout(), cfg, dbPath, githubSecret)
 		},
 	}
 	cmd.Flags().StringVar(&cfg.Addr, "addr", cfg.Addr, "bind interface (use 0.0.0.0 to expose on every NIC)")
 	cmd.Flags().IntVar(&cfg.Port, "port", cfg.Port, "TCP port")
 	cmd.Flags().StringVar(&dbPath, "db", "./.compliancekit/serve.db", "SQLite file path (or postgres://... DSN; see CONFIGURATION.md)")
+	cmd.Flags().StringVar(&githubSecret, "github-webhook-secret", "", "shared secret for the /webhooks/github HMAC verification (empty disables the route)")
 	return cmd
 }
 
@@ -72,7 +75,7 @@ period for in-flight requests to drain.`,
 // the same code path without going through cobra.
 func runServe(ctx context.Context, stdout interface {
 	Write([]byte) (int, error)
-}, cfg server.Config, dbPath string) error {
+}, cfg server.Config, dbPath, githubSecret string) error {
 	// Open the persistent store. SQLite path or postgres:// DSN —
 	// both backends behind the same Store interface (phase 1 + 2).
 	st, err := openStore(ctx, dbPath)
@@ -93,6 +96,9 @@ func runServe(ctx context.Context, stdout interface {
 	// Mount the v1.3 REST API on the daemon's chi router.
 	apiH := api.New(st, users, tokens, sessions)
 	apiH.Mount(srv.Router())
+	// Mount the v1.3 webhook receivers (/webhooks/github + /webhooks/{id}).
+	webhookH := webhook.New(st, webhook.Config{GitHubSecret: githubSecret})
+	webhookH.Mount(srv.Router())
 
 	// Spawn the background worker pool. Phase 8 ships StubRunner so
 	// queued scans transition to completed without running anything;
