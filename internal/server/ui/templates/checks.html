@@ -1,0 +1,31 @@
+{{define "content"}}
+<h1 class="page-title">Checks</h1>
+<p class="page-sub">{{ .Total }} checks compiled into this binary. v1.4 Studio adds per-check toggle UI; v1.5 Explorer adds filters + saved views.</p>
+
+<div class="card" style="padding:0">
+<table class="list">
+<thead>
+<tr>
+<th>ID</th>
+<th>Severity</th>
+<th>Provider</th>
+<th>Service</th>
+<th>Title</th>
+<th>Enabled</th>
+</tr>
+</thead>
+<tbody>
+{{ range .Items }}
+<tr>
+<td class="mono">{{ .ID }}</td>
+<td><span class="status-pill {{.Severity}}">{{ .Severity }}</span></td>
+<td class="mono muted">{{ .Provider }}</td>
+<td class="mono muted">{{ .Service }}</td>
+<td>{{ .Title }}</td>
+<td>{{ if .Enabled }}<span class="status-pill completed">on</span>{{ else }}<span class="status-pill canceled">off</span>{{ end }}</td>
+</tr>
+{{ end }}
+</tbody>
+</table>
+</div>
+{{end}}

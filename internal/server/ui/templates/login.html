@@ -1,0 +1,15 @@
+{{define "content"}}
+<div class="login-card">
+  <h1>Sign in</h1>
+  {{ if .Flash }}<div class="alert error">{{ .Flash }}</div>{{ end }}
+  <form action="/api/auth/login" method="post">
+    {{ if .Next }}<input type="hidden" name="next" value="{{ .Next }}">{{ end }}
+    <label for="email">Email</label>
+    <input type="email" id="email" name="email" autocomplete="username" required autofocus>
+    <label for="password">Password</label>
+    <input type="password" id="password" name="password" autocomplete="current-password" required>
+    <button type="submit">Sign in</button>
+  </form>
+  <p class="footer-link">Or use an upstream identity provider — see the <a href="/docs/oidc">OIDC setup guide</a>.</p>
+</div>
+{{end}}

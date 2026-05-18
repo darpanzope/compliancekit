@@ -1,0 +1,39 @@
+{{define "content"}}
+<h1 class="page-title">Scans</h1>
+<p class="page-sub">{{ .Total }} scan{{ if ne .Total 1 }}s{{ end }} in the daemon's history. Click a row to open its v1.2 report.</p>
+
+<div class="card" style="padding:0">
+<table class="list">
+<thead>
+<tr>
+<th>Created</th>
+<th>Status</th>
+<th>Source</th>
+<th>Providers</th>
+<th>Score</th>
+<th>Findings</th>
+<th>Actionable</th>
+<th>Duration</th>
+</tr>
+</thead>
+<tbody>
+{{ range .Items }}
+<tr onclick="window.location='/scans/{{.ID}}'">
+<td class="mono">{{ .CreatedAt }}</td>
+<td><span class="status-pill {{.Status}}">{{ .Status }}</span></td>
+<td class="muted">{{ .Source }}</td>
+<td class="mono muted">{{ .ProvidersScanned }}</td>
+<td>{{ .Score }}/100</td>
+<td>{{ .TotalFindings }}</td>
+<td>{{ .ActionableFindings }}</td>
+<td class="muted">{{ if .DurationMS }}{{ .DurationMS }}ms{{ else }}—{{ end }}</td>
+</tr>
+{{ else }}
+<tr><td colspan="8" class="muted" style="text-align:center;padding:48px 0">
+No scans yet. Run <span class="mono">compliancekit scan --push-to-server=...</span> from a CLI to populate history.
+</td></tr>
+{{ end }}
+</tbody>
+</table>
+</div>
+{{end}}

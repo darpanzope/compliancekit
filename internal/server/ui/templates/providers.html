@@ -1,0 +1,33 @@
+{{define "content"}}
+<h1 class="page-title">Providers</h1>
+<p class="page-sub">Configured providers + their last auth-probe status. v1.4 Studio adds the in-UI configurator.</p>
+
+<div class="card" style="padding:0">
+<table class="list">
+<thead>
+<tr>
+<th>Provider</th>
+<th>Enabled</th>
+<th>Last auth status</th>
+<th>Last checked</th>
+<th>Error</th>
+</tr>
+</thead>
+<tbody>
+{{ range .Providers }}
+<tr>
+<td class="mono">{{ .ID }}</td>
+<td>{{ if .Enabled }}<span class="status-pill completed">on</span>{{ else }}<span class="status-pill canceled">off</span>{{ end }}</td>
+<td>{{ if eq .LastAuthStatus "ok" }}<span class="status-pill completed">ok</span>{{ else if eq .LastAuthStatus "failed" }}<span class="status-pill failed">failed</span>{{ else }}<span class="status-pill canceled">unknown</span>{{ end }}</td>
+<td class="muted">{{ if .LastAuthCheckAt }}{{ .LastAuthCheckAt }}{{ else }}—{{ end }}</td>
+<td class="muted mono">{{ .LastAuthError }}</td>
+</tr>
+{{ else }}
+<tr><td colspan="5" class="muted" style="text-align:center;padding:48px 0">
+No providers configured yet. The first <span class="mono">compliancekit scan --push-to-server=...</span> upload registers them automatically; v1.4 Studio adds the in-UI configurator.
+</td></tr>
+{{ end }}
+</tbody>
+</table>
+</div>
+{{end}}

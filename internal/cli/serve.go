@@ -15,6 +15,7 @@ import (
 	"github.com/darpanzope/compliancekit/internal/server/api"
 	"github.com/darpanzope/compliancekit/internal/server/auth"
 	"github.com/darpanzope/compliancekit/internal/server/store"
+	"github.com/darpanzope/compliancekit/internal/server/ui"
 	"github.com/darpanzope/compliancekit/internal/server/webhook"
 	"github.com/darpanzope/compliancekit/internal/server/worker"
 )
@@ -100,6 +101,10 @@ func runServe(ctx context.Context, stdout interface {
 	webhookH := webhook.New(st, webhook.Config{GitHubSecret: githubSecret})
 	webhookH.Mount(srv.Router())
 
+	// Mount the v1.3 minimal UI shell (login + scans + providers + checks).
+	uiH := ui.New(st, users, sessions)
+	uiH.Mount(srv.Router())
+
 	// Spawn the background worker pool. Phase 8 ships StubRunner so
 	// queued scans transition to completed without running anything;
 	// v1.4 phase 9 swaps it for a real scan-engine Runner.
@@ -119,6 +124,7 @@ func runServe(ctx context.Context, stdout interface {
 	fmt.Fprintf(stdout, "  health:  http://%s/health\n", srv.Addr())
 	fmt.Fprintf(stdout, "  metrics: http://%s/metrics\n", srv.Addr())
 	fmt.Fprintf(stdout, "  api:     http://%s/api/v1/\n", srv.Addr())
+	fmt.Fprintf(stdout, "  ui:      http://%s/\n", srv.Addr())
 	fmt.Fprintf(stdout, "  store:   %s (driver=%s)\n", dbPath, st.Driver())
 	fmt.Fprintln(stdout, "(Ctrl-C to stop)")
 	return srv.Run(ctx)
