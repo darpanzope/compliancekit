@@ -460,12 +460,12 @@ These were open questions; each is now decided. Full reasoning lives in [DECISIO
 - **Resource graph:** designed in at v0.1 via the `Collector` + `Resource` split. Avoids a painful v0.6 refactor for ~50 LoC of upfront cost.
 - **Policy DSL:** Rego (via OPA Go library), landing at v0.16. The `Evaluator` interface is shaped from day 1 so Rego slots in without breaking check signatures. Go remains the option for complex / perf-sensitive checks.
 - **OCSF output:** lands at v0.3 alongside SARIF. Cheap to add early, painful to retrofit; aligns with Prowler's downstream-SIEM story.
-- **GRC layer (risk register, vendor register, CAIQ/SIG templates):** in scope, at v1.6. Scanning maturity precedes GRC features so we earn technical credibility before the soft-skills layer.
+- **GRC layer (risk register, vendor register, CAIQ/SIG templates):** in scope, at v1.8. Scanning maturity precedes GRC features so we earn technical credibility before the soft-skills layer.
 - **`serve` mode:** optional, never required. The CLI must always be feature-complete. Day-1 internal interfaces are daemon-aware (no globals, context-cancellable) so v1.3 is a feature add, not a rewrite.
 - **Auto-remediation:** opt-in at v2.x, behind `--yes-i-mean-it`, dry-run by default, full audit log. Permanently splits the project into "audit-only" (default, safe) and "act-on-it" (advanced) modes.
 
 ## 16. Open questions (decide as we go)
 
 - **Plugin host: subprocess gRPC vs. WASM (wazero) vs. both.** Punted to v2.0; the answer depends on whether closed-source plugins become a real ask.
-- **Postgres vs. SQLite default for `serve` mode.** Probably SQLite default, Postgres opt-in. Decide at v1.3.
+- ~~**Postgres vs. SQLite default for `serve` mode.**~~ Resolved 2026-05-18 in [DECISIONS.md ADR-015](DECISIONS.md): SQLite default, Postgres opt-in.
 - **CIS Certification pursuit.** Worth the paperwork for credibility, but not free. Decide post-launch once we see audience traction.

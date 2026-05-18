@@ -102,15 +102,15 @@ OCSF is now genuinely a wire format. ADR closed.
 
 ---
 
-## ADR-004 — GRC layer is in scope, at v1.6
-**Date:** 2026-05-13 (slot renumbered v1.4 → v1.6 on 2026-05-18 when v1.1 CLI polish + v1.2 HTML overhaul wedged into the queue ahead)
+## ADR-004 — GRC layer is in scope, at v1.8
+**Date:** 2026-05-13 (slot renumbered v1.4 → v1.6 on 2026-05-18 [v1.1 CLI + v1.2 HTML wedge], then v1.6 → v1.8 on 2026-05-18 [v1.3 serve + v1.4 studio + v1.5 explorer wedge])
 **Status:** Accepted
 
 ### Question
 Are we a pure technical scanner, or do we also ship lightweight GRC features (risk register, vendor register, CAIQ/SIG response templates, training tracking)? This is the largest scope question.
 
 ### Decision
-GRC is in scope, at v1.6 — after scanning maturity is established. Lightweight, CSV/YAML-driven, no HRIS ambitions.
+GRC is in scope, at v1.8 — after scanning maturity is established. Lightweight, CSV/YAML-driven, no HRIS ambitions.
 
 ### Reasoning
 - Drata, Vanta, and Secureframe's actual moat isn't scanning — it's the GRC workflows. If we want to be a credible alternative to the $20k-100k/yr SaaS for small teams, we have to address this.
@@ -123,8 +123,8 @@ GRC is in scope, at v1.6 — after scanning maturity is established. Lightweight
 - **Ship GRC at v0.5 alongside launch.** Premature — would dilute the launch narrative.
 
 ### Consequences
-- v1.6 introduces a `register/` directory convention (risks.yaml, vendors.yaml, etc.) and a markdown library for policies and questionnaire responses.
-- Trust Center (v1.5) and Auditor Portal (v1.7) are designed knowing the GRC layer lands at v1.6.
+- v1.8 introduces a `register/` directory convention (risks.yaml, vendors.yaml, etc.) and a markdown library for policies and questionnaire responses.
+- Trust Center (v1.7) and Auditor Portal (v1.9) are designed knowing the GRC layer lands at v1.8.
 
 ---
 
@@ -184,7 +184,7 @@ Opt-in at v2.x. Permanently behind `--apply-fix` or `--yes-i-mean-it`. Dry-run b
 **Status:** Accepted
 
 ### Question
-The pre-launch roadmap had Hetzner at v0.7, Containers + K8s at v0.8, and AWS / GCP / Cloudflare / Vercel / Linode / Vultr collapsed into a single v1.7 "more clouds" milestone (the slot now numbered v1.9 after the 2026-05-18 wedge of v1.1 CLI + v1.2 HTML — described historically here as v1.7 to preserve the pre-pivot terminology). Is that the right order after the v0.5 launch signal?
+The pre-launch roadmap had Hetzner at v0.7, Containers + K8s at v0.8, and AWS / GCP / Cloudflare / Vercel / Linode / Vultr collapsed into a single v1.7 "more clouds" milestone (the slot now numbered v1.11 after the 2026-05-18 wedges of v1.1 CLI + v1.2 HTML and v1.3 serve + v1.4 studio + v1.5 explorer — described historically here as v1.7 to preserve the pre-pivot terminology). Is that the right order after the v0.5 launch signal?
 
 ### Decision
 Re-sequence v0.6 → v1.0 so the cloud arc lands as:
@@ -204,7 +204,7 @@ Re-sequence v0.6 → v1.0 so the cloud arc lands as:
 | v0.17 | (not previously numbered) | Notifications |
 | v0.18 | (not previously numbered) | Waivers + skip annotations |
 
-The old v1.7 "more clouds" entry collapses: AWS and GCP land at v0.7-v0.8 as first-class providers. The tail (Cloudflare, GitHub, Workspace, Vercel, Linode, Vultr) stays in the same slot — now numbered v1.9 — as a smaller "expand-the-tail" milestone. v1.0 (API stability) is unchanged.
+The old v1.7 "more clouds" entry collapses: AWS and GCP land at v0.7-v0.8 as first-class providers. The tail (Cloudflare, GitHub, Workspace, Vercel, Linode, Vultr) stays in the same slot — now numbered v1.11 — as a smaller "expand-the-tail" milestone. v1.0 (API stability) is unchanged.
 
 ### Reasoning
 - The v0.5 HN launch was the first real audience-selection event. The single most common feedback theme — outpacing every other category combined — was *"would love to use this but we're on AWS."* Same indie-SaaS demographic that put compliancekit on the map, different provider.
@@ -220,7 +220,7 @@ The old v1.7 "more clouds" entry collapses: AWS and GCP land at v0.7-v0.8 as fir
 - **Pull K8s forward to v0.7.5 as a generic-K8s-only release.** Rejected. Cloud-specific K8s is the value; a generic kubeconfig scanner without IRSA / Workload Identity / DOKS-specific glue is a half-finished feature.
 
 ### Consequences
-- The "v1.7 more clouds" milestone (renumbered v1.9 on 2026-05-18) shrinks to just the tail (Cloudflare, GitHub, Workspace, Vercel, Linode, Vultr).
+- The "v1.7 more clouds" milestone (renumbered v1.9 on 2026-05-18 [CLI/HTML wedge], then v1.11 on 2026-05-18 [serve/studio/explorer wedge]) shrinks to just the tail (Cloudflare, GitHub, Workspace, Vercel, Linode, Vultr).
 - The previously deferred *AWS provider depth* open question is now answered: depth at v0.7 is "the 30 highest-leverage checks that map cleanly to the three shipping frameworks." Full scope enumerated in ROADMAP.md v0.7.
 - ADR-002 (Rego policy DSL) shifts from v0.13 to v0.16. The interface design and the rationale are unchanged; only the release slot moves. The `Evaluator` seam from v0.1 still pays off, just three minor versions later.
 - ADR-003 (OCSF) is unaffected on the *emit* side (shipped at v0.3). The *ingest* side moves from the old v0.10 slot to v0.13 alongside the rest of the ingest work.
@@ -531,9 +531,41 @@ Concretely:
 
 ---
 
+## ADR-015 — `serve` UI is htmx + Alpine + Tailwind + Preline + vanilla SVG, embedded at build time
+**Date:** 2026-05-18
+**Status:** Accepted
+
+### Question
+v1.3 lands `compliancekit serve`. v1.4 lands the studio (config-as-UI), v1.5 lands the explorer (resource map, findings filter, remediation studio). What does the UI ship in, given the project's "single binary, no SaaS, no Node runtime, no CDN" ethos?
+
+### Decision
+Server-rendered HTML driven by htmx + Alpine.js for client-side reactivity, styled with Tailwind CSS, using Preline UI for high-quality off-the-shelf components, with vanilla SVG drawers (continuing the v1.2 chart.js pattern) for charts + the resource map. The full asset bundle is compiled at `make ui` time and `go:embed`-ed into the binary. No Node runtime ships with compliancekit; no CDN is reached at runtime.
+
+### Reasoning
+- **Single-binary invariant preserved.** Tailwind (~30 KB CSS), htmx (~14 KB JS), Alpine (~8 KB JS), Preline components on top — total client-side bundle around 60 KB, all embedded. `curl -L https://.../compliancekit | sudo install` still gets the operator a working `serve` without any external dependency.
+- **No bundler runtime in the repo.** Contributors run `make ui` to refresh the embedded assets (driven by Tailwind CLI + esbuild for Alpine plugin packaging). The repo carries the compiled outputs under `internal/server/assets/`; CI verifies they're fresh against source via a `make ui-check` gate, matching how api.txt + checks.md gate their generated content.
+- **htmx is a Go-shop's frontend framework.** The interaction model (`hx-get`, `hx-post`, `hx-swap`) is a natural extension of how Go HTTP handlers think — return HTML fragments, browser swaps them in. Maintainers writing Go don't context-switch to a JS/TS mental model to add a UI feature. Linear, GitHub, and Hotwire-style Rails apps demonstrate this stack produces UIs indistinguishable from SPAs for the use cases compliancekit needs (filter panels, side-drawer drill-in, live progress streams via SSE).
+- **Preline UI ships polished components.** Command palette, datatable, modal, popover, dropdown, drawer, accordion, stepper, alert toast, tabs — all themed via Tailwind utility classes, all keyboard-accessible by default. Avoids the "I designed a popover from scratch and it has six accessibility bugs" trap.
+- **Vanilla SVG continues the v1.2 chart.js pattern.** The gauge / donut / hbar / sparkline drawers already live in `internal/report/assets/chart.js`. The v1.5 resource-map graph extends the same pattern — a `drawResourceMap(el)` registered in the same drawer dispatch, no graph library, palette pulled live from CSS variables so the theme toggle re-paints automatically.
+- **Real-time updates use SSE, not WebSockets.** Server-Sent Events are unidirectional but enough for scan progress + audit-log tail + drift alerts. WebSockets add bidirectional complexity (auth handshake, reconnection, framing) for no payoff at v1.5's scope.
+- **PDF export uses chromedp embedded.** Headless Chrome via chromedp is the cleanest path to "print this filter view to A4." The v1.2 print stylesheet already prepares the page for clean PDF conversion; chromedp just drives the print pipeline server-side. The chromedp dep adds ~3-4 MB to the binary; acceptable given the operator value.
+
+### Rejected alternatives
+- **Preact / Solid SPA with esbuild/vite.** Considered. The interactivity ceiling is marginally higher (Monaco editor inline, drag-to-reorder, complex graph state). Rejected because it forces contributors to maintain a `package.json` + node_modules + a JS build pipeline alongside the Go build, foreign to a Go-shop maintainer + reviewer. The htmx stack hits the same visual ceiling for compliancekit's specific use cases (filter chips, side-panel drill-in, live progress) at half the contributor cost.
+- **Server-rendered Go templates with no JS framework.** Considered as the minimalist option. Rejected because compliancekit-as-Wiz-competitor needs side-panel drill-in (no page reload), live scan progress (SSE), fluid filter chips (no flicker), Cmd+K palette, and the resource map — all require at least Alpine-tier reactivity. A pure-templates approach hits a 7/10 visual ceiling at most; the user explicitly named "world-famous, production-grade" as the bar.
+- **Next.js / Nuxt full SPA + Go backend over REST.** Rejected. Two-runtime deployment (Node + Go), CDN expectations, hydration complexity. Incompatible with the single-binary invariant compliancekit makes its biggest pitch around.
+- **Pure WebComponents + Lit.** Considered briefly. Rejected because Lit pulls a build pipeline regardless + the component ecosystem is thinner than Preline-on-Tailwind for the components compliancekit needs day one.
+
+### Consequences
+- A new top-level directory `internal/server/` houses the v1.3 server: `server.go` (chi router, middleware), `auth/` (local + OIDC), `api/` (REST handlers), `store/` (SQLite + Postgres backends), `ui/` (handlers that render the htmx-driven HTML). Assets live under `internal/server/assets/` (templates, compiled CSS, JS, sprite, images).
+- `make ui` (new top-level target) runs Tailwind CLI + esbuild against source under `internal/server/ui/src/` and writes compiled outputs under `internal/server/assets/`. `make ui-check` verifies cleanliness; CI gates on it, same shape as `api-check` / `gencheckdocs-check`.
+- Tailwind config + Preline + Alpine + htmx vendored at known versions under `internal/server/ui/vendor/` so a clean clone can `make ui` without network. Updates land via `make ui-update` (vendoring helper) + reviewed PR.
+- `compliancekit serve` adds a new binary section for the embedded assets. Estimated stripped-binary delta: ~4-5 MB (Tailwind output, htmx, Alpine, Preline JS bundle, chromedp Chrome-driver bindings — Chrome itself remains an OS-level dep that operators provide if they want PDF export).
+- The v1.2 HTML report (`internal/report/assets/`) stays as-is — its single-file invariant is for the offline / emailable / committed-to-git artefact. `serve` mode renders the same template for `/scans/:id`, so a v1.2 polish improvement propagates to both surfaces for free.
+
+---
+
 ## Open questions (not yet decided)
 
 - **Plugin host model:** subprocess gRPC (Terraform-provider pattern), WASM via wazero, or both? Decision at v2.0.
-- **Storage backend default for `serve`:** SQLite or Postgres? Probably SQLite default, Postgres opt-in. Decide at v1.3.
 - **CIS Certification pursuit:** worth the paperwork for credibility? Decide post-launch once audience traction is known.
-- **Web UI framework for `serve`:** server-rendered HTML (htmx?) vs. a real SPA. Stay server-rendered as long as we can.

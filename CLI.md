@@ -40,7 +40,7 @@ Available on every subcommand:
 | `remediate` | v0.15 | generate remediation snippets |
 | `ingest` | v0.13 | import Trivy / Checkov / OCSF / OSCAL / SCAP |
 | `serve` | v1.3 | continuous monitoring daemon |
-| `trust-center` | v1.5 | generate public security page |
+| `trust-center` | v1.7 | generate public security page |
 | `plugins` | v2.0 | manage plugin packages |
 
 ---
