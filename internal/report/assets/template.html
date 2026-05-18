@@ -1,15 +1,39 @@
 <!doctype html>
-<html lang="en" data-theme="dark">
+<html lang="en" data-theme="dark" data-theme-pref="system">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light dark">
 <title>compliancekit scan report</title>
+
+<script>
+/* Pre-paint theme resolution — runs before <body> renders so the
+   light/dark choice from localStorage takes effect on the first paint
+   (no FOUC flash). The persisted value is one of "light", "dark", or
+   "system"; "system" is resolved against prefers-color-scheme. The
+   real toggle UI + change listener live in the script block at the
+   bottom of <body>; this snippet is intentionally tiny so any parse
+   failure leaves the default data-theme="dark" intact. */
+(function () {
+  try {
+    var pref = localStorage.getItem("compliancekit-theme") || "system";
+    var resolved = pref === "system"
+      ? (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
+      : pref;
+    var root = document.documentElement;
+    root.setAttribute("data-theme", resolved);
+    root.setAttribute("data-theme-pref", pref);
+  } catch (e) { /* fall back to data-theme="dark" already set on <html> */ }
+})();
+</script>
+
 <style>
 /* ─── Palette ─────────────────────────────────────────────────────
-   Single source of truth for color. Every component below reads from
-   these CSS variables so phase 1's dark/light/system toggle is a
-   one-line attribute flip on <html>. The dark palette is the default;
-   phase 1 will introduce the [data-theme="light"] counterpart. */
+   Two complete palettes keyed off the data-theme attribute on <html>.
+   The pre-paint script in <head> resolves the user's persisted choice
+   (or system preference) and sets data-theme before first paint.
+   :root carries the dark defaults so a no-JS render still looks
+   intentional. */
 :root,
 [data-theme="dark"] {
   --bg: #0f1115;
@@ -30,6 +54,31 @@
   --status-fail:  #ff5252;
   --status-skip:  #8a93a3;
   --status-error: #ff8a3d;
+
+  --shadow:       0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+[data-theme="light"] {
+  --bg: #fcfcfd;
+  --panel: #ffffff;
+  --panel-2: #f3f4f7;
+  --border: #e2e5ea;
+  --text: #1d2128;
+  --muted: #5b6371;
+  --accent: #2563eb;
+
+  --sev-critical: #b91c1c;
+  --sev-high:     #c2410c;
+  --sev-medium:   #a16207;
+  --sev-low:      #1e40af;
+  --sev-info:     #5b6371;
+
+  --status-pass:  #15803d;
+  --status-fail:  #b91c1c;
+  --status-skip:  #5b6371;
+  --status-error: #c2410c;
+
+  --shadow:       0 1px 2px rgba(15, 17, 21, 0.08);
 }
 
 /* ─── Base ──────────────────────────────────────────────────────── */
@@ -48,14 +97,59 @@ header.report-head {
   border-bottom: 1px solid var(--border);
   margin-bottom: 24px;
 }
+header.report-head .head-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 8px;
+}
 header.report-head h1 {
-  margin: 0 0 8px;
+  margin: 0;
   font-size: 22px;
   letter-spacing: -0.01em;
 }
 header.report-head .meta {
   color: var(--muted);
   font-size: 13px;
+}
+
+/* ─── Theme toggle (light / dark / system) ─────────────────────── */
+.theme-toggle {
+  display: inline-flex;
+  gap: 2px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 2px;
+  flex-shrink: 0;
+}
+.theme-toggle button {
+  background: transparent;
+  color: var(--muted);
+  border: 0;
+  border-radius: 999px;
+  width: 28px;
+  height: 28px;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+.theme-toggle button:hover { color: var(--text); }
+.theme-toggle button[aria-pressed="true"] {
+  background: var(--panel);
+  color: var(--text);
+  box-shadow: var(--shadow);
+}
+.theme-toggle button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
 }
 
 .counts {
@@ -357,7 +451,14 @@ footer.report-foot {
 
 {{ block "report-head" . -}}
 <header class="report-head">
-  <h1>compliancekit scan report</h1>
+  <div class="head-row">
+    <h1>compliancekit scan report</h1>
+    <div class="theme-toggle" role="group" aria-label="Color theme">
+      <button type="button" data-theme-set="light"  aria-pressed="false" title="Light theme"   aria-label="Light theme">☀</button>
+      <button type="button" data-theme-set="dark"   aria-pressed="false" title="Dark theme"    aria-label="Dark theme">☾</button>
+      <button type="button" data-theme-set="system" aria-pressed="false" title="Match system"  aria-label="Match system theme">⌬</button>
+    </div>
+  </div>
   <div class="meta">Generated {{.Generated}} &middot; {{.TotalCount}} findings ({{.ActionableCount}} actionable)</div>
   <ul class="counts">
     <li class="score" style="min-width:140px"><span class="label">Hardening score</span><span class="value">{{.Score}}<span style="font-size:13px;color:var(--muted);font-weight:400">/100 &middot; {{.Coverage}}% coverage</span></span></li>
@@ -464,6 +565,46 @@ footer.report-foot {
 
 <script>
 (function () {
+  // Theme toggle — light / dark / system. The pre-paint script in
+  // <head> has already resolved the persisted choice and set
+  // data-theme + data-theme-pref on <html>, so the work here is:
+  // (a) reflect the current pref in the toggle's pressed state,
+  // (b) wire click handlers to persist + re-apply,
+  // (c) listen for OS-level prefers-color-scheme changes when the
+  //     pref is "system" so the page tracks the OS without reload.
+  var root = document.documentElement;
+  var THEME_KEY = "compliancekit-theme";
+  function currentPref() {
+    return root.getAttribute("data-theme-pref") || "system";
+  }
+  function resolve(pref) {
+    return pref === "system"
+      ? (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
+      : pref;
+  }
+  function applyState() {
+    var pref = currentPref();
+    root.setAttribute("data-theme", resolve(pref));
+    document.querySelectorAll(".theme-toggle button[data-theme-set]").forEach(function (b) {
+      b.setAttribute("aria-pressed", b.getAttribute("data-theme-set") === pref ? "true" : "false");
+    });
+  }
+  applyState();
+  document.querySelectorAll(".theme-toggle button[data-theme-set]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var pref = b.getAttribute("data-theme-set");
+      try { localStorage.setItem(THEME_KEY, pref); } catch (e) { /* private mode etc. */ }
+      root.setAttribute("data-theme-pref", pref);
+      applyState();
+    });
+  });
+  if (window.matchMedia) {
+    var mq = window.matchMedia("(prefers-color-scheme: dark)");
+    var onChange = function () { if (currentPref() === "system") applyState(); };
+    if (mq.addEventListener) { mq.addEventListener("change", onChange); }
+    else if (mq.addListener) { mq.addListener(onChange); } // older Safari
+  }
+
   // Severity filter pills toggle whole sections off / on.
   document.querySelectorAll('nav.controls button[data-sev]').forEach(function (btn) {
     btn.addEventListener('click', function () {
