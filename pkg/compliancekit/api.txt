@@ -20,8 +20,16 @@ const StatusError Status
 const StatusFail Status
 const StatusPass Status
 const StatusSkip Status
+func NewResourceGraph() *ResourceGraph
 func ParseSeverity(s string) (Severity, error)
 func ParseStatus(s string) (Status, error)
+method (*ResourceGraph) Add(r Resource)
+method (*ResourceGraph) All() []Resource
+method (*ResourceGraph) ByID(id string) (Resource, bool)
+method (*ResourceGraph) ByType(t string) []Resource
+method (*ResourceGraph) Count() int
+method (*ResourceGraph) Query(expr string) ([]Resource, error)
+method (*ResourceGraph) Related(r Resource, edge string) []Resource
 method (*Severity) UnmarshalJSON(b []byte) error
 method (Resource) Attr(key string) string
 method (Resource) AttrBool(key string) bool
@@ -33,6 +41,7 @@ method (Severity) String() string
 method (Status) IsActionable() bool
 type EvidencePtr struct
 type Resource struct
+type ResourceGraph struct
 type ResourceRef struct
 type Severity int
 type Status string
