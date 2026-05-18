@@ -109,6 +109,40 @@ type htmlView struct {
 	// filter JS reads data-filter-key + data-filter-val off each chip
 	// to drive show/hide of findings + section headers.
 	ChipGroups []htmlChipGroup
+
+	// v1.2 phase 5 — sticky resource sidebar. Resources are bucketed
+	// provider → type → resource, sorted alphabetically for stable
+	// rendering. Sidebar links scroll to the first article for that
+	// resource (anchor IDs are wired by client-side JS on load).
+	SidebarGroups []htmlSidebarGroup
+}
+
+// htmlSidebarGroup is the top-level provider bucket in the resource
+// sidebar.
+type htmlSidebarGroup struct {
+	Provider   string
+	Total      int
+	Actionable int
+	Types      []htmlSidebarSubgroup
+}
+
+// htmlSidebarSubgroup is a resource-type bucket inside a provider
+// group (e.g. provider=digitalocean → type=digitalocean.droplet).
+type htmlSidebarSubgroup struct {
+	Type       string
+	TypeShort  string // suffix after the provider prefix, for display
+	Total      int
+	Actionable int
+	Resources  []htmlSidebarItem
+}
+
+// htmlSidebarItem is one resource row inside the sidebar.
+type htmlSidebarItem struct {
+	ID         string // matches Finding.Resource.ID; used for the scroll anchor
+	AnchorID   string // CSS-safe slug of the resource ID
+	Name       string
+	Total      int
+	Actionable int
 }
 
 // htmlChipGroup is one row of categorical filter chips.
@@ -152,21 +186,23 @@ type htmlSection struct {
 // htmlFinding is one finding plus the check / framework metadata
 // resolved at render time.
 type htmlFinding struct {
-	CheckID         string
-	Status          string
-	Severity        string
-	SeverityClass   string
-	ResourceName    string
-	ResourceType    string
-	Provider        string   // v1.2 phase 4 — prefix of ResourceType ("digitalocean" from "digitalocean.droplet")
-	FrameworkIDs    []string // v1.2 phase 4 — distinct framework IDs the check is attributed to
-	FrameworkIDsCSV string   // v1.2 phase 4 — same list, comma-joined for the data-fws attribute
-	Message         string
-	Title           string
-	Description     string
-	Remediation     string
-	Frameworks      []frameworkRef
-	Snippets        []htmlSnippet // v0.22.1 — bespoke per-format remediation snippets
+	CheckID          string
+	Status           string
+	Severity         string
+	SeverityClass    string
+	ResourceID       string // raw resource ID — drives the sidebar anchor target
+	ResourceAnchorID string // CSS-safe slug used as the article's element id
+	ResourceName     string
+	ResourceType     string
+	Provider         string   // v1.2 phase 4 — prefix of ResourceType ("digitalocean" from "digitalocean.droplet")
+	FrameworkIDs     []string // v1.2 phase 4 — distinct framework IDs the check is attributed to
+	FrameworkIDsCSV  string   // v1.2 phase 4 — same list, comma-joined for the data-fws attribute
+	Message          string
+	Title            string
+	Description      string
+	Remediation      string
+	Frameworks       []frameworkRef
+	Snippets         []htmlSnippet // v0.22.1 — bespoke per-format remediation snippets
 }
 
 // frameworkRef is one (framework, control) pair attributed to a finding.
@@ -223,7 +259,116 @@ func buildHTMLView(findings []compliancekit.Finding) htmlView {
 		DonutJSON:       buildDonutJSON(counts),
 		HBarJSON:        buildFrameworkJSON(findings),
 		ChipGroups:      buildChipGroups(findings),
+		SidebarGroups:   buildSidebarGroups(findings),
 	}
+}
+
+// resourceAnchorID renders a CSS-id-safe slug for a resource ID.
+// Replaces every non-[A-Za-z0-9_-] byte with "-" and prefixes "r-"
+// so the result is a valid id selector and a stable URL fragment.
+func resourceAnchorID(resourceID string) string {
+	var b strings.Builder
+	b.Grow(len(resourceID) + 2)
+	b.WriteString("r-")
+	for _, r := range resourceID {
+		switch {
+		case r >= 'a' && r <= 'z', r >= 'A' && r <= 'Z', r >= '0' && r <= '9', r == '-', r == '_':
+			b.WriteRune(r)
+		default:
+			b.WriteRune('-')
+		}
+	}
+	return b.String()
+}
+
+// buildSidebarGroups walks findings, buckets resources by provider →
+// type → resource, and counts total + actionable findings per bucket.
+// Sort order is alpha throughout so the sidebar is byte-stable across
+// renders + reloads.
+func buildSidebarGroups(findings []compliancekit.Finding) []htmlSidebarGroup {
+	type rkey struct{ id, name, typ string }
+	type rstate struct {
+		name              string
+		total, actionable int
+	}
+	// provider → type → resourceID → counts
+	tree := map[string]map[string]map[rkey]*rstate{}
+
+	for _, f := range findings {
+		prov := providerOf(f.Resource.Type)
+		typ := f.Resource.Type
+		id := f.Resource.ID
+		if id == "" {
+			id = f.Resource.Name // fall back so the tree still buckets
+		}
+		k := rkey{id: id, name: f.Resource.Name, typ: typ}
+		byType, ok := tree[prov]
+		if !ok {
+			byType = map[string]map[rkey]*rstate{}
+			tree[prov] = byType
+		}
+		byRes, ok := byType[typ]
+		if !ok {
+			byRes = map[rkey]*rstate{}
+			byType[typ] = byRes
+		}
+		st, ok := byRes[k]
+		if !ok {
+			st = &rstate{name: f.Resource.Name}
+			byRes[k] = st
+		}
+		st.total++
+		if f.Status.IsActionable() {
+			st.actionable++
+		}
+	}
+
+	provs := make([]string, 0, len(tree))
+	for p := range tree {
+		provs = append(provs, p)
+	}
+	sort.Strings(provs)
+
+	out := make([]htmlSidebarGroup, 0, len(provs))
+	for _, prov := range provs {
+		group := htmlSidebarGroup{Provider: prov}
+		byType := tree[prov]
+		typs := make([]string, 0, len(byType))
+		for t := range byType {
+			typs = append(typs, t)
+		}
+		sort.Strings(typs)
+		for _, t := range typs {
+			sub := htmlSidebarSubgroup{Type: t, TypeShort: strings.TrimPrefix(t, prov+".")}
+			items := make([]htmlSidebarItem, 0, len(byType[t]))
+			for k, st := range byType[t] {
+				items = append(items, htmlSidebarItem{
+					ID:         k.id,
+					AnchorID:   resourceAnchorID(k.id),
+					Name:       st.name,
+					Total:      st.total,
+					Actionable: st.actionable,
+				})
+				sub.Total += st.total
+				sub.Actionable += st.actionable
+			}
+			// Highest-actionable resources first so the operator sees
+			// the noisy ones at the top; ties broken by name for byte-
+			// stability.
+			sort.SliceStable(items, func(i, j int) bool {
+				if items[i].Actionable != items[j].Actionable {
+					return items[i].Actionable > items[j].Actionable
+				}
+				return items[i].Name < items[j].Name
+			})
+			sub.Resources = items
+			group.Total += sub.Total
+			group.Actionable += sub.Actionable
+			group.Types = append(group.Types, sub)
+		}
+		out = append(out, group)
+	}
+	return out
 }
 
 // providerOf extracts the leading provider segment from a resource
@@ -433,15 +578,21 @@ func buildHTMLSections(findings []compliancekit.Finding) []htmlSection {
 // and the framework catalog so the template doesn't have to chase
 // references at render time.
 func findingToHTML(f compliancekit.Finding) htmlFinding {
+	rid := f.Resource.ID
+	if rid == "" {
+		rid = f.Resource.Name
+	}
 	view := htmlFinding{
-		CheckID:       f.CheckID,
-		Status:        string(f.Status),
-		Severity:      f.Severity.String(),
-		SeverityClass: f.Severity.String(),
-		ResourceName:  f.Resource.Name,
-		ResourceType:  f.Resource.Type,
-		Provider:      providerOf(f.Resource.Type),
-		Message:       f.Message,
+		CheckID:          f.CheckID,
+		Status:           string(f.Status),
+		Severity:         f.Severity.String(),
+		SeverityClass:    f.Severity.String(),
+		ResourceID:       rid,
+		ResourceAnchorID: resourceAnchorID(rid),
+		ResourceName:     f.Resource.Name,
+		ResourceType:     f.Resource.Type,
+		Provider:         providerOf(f.Resource.Type),
+		Message:          f.Message,
 	}
 
 	// Pull Title / Description / Remediation / Frameworks from the

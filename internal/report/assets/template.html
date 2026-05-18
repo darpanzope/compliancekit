@@ -83,6 +83,7 @@
 
 /* ─── Base ──────────────────────────────────────────────────────── */
 * { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
 html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); }
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
@@ -343,17 +344,155 @@ nav.controls .chip .count {
   opacity: 0.7;
 }
 
-/* ─── Layout (sidebar + main) ───────────────────────────────────
-   Phase 5 splits the layout into a sticky sidebar + main column. For
-   now the layout container is a passthrough so the existing single-
-   column flow renders identically. */
+/* ─── Layout (sidebar + main) ─────────────────────────────────── */
 .layout {
-  display: block;
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+.layout > main { min-width: 0; }
+
+/* ─── Sticky resource sidebar (phase 5) ────────────────────────── */
+aside.sidebar {
+  position: sticky;
+  top: 16px;
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 13px;
+}
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 8px 8px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 8px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+.sidebar-toggle {
+  display: none;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.sidebar-group {
+  margin-bottom: 8px;
+}
+.sidebar-group > summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 4px;
+  font-weight: 600;
+  color: var(--text);
+  border-radius: 4px;
+}
+.sidebar-group > summary::-webkit-details-marker { display: none; }
+.sidebar-group > summary::before {
+  content: "▸";
+  display: inline-block;
+  font-size: 10px;
+  color: var(--muted);
+  transition: transform 100ms ease;
+}
+.sidebar-group[open] > summary::before { transform: rotate(90deg); }
+.sidebar-group > summary:hover { background: var(--panel-2); }
+.sidebar-group .count {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+  font-weight: 400;
+  color: var(--muted);
+  font-size: 11px;
+}
+.sidebar-subgroup {
+  margin: 4px 0 0 12px;
+}
+.sidebar-subgroup > summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px;
+  color: var(--muted);
+  font-size: 12px;
+  border-radius: 4px;
+}
+.sidebar-subgroup > summary::-webkit-details-marker { display: none; }
+.sidebar-subgroup > summary::before {
+  content: "▸";
+  display: inline-block;
+  font-size: 9px;
+}
+.sidebar-subgroup[open] > summary::before { transform: rotate(90deg); }
+.sidebar-subgroup > summary:hover { color: var(--text); }
+.sidebar-subgroup ul {
+  list-style: none;
+  margin: 2px 0 4px 16px;
+  padding: 0;
+}
+.sidebar-subgroup li a {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  text-decoration: none;
+  color: var(--muted);
+  padding: 3px 6px;
+  border-radius: 3px;
+  font-size: 12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.sidebar-subgroup li a:hover {
+  color: var(--text);
+  background: var(--panel-2);
+}
+.sidebar-subgroup li a .name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sidebar-subgroup li a .badge {
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  background: var(--panel-2);
+  color: var(--muted);
+  padding: 1px 6px;
+  border-radius: 999px;
+}
+.sidebar-subgroup li a.has-actionable .badge {
+  background: rgba(255, 82, 82, 0.15);
+  color: var(--sev-critical);
 }
 
-/* ─── Sidebar (filled in phase 5) ──────────────────────────────── */
-/* Phase 5 introduces .sidebar with resources grouped by type/provider
-   and a scroll-to anchor per resource. Empty for now. */
+@media (max-width: 800px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  aside.sidebar {
+    position: relative;
+    top: 0;
+    max-height: none;
+  }
+  .sidebar-toggle { display: inline-flex; align-items: center; gap: 6px; }
+  .sidebar-body { display: none; }
+  aside.sidebar.open .sidebar-body { display: block; }
+}
 
 /* ─── Findings list ────────────────────────────────────────────── */
 section.severity-section {
@@ -649,9 +788,41 @@ footer.report-foot {
 
 <div class="layout">
 {{ block "sidebar" . -}}
-{{- /* Phase 5 lands the sticky resource sidebar here. Empty by
-       default; the .layout container collapses to a single column
-       when no sidebar is present. */ -}}
+{{- if .SidebarGroups }}
+<aside class="sidebar" id="resource-sidebar">
+  <div class="sidebar-header">
+    <span>Resources</span>
+    <button type="button" class="sidebar-toggle" aria-expanded="false" aria-controls="sidebar-body">Toggle</button>
+  </div>
+  <div class="sidebar-body" id="sidebar-body">
+  {{- range $group := .SidebarGroups }}
+  <details class="sidebar-group" data-provider="{{$group.Provider}}" open>
+    <summary>
+      <svg class="icon" aria-hidden="true"><use href="#i-prov-{{$group.Provider}}"/></svg>
+      <span>{{$group.Provider}}</span>
+      <span class="count">{{$group.Actionable}}/{{$group.Total}}</span>
+    </summary>
+    {{- range $sub := $group.Types }}
+    <details class="sidebar-subgroup" data-type="{{$sub.Type}}">
+      <summary>
+        <span>{{$sub.TypeShort}}</span>
+        <span class="count">{{$sub.Actionable}}/{{$sub.Total}}</span>
+      </summary>
+      <ul>
+        {{- range $res := $sub.Resources }}
+        <li><a href="#{{$res.AnchorID}}" data-resource-id="{{$res.ID}}"{{if $res.Actionable}} class="has-actionable"{{end}}>
+          <span class="name" title="{{$res.Name}}">{{$res.Name}}</span>
+          <span class="badge">{{$res.Actionable}}/{{$res.Total}}</span>
+        </a></li>
+        {{- end }}
+      </ul>
+    </details>
+    {{- end }}
+  </details>
+  {{- end }}
+  </div>
+</aside>
+{{- end }}
 {{- end }}
 
 {{ block "findings" . -}}
@@ -667,7 +838,7 @@ footer.report-foot {
 <section class="severity-section {{.SeverityClass}}" data-sev="{{.SeverityClass}}">
   <h2><svg class="icon sev-icon" aria-hidden="true"><use href="#i-sev-{{.SeverityClass}}"/></svg> {{.SeverityName}} ({{len .Findings}})</h2>
   {{- range .Findings }}
-  <article class="finding" data-sev="{{.SeverityClass}}" data-status="{{.Status}}" data-provider="{{.Provider}}" data-fws="{{.FrameworkIDsCSV}}">
+  <article class="finding" data-sev="{{.SeverityClass}}" data-status="{{.Status}}" data-provider="{{.Provider}}" data-fws="{{.FrameworkIDsCSV}}" data-resource-id="{{.ResourceID}}" data-resource-anchor="{{.ResourceAnchorID}}">
     <header>
       <span class="check-id">{{.CheckID}}</span>
       <span class="resource">on <span class="name">{{.ResourceName}}</span>{{if .ResourceType}} <small>({{.ResourceType}})</small>{{end}}</span>
@@ -898,6 +1069,63 @@ footer.report-foot {
     });
     if (state.q && search) search.value = state.q;
     if (Object.keys(state.sel).length || state.q) applyFilters();
+  })();
+
+  // v1.2 phase 5 — sticky resource sidebar.
+  //
+  // 1. Stamp the first article per resource with an anchor id so the
+  //    sidebar links (<a href="#r-...">) resolve to a real target.
+  //    Articles are iterated in DOM order; the first one wins per
+  //    resource, which is the highest-severity finding for that
+  //    resource (sections render Critical → Info).
+  // 2. Sidebar link click → if filters hide the linked article, scroll
+  //    to the next visible article for the same resource. If none are
+  //    visible, the click is a no-op (no surprise scroll into hidden
+  //    chrome).
+  // 3. Mobile sidebar-toggle button collapses / expands the body.
+  (function sidebar() {
+    var seen = {};
+    document.querySelectorAll("article.finding").forEach(function (a) {
+      var idRaw = a.querySelector(".name");
+      // We tag via data-resource-anchor (rendered server-side) for
+      // robustness; fall back to using the visible name.
+      var anchor = a.getAttribute("data-resource-anchor");
+      if (!anchor) return;
+      if (seen[anchor]) return;
+      seen[anchor] = true;
+      a.id = anchor;
+      // Avoid the unused-var warning.
+      void idRaw;
+    });
+
+    document.querySelectorAll("aside.sidebar a[data-resource-id]").forEach(function (link) {
+      link.addEventListener("click", function (e) {
+        var target = document.getElementById(link.getAttribute("href").replace(/^#/, ""));
+        if (!target) return;
+        if (target.hidden) {
+          // Find the next visible article for this resource.
+          var rid = link.getAttribute("data-resource-id");
+          var visible = null;
+          document.querySelectorAll('article.finding[data-resource-id="' + rid.replace(/"/g, '\\"') + '"]').forEach(function (a) {
+            if (!visible && !a.hidden) visible = a;
+          });
+          if (!visible) { e.preventDefault(); return; }
+          e.preventDefault();
+          visible.scrollIntoView({ behavior: "smooth", block: "start" });
+          return;
+        }
+        // Native anchor scroll handles the visible case.
+      });
+    });
+
+    var toggle = document.querySelector(".sidebar-toggle");
+    var aside = document.getElementById("resource-sidebar");
+    if (toggle && aside) {
+      toggle.addEventListener("click", function () {
+        var open = aside.classList.toggle("open");
+        toggle.setAttribute("aria-expanded", open ? "true" : "false");
+      });
+    }
   })();
 
   // v0.22.1 — remediation-snippet tabs. One button per format under
