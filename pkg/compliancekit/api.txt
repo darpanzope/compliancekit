@@ -61,10 +61,13 @@ method (Severity) String() string
 method (Status) IsActionable() bool
 type Check struct
 type CheckFunc func(ctx context.Context, graph *ResourceGraph) ([]Finding, error)
+type Collector interface
+type Evaluator interface
 type EvidencePtr struct
 type Finding struct
 type Package struct
 type Registry struct
+type Reporter interface
 type Resource struct
 type ResourceGraph struct
 type ResourceRef struct
