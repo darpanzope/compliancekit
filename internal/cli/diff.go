@@ -10,6 +10,7 @@ import (
 
 	"github.com/darpanzope/compliancekit/internal/baseline"
 	"github.com/darpanzope/compliancekit/internal/diff"
+	"github.com/darpanzope/compliancekit/internal/ui"
 	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
@@ -56,7 +57,7 @@ Example workflow:
         --fail-on=new-high`,
 		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runDiff(cmd.Context(), cmd.OutOrStdout(), args[0], args[1], opts)
+			return runDiff(cmd.Context(), cmd.OutOrStdout(), stylerFor(cmd), args[0], args[1], opts)
 		},
 	}
 
@@ -65,7 +66,7 @@ Example workflow:
 	return cmd
 }
 
-func runDiff(_ context.Context, w io.Writer, baselinePath, findingsPath string, opts diffOptions) error {
+func runDiff(_ context.Context, w io.Writer, st *ui.Styler, baselinePath, findingsPath string, opts diffOptions) error {
 	b, err := baseline.Load(baselinePath)
 	if err != nil {
 		return fmt.Errorf("baseline: %w", err)
@@ -76,7 +77,7 @@ func runDiff(_ context.Context, w io.Writer, baselinePath, findingsPath string, 
 	}
 
 	result := diff.Compute(b, current)
-	renderDiff(w, result)
+	renderDiff(w, st, result)
 
 	return checkFailOnGate(opts.failOn, result)
 }
@@ -88,37 +89,59 @@ func runDiff(_ context.Context, w io.Writer, baselinePath, findingsPath string, 
 //   - 1 resolved
 //     = 23 existing
 //     Hardening score: 76 -> 73 (-3)
-func renderDiff(w io.Writer, r diff.DiffResult) {
-	fmt.Fprintf(w, "+ %d new", len(r.New))
+func renderDiff(w io.Writer, st *ui.Styler, r diff.DiffResult) {
+	addedMark := st.DiffMark(ui.DiffKindAdded)
+	removedMark := st.DiffMark(ui.DiffKindRemoved)
+	existingMark := st.DiffMark(ui.DiffKindExisting)
+
+	// New findings get the bold-green + glyph treatment; the count
+	// is also accented so the eye lands on it first.
+	fmt.Fprintf(w, "%s %s new", addedMark, st.InStatus(fmt.Sprintf("%d", len(r.New)), compliancekit.StatusFail))
 	if len(r.New) > 0 {
-		fmt.Fprintf(w, "   %s", formatSeverityBreakdown(diff.CountsBySeverity(r.New)))
+		fmt.Fprintf(w, "   %s", formatSeverityBreakdown(st, diff.CountsBySeverity(r.New)))
 	}
 	fmt.Fprintln(w)
 
-	fmt.Fprintf(w, "- %d resolved", len(r.Resolved))
+	// Resolved get the dim-strikethrough treatment from DiffMark plus
+	// a muted count — they're informational, not actionable.
+	fmt.Fprintf(w, "%s %s resolved", removedMark, st.Muted(fmt.Sprintf("%d", len(r.Resolved))))
 	if len(r.Resolved) > 0 {
-		fmt.Fprintf(w, "  %s", formatSeverityBreakdown(diff.CountsBySeverityEntries(r.Resolved)))
+		fmt.Fprintf(w, "  %s", formatSeverityBreakdown(st, diff.CountsBySeverityEntries(r.Resolved)))
 	}
 	fmt.Fprintln(w)
 
-	fmt.Fprintf(w, "= %d existing\n", len(r.Existing))
+	fmt.Fprintf(w, "%s %s existing\n", existingMark, st.Muted(fmt.Sprintf("%d", len(r.Existing))))
 
 	delta := r.CurrentScore - r.PreviousScore
-	sign := ""
-	if delta >= 0 {
-		sign = "+"
+	var deltaStr string
+	switch {
+	case delta > 0:
+		deltaStr = st.InStatus(fmt.Sprintf("+%d", delta), compliancekit.StatusPass)
+	case delta == 0:
+		deltaStr = st.Muted("+0")
+	default:
+		// Negative delta = score got worse.
+		deltaStr = st.InSeverity(fmt.Sprintf("%d", delta), compliancekit.SeverityHigh)
 	}
-	fmt.Fprintf(w, "Hardening score: %d -> %d (%s%d)\n", r.PreviousScore, r.CurrentScore, sign, delta)
+	fmt.Fprintf(w, "Hardening score: %d %s %d (%s)\n",
+		r.PreviousScore, st.Glyph("arrow"), r.CurrentScore, deltaStr)
 }
 
-// formatSeverityBreakdown produces "(1 high, 1 medium)" style.
-// Severities render in display order (critical -> info).
-func formatSeverityBreakdown(counts map[string]int) string {
-	order := []string{"critical", "high", "medium", "low", "info"}
+// formatSeverityBreakdown produces "(1 [HIGH], 1 [MEDIUM])" style.
+// Severities render in display order (critical -> info) with each
+// chip colored by severity band.
+func formatSeverityBreakdown(st *ui.Styler, counts map[string]int) string {
+	order := []compliancekit.Severity{
+		compliancekit.SeverityCritical,
+		compliancekit.SeverityHigh,
+		compliancekit.SeverityMedium,
+		compliancekit.SeverityLow,
+		compliancekit.SeverityInfo,
+	}
 	parts := []string{}
 	for _, sev := range order {
-		if n := counts[sev]; n > 0 {
-			parts = append(parts, fmt.Sprintf("%d %s", n, sev))
+		if n := counts[sev.String()]; n > 0 {
+			parts = append(parts, fmt.Sprintf("%d %s", n, st.SeverityChip(sev)))
 		}
 	}
 	if len(parts) == 0 {
