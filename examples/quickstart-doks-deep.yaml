@@ -47,13 +47,12 @@ scan:
   fail_on: high
 
 frameworks:
-  enabled:
-    - soc2
-    - iso27001
-    - cis-v8
-    - nsa-cisa-k8s              # v0.21
-    - cis-linux-server          # v0.20 — DOKS nodes are Ubuntu
-    - nist-800-53
+  - soc2
+  - iso27001
+  - cis-v8
+  - nsa-cisa-k8s              # v0.21
+  - cis-linux-server          # v0.20 — DOKS nodes are Ubuntu
+  - nist-800-53
 
 waivers:
   file: waivers.yaml

@@ -40,15 +40,14 @@ scan:
   fail_on: high                 # any High / Critical finding exits non-zero
 
 frameworks:
-  enabled:
-    - soc2
-    - iso27001
-    - cis-v8                    # CIS Controls v8 (organizational)
-    - nsa-cisa-k8s              # NEW in v0.21 — K8s Hardening Guide v1.2
-    - nist-800-53
-    - hipaa
-    - pci-dss
-    # - mitre-attack            # threat-model overlay; enable when wanted
+  - soc2
+  - iso27001
+  - cis-v8                    # CIS Controls v8 (organizational)
+  - nsa-cisa-k8s              # NEW in v0.21 — K8s Hardening Guide v1.2
+  - nist-800-53
+  - hipaa
+  - pci-dss
+  # - mitre-attack            # threat-model overlay; enable when wanted
 
 waivers:
   file: waivers.yaml

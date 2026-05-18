@@ -44,13 +44,12 @@ scan:
   fail_on: high                  # any High / Critical finding exits non-zero
 
 frameworks:
-  enabled:
-    - soc2
-    - iso27001
-    - cis-v8                     # CIS Controls v8 (organizational)
-    - cis-linux-server           # NEW in v0.20 — CIS Linux Server Benchmark v8
-    - nist-800-53
-    # - mitre-attack             # threat-model overlay; enable when wanted
+  - soc2
+  - iso27001
+  - cis-v8                     # CIS Controls v8 (organizational)
+  - cis-linux-server           # NEW in v0.20 — CIS Linux Server Benchmark v8
+  - nist-800-53
+  # - mitre-attack             # threat-model overlay; enable when wanted
 
 waivers:
   file: waivers.yaml
