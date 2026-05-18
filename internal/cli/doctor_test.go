@@ -23,7 +23,7 @@ func TestRunDoctor_NoProvidersFails(t *testing.T) {
 	chdir(t, t.TempDir())
 
 	var buf bytes.Buffer
-	err := runDoctor(context.Background(), &buf, doctorOptions{checkConfig: true})
+	err := runDoctor(context.Background(), &buf, plainStyler(), doctorOptions{checkConfig: true})
 	if err == nil {
 		t.Error("runDoctor expected to fail with no providers enabled")
 	}
@@ -53,7 +53,7 @@ providers:
 	}
 
 	var buf bytes.Buffer
-	err := runDoctor(context.Background(), &buf, opts)
+	err := runDoctor(context.Background(), &buf, plainStyler(), opts)
 	if err != nil {
 		t.Errorf("runDoctor: %v\noutput:\n%s", err, buf.String())
 	}
@@ -89,7 +89,7 @@ providers:
 	}
 
 	var buf bytes.Buffer
-	err := runDoctor(context.Background(), &buf, opts)
+	err := runDoctor(context.Background(), &buf, plainStyler(), opts)
 	if err == nil {
 		t.Error("runDoctor expected to return error when probe fails")
 	}
@@ -114,7 +114,7 @@ providers:
 	}
 
 	var buf bytes.Buffer
-	err := runDoctor(context.Background(), &buf, doctorOptions{})
+	err := runDoctor(context.Background(), &buf, plainStyler(), doctorOptions{})
 	if err == nil {
 		t.Error("runDoctor expected to return error when an enabled provider's token is missing")
 	}
@@ -123,8 +123,12 @@ providers:
 	if !strings.Contains(out, "DO_API_TOKEN_MISSING is unset") {
 		t.Errorf("output missing missing-token line:\n%s", out)
 	}
-	if !strings.Contains(out, iconFail) {
-		t.Errorf("output missing fail glyph: %s", out)
+	// Failure glyph + colored fail row should appear. Plain-mode
+	// styler emits the ASCII fallback "X" prefix; in TTY mode the
+	// unicode glyph would render. Test against plain since that's
+	// what the test styler produces.
+	if !strings.Contains(out, "X providers.digitalocean") {
+		t.Errorf("output missing fail-glyph-prefixed providers.digitalocean line:\n%s", out)
 	}
 	// Doctor must keep reporting subsequent providers, not short-circuit.
 	if !strings.Contains(out, "providers.linux: disabled") {
@@ -146,7 +150,7 @@ providers:
 	}
 
 	var buf bytes.Buffer
-	err := runDoctor(context.Background(), &buf, doctorOptions{checkConfig: true})
+	err := runDoctor(context.Background(), &buf, plainStyler(), doctorOptions{checkConfig: true})
 	if err != nil {
 		t.Errorf("runDoctor with --check-config: %v\noutput:\n%s", err, buf.String())
 	}

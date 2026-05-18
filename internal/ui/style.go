@@ -88,6 +88,17 @@ func (s *Styler) InSeverity(text string, sev compliancekit.Severity) string {
 	return s.r.NewStyle().Foreground(severityColor(sev)).Bold(sev >= compliancekit.SeverityHigh).Render(text)
 }
 
+// InStatus renders text in the color of st without the glyph + name
+// prefix that Status adds. Use this when the caller wants to color
+// a glyph or short token (e.g. doctor's probe markers) by status.
+// No-op when Color is false.
+func (s *Styler) InStatus(text string, st compliancekit.Status) string {
+	if !s.Color {
+		return text
+	}
+	return s.r.NewStyle().Foreground(statusColor(st)).Render(text)
+}
+
 // Status renders the status glyph + colored name. ASCII fallback
 // substitutes the glyph and drops color when Color is false. Pad
 // width is stable across modes so columns line up in both forms.
