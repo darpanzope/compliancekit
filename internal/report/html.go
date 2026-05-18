@@ -7,6 +7,7 @@ import (
 	"html/template"
 	"io"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/darpanzope/compliancekit/internal/frameworks"
@@ -102,6 +103,27 @@ type htmlView struct {
 	// escaping.
 	DonutJSON string
 	HBarJSON  string
+
+	// v1.2 phase 4 — filter chip groups. Each group is one row of
+	// togglable chips (severity, status, provider, framework). The
+	// filter JS reads data-filter-key + data-filter-val off each chip
+	// to drive show/hide of findings + section headers.
+	ChipGroups []htmlChipGroup
+}
+
+// htmlChipGroup is one row of categorical filter chips.
+type htmlChipGroup struct {
+	Key   string     // "severity", "status", "provider", "framework"
+	Label string     // human-facing group label
+	Chips []htmlChip // displayed left-to-right in this order
+}
+
+// htmlChip is one togglable filter.
+type htmlChip struct {
+	Value    string // matched against the article's data-<key> attribute
+	Label    string // display text
+	Count    int    // findings matching this chip in isolation
+	ColorVar string // optional CSS variable for chip border + text accent
 }
 
 // htmlDonutSegment is one wedge in the severity donut card.
@@ -130,18 +152,21 @@ type htmlSection struct {
 // htmlFinding is one finding plus the check / framework metadata
 // resolved at render time.
 type htmlFinding struct {
-	CheckID       string
-	Status        string
-	Severity      string
-	SeverityClass string
-	ResourceName  string
-	ResourceType  string
-	Message       string
-	Title         string
-	Description   string
-	Remediation   string
-	Frameworks    []frameworkRef
-	Snippets      []htmlSnippet // v0.22.1 — bespoke per-format remediation snippets
+	CheckID         string
+	Status          string
+	Severity        string
+	SeverityClass   string
+	ResourceName    string
+	ResourceType    string
+	Provider        string   // v1.2 phase 4 — prefix of ResourceType ("digitalocean" from "digitalocean.droplet")
+	FrameworkIDs    []string // v1.2 phase 4 — distinct framework IDs the check is attributed to
+	FrameworkIDsCSV string   // v1.2 phase 4 — same list, comma-joined for the data-fws attribute
+	Message         string
+	Title           string
+	Description     string
+	Remediation     string
+	Frameworks      []frameworkRef
+	Snippets        []htmlSnippet // v0.22.1 — bespoke per-format remediation snippets
 }
 
 // frameworkRef is one (framework, control) pair attributed to a finding.
@@ -197,6 +222,108 @@ func buildHTMLView(findings []compliancekit.Finding) htmlView {
 		ChartJS:         htmlChartJS,
 		DonutJSON:       buildDonutJSON(counts),
 		HBarJSON:        buildFrameworkJSON(findings),
+		ChipGroups:      buildChipGroups(findings),
+	}
+}
+
+// providerOf extracts the leading provider segment from a resource
+// type. "digitalocean.droplet" → "digitalocean"; "linux.host" →
+// "linux"; "k8s.pod" → "k8s". Resources without a dot return the
+// full type so they still cluster meaningfully.
+func providerOf(resourceType string) string {
+	if i := strings.Index(resourceType, "."); i >= 0 {
+		return resourceType[:i]
+	}
+	return resourceType
+}
+
+// buildChipGroups returns the four chip rows that drive the filter UI:
+// severity (fixed order Critical → Info), status (Fail → Skip),
+// provider (sorted, derived from resource types present in this scan),
+// framework (sorted, derived from check-registry framework
+// attribution). A group with zero distinct values is still emitted —
+// the template skips empty groups so the UI stays clean.
+func buildChipGroups(findings []compliancekit.Finding) []htmlChipGroup {
+	sevCounts := map[string]int{}
+	statusCounts := map[string]int{}
+	provCounts := map[string]int{}
+	fwCounts := map[string]int{}
+	fwNames := map[string]string{}
+
+	for _, f := range findings {
+		sev := f.Severity.String()
+		sevCounts[sev]++
+		statusCounts[string(f.Status)]++
+		provCounts[providerOf(f.Resource.Type)]++
+		check, ok := compliancekit.LookupCheck(f.CheckID)
+		if !ok {
+			continue
+		}
+		seen := map[string]bool{}
+		for _, rc := range frameworks.ResolveCheckControls(check.Frameworks) {
+			if seen[rc.Framework.ID] {
+				continue
+			}
+			seen[rc.Framework.ID] = true
+			fwCounts[rc.Framework.ID]++
+			fwNames[rc.Framework.ID] = rc.Framework.Name
+		}
+	}
+
+	sevOrder := []struct{ key, label string }{
+		{"critical", "Critical"},
+		{"high", "High"},
+		{"medium", "Medium"},
+		{"low", "Low"},
+		{"info", "Info"},
+	}
+	sevChips := make([]htmlChip, 0, 5)
+	for _, s := range sevOrder {
+		if sevCounts[s.key] == 0 {
+			continue
+		}
+		sevChips = append(sevChips, htmlChip{Value: s.key, Label: s.label, Count: sevCounts[s.key], ColorVar: "--sev-" + s.key})
+	}
+
+	statusOrder := []struct{ key, label string }{
+		{"fail", "Fail"},
+		{"error", "Error"},
+		{"pass", "Pass"},
+		{"skip", "Skip"},
+	}
+	statusChips := make([]htmlChip, 0, 4)
+	for _, s := range statusOrder {
+		if statusCounts[s.key] == 0 {
+			continue
+		}
+		statusChips = append(statusChips, htmlChip{Value: s.key, Label: s.label, Count: statusCounts[s.key], ColorVar: "--status-" + s.key})
+	}
+
+	provIDs := make([]string, 0, len(provCounts))
+	for id := range provCounts {
+		provIDs = append(provIDs, id)
+	}
+	sort.Strings(provIDs)
+	provChips := make([]htmlChip, 0, len(provIDs))
+	for _, id := range provIDs {
+		provChips = append(provChips, htmlChip{Value: id, Label: id, Count: provCounts[id]})
+	}
+
+	fwIDs := make([]string, 0, len(fwCounts))
+	for id := range fwCounts {
+		fwIDs = append(fwIDs, id)
+	}
+	sort.Strings(fwIDs)
+	fwChips := make([]htmlChip, 0, len(fwIDs))
+	for _, id := range fwIDs {
+		fwChips = append(fwChips, htmlChip{Value: id, Label: fwNames[id], Count: fwCounts[id]})
+	}
+
+	return []htmlChipGroup{
+		{Key: "severity", Label: "Severity", Chips: sevChips},
+		{Key: "status", Label: "Status", Chips: statusChips},
+		{Key: "provider", Label: "Provider", Chips: provChips},
+		{Key: "framework", Label: "Framework", Chips: fwChips},
 	}
 }
 
@@ -313,6 +440,7 @@ func findingToHTML(f compliancekit.Finding) htmlFinding {
 		SeverityClass: f.Severity.String(),
 		ResourceName:  f.Resource.Name,
 		ResourceType:  f.Resource.Type,
+		Provider:      providerOf(f.Resource.Type),
 		Message:       f.Message,
 	}
 
@@ -324,6 +452,7 @@ func findingToHTML(f compliancekit.Finding) htmlFinding {
 		view.Title = check.Title
 		view.Description = check.Description
 		view.Remediation = check.Remediation
+		fwSeen := map[string]bool{}
 		for _, rc := range frameworks.ResolveCheckControls(check.Frameworks) {
 			view.Frameworks = append(view.Frameworks, frameworkRef{
 				FrameworkID:   rc.Framework.ID,
@@ -331,7 +460,12 @@ func findingToHTML(f compliancekit.Finding) htmlFinding {
 				ControlID:     rc.Control.ID,
 				ControlName:   rc.Control.Name,
 			})
+			if !fwSeen[rc.Framework.ID] {
+				fwSeen[rc.Framework.ID] = true
+				view.FrameworkIDs = append(view.FrameworkIDs, rc.Framework.ID)
+			}
 		}
+		view.FrameworkIDsCSV = strings.Join(view.FrameworkIDs, ",")
 	}
 
 	// v0.22.1 — pull bespoke per-format remediation snippets from the

@@ -258,18 +258,27 @@ header.report-head .meta {
 .card-legend .dot.sev-low      { background: var(--sev-low); }
 .card-legend .dot.sev-info     { background: var(--sev-info); }
 
-/* ─── Controls (search + severity chips) ───────────────────────── */
+/* ─── Controls (search + filter chip groups) ──────────────────── */
 nav.controls {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px 12px;
-  align-items: center;
+  flex-direction: column;
+  gap: 12px;
   margin-bottom: 24px;
+  padding: 12px 16px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+nav.controls .controls-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
 }
 nav.controls input[type=search] {
   flex: 1;
   min-width: 200px;
-  background: var(--panel);
+  background: var(--panel-2);
   color: var(--text);
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -281,22 +290,58 @@ nav.controls input[type=search]:focus {
   outline: none;
   border-color: var(--accent);
 }
-nav.controls button {
-  background: var(--panel);
-  color: var(--text);
+nav.controls .clear-filters {
+  background: transparent;
+  color: var(--muted);
   border: 1px solid var(--border);
   border-radius: 999px;
-  padding: 6px 14px;
-  font-size: 13px;
+  padding: 5px 12px;
+  font-size: 12px;
   cursor: pointer;
   font-family: inherit;
 }
-nav.controls button.off { opacity: 0.4; text-decoration: line-through; }
-nav.controls button[data-sev="critical"] { color: var(--sev-critical); border-color: var(--sev-critical); }
-nav.controls button[data-sev="high"]     { color: var(--sev-high);     border-color: var(--sev-high); }
-nav.controls button[data-sev="medium"]   { color: var(--sev-medium);   border-color: var(--sev-medium); }
-nav.controls button[data-sev="low"]      { color: var(--sev-low);      border-color: var(--sev-low); }
-nav.controls button[data-sev="info"]     { color: var(--sev-info);     border-color: var(--sev-info); }
+nav.controls .clear-filters:hover { color: var(--text); border-color: var(--accent); }
+nav.controls .chip-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+nav.controls .chip-group-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  min-width: 70px;
+  flex-shrink: 0;
+}
+nav.controls .chip {
+  background: var(--panel-2);
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: background-color 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+nav.controls .chip:hover { color: var(--text); border-color: var(--accent); }
+nav.controls .chip[aria-pressed="true"] {
+  background: var(--panel);
+  color: var(--text);
+  border-color: currentColor;
+}
+nav.controls .chip[data-color] { color: var(--muted); }
+nav.controls .chip[data-color][aria-pressed="true"] { color: var(--chip-color); border-color: var(--chip-color); }
+nav.controls .chip .count {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.7;
+}
 
 /* ─── Layout (sidebar + main) ───────────────────────────────────
    Phase 5 splits the layout into a sticky sidebar + main column. For
@@ -584,13 +629,21 @@ footer.report-foot {
 {{- end }}
 
 {{ block "controls" . -}}
-<nav class="controls">
-  <input type="search" id="search" placeholder="Filter findings by text...">
-  <button data-sev="critical">Critical</button>
-  <button data-sev="high">High</button>
-  <button data-sev="medium">Medium</button>
-  <button data-sev="low">Low</button>
-  <button data-sev="info">Info</button>
+<nav class="controls" id="filters">
+  <div class="controls-row">
+    <input type="search" id="search" placeholder="Filter findings by text...">
+    <button type="button" class="clear-filters" id="clear-filters" title="Clear all filters">Clear</button>
+  </div>
+  {{- range $group := .ChipGroups }}
+  {{- if $group.Chips }}
+  <div class="chip-group" data-chip-group="{{$group.Key}}">
+    <span class="chip-group-label">{{$group.Label}}</span>
+    {{- range $chip := $group.Chips }}
+    <button type="button" class="chip" data-filter-key="{{$group.Key}}" data-filter-val="{{$chip.Value}}" aria-pressed="false"{{if $chip.ColorVar}} data-color="{{$chip.ColorVar}}" style="--chip-color: var({{$chip.ColorVar}});"{{end}}>{{$chip.Label}} <span class="count">{{$chip.Count}}</span></button>
+    {{- end }}
+  </div>
+  {{- end }}
+  {{- end }}
 </nav>
 {{- end }}
 
@@ -614,7 +667,7 @@ footer.report-foot {
 <section class="severity-section {{.SeverityClass}}" data-sev="{{.SeverityClass}}">
   <h2><svg class="icon sev-icon" aria-hidden="true"><use href="#i-sev-{{.SeverityClass}}"/></svg> {{.SeverityName}} ({{len .Findings}})</h2>
   {{- range .Findings }}
-  <article class="finding" data-sev="{{.SeverityClass}}" data-status="{{.Status}}">
+  <article class="finding" data-sev="{{.SeverityClass}}" data-status="{{.Status}}" data-provider="{{.Provider}}" data-fws="{{.FrameworkIDsCSV}}">
     <header>
       <span class="check-id">{{.CheckID}}</span>
       <span class="resource">on <span class="name">{{.ResourceName}}</span>{{if .ResourceType}} <small>({{.ResourceType}})</small>{{end}}</span>
@@ -712,31 +765,140 @@ footer.report-foot {
     else if (mq.addListener) { mq.addListener(onChange); } // older Safari
   }
 
-  // Severity filter pills toggle whole sections off / on.
-  document.querySelectorAll('nav.controls button[data-sev]').forEach(function (btn) {
-    btn.addEventListener('click', function () {
-      btn.classList.toggle('off');
-      var sev = btn.getAttribute('data-sev');
-      document.querySelectorAll('section.severity-section[data-sev="' + sev + '"]').forEach(function (s) {
-        s.hidden = btn.classList.contains('off');
-      });
+  // v1.2 phase 4 — chip-based categorical filters + free-text search.
+  //
+  // Filter model:
+  //   - Within a group (severity/status/provider/framework), selected
+  //     chips OR together: "show findings matching any selected chip".
+  //   - Across groups, results AND together: "must match each group
+  //     that has at least one chip selected".
+  //   - An empty group is a wildcard (no constraint).
+  //   - The free-text search ANDs on top of everything.
+  //
+  // URL fragment encoding mirrors the model:
+  //   findings.html#severity=critical,high&provider=digitalocean&q=mfa
+  // No-filter state collapses to a bare URL (no fragment).
+
+  var FILTER_KEYS = ["severity", "status", "provider", "framework"];
+  var FILTER_ATTR = {
+    severity: "data-sev",
+    status: "data-status",
+    provider: "data-provider",
+    framework: "data-fws" // comma-list — needs substring-token match
+  };
+
+  function selectedByGroup() {
+    var sel = {};
+    FILTER_KEYS.forEach(function (k) { sel[k] = []; });
+    document.querySelectorAll('.chip[aria-pressed="true"]').forEach(function (c) {
+      var k = c.getAttribute("data-filter-key");
+      var v = c.getAttribute("data-filter-val");
+      if (sel[k]) sel[k].push(v);
+    });
+    return sel;
+  }
+
+  function matchesGroup(article, key, selected) {
+    if (selected.length === 0) return true; // wildcard
+    var raw = article.getAttribute(FILTER_ATTR[key]) || "";
+    if (key === "framework") {
+      var tokens = raw.split(",");
+      for (var i = 0; i < selected.length; i++) {
+        if (tokens.indexOf(selected[i]) >= 0) return true;
+      }
+      return false;
+    }
+    return selected.indexOf(raw) >= 0;
+  }
+
+  function applyFilters() {
+    var sel = selectedByGroup();
+    var q = (document.getElementById("search") || { value: "" }).value.toLowerCase().trim();
+    document.querySelectorAll("article.finding").forEach(function (a) {
+      var ok = true;
+      for (var i = 0; i < FILTER_KEYS.length && ok; i++) {
+        ok = matchesGroup(a, FILTER_KEYS[i], sel[FILTER_KEYS[i]]);
+      }
+      if (ok && q) ok = a.textContent.toLowerCase().indexOf(q) >= 0;
+      a.hidden = !ok;
+    });
+    // Hide severity-section headers when all their findings hid.
+    document.querySelectorAll("section.severity-section").forEach(function (s) {
+      var any = false;
+      s.querySelectorAll("article.finding").forEach(function (a) { if (!a.hidden) any = true; });
+      s.hidden = !any;
+    });
+    writeFragment(sel, q);
+  }
+
+  function writeFragment(sel, q) {
+    var parts = [];
+    FILTER_KEYS.forEach(function (k) {
+      if (sel[k].length) parts.push(k + "=" + sel[k].slice().sort().join(","));
+    });
+    if (q) parts.push("q=" + encodeURIComponent(q));
+    var frag = parts.join("&");
+    // Replace without scrolling. Empty fragment clears the # too.
+    if (frag) {
+      history.replaceState(null, "", "#" + frag);
+    } else if (window.location.hash) {
+      history.replaceState(null, "", window.location.pathname + window.location.search);
+    }
+  }
+
+  function readFragment() {
+    var raw = window.location.hash.replace(/^#/, "");
+    if (!raw) return { sel: {}, q: "" };
+    var sel = {};
+    var q = "";
+    raw.split("&").forEach(function (kv) {
+      var eq = kv.indexOf("=");
+      if (eq < 0) return;
+      var k = kv.slice(0, eq);
+      var v = kv.slice(eq + 1);
+      if (k === "q") { q = decodeURIComponent(v); return; }
+      if (FILTER_KEYS.indexOf(k) >= 0) sel[k] = v.split(",").filter(Boolean);
+    });
+    return { sel: sel, q: q };
+  }
+
+  // Wire chip clicks.
+  document.querySelectorAll(".chip[data-filter-key]").forEach(function (c) {
+    c.addEventListener("click", function () {
+      c.setAttribute("aria-pressed", c.getAttribute("aria-pressed") === "true" ? "false" : "true");
+      applyFilters();
     });
   });
-
-  // Text search hides individual findings whose visible text doesn't match.
-  var search = document.getElementById('search');
+  // Wire free-text search.
+  var search = document.getElementById("search");
   if (search) {
-    search.addEventListener('input', function () {
-      var q = search.value.toLowerCase().trim();
-      document.querySelectorAll('article.finding').forEach(function (f) {
-        if (!q) {
-          f.hidden = false;
-          return;
-        }
-        f.hidden = !f.textContent.toLowerCase().includes(q);
+    search.addEventListener("input", applyFilters);
+  }
+  // Wire "Clear" button — drop chips, drop search, drop fragment.
+  var clearBtn = document.getElementById("clear-filters");
+  if (clearBtn) {
+    clearBtn.addEventListener("click", function () {
+      document.querySelectorAll('.chip[aria-pressed="true"]').forEach(function (c) {
+        c.setAttribute("aria-pressed", "false");
       });
+      if (search) search.value = "";
+      applyFilters();
     });
   }
+
+  // Hydrate initial state from the URL fragment, then apply.
+  (function hydrate() {
+    var state = readFragment();
+    Object.keys(state.sel).forEach(function (key) {
+      state.sel[key].forEach(function (val) {
+        var sel = '.chip[data-filter-key="' + key + '"][data-filter-val="' + val + '"]';
+        var c = document.querySelector(sel);
+        if (c) c.setAttribute("aria-pressed", "true");
+      });
+    });
+    if (state.q && search) search.value = state.q;
+    if (Object.keys(state.sel).length || state.q) applyFilters();
+  })();
 
   // v0.22.1 — remediation-snippet tabs. One button per format under
   // each finding; click to switch the active panel. Event delegation
