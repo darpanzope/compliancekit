@@ -191,19 +191,34 @@ to the v0.1-v0.5 audience that put compliancekit on the map.
 | ~~v1.1~~ ✅ | **Beautiful CLI** — `internal/ui` package owns the palette + glyph + Styler + Table primitives. lipgloss-driven severity colors (palette tuned for light/dark terminals, AdaptiveColor pairs), status glyphs (`✓✗⚠–·` with ASCII fallbacks), Unicode box-drawing tables across `checks list/show` + `doctor` + `waivers list` + `mapping list` + `notify --list` + `policy validate`, doctor probes accumulate + sort failures-first with sub-items grouped under their parent, diff colorization (`+` green / `-` strikethrough / `=` muted), styled `--help` (bold sections + accented commands), Cobra-provided shell completion (bash/zsh/fish/pwsh), new `compliancekit motd` fleet-at-a-glance card. Global `--no-color` + NO_COLOR + CLICOLOR=0 + non-TTY auto-detect all honored. **Scan progress bar deferred to v1.1.x** — needs an engine progress-channel API change that risked a v1.0 surface diff. 10 phases / 10 commits; lipgloss adds ~3 MB to the stripped binary. | The CLI looks the part for the audience that lives in the terminal |
 | ~~v1.2~~ ✅ | **HTML report overhaul** — `internal/report/assets/` is now a 4-file system: template.html with named `{{ block }}` partials + CSS-vars palette, icons/sprite.svg (22 symbols across severity/status/theme/providers), chart.js (gauge + donut + hbar + sparkline drawers), template-driven layout. Two complete palettes (dark + light) + system-preference resolution, persisted to localStorage, no FOUC. Summary cards (score gauge + severity donut + framework coverage bars), filter chips with multi-select OR / cross-group AND + URL-fragment share-views, sticky resource sidebar grouped provider → type → resource, baseline-driven drift card with score + actionable-count sparklines + per-finding "new" badges, @media print + responsive 800/600/400px breakpoints, empty-state celebration panel. New `compliancekit render` subcommand re-renders findings.json against any reporter format without re-scanning, takes `--baseline=path` for trend visualisation. Golden snapshot tests pin empty / all_clear / mixed / critical_only fixtures. 10 phases / 10 commits; single-file invariant preserved (zero CDN / font / external asset). | The HTML report goes from utilitarian to share-with-the-board |
 | v1.3 | **`serve` mode — foundation** — embedded HTTP server (chi router, CSP / security headers, `/health`, `/metrics`), SQLite default + Postgres optional backend (scans / findings / resources / providers / checks / waivers / audit_log / users / api_tokens), REST API v1 (read + write), auth (local + OIDC for Google/GitHub/Okta + scoped API tokens), webhook receivers (GitHub PR events, generic POST w/ HMAC verification), background worker pool + job queue, CLI `--push-to-server=...` upload, minimal UI shell (login / nav / scans list / providers status / checks browser; the v1.2 report served from the daemon at `/scans/:id`). 12 phases; new ADR-015 codifies the UI stack. | Continuous monitoring without the SaaS bill |
-| v1.4 | **Studio — config-as-UI** — first-run onboarding wizard (5-min cloud setup w/ per-provider doc + token guide), settings page with provider auth status + "test connection", check-catalog browser with search/filter + per-check toggle, granular per-service selector (AWS→IAM/S3/EC2 etc.), framework tailoring UI (per-control include/exclude w/ justification), live `compliancekit.yaml` preview side-panel as you toggle, CI generator (`.github/workflows/compliance.yaml` + GitLab + CircleCI variants), waivers manager (add/edit/expire w/ approver), scan-now trigger w/ live SSE progress, cron scheduler (timezone-aware), audit log + in-UI notifications inbox layered on v0.17 outbound. 12 phases. | The config builder operators want to ship to their team |
-| v1.5 | **Explorer + Remediation Studio** — SQL-backed findings explorer (paginated, indexed; virtualized scroll for 100k+ findings), advanced filter bar (severity / status / provider / framework / resource type / name search / check ID / time range / baseline-delta), saved filter views (name + share via URL + pin to nav), Linear-style side-panel finding detail (no page reload), remediation studio (Prism-style syntax highlighting across bash / terraform / kubectl / helm / ansible / CLI; copy/download/run-in-CI), interactive resource map (vanilla-SVG graph: provider → service → resource → findings, pannable/zoomable, click-to-filter), resource inventory table, drift timeline per finding, score-over-time chart per framework, cross-scan diff (pick any two historical scans), Cmd+K global search, PDF export of any filter view. 11 phases. | The findings explorer Wiz / Snyk users will want to switch to |
-| v1.6 | Multi-tenant / organizations | MSP-friendly: one binary, many clients |
-| v1.7 | Trust Center generator | Your public security page, generated |
-| v1.8 | GRC layer — risk register, vendor register, CAIQ/SIG templates, training tracking | Risk + vendors + questionnaires in repo |
-| v1.9 | Auditor portal (auth-gated, time-boxed, watermarked exports) | Give your auditor read-only access |
-| v1.10 | macOS + Windows + BSD hardening | Hardening for every machine you own |
-| v1.11 | Tail clouds — Cloudflare, GitHub, Google Workspace, Vercel, Linode, Vultr | Every SaaS surface your SaaS touches |
-| v1.12 | OSCAL ecosystem (catalogs in, assessment results out) + SCAP DataStream import | FedRAMP-curious? OSCAL in, OSCAL out |
-| v1.13 | Risk score + executive PDF + time-series dashboard | One number for your board |
-| v2.0 | Plugin marketplace — subprocess gRPC + WASM (wazero), cosign-signed | Install a check pack with one command |
-| v2.x | K8s operator — CRDs (`ComplianceScan`, `ComplianceProfile`, `ComplianceWaiver`) | Reconcile compliance from a CRD |
-| v2.x | Auto-remediation (opt-in, dry-run default, full audit log) | Fix it for me — if you really want |
+| v1.4 | **Studio — config-as-UI** — first-run onboarding wizard (5-min cloud setup w/ per-provider doc + token guide), settings page with provider auth status + "test connection", check-catalog browser with search/filter + per-check toggle, granular per-service selector (AWS→IAM/S3/EC2 etc.), framework tailoring UI (per-control include/exclude w/ justification), live `compliancekit.yaml` preview side-panel as you toggle, CI generator (`.github/workflows/compliance.yaml` + GitLab + CircleCI variants), waivers manager (add/edit/expire w/ approver), scan-now trigger w/ live SSE progress, cron scheduler (timezone-aware), audit log + in-UI notifications inbox layered on v0.17 outbound. **Daemon-bootstrap CLI subcommands** (`compliancekit serve users create --admin`, `serve tokens issue --scope=...`) close the v1.3.1 throwaway-seeddemo gap. **Demo mode** (`compliancekit serve --demo`) seeds realistic findings + resources for first-impression evaluators and screenshot-grade onboarding. 13 phases. | The config builder operators want to ship to their team |
+| v1.5 | **Explorer + Remediation Studio** — SQL-backed findings explorer (paginated, indexed; virtualized scroll for 100k+ findings), advanced filter bar (severity / status / provider / framework / resource type / name search / check ID / time range / baseline-delta), saved filter views (name + share via URL + pin to nav), Linear-style side-panel finding detail (no page reload), remediation studio (Prism-style syntax highlighting across bash / terraform / kubectl / helm / ansible / CLI; copy/download/run-in-CI), interactive resource map (vanilla-SVG graph: provider → service → resource → findings, pannable/zoomable, click-to-filter — **escape hatch: if implementation reveals a 1500+ LoC budget for full pan/zoom/drag/layout, vendor cytoscape.js ~150KB vanilla-JS as a 2-3 phase migration**), resource inventory table, drift timeline per finding, score-over-time chart per framework, cross-scan diff (pick any two historical scans), Cmd+K global search, PDF export of any filter view. 11 phases. | The findings explorer Wiz / Snyk users will want to switch to |
+| v1.6 | **Live Operations** — SSE event bus (`/api/v1/events`) for scans + findings + status, WebSocket fallback for the admin console, live dashboard cards that update without a refresh, scan-progress streaming (per-resource granularity), multi-tab BroadcastChannel sync + tab-claim semantics, toast system, in-UI log tail (`docker logs`-style), connection-loss UX with replay-from-cursor. ~10 phases. | See your fleet live, not on refresh |
+| v1.7 | **TUI mode (k9s for compliance)** — `compliancekit tui` Bubble Tea client. Connects to a running daemon OR opens a local findings.json. Multi-pane (frameworks/providers/severity tree → finding list → detail panel), vim keybindings (`j/k`, `g/G`, `/search`, `n/N`, `:command`), live-tail against `/events`, resource-graph navigator in box-drawing, in-place actions (`w` waive, `a` ack, `c` comment, `r` remediate-preview), full v1.5 explorer filter parity, diff-vs-baseline mode, help overlay (`?`), v1.1 palette reused. ~10 phases. | Live in the terminal? Live in compliancekit |
+| v1.8 | **Collaboration & workflow** — per-finding markdown comments + edit history, assignees / ownership routing, activity stream per finding, `@user` / `@team` mentions firing notifications, Slack/Teams reply-in-thread to ack/comment/waive, two-way GitHub-PR-comment sync, two-way Jira/Linear (issue status mirrors finding state), team management UI, follower scope per resource, email digest builder, **notification inbox 2.0** (snooze, mark-all-read, filter by event type, per-event-type preferences, quiet hours / DND). ~11 phases. | Findings stop being a wall of text, start being a conversation |
+| v1.9 | **Workflow automation / rules engine** — if-this-then-that builder UI; conditions (severity / framework / provider / resource type / tag / age / drift-delta) × actions (notify / assign / waive-with-expiry / open-issue / run-remediation); schedule-based actions, multi-approver waiver flows, exception expiry automation, conditional notification routing, rule simulator (replay against last 30 days), every action audited. ~10 phases. | Automate the boring stuff your runbook used to do |
+| v1.10 | **Accessibility, i18n, keyboard excellence** — WCAG AA sweep, full keyboard nav (skip links, focus rings, focus traps), screen-reader pass (NVDA / VoiceOver / JAWS), ARIA live regions on SSE updates, high-contrast theme, `prefers-reduced-motion` honored, gettext-style i18n with first translations (ES, FR, DE, JA, PT-BR), inline help / docs panel (`?`-key context), every empty state has a next-action hint. ~10 phases. | Compliance for every operator, every language, every keyboard |
+| v1.11 | **Performance & scale** — cursor pagination replacing OFFSET/LIMIT, virtualized scroll across every long list, covering indexes audited per query path, materialized resource/finding counts per scan, HTTP brotli + gzip + `Vary`, ETag/`If-None-Match` everywhere, in-memory LRU for hot filtered lists, query budget + slow-query log, queue-depth metrics + autoscaling worker pool, streaming NDJSON export, 100k-findings / 10k-resources benchmark harness in CI. ~10 phases. | Designed for one team's fleet, performs like it's for ten |
+| v1.12 | **Admin & RBAC** — roles (admin / editor / viewer / auditor) + custom roles via permission matrix, SAML 2.0 SSO (next to v1.3 OIDC), SCIM 2.0 user provisioning, active-sessions admin (list + revoke), audit-log search + export, settings export/import (config-as-code YAML round-trip), backup/restore UI (sqlite dump + pg_dump wrapper, scheduled), API token UI polish (zero-downtime rotate, scope picker, last-used + IP), hash-chained tamper-evident audit log, **settings UX excellence** (settings search via Cmd+K, settings change diff/audit, settings deep links, settings recommendations, auto-save). ~11 phases. | Admin a fleet, not a single instance |
+| v1.13 | **Plugin SDK + marketplace prep** — `compliancekit checks new <id>` scaffolder, hot-reload of custom Rego rules via daemon, notification template editor with live preview, provider plugin discovery from `$XDG_DATA/compliancekit/plugins/`, plugin manifest schema (name / version / sig / scopes), cosign signature verification on plugin packages, plugin sandbox with per-plugin egress allow-list, `compliancekit plugins {install,list,update,remove}`, embedded plugin catalog browser in UI. Lays the runway for v2.9 marketplace. ~10 phases. | Your checks. Your remediation. Your distribution. |
+| v1.14 | **Reporting renaissance** — dashboard builder (drag widgets onto a canvas, save layouts per user/team), custom dashboards (e.g. "AWS landing zone", "K8s-only"), scheduled email reports (daily/weekly markdown + PDF), executive-summary auto-gen, chart expansion (heatmap / treemap / sankey / radar) **with hover-tooltip / click-drill / annotation hooks designed for v1.18 to flesh out**, multi-scan 3-up compare report, watermarked per-recipient exports, audit-pack profile builder, live-share link to a filtered view (expiring + watermarked), PDF export polish (TOC, page numbers, footers). ~10 phases. | From findings.html to a board deck — without leaving the app |
+| v1.15 | **Deploy & operate** — Helm chart at `oci://ghcr.io/darpanzope/compliancekit-chart`, Kustomize overlay, K8s operator (basic CRDs: `ComplianceSchedule` reconciles cron, `ScanJob` for ad-hoc), Terraform modules for AWS / GCP / DO / Hetzner deployments, distroless multi-arch (`amd64` + `arm64`) image, HA Postgres docs (replicas + `pg_advisory_lock` leader election), systemd unit, NixOS module, deep healthchecks (DB writable / migrations current / queue alive), Grafana dashboard JSON bundle, one-line installer parity with brew. ~10 phases. | Production-ready from clone to systemd |
+| v1.16 | **Mobile / PWA** — PWA manifest + service worker for offline caching, iOS / Android install prompts, mobile-first responsive sweep across every UI, push notifications via VAPID (no third-party push provider), mobile-optimized "quick scan" flow, 1-handed-friendly UX, swipe gestures, offline mode showing cached last-scan when daemon unreachable. ~8 phases. | Compliance you can check in line at the coffee shop |
+| v1.17 | **Data warehouse bridges** — Parquet export of findings + resources + history, `compliancekit warehouse load --to={bigquery,snowflake,redshift,duckdb}`, OpenLineage event emit (Marquez / DataHub compatible), point-in-time snapshot API (immutable read-only views), webhook fan-out polish, scheduled warehouse sync via daemon worker. ~8 phases. | Your warehouse already runs the reports — feed it |
+| v1.18 | **Design system & visual polish** — `internal/server/ui/design/` formalized (tokens.css for colors / spacing / radii / shadows / typography / motion + a `<component>.html` library + `/design` live docs route), loading skeletons everywhere (spinners eliminated for >200ms ops), page-top nprogress bar, 6 vendored Framer-style easing curves + 4 standard durations, toast queue with slide+fade+stack, optimistic UI on every form (assign/waive/comment/ack), ~30 vanilla-SVG empty-state illustrations theme-aware across light/dark/high-contrast, micro-interactions audit (every hover/focus/active/press), Linear-style initials-gradient avatars, status-pill system, card depth tokens (flat / raised / floating / glass), sprite expanded 22 → 100 symbols, chart interactivity (rich hover tooltips, click-to-drill, waiver/baseline annotations, brushing), magic moments (zero-critical-findings confetti, score-improved celebration card, weekly streak badges bronze/silver/gold), brand kit per org (logo + favicon + primary-color override with contrast validation). ~12 phases; new ADR-017 codifies the design-system contract. | Every pixel feels intentional — Linear-tier polish |
+| v1.19 | **Onboarding 2.0 + global search + table excellence** — feature-tour overlay system ("Press . to try the new ..." — vanilla, no Shepherd.js), changelog modal on first login after upgrade with deep links to touched UI areas, in-app feedback widget (bug / feature / love note → daemon admin queue + optional webhook), first-run product tour (post-wizard orientation), empty-state coaching v2 (illustration + 3-step CTA on every empty), screenshot-grade demo seed data layered on the v1.4 `--demo` flag (~500 findings × ~150 resources × multi-week trend), global Cmd-K / `/` search (findings + resources + scans + users + waivers + settings + docs), Sublime-style fuzzy ranking, recent + suggested searches, sticky search bar in nav, discovery surfaces (home "Did you know..." auto-rotating cards), table 2.0 (drag to resize / drag to reorder / pin left or right columns + visibility menu + saved column sets), inline edit (notes / tags / assignee), bulk-actions toolbar (multi-select → waive/ack/assign/export), detail-panel polish (resizable + detachable + j/k item nav), keyboard-shortcut discoverability badges next to every clickable action. ~10 phases. | First 10 minutes feel guided; daily search is instant; tables feel modern |
+| v2.0 | Next API surface refinement (`pkg/compliancekit` v2 if needed; otherwise reserved) | Held for the next breaking-change cycle |
+| v2.1 | Multi-tenant / organizations | MSP-friendly: one binary, many clients |
+| v2.2 | Trust Center generator | Your public security page, generated |
+| v2.3 | GRC layer — risk register, vendor register, CAIQ/SIG templates, training tracking (ADR-004 re-slotted from v1.8) | Risk + vendors + questionnaires in repo |
+| v2.4 | Auditor portal (auth-gated, time-boxed, watermarked exports) | Give your auditor read-only access |
+| v2.5 | macOS + Windows + BSD hardening | Hardening for every machine you own |
+| v2.6 | Tail clouds — Cloudflare, GitHub, Google Workspace, Vercel, Linode, Vultr | Every SaaS surface your SaaS touches |
+| v2.7 | OSCAL ecosystem (catalogs in, assessment results out) + SCAP DataStream import | FedRAMP-curious? OSCAL in, OSCAL out |
+| v2.8 | Risk score + executive risk PDF + time-series dashboard | One number for your board |
+| v2.9 | Plugin marketplace — federation layer on top of v1.13 SDK (registry, ratings, discovery), cosign-verified | Install a check pack with one command |
+| v2.10 | K8s operator — full reconciler (CRDs `ComplianceScan`, `ComplianceProfile`, `ComplianceWaiver`); extends v1.15 basic | Reconcile compliance from a CRD |
+| v2.11 | Auto-remediation (opt-in, dry-run default, full audit log) — ADR-006 unchanged | Fix it for me — if you really want |
 
 The full table is the high-level view; v0.6 through v1.0 are expanded
 below, in order. Versions past v1.0 stay in table form here because
@@ -1149,7 +1164,9 @@ integration. Architectural shape codified in
 - Multi-approver chains for high-severity waivers — out of v0.18
   scope; the audit-log-via-evidence-pack covers basic accountability.
 - Waiver application via Web UI / workflow integration — that's
-  v1.6 GRC layer + v1.7 auditor portal.
+  v1.4 Studio (web UI waiver manager) + v1.9 workflow automation
+  (multi-approver flows + expiry); the GRC layer is at v2.3 and the
+  auditor portal at v2.4 per ADR-016.
 
 ---
 
@@ -1922,7 +1939,7 @@ exists to recognize the shape worth lifting out.
   out — every comparable scanner (kubescape, Trivy, Prowler,
   steampipe) keeps flat per-provider packages because Go subpackage
   semantics impose more friction than the navigability win is worth.
-- **macOS / Windows / BSD hardening.** Stays at v1.8.
+- **macOS / Windows / BSD hardening.** Re-slotted to v2.5 per ADR-016 (v1.x reserved for server / UI / UX / backend / CLI polish; OS-coverage expansion is a v2.x scope-expansion concern).
 
 ---
 
@@ -2020,6 +2037,495 @@ A few specific scope decisions worth pinning down here so they don't drift:
 - Comparison views (two HTML reports side by side). Same answer: v1.3+ with `serve`.
 
 **No API surface change** (pkg/compliancekit unchanged). Pure reporter polish in `internal/report/`.
+
+---
+
+## v1.x — server / UI/UX / backend / CLI polish (v1.6 – v1.19)
+
+After v1.5 ships the explorer + remediation studio, every v1.x slot
+through v1.19 is deliberately scoped to **server, frontend, UI/UX,
+backend, and CLI polish**. No new providers, no new frameworks, no new
+GRC features in v1.x — those are reserved for v2.x. The thesis: a
+world-class daemon experience is the moat. Multi-tenant, Trust Center,
+GRC layer, auditor portal, tail clouds, OSCAL ecosystem, OS-coverage
+expansion, and risk-score modelling all get re-slotted to v2.1–v2.8.
+
+The lineup explicitly invests in the "magnificent dashboard" layer
+that separates a functional admin UI from a Linear / Vercel / Wiz-tier
+product: v1.18 owns the design system + motion + skeletons + magic
+moments + chart interactivity; v1.19 owns onboarding 2.0 + global
+fuzzy search + table 2.0; and v1.8 / v1.12 / v1.14 scope up to cover
+notification inbox 2.0, settings UX excellence, and chart-interactivity
+hooks respectively.
+
+**Stack-independent visual ceiling.** ADR-015 commits the daemon UI to
+htmx + Alpine + Tailwind + Preline + vanilla SVG (no React, no Node
+runtime, contributors stay Go-only). That stack choice is **not** a
+quality ceiling. The benchmark for v1.18 + v1.19 is what modern
+React + shadcn/ui dashboards (e.g. Linear, Vercel, Wiz) achieve "for
+free" via vendored component libraries — compliancekit invests the
+equivalent effort in carefully crafted htmx + Alpine partials under
+`internal/server/ui/design/components/` to hit the same visual +
+interaction ceiling. If a design or interaction is achievable in the
+React+shadcn world, it is in-scope for v1.18+; the htmx stack
+constrains *how* we implement, never *what quality* we ship.
+
+See [ADR-016](DECISIONS.md#adr-016--v1x-is-fully-scoped-to-server--uiux--backend--cli-polish) for the scope decision and the explicit deferral list.
+
+---
+
+### v1.6 — Live Operations
+
+**Goal:** the daemon's UI moves from request/response polling to live, event-driven updates. Operators watching a scan run, watching critical findings come in, or watching webhooks fire shouldn't have to refresh.
+
+**Deliverables**
+
+- **SSE event bus** at `GET /api/v1/events`. Server-sent events with cursor-based replay (`?since=<cursor>`) so reconnecting clients don't miss events. Per-tenant when v2.1 lands; per-user for now. Event types: `scan.queued`, `scan.started`, `scan.progress`, `scan.completed`, `finding.created`, `finding.resolved`, `webhook.received`, `auth.session.created`.
+- **WebSocket fallback** at `/api/v1/ws` for full-duplex (admin console live log tail, interactive scan-progress drill-down). Same event vocabulary; chosen when the client needs bidirectional.
+- **Live dashboard cards**: home, scans list, findings list, providers status all subscribe to `/events` and update in place via Alpine.js stores. No `setInterval(fetch, 5000)` anywhere.
+- **Scan-progress streaming**: per-resource granularity. `GET /api/v1/scans/{id}/stream` emits `resource.started`, `resource.completed`, `check.completed` events as the worker walks the tree. The UI renders a "now scanning: aws/iam/user/alice" status bar plus a per-provider progress bar.
+- **Multi-tab BroadcastChannel sync**: state changes (filter selection, theme, notification reads) sync across browser tabs. Per-tab claim semantics so only one tab holds the live SSE connection for a given user (others mirror via BroadcastChannel) — saves daemon connection budget.
+- **Toast system**: corner toast that pops on new critical-severity finding, new comment mention, webhook received. Click-to-dismiss; clicking opens the relevant detail panel.
+- **In-UI log tail**: admin-only page streaming `daemon stderr` via WebSocket. Useful when "why is the worker stuck" can't wait for SSH.
+- **Connection-loss UX**: reconnecting indicator in the nav bar; events buffered server-side per cursor for 5 minutes so a brief disconnect replays cleanly.
+- **Activity timeline**: home page shows the last 50 server events in a vertical timeline. Filterable by event type.
+
+**Out of scope at v1.6**
+
+- Live collaboration cursors / presence indicators. That's v1.8 collaboration.
+- Push notifications outside the browser tab. PWA push lands at v1.16.
+
+**Dependencies added**
+
+- `github.com/r3labs/sse/v2` for the SSE producer (small, idiomatic, supports replay).
+- No frontend deps — Alpine + native EventSource handle SSE; native WebSocket handles WS.
+
+**No API surface change to `pkg/compliancekit`**. New REST + WS endpoints under `/api/v1/`.
+
+---
+
+### v1.7 — TUI mode (k9s for compliance)
+
+**Goal:** a Bubble Tea terminal UI that puts the v1.5 explorer in `tmux`. Operators who live in the terminal get the same density and interactivity without leaving the shell.
+
+**Deliverables**
+
+- **`compliancekit tui`** subcommand. Bubble Tea event loop. Two source modes:
+  1. **Local**: `--findings=path.json` opens a static findings.json (offline).
+  2. **Daemon**: `--server=http://localhost:8080 --api-token=ck_…` (or `$CK_API_TOKEN`) opens against a running daemon — subscribes to `/events` for live updates.
+- **Multi-pane layout**: left tree (frameworks → providers → severities), middle finding list (paginated, virtualised), right detail panel. Resizable with `[` / `]`.
+- **Vim keybindings**: `j/k`, `gg/G`, `/`-search, `n/N` next/prev match, `:command` for ad-hoc filters (`:fw=soc2`, `:sev>=high`, `:provider=aws`). All v1.5 explorer filter parity.
+- **Live tail mode**: `:tail` enters live-tail; new events stream into the list with a green flash.
+- **Resource-graph navigator**: `g` opens an in-terminal box-drawing graph of the dependency tree from the v0.x ResourceGraph. Navigate with arrow keys; Enter focuses a node and filters findings to it.
+- **In-place actions**: `w` waive (prompts for reason + duration), `a` ack, `c` comment (opens `$EDITOR`), `r` remediate-preview (shows the v0.15 generator output in a side panel). When connected to daemon, actions hit the REST API; when local, prints a YAML patch suggestion.
+- **Diff-vs-baseline**: `:diff path.json` overlays a previous baseline; new/resolved findings get colour-coded gutters.
+- **Help overlay**: `?` opens a Karabiner-style keymap legend.
+- **Theme matching v1.1 CLI**: the same `internal/ui` palette + glyphs + adaptive colours drive the TUI.
+- **Headless test harness**: Bubble Tea's `teatest` package drives golden snapshots of every screen.
+
+**Out of scope at v1.7**
+
+- Inline charts / sparklines (the terminal canvas is the limit). Score and trend numbers shown numerically.
+- Writing back arbitrary structural changes — TUI edits are limited to waive/ack/comment. Anything else punts to the web UI.
+
+**Dependencies added**
+
+- `github.com/charmbracelet/bubbletea` (already added at v1.1 for the scan progress bar).
+- `github.com/charmbracelet/bubbles` for stock list + viewport + textinput components.
+
+**No API surface change to `pkg/compliancekit`**. `internal/tui/` is the new home for the TUI code.
+
+---
+
+### v1.8 — Collaboration & workflow
+
+**Goal:** findings stop being a wall of read-only text and become a conversation. Comments, assignees, mentions, and two-way sync with the systems your team already lives in.
+
+**Deliverables**
+
+- **Per-finding markdown comments**: thread on every finding. Edit history (Linear-style "edited 3m ago"). Rich-text via simple markdown subset (bold, italic, code, lists, links — no HTML).
+- **Assignees / ownership**: per-finding `assignee` + per-resource `owner`. Auto-assign rules layer on at v1.9 (e.g. "AWS IAM findings → @security-team").
+- **Activity stream**: every finding gets a chronological activity log — state changes, comments, waivers, scan re-runs that touched it, webhook events that referenced its resource.
+- **Mentions**: `@user` and `@team` autocompletes in comment editor; triggers in-UI notification + email/Slack via v0.17 sinks.
+- **Slack/Teams reply-in-thread**: when v0.17 posts a finding to a Slack thread, the thread accepts replies that the daemon ingests as comments. Slash-actions `/ack`, `/waive <reason>`, `/assign @user` work in-thread.
+- **GitHub PR-comment two-way sync**: when a finding has an associated PR (v1.3 webhook receiver), comments on that finding mirror to the PR; PR-comment replies mirror back.
+- **Jira / Linear two-way**: issue status changes (Done / Closed) mirror finding state (Resolved); finding state changes mirror back. Mapping configurable per-sink.
+- **Team management UI**: create teams, assign members, set notification preferences per team.
+- **Followers per resource**: subscribe to "any finding on `aws/iam/user/alice` notifies me".
+- **Email digest builder**: configurable daily/weekly summaries (which findings, which resources, which frameworks).
+- **Notification inbox 2.0**: builds on the v1.4 inbox (which is a flat list + read/unread) — snooze (revisit in 1h / 4h / tomorrow / next week), mark-all-read, filter by event type (finding / scan / webhook / mention / system), per-event-type preferences (notify-here vs. email-only vs. silent), quiet hours / DND with timezone-aware schedule, "muted threads" so a single noisy finding doesn't drown the inbox.
+
+**Out of scope at v1.8**
+
+- Real-time presence (who's viewing this finding right now). Premature; punt to v2.x if demand surfaces.
+- Voice / video. Out of scope forever.
+
+**Dependencies added**
+
+- `github.com/yuin/goldmark` for markdown rendering (server-side, sanitised).
+- No new external sink integrations — uses the v0.17 notification clients for two-way.
+
+**API surface additions**: `Finding.Comments`, `Finding.Assignee`, `Finding.Followers` added under `pkg/compliancekit`. Backwards-compatible: new fields are pointers/slices, omitted when empty.
+
+---
+
+### v1.9 — Workflow automation / rules engine
+
+**Goal:** the runbook moves from "post-it on the monitor" to "if-this-then-that rules the daemon enforces." Conditional notifications, expiring waivers, multi-approver flows, and rule simulation against historical scans.
+
+**Deliverables**
+
+- **Rules engine UI**: visual if-this-then-that builder. Conditions composed AND/OR.
+- **Condition library**: severity, framework, provider, resource type, resource tag, finding age, drift-delta from baseline, time-of-day, day-of-week.
+- **Action library**: notify (any v0.17 sink, with custom template), assign (user / team / round-robin), waive with auto-expiry, open issue (Jira / Linear / GitHub), run remediation script (audit-only — v2.11 lifts the audit gate for `--apply-fix`).
+- **Scheduled actions**: cron-style schedules (timezone-aware) — "every Monday 9am, summarise unresolved high+critical to #compliance".
+- **Multi-approver waiver flows**: waivers above a configurable severity threshold require N approvers before becoming active. Approver list configurable per rule.
+- **Exception expiry automation**: when a waiver's `ExpiresAt` passes, the daemon automatically re-opens the finding + fires a notification.
+- **Conditional notification routing**: same finding routes to different sinks based on conditions (e.g. critical → PagerDuty, high → Slack, medium → digest).
+- **Rule simulator**: pick a rule + a 30-day window; the daemon replays past scans against the rule and shows what would have triggered. Catches over-eager rules before they fire in production.
+- **Audit log**: every rule action lands in the v1.12 hash-chained audit log (rule_id, trigger event, action, outcome).
+
+**Out of scope at v1.9**
+
+- Arbitrary code execution as a rule action. Rules call named built-in actions only; custom logic lives in v1.13 plugins or v0.16 Rego.
+- ML-driven anomaly detection. Out of scope forever.
+
+**Dependencies added**
+
+- None new — the rules engine is a pure-Go evaluator over the existing event bus from v1.6.
+
+**API surface additions**: `Rule`, `RuleCondition`, `RuleAction` types under `pkg/compliancekit/rules`. New subpackage so the core surface stays clean.
+
+---
+
+### v1.10 — Accessibility, i18n, keyboard excellence
+
+**Goal:** compliancekit is usable by every operator, in every language, on every input device. WCAG AA conformance audit + first non-English translations + keyboard parity with mouse.
+
+**Deliverables**
+
+- **WCAG AA audit**: third-party-style sweep (we'll run axe-core in CI). Fixes: colour contrast (already partial at v1.2), focus indicators, ARIA labels, skip links, heading hierarchy.
+- **Full keyboard navigation**: every interactive element reachable via Tab. Skip-to-content link. Focus traps on modals. `Esc` always closes. Cmd/Ctrl-K command palette parity from v1.5.
+- **Screen-reader pass**: tested under NVDA (Windows), VoiceOver (macOS / iOS), JAWS. Every chart has a textual alternative; every icon has an aria-label.
+- **ARIA live regions**: SSE-driven updates announce ("New critical finding on aws/iam/user/alice") via `aria-live="polite"` regions.
+- **High-contrast theme**: third palette (next to dark + light) for low-vision users; auto-selected when `prefers-contrast: more`.
+- **Reduced motion**: `prefers-reduced-motion: reduce` honored — sparkline animations, toast slide-ins, page transitions all flip to instant.
+- **Colour-blind safe glyph parity**: v1.1's status glyphs (`✓ ✗ ⚠ –`) extended into the UI so colour is never load-bearing.
+- **i18n framework**: gettext-style JSON catalogs per locale. `internal/i18n/` package. Strings extracted via `xgettext`-equivalent Go tooling.
+- **First translations**: Spanish (ES), French (FR), German (DE), Japanese (JA), Brazilian Portuguese (PT-BR). User chooses locale in profile; HTTP `Accept-Language` is the fallback.
+- **Inline help / docs panel**: `?`-key opens a contextual side panel. Each page registers its own help content. Links into the v0.x docs site without leaving the app.
+- **Empty-state coaching**: every empty list has a next-action hint ("No scans yet — try `compliancekit scan` or use the Scan Now button").
+
+**Out of scope at v1.10**
+
+- RTL languages (Arabic, Hebrew) — needs CSS logical-properties pass that's its own milestone.
+- Voice control. Punted.
+
+**Dependencies added**
+
+- `golang.org/x/text` for locale-aware formatting (numbers, dates, plurals).
+- `github.com/nicksnyder/go-i18n/v2` for the message catalog runtime.
+
+**No API surface change to `pkg/compliancekit`**. UI-only.
+
+---
+
+### v1.11 — Performance & scale
+
+**Goal:** the daemon stops being "fine for a small team" and starts being "fine for an SI managing 50 customers' fleets." Cursor pagination, virtualised lists, caching, and a 100k-findings benchmark harness.
+
+**Deliverables**
+
+- **Cursor-based pagination**: replace OFFSET/LIMIT across every list endpoint (findings, scans, resources, audit log). Cursor is `(sort_key, id)`-encoded.
+- **Virtualised scroll**: every long list uses windowing (visible rows + buffer). Smooth scroll for 100k+ findings.
+- **Covering indexes**: audited per query path. Slow-query log + EXPLAIN plans documented in `internal/server/store/sql_perf.md`.
+- **Materialised counts**: per-scan `resource_count`, `finding_count`, `severity_breakdown`. Computed on scan completion, not on every dashboard load.
+- **HTTP compression**: brotli (preferred) + gzip + `Vary: Accept-Encoding`. Done at the middleware layer.
+- **ETag everywhere**: every GET sets a weak ETag (already at v1.3 for findings; v1.11 extends to all collections). `If-None-Match` short-circuits to 304.
+- **In-memory LRU**: hot filtered finding lists cached for 60s per `(filter, cursor)` key. Cache busted on `finding.created`/`finding.resolved` events via the v1.6 SSE bus.
+- **Query budget**: per-request CPU + row-scan budget; over-budget responses log slow-query with the offending query.
+- **Queue-depth metrics**: `compliancekit_worker_queue_depth` Prometheus gauge. Autoscaling worker pool when queue depth exceeds N for M minutes (configurable).
+- **Streaming NDJSON export**: `GET /api/v1/findings.ndjson` streams the full set without buffering — enables warehouse loaders (v1.17) and large client-side analyses.
+- **Benchmark harness**: `make bench-server` seeds 100k findings / 10k resources / 1k scans into a SQLite + Postgres backend; CI runs perf-regression checks against tagged baselines.
+
+**Out of scope at v1.11**
+
+- Horizontal scaling / multi-replica daemon. That's v1.15 with leader-election; sharding lives at v2.1 multi-tenant.
+- Materialised views for cross-scan analytics. Snapshot API at v1.17.
+
+**Dependencies added**
+
+- `github.com/andybalholm/brotli` for HTTP compression.
+- `github.com/hashicorp/golang-lru/v2` for the in-memory cache.
+
+**No API surface change to `pkg/compliancekit`**. Cursor format documented but not promised across minor versions — opaque-by-design.
+
+---
+
+### v1.12 — Admin & RBAC
+
+**Goal:** the daemon is administrable in the way operators expect from a production tool. Roles, SAML, SCIM, audit search, backup/restore, tamper-evident logs.
+
+**Deliverables**
+
+- **Roles & RBAC**: built-in roles — `admin`, `editor`, `viewer`, `auditor`. Plus custom roles via a permission matrix UI.
+- **Permission matrix**: per-resource grid (Scans / Findings / Settings / Users / API Tokens / Plugins / Audit Log) × (Read / Write / Delete / Admin). Custom roles compose these.
+- **SAML 2.0 SSO**: in addition to v1.3 OIDC. IdP-initiated + SP-initiated flows. Tested against Okta, Azure AD, Google Workspace.
+- **SCIM 2.0 user provisioning**: `/scim/v2/Users` + `/Groups` endpoints so admins manage users in their IdP, not in compliancekit.
+- **Active sessions admin**: list every active session per user; revoke individually. Useful after a stolen laptop.
+- **Audit log search**: full-text + structured filters (user, action, resource, time range). Export to NDJSON / CSV.
+- **Settings export/import**: full daemon config (providers, frameworks, rules, notification sinks, custom roles) round-trips through YAML. Enables config-as-code in git.
+- **Backup/restore UI**: scheduled SQLite dumps + `pg_dump` wrappers (run as daemon worker jobs). Restore from a backup ID with a one-click UI flow.
+- **API token UI polish**: zero-downtime rotation (issue new, leave old active for N days, revoke). Scope picker. Last-used timestamp + last-used IP. Per-token rate limits.
+- **Tamper-evident audit log**: each entry hashes the previous (`prev_hash` column). `compliancekit serve audit verify` validates the chain.
+- **Settings UX excellence**: builds on the v1.4 settings page — settings search via Cmd+K (jumps to the right setting + scrolls + highlights), settings change diff/audit (every settings change recorded in the v1.12 hash-chained log with before/after), settings deep links (every setting has a stable anchor URL for runbook references), settings recommendations ("you haven't configured X yet" surfaced contextually), auto-save (no Save button — debounced commit + visible "saved" indicator).
+
+**Out of scope at v1.12**
+
+- WebAuthn / passkeys (modern auth). Worth a dedicated milestone or v1.12 sub-phase if user demand surfaces.
+- Time-boxed read-only auditor exports — that's v2.4's auditor portal.
+
+**Dependencies added**
+
+- `github.com/crewjam/saml` for SAML 2.0.
+- `github.com/elimity-com/scim` for SCIM 2.0 server-side.
+
+**API surface additions**: `Role`, `Permission` types under `pkg/compliancekit/rbac` subpackage.
+
+---
+
+### v1.13 — Plugin SDK + marketplace prep
+
+**Goal:** the runway for v2.9's plugin marketplace. SDK + sandbox + signing + discovery — everything the marketplace needs to be a distribution layer, not a security risk.
+
+**Deliverables**
+
+- **Scaffolder**: `compliancekit checks new <id>` generates a starter check (Go + Rego variants) with manifest, tests, README.
+- **Hot-reload Rego**: daemon watches `$XDG_DATA/compliancekit/plugins/*/rego/*.rego`; reload without restart. Bumps a plugin generation counter; in-flight scans use the version they started with.
+- **Notification template editor**: in-UI editor with live preview against a test payload (Slack / Teams / Email / Webhook / Jira / Linear / PagerDuty templates).
+- **Provider plugin discovery**: daemon enumerates `$XDG_DATA/compliancekit/plugins/`. Each plugin is a directory with `manifest.yaml` + `checks/` + optional `assets/`.
+- **Plugin manifest schema**: name, version, kind (`check-pack` | `provider` | `notifier` | `reporter`), required-scopes, declared-egress-hosts, author, signature.
+- **Cosign signature verification**: every plugin install requires a cosign-keyless signature; the daemon refuses unsigned plugins by default (`--allow-unsigned-plugins` is an explicit opt-out).
+- **Plugin sandbox**: per-plugin egress allow-list. Plugin tries to dial a host outside its declared allow-list → connection refused + audit log entry.
+- **CLI subcommands**: `compliancekit plugins install <ref>`, `list`, `update`, `remove`, `verify`. `<ref>` accepts a local path, a `ghcr.io/...` OCI ref, or a registry name when v2.9 lands.
+- **Embedded catalog browser**: in-UI page lists installed plugins + a "browse community packs" tab (static list shipped with the binary in v1.13; backed by v2.9 registry later).
+
+**Out of scope at v1.13**
+
+- The registry itself (search, ratings, ownership). v2.9.
+- WASM plugin runtime — Go subprocess gRPC is the v1.13 ABI; WASM is a v2.9 escape hatch.
+
+**Dependencies added**
+
+- `github.com/sigstore/cosign/v2` for signature verification.
+- `github.com/hashicorp/go-plugin` for the subprocess gRPC plugin protocol.
+
+**API surface additions**: `Plugin`, `PluginManifest` types under `pkg/compliancekit/plugin` subpackage. Stable so v2.9 doesn't break the ABI.
+
+---
+
+### v1.14 — Reporting renaissance
+
+**Goal:** the v1.2 HTML report was the "share with the board" artifact. v1.14 makes it composable — drag widgets onto a dashboard, schedule it to a stakeholder's inbox, watermark it for the auditor.
+
+**Deliverables**
+
+- **Dashboard builder**: drag-and-drop canvas; widget palette (score gauge, severity donut, framework coverage bar, finding list, resource table, sparkline, heatmap, treemap, sankey, free-form markdown). Save layouts per user / team.
+- **Custom dashboards**: ship 4 built-in templates — "Executive overview", "AWS landing zone", "K8s-only", "SOC 2 readiness". Cloneable.
+- **Scheduled email reports**: cron-style schedule + recipient list. Emits Markdown body + PDF attachment of any dashboard.
+- **Executive-summary auto-gen**: GPT-free templated summary — "Score: 78 (+3 vs last week). Top 5 findings: ... Key wins: ... New regressions: ...". Pure templating over numbers from the v0.6 trend store.
+- **Chart expansion**: heatmap (resource × severity), treemap (findings by service), sankey (drift sources → resolutions), radar (per-framework coverage). All vanilla-SVG, no chart library. **Designed with hover-tooltip / click-drill / annotation / brushing hooks pre-wired so v1.18 visual polish can flesh them out without re-shaping the SVG output.**
+- **Multi-scan compare**: 3-up side-by-side dashboard view. Pick any 3 historical scans.
+- **Watermarked exports**: per-recipient watermark ("for auditor@firm.com — 2026-08-15") in PDF + HTML exports.
+- **Audit-pack profile builder**: pick which artifacts (findings.csv, vulnerabilities.csv, poam.oscal.json, waivers.json, dashboards) compose the v0.4 evidence pack. Save profiles per audit.
+- **Live-share link**: shareable URL to a filtered dashboard view. Expires; watermarked; revocable from a "shared links" admin page.
+- **PDF polish**: TOC with page anchors, page numbers, header/footer per page, page-break-friendly layout.
+
+**Out of scope at v1.14**
+
+- LLM-generated summaries. Static templating only — keeps the no-phone-home invariant safe.
+- Dashboards as code (HCL / YAML). Possible v1.14 sub-phase; lower priority than UI builder.
+
+**Dependencies added**
+
+- `github.com/chromedp/chromedp` for headless-Chrome PDF rendering (also deferred from v1.5).
+
+**No API surface change to `pkg/compliancekit`** (reporter contract unchanged). All new work in `internal/server/dashboards/` and `internal/report/`.
+
+---
+
+### v1.15 — Deploy & operate
+
+**Goal:** the daemon goes from "build from source" to "kubectl apply -f". Helm, Kustomize, operator, Terraform — every deployment pattern operators expect.
+
+**Deliverables**
+
+- **Helm chart**: published to `oci://ghcr.io/darpanzope/compliancekit-chart`. Defaults to single replica + SQLite; HA Postgres mode toggleable via values.
+- **Kustomize overlay**: community-template-style. Base + overlays for dev / staging / prod.
+- **K8s operator** (basic): `ComplianceSchedule` CRD reconciles cron schedules (replaces in-daemon cron when running in K8s — schedule-as-Kubernetes-resource); `ScanJob` CRD for ad-hoc one-shot scans (creates a Pod with the right config). Full reconciler with CRD-driven profiles + waivers is the v2.10 milestone.
+- **Terraform modules**: `terraform-aws-compliancekit`, `-gcp-`, `-do-`, `-hetzner-`. Provisions a VM / managed service + Postgres + reverse proxy + DNS in each cloud.
+- **Distroless multi-arch image**: `linux/amd64` + `linux/arm64`. `gcr.io/distroless/static-debian12:nonroot` base. ~25 MB.
+- **HA Postgres docs**: replica setup, leader election via `pg_advisory_lock` (already used at v1.3 for migrations; extended to worker leader-election).
+- **systemd unit + NixOS module**: ship-with templates for the two most-requested non-K8s deploy patterns.
+- **Deep healthchecks**: `/health/ready` checks DB writable + migrations current + queue alive + leader-elected. `/health/live` is the cheap one.
+- **Grafana dashboards**: JSON bundle in `grafana/dashboards/` — "Compliancekit Operations", "Findings Overview", "Worker Pool". Import into any Grafana.
+- **One-line installer**: `curl -sSf https://compliancekit.dev/install.sh | sh` parity with brew (chooses the right binary + drops a systemd unit / launchd plist).
+
+**Out of scope at v1.15**
+
+- Full operator reconciliation of profiles + waivers from CRDs — v2.10.
+- Helm chart for monitoring (Prometheus + Grafana). Deploy those separately; we ship the dashboards.
+
+**Dependencies added**
+
+- `sigs.k8s.io/controller-runtime` for the basic operator.
+- `helm.sh/helm/v3` patterns for the chart (no library dep — chart is YAML).
+
+**No API surface change to `pkg/compliancekit`**.
+
+---
+
+### v1.16 — Mobile / PWA
+
+**Goal:** the UI works on a phone. Stand-ups, on-call check-ins, coffee-shop sanity glances all stop requiring a laptop.
+
+**Deliverables**
+
+- **PWA manifest** + service worker: installable on iOS / Android. App icon, splash screen, theme colour.
+- **Service-worker caching strategy**: stale-while-revalidate for assets, network-first for `/api/v1/`, offline fallback page.
+- **Install prompts**: handled native-style. iOS uses the share-sheet "Add to Home Screen"; Android uses `beforeinstallprompt`.
+- **Mobile-first responsive sweep**: every page redesigned for <=400px width. Header collapses to hamburger, finding list collapses to card layout, filter chips stack vertically. Tested at iPhone-SE + standard tablet.
+- **Push notifications via VAPID**: no third-party push provider (Firebase / OneSignal). VAPID keys generated by the daemon; users opt in per device. Push payload encrypted (per the Web Push spec).
+- **Mobile-optimized "quick scan"**: a stripped-down flow — "Run AWS scan" → progress → top-5 findings — for the in-line scan-then-go pattern.
+- **1-handed UX**: bottom-of-screen action bar (instead of top-of-screen); thumb-reachable.
+- **Swipe gestures**: swipe-left to ack, swipe-right to waive (with confirm). Power-user accelerator.
+- **Offline mode**: when daemon unreachable, the service worker shows the last-cached scan view (read-only) with an "offline — showing cached" banner.
+
+**Out of scope at v1.16**
+
+- Native iOS / Android apps. PWA only — the maintainer surface stays Go + static assets.
+- Background sync (silent push). Future PWA milestone or v2.x.
+
+**Dependencies added**
+
+- No new server-side deps; Web Push is a server-side encrypted POST.
+- `github.com/SherClockHolmes/webpush-go` for VAPID + Web Push encryption.
+
+**No API surface change to `pkg/compliancekit`**.
+
+---
+
+### v1.17 — Data warehouse bridges
+
+**Goal:** the daemon's findings + resources + history become first-class warehouse citizens. Parquet exports, BigQuery / Snowflake / Redshift loaders, OpenLineage events, point-in-time snapshots.
+
+**Deliverables**
+
+- **Parquet export**: `compliancekit warehouse export --format=parquet --out=path/`. Files per table — `findings.parquet`, `resources.parquet`, `scans.parquet`, `audit_log.parquet`. Schema versioned + documented.
+- **BigQuery loader**: `compliancekit warehouse load --to=bigquery --project=... --dataset=...`. Streaming inserts or batched, configurable.
+- **Snowflake loader**: similar shape; uses snowsql-style stage upload + COPY.
+- **Redshift loader**: S3-stage + COPY pattern.
+- **DuckDB-friendly NDJSON**: lossless NDJSON export designed to round-trip via `read_ndjson_auto`.
+- **OpenLineage events**: every scan emits an OpenLineage `START` + `COMPLETE` event with input/output datasets. Marquez / DataHub compatible.
+- **Snapshot API**: `POST /api/v1/snapshots` creates an immutable, named, point-in-time read-only view (cursor + content-hash). `GET /api/v1/snapshots/{name}/findings` queries the snapshot. Snapshots compose with the v1.17 warehouse loaders ("export the 2026-Q1 snapshot to BigQuery").
+- **Webhook fan-out polish**: a single inbound webhook can route to N outbound notification sinks via the v1.9 rules engine — formalised in v1.17.
+- **Scheduled warehouse sync**: daemon worker runs nightly warehouse loads; status visible in the v1.6 activity timeline.
+
+**Out of scope at v1.17**
+
+- ETL transformations beyond schema-shape (we ship the raw shape; transformations are dbt's job).
+- Custom warehouse targets beyond BigQuery / Snowflake / Redshift / DuckDB. Operators with another warehouse use Parquet + their own loader.
+
+**Dependencies added**
+
+- `github.com/apache/arrow/go/v17/parquet` for Parquet writes.
+- `cloud.google.com/go/bigquery` for the BigQuery loader.
+- `github.com/snowflakedb/gosnowflake` for the Snowflake loader.
+- `github.com/aws/aws-sdk-go-v2/service/redshiftdata` for the Redshift loader.
+
+**No API surface change to `pkg/compliancekit`**. New CLI subcommand + new `/api/v1/snapshots` route.
+
+---
+
+### v1.18 — Design system & visual polish
+
+**Goal:** the layer that separates a functional admin UI from a Linear / Vercel / Wiz-tier product. Every pixel feels intentional; every interaction has motion; every empty state has an illustration; every magnificent moment gets a celebration. ADR-017 codifies the design-system contract so v2.x can build on it without re-deriving the tokens.
+
+**Deliverables**
+
+- **Design tokens**: single source of truth for color, spacing, radii, shadows, typography, motion durations + easings. Lives in `internal/server/ui/design/tokens.css`. Three palettes (dark / light / high-contrast) all reference the same token names. **Per-domain palettes**: `--severity-{critical,high,medium,low,info}` + `--severity-*-bg`; `--status-{open,acknowledged,resolved,running,completed,failed,pending,false-positive}`; `--resource-{droplet,database,kubernetes,spaces,load-balancer,firewall,vpc,domain,ec2,s3,iam,rds,gcs,compute,...}` extended for every provider compliancekit ships (DO / AWS / GCP / Hetzner / K8s / Linux); `--sidebar-*` palette family.
+- **Gradient utility tokens**: `--gradient-primary`, `--gradient-critical`, `--gradient-high`, `--gradient-medium`, `--gradient-low`, `--gradient-success` (linear-gradient 135deg). Drives the hero MetricCard variants. The thing that makes a dashboard look modern vs. flat.
+- **Component library**: 20–25 carefully crafted htmx + Alpine partials under `internal/server/ui/design/components/*.html`, modeled on the shadcn/ui *API shape* (variant + slot + tooltip + clean prop set) but vendored as server-rendered partials. Target breadth covers what compliancekit will actually use; we don't ship shadcn's full 50+ (carousel / OTP / drawer / hover-card etc. wait for demand).
+- **MetricCard component spec**: hero metric primitive — `title`, `value`, `subtitle`, `icon`, `variant` (`default` / `critical` / `high` / `medium` / `low` / `success` / `primary` / `warning`), `tooltip`, optional `trend` (up/down + value, color-coded). Icon in rounded-bg corner; gradient variants apply to the whole card; subtle decorative circle in the top-right of colored variants. Named v1.18 deliverable.
+- **InfoTooltip-on-every-card-title pattern**: every Card title surface gets a small `?` icon with a hover-tooltip explaining "what this is and why it matters." Replaces docs-elsewhere with in-context discovery — the highest-leverage polish pattern in the magnificent-dashboard layer. Applied to every dashboard surface as a v1.18 audit task.
+- **Named shadow scale**: `--shadow-soft` (`0 4px 16px -4px rgba(0,0,0,0.08)`), `--shadow-elevated` (`0 10px 30px -10px rgba(99,102,241,0.2)`), `--shadow-floating` (deeper), `--shadow-glass` (with backdrop-blur companion). Token-driven, theme-aware.
+- **Design system docs page**: `/design` route renders the live component zoo — every button variant, every card depth, every status pill, every empty-state illustration, every MetricCard variant, the full per-domain palette swatches. Internal contributor onboarding artifact + visual regression target.
+- **Loading skeletons everywhere**: every list, card, chart, table renders a skeleton during fetch. Spinners only acceptable for sub-200ms operations.
+- **Page-top progress bar**: nprogress-style, driven by HTMX request-lifecycle events. Subtle, themed, dismissible.
+- **Motion design tokens**: 6 vendored Framer-style easing curves as CSS variables (`--ease-in-out-cubic`, `--ease-out-quart`, `--ease-spring`, etc.). Four standard durations: 75ms (quick), 150ms (snap), 250ms (confident), 400ms (storytell).
+- **Toast queue**: slide-in from corner, auto-stack, fade-out. Click-to-dismiss, swipe-to-dismiss on touch. Severity-coded.
+- **Optimistic UI**: every form mutation (assign, waive, comment, ack, settings save) updates locally on submit, reconciles on server response, rolls back on error.
+- **Empty-state SVG illustrations**: ~30 hand-drawn-style vanilla-SVG illustrations across "no findings", "all clear", "configure a provider", "no scans yet", "search no matches", "permission denied", etc. Theme-aware across dark / light / high-contrast.
+- **Micro-interactions audit**: every hover / focus / active / press state on every interactive element. Subtle scale (0.98 on press), color shift, focus rings tuned with the design tokens.
+- **Avatar generation**: hash-from-name initials gradient avatars (Linear-style). Per-user, per-team, per-bot. No third-party avatar service.
+- **Status pill system**: severity / state / framework pills with consistent shape (pill + small icon + label), built from design tokens.
+- **Card depth system**: `flat` / `raised` / `floating` / `glass` variants from shadow tokens.
+- **Iconography expansion**: sprite grows from 22 (v1.2) to ~100 symbols (severities, statuses, providers, file types, actions, framework logos, sources, action chips).
+- **Chart interactivity**: hover tooltips with rich content (multi-value, formatted), click-to-drill into filtered views, waiver-marker + baseline-shift annotations, time-series brushing.
+- **Magic moments**: confetti animation on a scan that closes with zero critical findings; score-improved celebration card; weekly improvement streak badges (3 weeks = bronze, 6 = silver, 12 = gold).
+- **Brand kit per org**: even single-tenant operators get a `Brand kit` page — upload logo, set favicon, override primary color (with contrast-against-tokens validation), set page-footer copy.
+
+**Out of scope at v1.18**
+
+- 3D / WebGL effects. Stays out forever — performance + a11y cost too high.
+- Custom font face. System fonts only; no CDN, no FOUC.
+- Cursor-following live presence. That's a v2.x collaboration concern.
+
+**Dependencies added**
+
+- `github.com/tabler/tabler-icons` SVGs vendored for the sprite expansion. MIT-licensed, ~5000 source icons; we cherry-pick ~100.
+- No JS animation library — every motion uses CSS transitions / Web Animations API.
+
+**API surface**: `pkg/compliancekit` unchanged. ADR-017 codifies the design-system contract so the tokens + component shape are a documented internal API.
+
+---
+
+### v1.19 — Onboarding 2.0 + global search + table excellence
+
+**Goal:** every operator's first 10 minutes feel guided; every operator's daily search is instant; every table feels modern. The "I just opened this for the first time and immediately knew what to do" experience.
+
+**Deliverables**
+
+- **Feature tour overlays**: Linear-style "Press . to try the new ..." overlay system. Per-feature, dismissible, re-launchable from `/onboarding`. Vanilla — no Shepherd.js, no Intro.js.
+- **Changelog modal**: on first login after a daemon upgrade, a modal surfaces the changelog highlights with deep links into the touched UI areas. Closes the gap where new features ship but nobody discovers them.
+- **In-app feedback widget**: corner button (companion to the `?`-key help) opens a modal — bug / feature / love note. Posts to a daemon admin queue + optionally relays to a configured webhook (GitHub Issues / Linear).
+- **First-run product tour**: 5-step interactive walkthrough triggered after the v1.4 first-run wizard. The wizard is *task*; the tour is *orientation* — they complement.
+- **Empty-state coaching v2**: every empty state gets the v1.18 illustration plus a 3-step CTA (e.g. "1. Add a provider → 2. Run a scan → 3. View findings"). Each step deep-links into the right page.
+- **Screenshot-grade demo seed**: layered on top of the v1.4 `compliancekit serve --demo` flag — ~500 findings across all severities, ~150 resources spread across providers, multi-week historical trend so charts look real.
+- **Global search**: invokable via `/` or `Cmd+K` from anywhere. Single index across findings + resources + scans + users + waivers + settings + docs.
+- **Fuzzy ranking**: Sublime-style — sub-string fuzzy plus recency weighting. Persisted recent searches + suggested searches from operator history.
+- **Sticky search bar**: floating bar in the nav. Result panel shows grouped results with keyboard navigation (j/k + Enter).
+- **Discovery surfaces**: home page "Did you know..." cards (auto-rotate, dismissable, never repeat). Surface features the operator hasn't used yet.
+- **Table 2.0**: drag-to-resize columns, drag-to-reorder columns, pin-left / pin-right, column-visibility menu, saved column sets (per-table, per-user).
+- **Inline edit**: where applicable (notes, tags, assignee). Click → edit in place → blur to save (optimistic from v1.18).
+- **Bulk actions in page header**: when selections > 0, action buttons (Acknowledge `(N)`, Resolve `(N)`, Waive `(N)`, Assign `(N)`, Export `(N)`) appear in the page header next to the existing actions, not as a floating toolbar. Cleaner; matches the rest of the chrome.
+- **Detail panel polish**: resizable side panel (drag border), detachable to new tab, j/k or arrow keys to navigate through items without closing.
+- **Keyboard shortcut discoverability**: `?`-key overlay (already at v1.10) gets per-page contextual shortcuts. v1.19 adds small "kbd hint" badges next to every clickable action so shortcuts surface in-context, not just in the overlay.
+- **Filter card convention**: a single `Filters` Card sits above every long list (findings, resources, scans, audit log). Inside: search input with leading magnifier glyph + N Select dropdowns + optional date-range, laid out as a responsive grid. One pattern, used everywhere — no bespoke filter chrome per page.
+- **Page header convention**: every page is `<h1>Title</h1>` + muted subtitle paragraph + right-aligned action buttons (primary action solid + secondary actions outlined). Codified in the v1.18 component library + audited across every page at v1.19.
+
+**Out of scope at v1.19**
+
+- AI-driven recommendations. Honors the no-phone-home invariant.
+- Voice search. Punted.
+- Live-presence cursors. v2.x collaboration concern.
+
+**Dependencies added**
+
+- `github.com/lithammer/fuzzysearch` for fuzzy ranking on the server side.
+- No new frontend deps — search index served from the daemon; client just renders.
+
+**API surface**: new `GET /api/v1/search?q=...&types=findings,resources,scans,...` endpoint with cursor pagination. Documented but not promised across minors. `pkg/compliancekit` unchanged.
 
 ---
 

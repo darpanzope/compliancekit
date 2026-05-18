@@ -460,7 +460,7 @@ These were open questions; each is now decided. Full reasoning lives in [DECISIO
 - **Resource graph:** designed in at v0.1 via the `Collector` + `Resource` split. Avoids a painful v0.6 refactor for ~50 LoC of upfront cost.
 - **Policy DSL:** Rego (via OPA Go library), landing at v0.16. The `Evaluator` interface is shaped from day 1 so Rego slots in without breaking check signatures. Go remains the option for complex / perf-sensitive checks.
 - **OCSF output:** lands at v0.3 alongside SARIF. Cheap to add early, painful to retrofit; aligns with Prowler's downstream-SIEM story.
-- **GRC layer (risk register, vendor register, CAIQ/SIG templates):** in scope, at v1.8. Scanning maturity precedes GRC features so we earn technical credibility before the soft-skills layer.
+- **GRC layer (risk register, vendor register, CAIQ/SIG templates):** in scope, at v2.3 (re-slotted from v1.8 per ADR-016 — v1.x is reserved for server / UI / UX / backend / CLI polish). Scanning maturity precedes GRC features so we earn technical credibility before the soft-skills layer.
 - **`serve` mode:** optional, never required. The CLI must always be feature-complete. Day-1 internal interfaces are daemon-aware (no globals, context-cancellable) so v1.3 is a feature add, not a rewrite.
 - **Auto-remediation:** opt-in at v2.x, behind `--yes-i-mean-it`, dry-run by default, full audit log. Permanently splits the project into "audit-only" (default, safe) and "act-on-it" (advanced) modes.
 

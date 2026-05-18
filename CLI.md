@@ -40,8 +40,10 @@ Available on every subcommand:
 | `remediate` | v0.15 | generate remediation snippets |
 | `ingest` | v0.13 | import Trivy / Checkov / OCSF / OSCAL / SCAP |
 | `serve` | v1.3 | continuous monitoring daemon |
-| `trust-center` | v1.7 | generate public security page |
-| `plugins` | v2.0 | manage plugin packages |
+| `tui` | v1.7 | k9s-style terminal UI client (local findings.json or daemon) |
+| `plugins` | v1.13 | manage plugin packages (SDK + signing); marketplace federation at v2.9 |
+| `warehouse` | v1.17 | export findings to Parquet / BigQuery / Snowflake / Redshift / DuckDB |
+| `trust-center` | v2.2 | generate public security page |
 
 ---
 

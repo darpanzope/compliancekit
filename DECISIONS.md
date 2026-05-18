@@ -102,15 +102,15 @@ OCSF is now genuinely a wire format. ADR closed.
 
 ---
 
-## ADR-004 — GRC layer is in scope, at v1.8
-**Date:** 2026-05-13 (slot renumbered v1.4 → v1.6 on 2026-05-18 [v1.1 CLI + v1.2 HTML wedge], then v1.6 → v1.8 on 2026-05-18 [v1.3 serve + v1.4 studio + v1.5 explorer wedge])
+## ADR-004 — GRC layer is in scope, at v2.3
+**Date:** 2026-05-13 (slot renumbered v1.4 → v1.6 on 2026-05-18 [v1.1 CLI + v1.2 HTML wedge], then v1.6 → v1.8 on 2026-05-18 [v1.3 serve + v1.4 studio + v1.5 explorer wedge], then v1.8 → v2.3 on 2026-05-18 [v1.6-v1.17 server/UI/UX polish reservation — see ADR-016])
 **Status:** Accepted
 
 ### Question
 Are we a pure technical scanner, or do we also ship lightweight GRC features (risk register, vendor register, CAIQ/SIG response templates, training tracking)? This is the largest scope question.
 
 ### Decision
-GRC is in scope, at v1.8 — after scanning maturity is established. Lightweight, CSV/YAML-driven, no HRIS ambitions.
+GRC is in scope, at v2.3 — after scanning maturity is established **and** after the v1.x server / UI/UX / backend / CLI polish reservation (ADR-016) completes. Lightweight, CSV/YAML-driven, no HRIS ambitions.
 
 ### Reasoning
 - Drata, Vanta, and Secureframe's actual moat isn't scanning — it's the GRC workflows. If we want to be a credible alternative to the $20k-100k/yr SaaS for small teams, we have to address this.
@@ -123,8 +123,8 @@ GRC is in scope, at v1.8 — after scanning maturity is established. Lightweight
 - **Ship GRC at v0.5 alongside launch.** Premature — would dilute the launch narrative.
 
 ### Consequences
-- v1.8 introduces a `register/` directory convention (risks.yaml, vendors.yaml, etc.) and a markdown library for policies and questionnaire responses.
-- Trust Center (v1.7) and Auditor Portal (v1.9) are designed knowing the GRC layer lands at v1.8.
+- v2.3 introduces a `register/` directory convention (risks.yaml, vendors.yaml, etc.) and a markdown library for policies and questionnaire responses.
+- Trust Center (v2.2) and Auditor Portal (v2.4) are designed knowing the GRC layer lands at v2.3.
 
 ---
 
@@ -184,7 +184,7 @@ Opt-in at v2.x. Permanently behind `--apply-fix` or `--yes-i-mean-it`. Dry-run b
 **Status:** Accepted
 
 ### Question
-The pre-launch roadmap had Hetzner at v0.7, Containers + K8s at v0.8, and AWS / GCP / Cloudflare / Vercel / Linode / Vultr collapsed into a single v1.7 "more clouds" milestone (the slot now numbered v1.11 after the 2026-05-18 wedges of v1.1 CLI + v1.2 HTML and v1.3 serve + v1.4 studio + v1.5 explorer — described historically here as v1.7 to preserve the pre-pivot terminology). Is that the right order after the v0.5 launch signal?
+The pre-launch roadmap had Hetzner at v0.7, Containers + K8s at v0.8, and AWS / GCP / Cloudflare / Vercel / Linode / Vultr collapsed into a single v1.7 "more clouds" milestone (the slot moved v1.7 → v1.11 on 2026-05-18 [CLI/HTML/serve/studio/explorer wedges], then v1.11 → v2.6 on 2026-05-18 [ADR-016 v1.x server/UI/UX reservation] — described historically here as v1.7 to preserve the pre-pivot terminology). Is that the right order after the v0.5 launch signal?
 
 ### Decision
 Re-sequence v0.6 → v1.0 so the cloud arc lands as:
@@ -204,7 +204,7 @@ Re-sequence v0.6 → v1.0 so the cloud arc lands as:
 | v0.17 | (not previously numbered) | Notifications |
 | v0.18 | (not previously numbered) | Waivers + skip annotations |
 
-The old v1.7 "more clouds" entry collapses: AWS and GCP land at v0.7-v0.8 as first-class providers. The tail (Cloudflare, GitHub, Workspace, Vercel, Linode, Vultr) stays in the same slot — now numbered v1.11 — as a smaller "expand-the-tail" milestone. v1.0 (API stability) is unchanged.
+The old v1.7 "more clouds" entry collapses: AWS and GCP land at v0.7-v0.8 as first-class providers. The tail (Cloudflare, GitHub, Workspace, Vercel, Linode, Vultr) stays in the same slot — now numbered v2.6 (after ADR-016's v1.x reservation) — as a smaller "expand-the-tail" milestone. v1.0 (API stability) is unchanged.
 
 ### Reasoning
 - The v0.5 HN launch was the first real audience-selection event. The single most common feedback theme — outpacing every other category combined — was *"would love to use this but we're on AWS."* Same indie-SaaS demographic that put compliancekit on the map, different provider.
@@ -220,7 +220,7 @@ The old v1.7 "more clouds" entry collapses: AWS and GCP land at v0.7-v0.8 as fir
 - **Pull K8s forward to v0.7.5 as a generic-K8s-only release.** Rejected. Cloud-specific K8s is the value; a generic kubeconfig scanner without IRSA / Workload Identity / DOKS-specific glue is a half-finished feature.
 
 ### Consequences
-- The "v1.7 more clouds" milestone (renumbered v1.9 on 2026-05-18 [CLI/HTML wedge], then v1.11 on 2026-05-18 [serve/studio/explorer wedge]) shrinks to just the tail (Cloudflare, GitHub, Workspace, Vercel, Linode, Vultr).
+- The "v1.7 more clouds" milestone (renumbered v1.9 on 2026-05-18 [CLI/HTML wedge], then v1.11 on 2026-05-18 [serve/studio/explorer wedge], then v2.6 on 2026-05-18 [ADR-016 v1.x server/UI/UX reservation]) shrinks to just the tail (Cloudflare, GitHub, Workspace, Vercel, Linode, Vultr).
 - The previously deferred *AWS provider depth* open question is now answered: depth at v0.7 is "the 30 highest-leverage checks that map cleanly to the three shipping frameworks." Full scope enumerated in ROADMAP.md v0.7.
 - ADR-002 (Rego policy DSL) shifts from v0.13 to v0.16. The interface design and the rationale are unchanged; only the release slot moves. The `Evaluator` seam from v0.1 still pays off, just three minor versions later.
 - ADR-003 (OCSF) is unaffected on the *emit* side (shipped at v0.3). The *ingest* side moves from the old v0.10 slot to v0.13 alongside the rest of the ingest work.
@@ -562,6 +562,65 @@ Server-rendered HTML driven by htmx + Alpine.js for client-side reactivity, styl
 - Tailwind config + Preline + Alpine + htmx vendored at known versions under `internal/server/ui/vendor/` so a clean clone can `make ui` without network. Updates land via `make ui-update` (vendoring helper) + reviewed PR.
 - `compliancekit serve` adds a new binary section for the embedded assets. Estimated stripped-binary delta: ~4-5 MB (Tailwind output, htmx, Alpine, Preline JS bundle, chromedp Chrome-driver bindings — Chrome itself remains an OS-level dep that operators provide if they want PDF export).
 - The v1.2 HTML report (`internal/report/assets/`) stays as-is — its single-file invariant is for the offline / emailable / committed-to-git artefact. `serve` mode renders the same template for `/scans/:id`, so a v1.2 polish improvement propagates to both surfaces for free.
+
+---
+
+## ADR-016 — v1.x is fully scoped to server / UI/UX / backend / CLI polish
+**Date:** 2026-05-18
+**Status:** Accepted
+
+### Question
+After v1.5 (Explorer + Remediation Studio) ships, the original v1.6-v1.13 lineup mixed cross-cutting platform expansion (multi-tenant, GRC, auditor portal, tail clouds, OSCAL, OS-coverage expansion, risk-score modelling) with what could have been a focused continuation of the v1.3-v1.5 server / UI / UX arc. Do we keep that mixed lineup, or do we reserve the entire remaining v1.x slot for server + frontend + UI/UX + backend + CLI polish, pushing everything else to v2.x?
+
+### Decision
+**v1.x (v1.6 through v1.19) is fully reserved for server, frontend, UI/UX, backend, and CLI polish.** No new providers, no new GRC capabilities, no new framework catalogs, no OS-coverage expansion, no risk-scoring model in v1.x — those are all explicitly deferred to v2.x.
+
+The v1.x lineup that lands under this reservation:
+
+| Slot | Theme |
+|---|---|
+| v1.6  | Live Operations (SSE / WebSocket / live dashboards) |
+| v1.7  | TUI mode (`compliancekit tui`) |
+| v1.8  | Collaboration & workflow (comments / assignees / two-way sync) + notification inbox 2.0 |
+| v1.9  | Workflow automation / rules engine |
+| v1.10 | Accessibility / i18n / keyboard excellence |
+| v1.11 | Performance & scale |
+| v1.12 | Admin & RBAC (SAML / SCIM / tamper-evident audit log) + settings UX excellence |
+| v1.13 | Plugin SDK + marketplace prep |
+| v1.14 | Reporting renaissance (dashboard builder / scheduled email; chart-interactivity hooks designed for v1.18) |
+| v1.15 | Deploy & operate (Helm / operator / Terraform / distroless) |
+| v1.16 | Mobile / PWA |
+| v1.17 | Data warehouse bridges |
+| v1.18 | **Design system & visual polish** (tokens, motion, skeletons, illustrations, chart interactivity, magic moments, brand kit) |
+| v1.19 | **Onboarding 2.0 + global search + table excellence** (feature tours, changelog modal, demo seed, fuzzy Cmd-K, table 2.0) |
+
+Demo mode (`compliancekit serve --demo`) ships at v1.4 (Studio) rather than v1.19 so first-impression evaluators see screenshot-grade seed data from day one. The v1.4 work also closes the v1.3.1 throwaway-seeddemo gap by shipping daemon-bootstrap CLI subcommands (`serve users create --admin`, `serve tokens issue --scope=...`). v1.19 polishes the seed-data fidelity for screenshot quality.
+
+The v2.x lineup absorbs the displaced items: v2.1 multi-tenant, v2.2 Trust Center, v2.3 GRC layer (ADR-004 re-slotted), v2.4 auditor portal, v2.5 macOS/Windows/BSD hardening, v2.6 tail clouds, v2.7 OSCAL ecosystem + SCAP, v2.8 risk score + executive PDF + time-series. v2.9-v2.11 retain the pre-existing v2.0/v2.x rows (plugin marketplace, K8s operator, auto-remediation).
+
+### Reasoning
+- **The daemon's UX is the moat.** v1.3 shipped server foundation; v1.4 ships the config builder; v1.5 ships the findings explorer. The next leap in audience reach comes from a daemon experience that beats Wiz / Snyk / Drata at developer-experience even though it has 1% of their R&D budget. That's a polish-and-focus play, not a feature-breadth play.
+- **Cross-cutting platform expansion is a v2.x prerequisite anyway.** Multi-tenant + auditor portal + GRC layer all assume an already-polished single-tenant daemon. Building them in v1.x before the v1.x polish lands means re-doing the polish work twice.
+- **Tail clouds, OS expansion, OSCAL** are scope-expansion features, not depth features. compliancekit's audience is best served by *depth* in v1.x and *breadth* in v2.x, mirroring the pre-v1.0 cadence where we picked depth (DO deepening, K8s deepening, Linux deepening) over breadth.
+- **Risk score + executive PDF** is partially folded into v1.14 reporting renaissance for the *report* shape (scheduled email, executive-summary auto-gen, watermarked exports). The *model* (a 0-100 risk score with separate weights from the hardening score) is a v2.8 modelling task that benefits from v1.14's reporting surfaces being in place.
+
+### Rejected alternatives
+- **Ship the original mixed v1.6-v1.13 lineup as-is.** Spreads attention too thin between platform expansion and depth polish. The risk: a v1.x where the daemon ships multi-tenant before its mobile UI works, ships tail clouds before its accessibility audit, ships an auditor portal before its admin-RBAC story.
+- **Cut v1.x at v1.10 and call it v2.0.** Tempting (clean break), but the v1.x slot has runway for 14 more milestones of polish work and the audience signal (per the v1.3 demo: "POST /api/auth/login=404 because CLI didn't have a `users create` subcommand") is that there's depth to mine in the server + CLI experience before we should worry about a v2 surface break.
+- **Slot a v1.x AI-assist milestone.** Reserved as a future possibility but not committed in v1.x. Any LLM-assist work has to honor the no-telemetry / no-phone-home invariant and the ADR-009 composed-not-native principle — implying local-LLM-only, which is a significant tooling dependency the audience doesn't yet need. Re-evaluate after v1.17.
+
+### Consequences
+- **ADR-004 re-slotted**: GRC layer moves v1.8 → v2.3. Trust Center moves v1.7 → v2.2. Auditor portal moves v1.9 → v2.4. All other references updated in the ROADMAP table.
+- **The v1.x table is now 14 minor versions deep**, all server / UI / UX / backend / CLI. ROADMAP.md has full per-milestone expansions for v1.6-v1.19.
+- **v1.18 (design system & visual polish) is the load-bearing magnificent-dashboard slot.** ADR-017 will codify the design-system contract — tokens, component library, motion language, illustration catalog — so v2.x builds on it without re-deriving.
+- **v1.19 (onboarding 2.0 + global search + table 2.0)** closes the "first 10 minutes feel guided + daily search is instant + tables feel modern" gap. Feature tours, changelog modal, demo seed (layered on v1.4 `--demo`), fuzzy Cmd-K search across everything, table-2.0 (resize/reorder/pin/bulk-actions/inline-edit/saved column sets).
+- **Three existing milestones scope-up** to absorb adjacent UX gaps without inflating the milestone count further: v1.8 adds notification inbox 2.0 (snooze / mark-all-read / per-event-type prefs / DND); v1.12 adds settings UX excellence (Cmd-K settings search / change diff / deep links / auto-save); v1.14 designs chart interactivity hooks so v1.18 visual polish can flesh them out without re-shaping SVG.
+- **Demo mode is pulled forward** from where it would naturally fit (v1.19) into v1.4 Studio. First-impression evaluators get screenshot-grade seed data day one; v1.19 polishes seed fidelity later. Closes the v1.3.1 throwaway-seeddemo gap.
+- **Stack-independent visual ceiling commitment**: ADR-015 fixes the daemon UI stack to htmx + Alpine + Tailwind + Preline + vanilla SVG. v1.18 + v1.19 commit that this stack choice is **not** a quality ceiling — whatever modern React + shadcn/ui dashboards (Linear / Vercel / Wiz) achieve "for free" via vendored component libraries, compliancekit invests equivalent effort to hit the same visual + interaction ceiling via carefully crafted htmx + Alpine partials. The concrete patterns codified into the v1.18/v1.19 expansions: per-domain color tokens (severity-/status-/resource-) extended across every provider compliancekit ships; gradient utility tokens; MetricCard component spec with variant + tooltip + trend + icon-in-rounded-bg; InfoTooltip-on-every-card-title pattern as the in-context discovery layer; named shadow scale (soft/elevated/floating/glass); 20–25 carefully crafted components modeled on shadcn's API shape (not breadth); filter-card convention; page-header convention; bulk-actions-in-page-header pattern. The htmx stack constrains *how* we implement, never *what quality* we ship.
+- **v1.5 resource graph escape hatch**: vanilla SVG is the default per ADR-015 spirit. If v1.5 implementation reveals a 1500+ LoC budget for full pan/zoom/drag/layout, vendor cytoscape.js (~150KB, vanilla JS, no React) as a 2-3 phase migration. Documented as an explicit escape hatch, not a yak-shave.
+- **v2.x grows from 3 rows (plugin marketplace, K8s operator, auto-remediation) to 12 rows** (those three plus the eight displaced items plus a reserved v2.0 slot for the next API-surface refinement cycle).
+- **Tracking issue cadence**: issues open just-in-time (only the next 1-2 milestones), not all 12 upfront. The roadmap is the long-form planning artifact; issues are the work artifacts. Current open: #25 (v1.3, closed), #26 (v1.4), #27 (v1.5). v1.6 tracking issue (#28) opens when v1.5 is in flight.
+- **ADR-006 unchanged**: auto-remediation remains a v2.x trust gate. The v2.x slot moves from "v2.x" to v2.11 (concrete numbering).
 
 ---
 
