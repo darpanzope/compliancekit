@@ -55,6 +55,7 @@ func (a *API) Mount(r chi.Router) {
 		r.Get("/scans/{id}", a.scopeGate(auth.ScopeScansRead, a.getScan))
 		r.Get("/scans/{id}/findings", a.scopeGate(auth.ScopeScansRead, a.listScanFindings))
 		r.Post("/scans", a.scopeGate(auth.ScopeScansWrite, a.triggerScan))
+		r.Post("/scans/ingest", a.scopeGate(auth.ScopeScansWrite, a.ingestScan))
 
 		r.Get("/findings", a.scopeGate(auth.ScopeFindingsRead, a.listFindings))
 		r.Get("/findings/{id}", a.scopeGate(auth.ScopeFindingsRead, a.getFinding))

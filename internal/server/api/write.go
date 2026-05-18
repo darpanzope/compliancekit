@@ -1,18 +1,200 @@
 package api
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 
 	"github.com/darpanzope/compliancekit/internal/server/auth"
+	"github.com/darpanzope/compliancekit/internal/server/store"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
+
+// driverPostgres is the local const used for switch-case branches
+// against store.Driver(). Defined as a store.Driver-typed value so
+// the switch comparison stays type-safe + goconst stops complaining
+// about repeated "postgres" string literals.
+const driverPostgres = store.DriverPostgres
+
+// ingestScanRequest is the body POST /api/v1/scans/ingest accepts.
+// Sent by the CLI's --push-to-server flag after a local scan
+// completes — lets a CI run land in the daemon's history without
+// duplicating the work.
+type ingestScanRequest struct {
+	Source             string                  `json:"source"`
+	Status             string                  `json:"status"`
+	StartedAt          string                  `json:"started_at,omitempty"`
+	FinishedAt         string                  `json:"finished_at,omitempty"`
+	ProvidersScanned   []string                `json:"providers_scanned"`
+	FrameworksScanned  []string                `json:"frameworks_scanned"`
+	Score              int                     `json:"score"`
+	Coverage           int                     `json:"coverage"`
+	TotalFindings      int                     `json:"total_findings"`
+	ActionableFindings int                     `json:"actionable_findings"`
+	DurationMS         int                     `json:"duration_ms"`
+	Findings           []compliancekit.Finding `json:"findings"`
+}
+
+// ingestScanResponse echoes the daemon-assigned scan_id.
+type ingestScanResponse struct {
+	ScanID string `json:"scan_id"`
+}
+
+// ingestScan is POST /api/v1/scans/ingest — accepts a completed
+// scan from the CLI's --push-to-server flow. Writes the scan row +
+// every finding + every distinct resource row inside a single tx so
+// partial uploads can't leave the DB in a half-state.
+func (a *API) ingestScan(w http.ResponseWriter, r *http.Request) {
+	req, err := decodeBody[ingestScanRequest](r)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "decode body: "+err.Error())
+		return
+	}
+	if req.Source == "" {
+		req.Source = "cli"
+	}
+	if req.Status == "" {
+		req.Status = "completed"
+	}
+	scanID := uuid.NewString()
+	now := time.Now().UTC().Format(time.RFC3339)
+	if req.FinishedAt == "" {
+		req.FinishedAt = now
+	}
+
+	tx, err := a.store.DB().BeginTx(r.Context(), nil)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "begin tx: "+err.Error())
+		return
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	providersJSON, _ := json.Marshal(req.ProvidersScanned)
+	frameworksJSON, _ := json.Marshal(req.FrameworksScanned)
+	actorUserID, actorTokenID := actorFromCtx(r)
+
+	scanQ := fmt.Sprintf( //nolint:gosec // placeholders only; no user input
+		`INSERT INTO scans (id, created_at, started_at, finished_at, source, status,
+		                    providers_scanned, frameworks_scanned, score, coverage,
+		                    total_findings, actionable_findings, duration_ms,
+		                    triggered_by_user_id, triggered_by_token_id)
+		 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)`,
+		a.ph(1), a.ph(2), a.ph(3), a.ph(4), a.ph(5), a.ph(6), a.ph(7), a.ph(8),
+		a.ph(9), a.ph(10), a.ph(11), a.ph(12), a.ph(13), a.ph(14), a.ph(15))
+	if _, err := tx.ExecContext(r.Context(), scanQ,
+		scanID, now, nullableString(req.StartedAt), req.FinishedAt,
+		req.Source, req.Status, string(providersJSON), string(frameworksJSON),
+		req.Score, req.Coverage, req.TotalFindings, req.ActionableFindings,
+		req.DurationMS, nullableString(actorUserID), nullableString(actorTokenID)); err != nil {
+		respondError(w, http.StatusInternalServerError, "insert scan: "+err.Error())
+		return
+	}
+
+	for _, f := range req.Findings {
+		if err := insertFindingRow(r.Context(), tx, a, scanID, now, f); err != nil {
+			respondError(w, http.StatusInternalServerError, "insert finding: "+err.Error())
+			return
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		respondError(w, http.StatusInternalServerError, "commit: "+err.Error())
+		return
+	}
+	a.auditLog(r, "scan.ingest", "scan", scanID, map[string]any{
+		"findings": req.TotalFindings, "actionable": req.ActionableFindings,
+	})
+	respondJSON(w, r, http.StatusCreated, ingestScanResponse{ScanID: scanID})
+}
+
+// insertFindingRow writes one Finding into the findings table.
+// Resource attribution is derived from finding.Resource; the
+// resources table gets an upsert per distinct resource ID seen.
+func insertFindingRow(ctx context.Context, tx *sql.Tx, a *API, scanID, now string, f compliancekit.Finding) error {
+	provider := providerOf(f.Resource.Type)
+	fingerprint := f.Fingerprint()
+	frameworkIDs, _ := json.Marshal(extractFrameworkIDs(f))
+
+	resID := f.Resource.ID
+	if resID == "" {
+		resID = f.Resource.Name
+	}
+	findingID := uuid.NewString()
+
+	insertF := fmt.Sprintf( //nolint:gosec // placeholders only; no user input
+		`INSERT INTO findings (id, scan_id, fingerprint, check_id, severity, status, provider,
+		                       resource_id, resource_name, resource_type, message,
+		                       framework_ids, first_seen_at, last_seen_at, created_at)
+		 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)`,
+		a.ph(1), a.ph(2), a.ph(3), a.ph(4), a.ph(5), a.ph(6), a.ph(7),
+		a.ph(8), a.ph(9), a.ph(10), a.ph(11), a.ph(12), a.ph(13), a.ph(14), a.ph(15))
+	if _, err := tx.ExecContext(ctx, insertF,
+		findingID, scanID, fingerprint, f.CheckID, f.Severity.String(), string(f.Status), provider,
+		resID, f.Resource.Name, f.Resource.Type, f.Message,
+		string(frameworkIDs), now, now, now); err != nil {
+		return err
+	}
+
+	// Resource upsert.
+	var resQ string
+	switch a.store.Driver() {
+	case driverPostgres:
+		resQ = fmt.Sprintf( //nolint:gosec // placeholders only; no user input
+			`INSERT INTO resources (id, name, type, provider, first_seen_at, last_seen_at, last_seen_scan_id)
+			 VALUES (%s, %s, %s, %s, %s, %s, %s)
+			 ON CONFLICT (id) DO UPDATE SET
+			   name = EXCLUDED.name, type = EXCLUDED.type, provider = EXCLUDED.provider,
+			   last_seen_at = EXCLUDED.last_seen_at, last_seen_scan_id = EXCLUDED.last_seen_scan_id`,
+			a.ph(1), a.ph(2), a.ph(3), a.ph(4), a.ph(5), a.ph(6), a.ph(7))
+	default:
+		resQ = fmt.Sprintf( //nolint:gosec // placeholders only; no user input
+			`INSERT INTO resources (id, name, type, provider, first_seen_at, last_seen_at, last_seen_scan_id)
+			 VALUES (%s, %s, %s, %s, %s, %s, %s)
+			 ON CONFLICT(id) DO UPDATE SET
+			   name = excluded.name, type = excluded.type, provider = excluded.provider,
+			   last_seen_at = excluded.last_seen_at, last_seen_scan_id = excluded.last_seen_scan_id`,
+			a.ph(1), a.ph(2), a.ph(3), a.ph(4), a.ph(5), a.ph(6), a.ph(7))
+	}
+	if _, err := tx.ExecContext(ctx, resQ,
+		resID, f.Resource.Name, f.Resource.Type, provider, now, now, scanID); err != nil {
+		return err
+	}
+	return nil
+}
+
+// providerOf strips the prefix before the first dot in a resource
+// type to derive the provider name. Mirrors the helper in
+// internal/report.
+func providerOf(resourceType string) string {
+	if i := strings.Index(resourceType, "."); i >= 0 {
+		return resourceType[:i]
+	}
+	return resourceType
+}
+
+// extractFrameworkIDs reads the framework attributions off a
+// Finding via the check registry. Empty on findings whose check is
+// not registered (would only happen on a daemon that's older than
+// the CLI emitting the finding).
+func extractFrameworkIDs(f compliancekit.Finding) []string {
+	check, ok := compliancekit.LookupCheck(f.CheckID)
+	if !ok {
+		return nil
+	}
+	out := make([]string, 0, len(check.Frameworks))
+	for id := range check.Frameworks {
+		out = append(out, id)
+	}
+	return out
+}
 
 // triggerScanRequest is the body POST /api/v1/scans accepts. Empty
 // values mean "scan everything currently enabled" — phase 8's worker
@@ -226,7 +408,7 @@ func (a *API) updateProvider(w http.ResponseWriter, r *http.Request) {
 	}
 	var q string
 	switch a.store.Driver() {
-	case "postgres":
+	case driverPostgres:
 		q = fmt.Sprintf( //nolint:gosec // placeholders only; no user input
 			`INSERT INTO providers (id, enabled, config_json, created_at, updated_at)
 			 VALUES (%s, %s, %s, %s, %s)
@@ -293,7 +475,7 @@ func (a *API) toggleCheck(w http.ResponseWriter, r *http.Request) {
 	var q string
 	var args []any
 	switch a.store.Driver() {
-	case "postgres":
+	case driverPostgres:
 		q = fmt.Sprintf( //nolint:gosec // placeholders only; no user input
 			`INSERT INTO checks_state (check_id, enabled, disabled_reason, disabled_by_user_id, disabled_at, updated_at)
 			 VALUES (%s, %s, %s, %s, %s, %s)

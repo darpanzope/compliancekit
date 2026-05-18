@@ -42,12 +42,14 @@ import (
 )
 
 type scanOptions struct {
-	configPath string
-	envName    string
-	outDir     string
-	formats    []string
-	failOn     string
-	profile    string
+	configPath   string
+	envName      string
+	outDir       string
+	formats      []string
+	failOn       string
+	profile      string
+	pushServer   string
+	pushAPIToken string
 }
 
 func newScanCmd() *cobra.Command {
@@ -82,10 +84,13 @@ Exit codes:
 	cmd.Flags().StringSliceVar(&opts.formats, "output", nil, "output format(s) (overrides config)")
 	cmd.Flags().StringVar(&opts.failOn, "fail-on", "", "severity threshold for non-zero exit (overrides config)")
 	cmd.Flags().StringVar(&opts.profile, "profile", "", "named profile from compliancekit.yaml `profiles:` to restrict which checks run")
+	cmd.Flags().StringVar(&opts.pushServer, "push-to-server", "", "after the scan completes, POST findings to a compliancekit daemon (e.g. https://compliance.acme.com)")
+	cmd.Flags().StringVar(&opts.pushAPIToken, "api-token", "", "Bearer token for --push-to-server (defaults to $CK_API_TOKEN)")
 
 	return cmd
 }
 
+//nolint:gocyclo // sequential pipeline (config → collect → reporters → register → run → ingest → waivers → output → summary → push) — splitting any further would hide the order
 func runScan(ctx context.Context, w io.Writer, st *ui.Styler, opts scanOptions, providerFilter string) error {
 	cfg, err := config.Load(config.LoadOptions{
 		ConfigPath: opts.configPath,
@@ -156,10 +161,46 @@ func runScan(ctx context.Context, w io.Writer, st *ui.Styler, opts scanOptions, 
 
 	printSummary(w, st, result.Findings)
 
+	if opts.pushServer != "" {
+		maybePushScan(ctx, w, st, opts, cfg, collectors, result)
+	}
+
 	if hasActionableAtOrAbove(result.Findings, failOnLevel) {
 		return NewExitCode(2, "findings at or above %s severity present", failOnLevel)
 	}
 	return nil
+}
+
+// providerSlice extracts the slice of provider names from the
+// collectors used in the scan; the daemon's scans table stores them
+// as a JSON array so the UI can filter by source provider.
+func providerSlice(collectors []compliancekit.Collector) []string {
+	out := make([]string, 0, len(collectors))
+	for _, c := range collectors {
+		out = append(out, c.Name())
+	}
+	return out
+}
+
+// maybePushScan is split out of runScan so the cyclomatic-complexity
+// linter doesn't complain about the conditional push branch. Same
+// observable behavior as inlining it: token resolution + push +
+// pass/fail logging.
+func maybePushScan(ctx context.Context, w io.Writer, st *ui.Styler, opts scanOptions, cfg *config.Config, collectors []compliancekit.Collector, result engine.Result) {
+	token := opts.pushAPIToken
+	if token == "" {
+		token = os.Getenv("CK_API_TOKEN")
+	}
+	providers := providerSlice(collectors)
+	frameworks := append([]string(nil), cfg.Frameworks...)
+	scanID, pushErr := pushToServer(ctx, opts.pushServer, token, result, providers, frameworks)
+	if pushErr != nil {
+		fmt.Fprintf(w, "%s push to %s failed: %v (local scan results unaffected)\n",
+			st.Glyph("warn"), opts.pushServer, pushErr)
+		return
+	}
+	fmt.Fprintf(w, "%s pushed to %s (scan_id=%s)\n",
+		st.Glyph("pass"), st.Accent(opts.pushServer), st.Muted(scanID))
 }
 
 // buildCollectors constructs the set of collectors from config. The
