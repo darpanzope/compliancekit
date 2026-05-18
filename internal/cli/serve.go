@@ -15,6 +15,7 @@ import (
 	"github.com/darpanzope/compliancekit/internal/server/api"
 	"github.com/darpanzope/compliancekit/internal/server/auth"
 	"github.com/darpanzope/compliancekit/internal/server/store"
+	"github.com/darpanzope/compliancekit/internal/server/worker"
 )
 
 // newServeCmd builds `compliancekit serve`, the v1.3 daemon entry
@@ -93,12 +94,20 @@ func runServe(ctx context.Context, stdout interface {
 	apiH := api.New(st, users, tokens, sessions)
 	apiH.Mount(srv.Router())
 
+	// Spawn the background worker pool. Phase 8 ships StubRunner so
+	// queued scans transition to completed without running anything;
+	// v1.4 phase 9 swaps it for a real scan-engine Runner.
+	pool := worker.New(st, worker.Default())
+
 	// Install signal handlers on the parent context. When the user
 	// hits Ctrl-C or systemd sends SIGTERM, the signal-aware context
 	// cancels, which is what Server.Run() waits on to trigger its
 	// graceful shutdown path.
 	ctx, stop := signal.NotifyContext(ctx, syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
+
+	pool.Start(ctx)
+	defer pool.Stop()
 
 	fmt.Fprintf(stdout, "compliancekit daemon listening on http://%s\n", srv.Addr())
 	fmt.Fprintf(stdout, "  health:  http://%s/health\n", srv.Addr())
