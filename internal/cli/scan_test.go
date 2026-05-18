@@ -2,9 +2,11 @@ package cli
 
 import (
 	"bytes"
+	"io"
 	"strings"
 	"testing"
 
+	"github.com/darpanzope/compliancekit/internal/ui"
 	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
@@ -50,9 +52,17 @@ func TestHasActionableAtOrAbove_ErrorCounts(t *testing.T) {
 	}
 }
 
+// plainStyler builds a Color=false Styler suitable for byte-stable
+// snapshot tests of printSummary output. Mirrors the production CI
+// path (NO_COLOR / piped output) where the snapshot tests act as
+// canaries against accidental color leaks into non-TTY output.
+func plainStyler() *ui.Styler {
+	return ui.NewStyler(io.Discard, true)
+}
+
 func TestPrintSummary_NoFindings(t *testing.T) {
 	var buf bytes.Buffer
-	printSummary(&buf, nil)
+	printSummary(&buf, plainStyler(), nil)
 	if !strings.Contains(buf.String(), "0 findings") {
 		t.Errorf("expected '0 findings' in output, got: %q", buf.String())
 	}
@@ -67,16 +77,17 @@ func TestPrintSummary_CountsBySeverity(t *testing.T) {
 		{Status: compliancekit.StatusPass, Severity: compliancekit.SeverityHigh}, // ignored
 	}
 	var buf bytes.Buffer
-	printSummary(&buf, findings)
+	printSummary(&buf, plainStyler(), findings)
 	out := buf.String()
 	if !strings.Contains(out, "4 findings") {
 		t.Errorf("expected '4 findings', got: %q", out)
 	}
-	if !strings.Contains(out, "1 critical") {
-		t.Errorf("expected '1 critical', got: %q", out)
+	// Counts are now severity-chip-formatted: "1 [CRITICAL]" etc.
+	if !strings.Contains(out, "1 [CRITICAL]") {
+		t.Errorf("expected '1 [CRITICAL]', got: %q", out)
 	}
-	if !strings.Contains(out, "2 high") {
-		t.Errorf("expected '2 high', got: %q", out)
+	if !strings.Contains(out, "2 [HIGH]") {
+		t.Errorf("expected '2 [HIGH]', got: %q", out)
 	}
 }
 

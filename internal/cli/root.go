@@ -36,6 +36,14 @@ Run 'compliancekit doctor' first to validate your config and connectivity.`,
 		SilenceErrors: true, // main handles error printing
 	}
 
+	// Global styling flag honored by every subcommand that emits
+	// styled output. Persists across subcommand boundaries so
+	// `compliancekit --no-color scan` and `compliancekit scan
+	// --no-color` are interchangeable. NO_COLOR / CLICOLOR=0 env
+	// vars + non-TTY auto-detect also work without the flag (see
+	// internal/ui/tty.go).
+	cmd.PersistentFlags().Bool(noColorFlag, false, "disable ANSI color output (forces plain text even on a TTY; NO_COLOR env var has the same effect)")
+
 	cmd.AddCommand(newVersionCmd(info))
 	cmd.AddCommand(newDoctorCmd())
 	cmd.AddCommand(newScanCmd())

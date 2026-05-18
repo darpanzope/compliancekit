@@ -20,6 +20,7 @@ import (
 	"github.com/darpanzope/compliancekit/internal/profile"
 	"github.com/darpanzope/compliancekit/internal/report"
 	"github.com/darpanzope/compliancekit/internal/score"
+	"github.com/darpanzope/compliancekit/internal/ui"
 	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 
 	// v0.22.1 — side-effect imports register every remediation
@@ -71,7 +72,7 @@ Exit codes:
 			if len(args) > 0 {
 				providerFilter = args[0]
 			}
-			return runScan(cmd.Context(), cmd.OutOrStdout(), opts, providerFilter)
+			return runScan(cmd.Context(), cmd.OutOrStdout(), stylerFor(cmd), opts, providerFilter)
 		},
 	}
 
@@ -85,7 +86,7 @@ Exit codes:
 	return cmd
 }
 
-func runScan(ctx context.Context, w io.Writer, opts scanOptions, providerFilter string) error {
+func runScan(ctx context.Context, w io.Writer, st *ui.Styler, opts scanOptions, providerFilter string) error {
 	cfg, err := config.Load(config.LoadOptions{
 		ConfigPath: opts.configPath,
 		EnvName:    opts.envName,
@@ -119,11 +120,13 @@ func runScan(ctx context.Context, w io.Writer, opts scanOptions, providerFilter 
 	}
 
 	if cfg.Profile != "" {
-		fmt.Fprintf(w, "scanning %s (profile=%s, %d checks)...\n",
-			describeCollectors(collectors), cfg.Profile, len(registry.Checks()))
+		fmt.Fprintf(w, "%s scanning %s (profile=%s, %s checks)...\n",
+			st.Glyph("arrow"), st.Accent(describeCollectors(collectors)),
+			st.Bold(cfg.Profile), st.Accent(fmt.Sprintf("%d", len(registry.Checks()))))
 	} else {
-		fmt.Fprintf(w, "scanning %s (%d checks)...\n",
-			describeCollectors(collectors), len(registry.Checks()))
+		fmt.Fprintf(w, "%s scanning %s (%s checks)...\n",
+			st.Glyph("arrow"), st.Accent(describeCollectors(collectors)),
+			st.Accent(fmt.Sprintf("%d", len(registry.Checks()))))
 	}
 
 	eng := engine.New(collectors, registry)
@@ -148,10 +151,10 @@ func runScan(ctx context.Context, w io.Writer, opts scanOptions, providerFilter 
 		if err := writeReport(ctx, r, result, path); err != nil {
 			return err
 		}
-		fmt.Fprintf(w, "wrote %s\n", path)
+		fmt.Fprintf(w, "%s wrote %s\n", st.Muted("·"), st.Muted(path))
 	}
 
-	printSummary(w, result.Findings)
+	printSummary(w, st, result.Findings)
 
 	if hasActionableAtOrAbove(result.Findings, failOnLevel) {
 		return NewExitCode(2, "findings at or above %s severity present", failOnLevel)
@@ -405,8 +408,10 @@ func describeCollectors(cs []compliancekit.Collector) string {
 }
 
 // printSummary writes the end-of-scan summary to w. Matches the shape
-// shown in ROADMAP.md's v0.1 demo block.
-func printSummary(w io.Writer, findings []compliancekit.Finding) {
+// shown in ROADMAP.md's v0.1 demo block. The styler colors the per-
+// severity counts and the hardening-score band; pass a plain-mode
+// styler (Color=false) for byte-stable CI output.
+func printSummary(w io.Writer, st *ui.Styler, findings []compliancekit.Finding) {
 	var (
 		fail, errored                     int
 		critical, high, medium, low, info int
@@ -435,32 +440,57 @@ func printSummary(w io.Writer, findings []compliancekit.Finding) {
 		}
 	}
 
-	fmt.Fprintf(w, "\n%d findings", fail+errored)
+	total := fail + errored
+	if total == 0 {
+		fmt.Fprintf(w, "\n%s 0 findings\n", st.Glyph("pass"))
+	} else {
+		fmt.Fprintf(w, "\n%s %s findings", st.Glyph("fail"), st.Accent(fmt.Sprintf("%d", total)))
+	}
+
 	if critical+high+medium+low+info > 0 {
 		fmt.Fprintf(w, " (")
 		first := true
-		writeCount := func(label string, n int) {
+		writeCount := func(sev compliancekit.Severity, n int) {
 			if n == 0 {
 				return
 			}
 			if !first {
 				fmt.Fprintf(w, ", ")
 			}
-			fmt.Fprintf(w, "%d %s", n, label)
+			fmt.Fprintf(w, "%d %s", n, st.SeverityChip(sev))
 			first = false
 		}
-		writeCount("critical", critical)
-		writeCount("high", high)
-		writeCount("medium", medium)
-		writeCount("low", low)
-		writeCount("info", info)
+		writeCount(compliancekit.SeverityCritical, critical)
+		writeCount(compliancekit.SeverityHigh, high)
+		writeCount(compliancekit.SeverityMedium, medium)
+		writeCount(compliancekit.SeverityLow, low)
+		writeCount(compliancekit.SeverityInfo, info)
 		fmt.Fprintf(w, ")")
+		fmt.Fprintln(w)
+	} else if total > 0 {
+		fmt.Fprintln(w)
 	}
-	fmt.Fprintln(w)
 
 	// Hardening score per DECISIONS.md ADR-008. Always emitted, even
 	// when there are zero findings (empty scan reads as 100/100,
 	// honest given the Coverage parallel metric).
 	s := score.Compute(findings)
-	fmt.Fprintf(w, "Hardening score: %d/100 (coverage %d%%)\n", s.Score, s.Coverage)
+	fmt.Fprintf(w, "Hardening score: %s/100 (coverage %d%%)\n", scoreChip(st, s.Score), s.Coverage)
+}
+
+// scoreChip colors the score number per band: ≥90 info (green-ish
+// in palette), 70-89 medium, 50-69 high, <50 critical. Falls through
+// to plain when the styler is in plain mode.
+func scoreChip(st *ui.Styler, score int) string {
+	text := fmt.Sprintf("%d", score)
+	switch {
+	case score >= 90:
+		return st.InSeverity(text, compliancekit.SeverityInfo)
+	case score >= 70:
+		return st.InSeverity(text, compliancekit.SeverityMedium)
+	case score >= 50:
+		return st.InSeverity(text, compliancekit.SeverityHigh)
+	default:
+		return st.InSeverity(text, compliancekit.SeverityCritical)
+	}
 }

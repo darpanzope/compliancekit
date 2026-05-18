@@ -78,6 +78,16 @@ func (s *Styler) SeverityChip(sev compliancekit.Severity) string {
 	return s.r.NewStyle().Foreground(severityColor(sev)).Bold(sev >= compliancekit.SeverityHigh).Render(chip)
 }
 
+// InSeverity renders text in the color of sev without the chip
+// brackets — useful for rendering numeric scores / counts in a
+// band-appropriate color. No-op when Color is false.
+func (s *Styler) InSeverity(text string, sev compliancekit.Severity) string {
+	if !s.Color {
+		return text
+	}
+	return s.r.NewStyle().Foreground(severityColor(sev)).Bold(sev >= compliancekit.SeverityHigh).Render(text)
+}
+
 // Status renders the status glyph + colored name. ASCII fallback
 // substitutes the glyph and drops color when Color is false. Pad
 // width is stable across modes so columns line up in both forms.
