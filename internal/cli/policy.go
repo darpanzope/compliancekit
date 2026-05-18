@@ -12,6 +12,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/darpanzope/compliancekit/internal/policy"
+	"github.com/darpanzope/compliancekit/internal/ui"
 	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
@@ -159,24 +160,31 @@ Useful as a CI gate (` + "`compliancekit policy validate ./policies`" + `) to
 catch malformed policies before they ship.`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runPolicyValidate(cmd.Context(), cmd.OutOrStdout(), args[0])
+			return runPolicyValidate(cmd.Context(), cmd.OutOrStdout(), stylerFor(cmd), args[0])
 		},
 	}
 	return cmd
 }
 
-func runPolicyValidate(ctx context.Context, stdout io.Writer, dir string) error {
+func runPolicyValidate(ctx context.Context, stdout io.Writer, st *ui.Styler, dir string) error {
 	modules, errs := policy.LoadDir(ctx, dir)
-	fmt.Fprintf(stdout, "Loaded %d policy module(s) from %s\n", len(modules), dir)
-	for _, m := range modules {
-		fmt.Fprintf(stdout, "  ✓ %s — %s [severity=%s]\n", m.Check.ID, m.SourcePath, m.Check.Severity)
+	fmt.Fprintf(stdout, "Loaded %s policy module(s) from %s\n",
+		st.Accent(fmt.Sprintf("%d", len(modules))), st.Accent(dir))
+	if len(modules) > 0 {
+		tbl := ui.NewTable("MODULE", "SOURCE", "SEVERITY")
+		tbl.MaxWidth(0, 40).MaxWidth(1, 60)
+		for _, m := range modules {
+			tbl.AddRow(m.Check.ID, m.SourcePath, st.SeverityChip(m.Check.Severity))
+		}
+		fmt.Fprint(stdout, tbl.Render(st))
 	}
 	if len(errs) == 0 {
 		return nil
 	}
-	fmt.Fprintf(stdout, "\n%d error(s):\n", len(errs))
+	fmt.Fprintf(stdout, "\n%s %d error(s):\n",
+		st.InStatus(st.Glyph("fail"), compliancekit.StatusFail), len(errs))
 	for i, e := range errs {
-		fmt.Fprintf(stdout, "  %d) %v\n", i+1, e)
+		fmt.Fprintf(stdout, "  %s %v\n", st.Muted(fmt.Sprintf("%d)", i+1)), e)
 	}
 	return fmt.Errorf("policy validate failed with %d error(s)", len(errs))
 }

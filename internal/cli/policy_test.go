@@ -77,7 +77,7 @@ func TestPolicyTest_TableOutput(t *testing.T) {
 func TestPolicyValidate_OK(t *testing.T) {
 	t.Cleanup(policy.Reset)
 	var out bytes.Buffer
-	if err := runPolicyValidate(context.Background(), &out, "../policy/testdata"); err != nil {
+	if err := runPolicyValidate(context.Background(), &out, plainStyler(), "../policy/testdata"); err != nil {
 		t.Fatalf("validate: %v\n%s", err, out.String())
 	}
 	if !strings.Contains(out.String(), "Loaded 2 policy module(s)") {

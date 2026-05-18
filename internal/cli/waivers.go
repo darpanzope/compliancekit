@@ -7,11 +7,11 @@ import (
 	"io"
 	"os"
 	"strings"
-	"text/tabwriter"
 	"time"
 
 	"github.com/spf13/cobra"
 
+	"github.com/darpanzope/compliancekit/internal/ui"
 	"github.com/darpanzope/compliancekit/internal/waivers"
 	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
@@ -58,41 +58,47 @@ func newWaiversListCmd() *cobra.Command {
 		Use:   "list",
 		Short: "Tabulate every active + expired waiver",
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			return runWaiversList(cmd.OutOrStdout(), file)
+			return runWaiversList(cmd.OutOrStdout(), stylerFor(cmd), file)
 		},
 	}
 	cmd.Flags().StringVar(&file, "file", "waivers.yaml", "path to waivers.yaml")
 	return cmd
 }
 
-func runWaiversList(stdout io.Writer, path string) error {
+func runWaiversList(stdout io.Writer, st *ui.Styler, path string) error {
 	now := time.Now().UTC()
 	list, errs := waivers.LoadFile(path, now)
 	for _, e := range errs {
-		fmt.Fprintf(stdout, "warning: %v\n", e)
+		fmt.Fprintf(stdout, "%s %v\n", st.InStatus(st.Glyph("error"), compliancekit.StatusError), e)
 	}
 	active, expired, expiring := list.Counts(now)
-	fmt.Fprintf(stdout, "%s: %d active, %d expired, %d expiring within 30d\n\n",
-		path, active, expired, expiring)
-	tw := tabwriter.NewWriter(stdout, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(tw, "STATUS\tCHECK\tRESOURCE\tEXPIRES\tAPPROVER\tSOURCE")
+	fmt.Fprintf(stdout, "%s: %s active, %s expired, %s expiring within 30d\n\n",
+		st.Accent(path),
+		st.InStatus(fmt.Sprintf("%d", active), compliancekit.StatusPass),
+		st.InStatus(fmt.Sprintf("%d", expired), compliancekit.StatusFail),
+		st.InSeverity(fmt.Sprintf("%d", expiring), compliancekit.SeverityHigh))
+
+	tbl := ui.NewTable("STATUS", "CHECK", "RESOURCE", "EXPIRES", "APPROVER", "SOURCE")
+	tbl.MaxWidth(1, 36).MaxWidth(2, 36)
+
 	for _, w := range list.Active {
 		days := w.ToRef().DaysUntilExpiry(now)
-		status := "active"
+		status := st.InStatus("active", compliancekit.StatusPass)
 		if days <= 30 {
-			status = "expiring"
+			status = st.InSeverity("expiring", compliancekit.SeverityHigh)
 		}
-		fmt.Fprintf(tw, "%s\t%s\t%s\t%s (%dd)\t%s\t%s\n",
-			status, w.CheckID, w.ResourceID,
-			w.Expires.Format("2006-01-02"), days, w.Approver, w.Source)
+		tbl.AddRow(status, w.CheckID, w.ResourceID,
+			fmt.Sprintf("%s (%dd)", w.Expires.Format("2006-01-02"), days),
+			w.Approver, w.Source)
 	}
 	for _, w := range list.Expired {
 		days := -w.ToRef().DaysUntilExpiry(now)
-		fmt.Fprintf(tw, "expired\t%s\t%s\t%s (-%dd)\t%s\t%s\n",
-			w.CheckID, w.ResourceID,
-			w.Expires.Format("2006-01-02"), days, w.Approver, w.Source)
+		tbl.AddRow(st.InStatus("expired", compliancekit.StatusFail), w.CheckID, w.ResourceID,
+			fmt.Sprintf("%s (-%dd)", w.Expires.Format("2006-01-02"), days),
+			w.Approver, w.Source)
 	}
-	return tw.Flush()
+	_, err := io.WriteString(stdout, tbl.Render(st))
+	return err
 }
 
 // --- show -------------------------------------------------------------

@@ -6,13 +6,13 @@ import (
 	"os"
 	"sort"
 	"strings"
-	"text/tabwriter"
 
 	"github.com/spf13/cobra"
 	"go.yaml.in/yaml/v3"
 
 	"github.com/darpanzope/compliancekit/internal/frameworks"
 	"github.com/darpanzope/compliancekit/internal/ingest"
+	"github.com/darpanzope/compliancekit/internal/ui"
 	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
@@ -61,20 +61,20 @@ func newMappingListCmd() *cobra.Command {
 		Use:   "list",
 		Short: "List every tool with a built-in mapping table",
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			return runMappingList(cmd.OutOrStdout())
+			return runMappingList(cmd.OutOrStdout(), stylerFor(cmd))
 		},
 	}
 }
 
-func runMappingList(w io.Writer) error {
+func runMappingList(w io.Writer, st *ui.Styler) error {
 	tables := ingest.AllBuiltinMappings()
 	if len(tables) == 0 {
-		fmt.Fprintln(w, "No built-in mapping tables registered.")
+		fmt.Fprintln(w, st.Muted("No built-in mapping tables registered."))
 		return nil
 	}
 
-	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(tw, "TOOL\tRULES\tVERSION\tDESCRIPTION")
+	tbl := ui.NewTable("TOOL", "RULES", "VERSION", "DESCRIPTION")
+	tbl.MaxWidth(3, 60)
 	keys := make([]string, 0, len(tables))
 	for k := range tables {
 		keys = append(keys, k)
@@ -82,9 +82,10 @@ func runMappingList(w io.Writer) error {
 	sort.Strings(keys)
 	for _, k := range keys {
 		t := tables[k]
-		fmt.Fprintf(tw, "%s\t%d\t%s\t%s\n", t.Tool, len(t.Rules), t.Version, t.Description)
+		tbl.AddRow(st.Accent(t.Tool), fmt.Sprintf("%d", len(t.Rules)), t.Version, t.Description)
 	}
-	return tw.Flush()
+	_, err := io.WriteString(w, tbl.Render(st))
+	return err
 }
 
 // ---------------------- show ----------------------

@@ -35,7 +35,7 @@ func writeNotifyFindingsFile(t *testing.T, body string) string {
 
 func TestNotify_ListShowsAllRegisteredSinks(t *testing.T) {
 	var out bytes.Buffer
-	if err := runNotifyList(&out); err != nil {
+	if err := runNotifyList(&out, plainStyler()); err != nil {
 		t.Fatalf("runNotifyList: %v", err)
 	}
 	s := out.String()
@@ -52,7 +52,7 @@ func TestNotify_ListShowsAllRegisteredSinks(t *testing.T) {
 func TestNotify_DryRunSkipsUnconfigured(t *testing.T) {
 	path := writeNotifyFindingsFile(t, sampleFindingsJSON)
 	var out bytes.Buffer
-	err := runNotify(context.Background(), &out, notifyOptions{in: path, dryRun: true})
+	err := runNotify(context.Background(), &out, plainStyler(), notifyOptions{in: path, dryRun: true})
 	if err != nil {
 		t.Fatalf("runNotify: %v", err)
 	}
@@ -68,7 +68,7 @@ func TestNotify_DryRunSkipsUnconfigured(t *testing.T) {
 func TestNotify_GlobalSeverityFloorFilters(t *testing.T) {
 	path := writeNotifyFindingsFile(t, sampleFindingsJSON)
 	var out bytes.Buffer
-	err := runNotify(context.Background(), &out, notifyOptions{
+	err := runNotify(context.Background(), &out, plainStyler(), notifyOptions{
 		in: path, severity: "critical", dryRun: true,
 	})
 	if err != nil {
@@ -97,7 +97,7 @@ func TestNotify_OnlyNewMode(t *testing.T) {
 	baselinePath := writeNotifyFindingsFile(t, string(baselineBody))
 
 	var out bytes.Buffer
-	err := runNotify(context.Background(), &out, notifyOptions{
+	err := runNotify(context.Background(), &out, plainStyler(), notifyOptions{
 		in: path, baseline: baselinePath, dryRun: true,
 	})
 	if err != nil {
@@ -115,7 +115,7 @@ func TestNotify_OnlyNewMode(t *testing.T) {
 func TestNotify_InvalidSeverity(t *testing.T) {
 	path := writeNotifyFindingsFile(t, sampleFindingsJSON)
 	var out bytes.Buffer
-	err := runNotify(context.Background(), &out, notifyOptions{in: path, severity: "bogus"})
+	err := runNotify(context.Background(), &out, plainStyler(), notifyOptions{in: path, severity: "bogus"})
 	if err == nil || !strings.Contains(err.Error(), "severity") {
 		t.Errorf("expected severity parse error; got %v", err)
 	}
@@ -123,7 +123,7 @@ func TestNotify_InvalidSeverity(t *testing.T) {
 
 func TestNotify_RequiresIn(t *testing.T) {
 	var out bytes.Buffer
-	err := runNotify(context.Background(), &out, notifyOptions{})
+	err := runNotify(context.Background(), &out, plainStyler(), notifyOptions{})
 	if err == nil || !strings.Contains(err.Error(), "--in is required") {
 		t.Errorf("expected --in required error; got %v", err)
 	}

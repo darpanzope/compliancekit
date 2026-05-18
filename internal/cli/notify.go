@@ -7,12 +7,12 @@ import (
 	"io"
 	"os"
 	"sort"
-	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
 
 	"github.com/darpanzope/compliancekit/internal/notify"
+	"github.com/darpanzope/compliancekit/internal/ui"
 	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
@@ -58,7 +58,7 @@ Per-sink severity thresholds apply on top of --severity. A sink set
 to PAGERDUTY_THRESHOLD=critical still pages on critical only even
 when --severity=medium is passed.`,
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			return runNotify(cmd.Context(), cmd.OutOrStdout(), opts)
+			return runNotify(cmd.Context(), cmd.OutOrStdout(), stylerFor(cmd), opts)
 		},
 	}
 	cmd.Flags().BoolVar(&opts.list, "list", false, "list registered sinks + per-sink configured/threshold status, then exit")
@@ -81,9 +81,9 @@ type notifyOptions struct {
 	dryRun    bool
 }
 
-func runNotify(ctx context.Context, stdout io.Writer, opts notifyOptions) error {
+func runNotify(ctx context.Context, stdout io.Writer, st *ui.Styler, opts notifyOptions) error {
 	if opts.list {
-		return runNotifyList(stdout)
+		return runNotifyList(stdout, st)
 	}
 	if opts.in == "" {
 		return fmt.Errorf("notify: --in is required (path to findings JSON or '-' for stdin)")
@@ -164,16 +164,24 @@ func dispatchAndReport(ctx context.Context, stdout io.Writer, notifications []no
 
 // runNotifyList prints the registered sinks + their per-sink
 // Configured() + Threshold() so operators can verify env-driven
-// configuration at a glance.
-func runNotifyList(stdout io.Writer) error {
+// configuration at a glance. Rendered as a ui.Table so plain mode
+// stays grep-friendly and TTY mode picks up the styler's coloring.
+func runNotifyList(stdout io.Writer, st *ui.Styler) error {
 	sinks := notify.Default.Sinks()
-	fmt.Fprintf(stdout, "%-14s %-12s %s\n", "SINK", "CONFIGURED", "THRESHOLD")
-	fmt.Fprintf(stdout, "%s\n", strings.Repeat("-", 50))
+	tbl := ui.NewTable("SINK", "CONFIGURED", "THRESHOLD")
 	for _, s := range sinks {
-		fmt.Fprintf(stdout, "%-14s %-12v %s\n", s.Name(), s.Configured(), s.Threshold())
+		configured := st.InStatus("no", compliancekit.StatusSkip)
+		if s.Configured() {
+			configured = st.InStatus("yes", compliancekit.StatusPass)
+		}
+		tbl.AddRow(st.Accent(s.Name()), configured, s.Threshold().String())
 	}
-	fmt.Fprintf(stdout, "\n%d sink(s) registered, %d configured.\n",
-		len(sinks), configuredSinkCount())
+	if _, err := io.WriteString(stdout, tbl.Render(st)); err != nil {
+		return err
+	}
+	fmt.Fprintf(stdout, "\n%s sink(s) registered, %s configured.\n",
+		st.Accent(fmt.Sprintf("%d", len(sinks))),
+		st.Accent(fmt.Sprintf("%d", configuredSinkCount())))
 	return nil
 }
 
