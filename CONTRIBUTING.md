@@ -19,7 +19,7 @@ For anything larger than a typo:
 - Wait for a maintainer to ack before opening a sizeable PR. Drive-by
   refactors and "modernizations" of working code are likely to be closed.
 - Check the [ROADMAP.md](ROADMAP.md) -- the next two or three milestones are
-  fixed, and changes that pull a v1.3 feature forward usually need a
+  fixed, and changes that pull a v1.5 feature forward usually need a
   conversation first.
 
 ## Development setup
@@ -124,7 +124,7 @@ machine-generated, the contributor signs for the work.
   DigitalOcean depth pass at v0.9 (74 checks, every DO surface
   except DOKS), Hetzner at v0.10 (15 checks). Next: K8s +
   EKS/GKE/DOKS at v0.11. Tail clouds (Cloudflare, GitHub, Google
-  Workspace, Vercel, Linode, Vultr) at v1.7. Pulling any planned
+  Workspace, Vercel, Linode, Vultr) at v1.9. Pulling any planned
   milestone forward needs a conversation -- the sequence is locked
   in [DECISIONS.md ADR-007](DECISIONS.md).
 - New output formats. Five reporters at v0.4 is enough; a new format

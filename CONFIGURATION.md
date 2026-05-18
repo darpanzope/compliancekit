@@ -203,7 +203,7 @@ output:
 
 state:
   dir: .compliancekit           # state directory
-  backend: file                 # file (default) | sqlite (v1.1+) | postgres (v1.1+)
+  backend: file                 # file (default) | sqlite (v1.3+) | postgres (v1.3+)
   retention_days: 90            # how long to keep historical scans
 
 waivers:                        # v0.15+
@@ -218,7 +218,7 @@ notify:                         # v0.14+
     headers:
       X-Token-Env: WEBHOOK_TOKEN
 
-server:                         # v1.1+, only used by `compliancekit serve`
+server:                         # v1.3+, only used by `compliancekit serve`
   listen: 0.0.0.0:8080
   base_url: https://compliance.acme.com
   auth:

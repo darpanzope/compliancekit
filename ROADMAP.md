@@ -188,15 +188,17 @@ to the v0.1-v0.5 audience that put compliancekit on the map.
 | ~~v0.21~~ ✅ | Kubernetes + DOKS deepening — production grade — 149 → 241 checks (+92 / +61%) across 12 phases; NSA/CISA Kubernetes Hardening Guide v1.2 framework yaml; every K8s check ships bespoke kubectl (102 backfilled, strict-equality parity gate at 0); checks-package coverage 52.4% | Production-grade K8s posture across CIS + NSA/CISA |
 | ~~v0.22~~ ✅ | Internal refactor + toolchain refresh + action-repo polish — 600-LoC check-file CI gate (internal/repocheck); 9 oversize files split (rbac/pods/network/cluster/reliability/eks/aws-iam/pods_extra/tail.go) into 11 new per-category siblings; Ubuntu 24.04 explicit pin in all 3 workflows; godo + k8s.io v0.34→0.36 + cobra + viper + opa dep sweep; compliancekit-action multi-provider input loop + jq-merged findings + opt-in evidence-pack workflow-artifact upload. **No new user-facing checks; sets up v1.0 API freeze.** Spec-pattern lifts + fake-API-server coverage + lint v2 + deep cookbook deferred to v0.22.x. | Structure debt paid down |
 | ~~v1.0~~ ✅ | API stability — `pkg/compliancekit` frozen — 10 type families graduated out of `internal/core` (Severity, Status, Resource, ResourceGraph + Query, Vulnerability/Package/Secret/WaiverRef, Source + Finding, Check + CheckFunc + Registry, Reporter/Collector/Evaluator interfaces, Framework/Control/Tactic); machine-enforced contract via `cmd/genapi` + `pkg/compliancekit/api.txt` CI gate; behavioural contract via `-tags=external` embed test; SECURITY.md two-year compat language for the last two minors; ADR-014 codifies what's in / out / why. 13 phases over one weekend; `internal/core` deleted, 432 files updated to import `pkg/compliancekit` directly. | Embed compliancekit in your own tools |
-| v1.1 | `serve` mode + SQLite/Postgres backend + REST API + webhook receivers | Continuous monitoring without the SaaS bill |
-| v1.2 | Multi-tenant / organizations | MSP-friendly: one binary, many clients |
-| v1.3 | Trust Center generator | Your public security page, generated |
-| v1.4 | GRC layer — risk register, vendor register, CAIQ/SIG templates, training tracking | Risk + vendors + questionnaires in repo |
-| v1.5 | Auditor portal (auth-gated, time-boxed, watermarked exports) | Give your auditor read-only access |
-| v1.6 | macOS + Windows + BSD hardening | Hardening for every machine you own |
-| v1.7 | Tail clouds — Cloudflare, GitHub, Google Workspace, Vercel, Linode, Vultr | Every SaaS surface your SaaS touches |
-| v1.8 | OSCAL ecosystem (catalogs in, assessment results out) + SCAP DataStream import | FedRAMP-curious? OSCAL in, OSCAL out |
-| v1.9 | Risk score + executive PDF + time-series dashboard | One number for your board |
+| v1.1 | **Beautiful CLI** — lipgloss/bubbletea terminal UI: severity-coloured output, Unicode tables, scan progress bar, status glyphs, diff colourisation, shell completion (bash/zsh/fish/pwsh), NO_COLOR + non-TTY fallback | The CLI looks the part for the audience that lives in the terminal |
+| v1.2 | **HTML report overhaul** — severity donut + framework bar charts, baseline-vs-current trend sparklines, filter chips (severity/status/provider/framework), sticky resource sidebar, dark/light toggle persisted to localStorage, print-friendly stylesheet, mobile layout, deep-link share-views | The HTML report goes from utilitarian to share-with-the-board |
+| v1.3 | `serve` mode + SQLite/Postgres backend + REST API + webhook receivers | Continuous monitoring without the SaaS bill |
+| v1.4 | Multi-tenant / organizations | MSP-friendly: one binary, many clients |
+| v1.5 | Trust Center generator | Your public security page, generated |
+| v1.6 | GRC layer — risk register, vendor register, CAIQ/SIG templates, training tracking | Risk + vendors + questionnaires in repo |
+| v1.7 | Auditor portal (auth-gated, time-boxed, watermarked exports) | Give your auditor read-only access |
+| v1.8 | macOS + Windows + BSD hardening | Hardening for every machine you own |
+| v1.9 | Tail clouds — Cloudflare, GitHub, Google Workspace, Vercel, Linode, Vultr | Every SaaS surface your SaaS touches |
+| v1.10 | OSCAL ecosystem (catalogs in, assessment results out) + SCAP DataStream import | FedRAMP-curious? OSCAL in, OSCAL out |
+| v1.11 | Risk score + executive PDF + time-series dashboard | One number for your board |
 | v2.0 | Plugin marketplace — subprocess gRPC + WASM (wazero), cosign-signed | Install a check pack with one command |
 | v2.x | K8s operator — CRDs (`ComplianceScan`, `ComplianceProfile`, `ComplianceWaiver`) | Reconcile compliance from a CRD |
 | v2.x | Auto-remediation (opt-in, dry-run default, full audit log) | Fix it for me — if you really want |
@@ -352,7 +354,7 @@ Hardening score: 64/100
 
 **Out of scope at v0.7**
 
-- AWS Organizations multi-account traversal (lands at v1.2 with
+- AWS Organizations multi-account traversal (lands at v1.4 with
   multi-tenant).
 - Inspector / Macie / Security Hub *ingest* (lands at v0.13 alongside
   OCSF).
@@ -387,7 +389,7 @@ identical so the second cloud is much cheaper than the first.
 - Resource scope adds `project_id` to `compliancekit.Resource`. Fleet-wide
   scans against an organization happen via the `--projects` filter
   (defaults to "all visible to the credential"), not a special
-  org-traversal mode (which lands at v1.2).
+  org-traversal mode (which lands at v1.4).
 - **Shared cloud abstractions**: the AWS work at v0.7 produced a
   thin `internal/collectors/cloudcommon/` for region/account
   resource attribution; GCP plugs in.
@@ -424,7 +426,7 @@ Hardening score: 71/100
 
 **Out of scope at v0.8**
 
-- Organization-policy ingestion (v1.2).
+- Organization-policy ingestion (v1.4).
 - GKE-specific checks (v0.11).
 - Security Command Center ingest (v0.13).
 
@@ -1145,7 +1147,7 @@ integration. Architectural shape codified in
 - Multi-approver chains for high-severity waivers — out of v0.18
   scope; the audit-log-via-evidence-pack covers basic accountability.
 - Waiver application via Web UI / workflow integration — that's
-  v1.4 GRC layer + v1.5 auditor portal.
+  v1.6 GRC layer + v1.7 auditor portal.
 
 ---
 
@@ -1908,7 +1910,7 @@ exists to recognize the shape worth lifting out.
 **Out of scope at v0.22 (explicit deferrals)**
 
 - **New checks or new framework catalogs.** Goes to v0.21
-  (K8s deepening) or v1.1+ (post-API-freeze).
+  (K8s deepening) or v1.3+ (post-API-freeze and UX polish).
 - **`pkg/compliancekit` extraction.** That's the v1.0 milestone
   (#18). v0.22 stays under `internal/`.
 - **Multi-binary split** (`ck-collector`, `ck-emit`, etc.).
@@ -1918,7 +1920,7 @@ exists to recognize the shape worth lifting out.
   out — every comparable scanner (kubescape, Trivy, Prowler,
   steampipe) keeps flat per-provider packages because Go subpackage
   semantics impose more friction than the navigability win is worth.
-- **macOS / Windows / BSD hardening.** Stays at v1.6.
+- **macOS / Windows / BSD hardening.** Stays at v1.8.
 
 ---
 
@@ -1959,6 +1961,63 @@ A few specific scope decisions worth pinning down here so they don't drift:
 - **Auto-remediation is permanently opt-in.** Default install is audit-only. `--apply-fix` always requires explicit re-affirmation per run.
 - **`serve` is permanently optional.** CLI parity is a hard invariant — every feature ships to CLI first, then daemon.
 - **No telemetry, no phone-home, ever.** This is a load-bearing promise to the audience.
+
+---
+
+### v1.1 — Beautiful CLI
+
+**Goal:** the CLI looks the part for the audience that lives in the terminal. v0.x shipped functional output; v1.1 makes the same output feel like the rest of the modern Go-tool ecosystem (k9s, glow, gh, lazygit) without sacrificing scriptability.
+
+**Deliverables**
+
+- **Severity-coloured output**, palette tuned for both light and dark terminals: `critical`=red, `high`=orange-bold, `medium`=yellow, `low`=blue, `info`=grey, `pass`=green-dim, `skip`=grey-italic. Status glyphs `✓ ✗ ⚠ –` paired with the colours so colour-blind readers and grep-pipelines still parse the output.
+- **Unicode box-drawing tables** for the structured-list commands: `checks list`, `checks show`, `doctor`, `waivers list`, `mapping list`, `notify --list`, `policy validate`. Column widths auto-fit the terminal; long values get truncated with a final ellipsis. Plain ASCII fallback under `--plain`.
+- **Scan progress bar** during `compliancekit scan`: live per-provider counter (`digitalocean (45/144)`), elapsed timer, current resource being evaluated. Replaces the v0.x newline-per-line `scanning digitalocean (574 checks)...` static text. Bubbletea-driven, redraws in-place via `\r`.
+- **Diff colourisation** in `compliancekit diff`: new findings in green, resolved in dim-strikethrough, existing in grey, severity-coloured per-finding chip.
+- **Doctor pretty-printer**: table view of every probe with status glyph + latency badge instead of the v0.x flat key=value lines. Failures sort to the top.
+- **Help text styling**: `compliancekit --help` and every subcommand's `--help` renders with bold section headers, indented argument groups, and an `Examples:` block at the bottom. Cobra defaults replaced with a custom usage template (~50 LoC).
+- **Shell completion**: `compliancekit completion bash|zsh|fish|powershell` writes a script per shell. Same shape as `kubectl completion`. Cobra's built-in generator wired in; brew/install.sh post-install hooks document the install path.
+- **TTY auto-detection + NO_COLOR**: colour and progress-bar output gate on `isatty(stdout)` AND the absence of `NO_COLOR` (per the [no-color.org spec](https://no-color.org)). CI runs see the v0.x-style plain output unchanged; `--no-color` forces plain on a TTY for piping into `tee` / `less`.
+- **`compliancekit motd`** (optional): single-screen "your fleet at a glance" — total findings, score, top-3 critical, baseline drift since last scan. The thing you `alias mc=compliancekit motd` and run after every coffee.
+
+**Out of scope at v1.1**
+
+- Full interactive TUI (k9s-style cluster browser). Promoted to v1.3+ if there's demand after `serve` lands and the daemon's REST surface gives the TUI something to fetch from.
+- Theming / colour-palette config in `compliancekit.yaml`. The default palette is auditable + accessible; per-user theming is overkill for the v1.x audience.
+
+**Dependencies added**
+
+- `github.com/charmbracelet/lipgloss` for styled output — small, Go-idiomatic, no JS/Node dependency. Adds ~1 MB stripped to the binary.
+- `github.com/charmbracelet/bubbletea` for the scan progress bar (interactive component). Lipgloss is the styling layer; bubbletea is the event-loop / state-machine for the progress component. Adds ~2 MB stripped.
+
+**No API surface change** (pkg/compliancekit unchanged). Pure CLI presentation layer.
+
+---
+
+### v1.2 — HTML report overhaul
+
+**Goal:** the HTML report goes from "a JSON dump rendered as a table" to "the artifact you screenshot for the board deck." Matches the v1.1 CLI polish energy in the browser.
+
+**Deliverables**
+
+- **Summary cards with charts**: at the top of `findings.html`, a row of cards — score (gauge), total findings (severity donut), framework coverage (horizontal bar). Pure SVG, no JS chart library; ~300 LoC of inline JS that draws to `<svg>` elements at render time. Charts honour the dark/light toggle.
+- **Baseline-vs-current trend sparklines**: when `--baseline=path.json` is passed at render time, every per-check row + each summary card gains a 7-data-point sparkline showing the trend across the last week of baselines (if available). Sparklines render at 60×16px inline next to the headline number.
+- **Filter chips at the top** (severity, status, provider, framework): clickable toggles that filter the finding list inline without a page reload. Multi-select OR within each chip group, AND across groups. URL fragment updates so a state is shareable.
+- **Sticky resource sidebar**: left column lists every resource grouped by type/provider; click a resource to scroll to its findings block. Sidebar is sticky on scroll. Mobile layout collapses it into a hamburger menu.
+- **Dark/light/system toggle**: three-state switch in the top-right; setting persisted to `localStorage`. CSS variables drive the palette; flips instantly without re-render.
+- **Print stylesheet** (`@media print`): auditor wants to print the pack. Chrome's "Save as PDF" → readable A4 layout, no sidebar, no sticky chrome, charts rendered as static SVG that survives print conversion.
+- **Mobile layout**: every section reflows to <=400px width. Severity chips, sparklines, and filter chips all stack vertically. Tested at iPhone-SE and standard tablet widths.
+- **Deep-link share views**: the URL fragment encodes the current filter + dark-mode + sidebar state, so `findings.html#severity=critical,high&fw=soc2&dark=1` is a shareable bookmark. Operators paste these into Slack/PR comments to point reviewers at a slice.
+- **Empty-state celebration**: when a scan produces zero actionable findings, the summary card renders a "All clear — 574 / 574 checks pass" panel with a small icon. The auditor's "nothing to see here" page should look intentional, not blank.
+- **Embedded SVG icons** for provider logos (DO, AWS, GCP, Hetzner, K8s, Linux) and severity glyphs. No web font; no CDN call. Single-file output is preserved.
+
+**Out of scope at v1.2**
+
+- Server-rendered live dashboard. That's v1.3's `serve` mode.
+- Per-finding deep-link permalinks (`#finding=do-spaces-public-acl-bucket-x`). Probably ships in v1.3 alongside the REST API.
+- Comparison views (two HTML reports side by side). Same answer: v1.3+ with `serve`.
+
+**No API surface change** (pkg/compliancekit unchanged). Pure reporter polish in `internal/report/`.
 
 ---
 

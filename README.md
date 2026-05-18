@@ -226,7 +226,7 @@ Full per-check reference (auto-generated, IDs / severities / framework mappings 
 | GCP | v0.8 ✅ | 25 | IAM (6) + Compute (5) + GCS (4) + Cloud SQL (3) + Logging (2) + KMS (2) + BigQuery (3) |
 | Hetzner Cloud | v0.10 ✅ | 15 | servers (5) + firewalls (3) + networks (2) + load balancers (2) + volumes (2) + floating IPs (1) |
 | Kubernetes + EKS / GKE / DOKS-deep | v0.21 ✅ | 241 | full CIS K8s Benchmark + NSA/CISA Kubernetes Hardening Guide v1.2 surface. v0.11 baseline (149) + v0.21 deepening (+92) across pod-security extra (12), reliability (12), supply-chain (10), RBAC depth (10), network depth (10), admission + policy engine (8), CIS control-plane manual-verify (15), DOKS/EKS/GKE deepening (15). Every K8s check ships bespoke kubectl (parity-gated at strict 0; Helm + Terraform per-check where natural-fit). |
-| Cloudflare, GitHub, Google Workspace, Vercel, Linode, Vultr | v1.7 | — | tail clouds |
+| Cloudflare, GitHub, Google Workspace, Vercel, Linode, Vultr | v1.9 | — | tail clouds |
 
 ### Frameworks
 
@@ -629,7 +629,7 @@ One static binary, no runtime, friendly to CI environments that don't have
 Python or Node. The same binary works on macOS, Linux, x86, and arm.
 
 **Is there a hosted version?**
-Not from us. The MIT licence lets anyone host one; the `serve` mode at v1.1
+Not from us. The MIT licence lets anyone host one; the `serve` mode at v1.3
 is the same binary running long-lived with a SQLite/Postgres backend so
 you can self-host without writing a new server.
 

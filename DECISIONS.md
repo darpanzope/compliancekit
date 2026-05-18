@@ -102,15 +102,15 @@ OCSF is now genuinely a wire format. ADR closed.
 
 ---
 
-## ADR-004 — GRC layer is in scope, at v1.4
-**Date:** 2026-05-13
+## ADR-004 — GRC layer is in scope, at v1.6
+**Date:** 2026-05-13 (slot renumbered v1.4 → v1.6 on 2026-05-18 when v1.1 CLI polish + v1.2 HTML overhaul wedged into the queue ahead)
 **Status:** Accepted
 
 ### Question
 Are we a pure technical scanner, or do we also ship lightweight GRC features (risk register, vendor register, CAIQ/SIG response templates, training tracking)? This is the largest scope question.
 
 ### Decision
-GRC is in scope, at v1.4 — after scanning maturity is established. Lightweight, CSV/YAML-driven, no HRIS ambitions.
+GRC is in scope, at v1.6 — after scanning maturity is established. Lightweight, CSV/YAML-driven, no HRIS ambitions.
 
 ### Reasoning
 - Drata, Vanta, and Secureframe's actual moat isn't scanning — it's the GRC workflows. If we want to be a credible alternative to the $20k-100k/yr SaaS for small teams, we have to address this.
@@ -123,8 +123,8 @@ GRC is in scope, at v1.4 — after scanning maturity is established. Lightweight
 - **Ship GRC at v0.5 alongside launch.** Premature — would dilute the launch narrative.
 
 ### Consequences
-- v1.4 introduces a `register/` directory convention (risks.yaml, vendors.yaml, etc.) and a markdown library for policies and questionnaire responses.
-- Trust Center (v1.3) and Auditor Portal (v1.5) are designed knowing the GRC layer lands at v1.4.
+- v1.6 introduces a `register/` directory convention (risks.yaml, vendors.yaml, etc.) and a markdown library for policies and questionnaire responses.
+- Trust Center (v1.5) and Auditor Portal (v1.7) are designed knowing the GRC layer lands at v1.6.
 
 ---
 
@@ -141,7 +141,7 @@ Is `compliancekit serve` (continuous monitoring daemon) a future requirement, or
 ### Reasoning
 - The audience is OSS-flavored DevOps teams. "Run a daemon" is a configuration burden for many of them. A cron job calling the binary should always be a valid deployment.
 - Daemon-mandatory tools (Wazuh, Trivy Operator) are great for their audience but ours skews lighter.
-- Day-1 internal interfaces are still designed daemon-aware: no package-level globals, every long-lived path takes `context.Context`. This makes v1.1's `serve` a feature add, not a rewrite.
+- Day-1 internal interfaces are still designed daemon-aware: no package-level globals, every long-lived path takes `context.Context`. This makes v1.3's `serve` a feature add, not a rewrite.
 
 ### Rejected alternatives
 - **Daemon-mandatory at v1.x.** Cuts the audience.
@@ -149,7 +149,7 @@ Is `compliancekit serve` (continuous monitoring daemon) a future requirement, or
 
 ### Consequences
 - v0.1 code must use `context.Context` end-to-end. No init-time singletons.
-- v1.1's `serve` ships as `compliancekit serve [--port=...]`. Same binary. Same checks. Same output formats. Just a different entry point.
+- v1.3's `serve` ships as `compliancekit serve [--port=...]`. Same binary. Same checks. Same output formats. Just a different entry point.
 
 ---
 
@@ -184,7 +184,7 @@ Opt-in at v2.x. Permanently behind `--apply-fix` or `--yes-i-mean-it`. Dry-run b
 **Status:** Accepted
 
 ### Question
-The pre-launch roadmap had Hetzner at v0.7, Containers + K8s at v0.8, and AWS / GCP / Cloudflare / Vercel / Linode / Vultr collapsed into a single v1.7 "more clouds" milestone. Is that the right order after the v0.5 launch signal?
+The pre-launch roadmap had Hetzner at v0.7, Containers + K8s at v0.8, and AWS / GCP / Cloudflare / Vercel / Linode / Vultr collapsed into a single v1.7 "more clouds" milestone (the slot now numbered v1.9 after the 2026-05-18 wedge of v1.1 CLI + v1.2 HTML — described historically here as v1.7 to preserve the pre-pivot terminology). Is that the right order after the v0.5 launch signal?
 
 ### Decision
 Re-sequence v0.6 → v1.0 so the cloud arc lands as:
@@ -204,7 +204,7 @@ Re-sequence v0.6 → v1.0 so the cloud arc lands as:
 | v0.17 | (not previously numbered) | Notifications |
 | v0.18 | (not previously numbered) | Waivers + skip annotations |
 
-The old v1.7 "more clouds" entry collapses: AWS and GCP land at v0.7-v0.8 as first-class providers. The tail (Cloudflare, GitHub, Workspace, Vercel, Linode, Vultr) stays at v1.7 as a smaller "expand-the-tail" milestone. v1.0 (API stability) is unchanged.
+The old v1.7 "more clouds" entry collapses: AWS and GCP land at v0.7-v0.8 as first-class providers. The tail (Cloudflare, GitHub, Workspace, Vercel, Linode, Vultr) stays in the same slot — now numbered v1.9 — as a smaller "expand-the-tail" milestone. v1.0 (API stability) is unchanged.
 
 ### Reasoning
 - The v0.5 HN launch was the first real audience-selection event. The single most common feedback theme — outpacing every other category combined — was *"would love to use this but we're on AWS."* Same indie-SaaS demographic that put compliancekit on the map, different provider.
@@ -220,7 +220,7 @@ The old v1.7 "more clouds" entry collapses: AWS and GCP land at v0.7-v0.8 as fir
 - **Pull K8s forward to v0.7.5 as a generic-K8s-only release.** Rejected. Cloud-specific K8s is the value; a generic kubeconfig scanner without IRSA / Workload Identity / DOKS-specific glue is a half-finished feature.
 
 ### Consequences
-- The "v1.7 more clouds" milestone shrinks to just the tail (Cloudflare, GitHub, Workspace, Vercel, Linode, Vultr).
+- The "v1.7 more clouds" milestone (renumbered v1.9 on 2026-05-18) shrinks to just the tail (Cloudflare, GitHub, Workspace, Vercel, Linode, Vultr).
 - The previously deferred *AWS provider depth* open question is now answered: depth at v0.7 is "the 30 highest-leverage checks that map cleanly to the three shipping frameworks." Full scope enumerated in ROADMAP.md v0.7.
 - ADR-002 (Rego policy DSL) shifts from v0.13 to v0.16. The interface design and the rationale are unchanged; only the release slot moves. The `Evaluator` seam from v0.1 still pays off, just three minor versions later.
 - ADR-003 (OCSF) is unaffected on the *emit* side (shipped at v0.3). The *ingest* side moves from the old v0.10 slot to v0.13 alongside the rest of the ingest work.
@@ -526,7 +526,7 @@ Concretely:
 - `internal/core/` is deleted at v1.0. Every internal caller imports `pkg/compliancekit` directly; the alias-shim period that bridged the migration is gone.
 - `cmd/genapi/` ships as a maintainer tool. The `make api-check` target wraps `go run ./cmd/genapi -check`, runs in the pre-push hook and on CI, and fails when api.txt is stale.
 - SECURITY.md gains a "Two-year compatibility commitment" section with the per-minor expiry dates expressed concretely (the v0.22.x sunset is 2026-11-18 — six months from v0.22.1 release).
-- A maintainer adding a new check or provider — the v0.x workflow — still happens entirely under `internal/`. No new public types ship at v1.0; v1.0 is a contract release, not a feature release. The v0.22.x deferred backlog (spec-pattern lifts, fake API server coverage, deep cookbook, ADR index, CHANGELOG backfill, lint v2) stays valid and can land as v1.0.x or v1.1 in parallel.
+- A maintainer adding a new check or provider — the v0.x workflow — still happens entirely under `internal/`. No new public types ship at v1.0; v1.0 is a contract release, not a feature release. The v0.22.x deferred backlog (spec-pattern lifts, fake API server coverage, deep cookbook, ADR index, CHANGELOG backfill, lint v2) stays valid and can land as v1.0.x or v1.3 (post-CLI/HTML polish) in parallel.
 - The Go module path stays `github.com/darpanzope/compliancekit`. A hypothetical v2.0 (plugin marketplace, fundamentally new evaluator interface, etc.) lives at `/v2/` and is a separate import path so v1.x embedders are unaffected.
 
 ---
@@ -534,6 +534,6 @@ Concretely:
 ## Open questions (not yet decided)
 
 - **Plugin host model:** subprocess gRPC (Terraform-provider pattern), WASM via wazero, or both? Decision at v2.0.
-- **Storage backend default for `serve`:** SQLite or Postgres? Probably SQLite default, Postgres opt-in. Decide at v1.1.
+- **Storage backend default for `serve`:** SQLite or Postgres? Probably SQLite default, Postgres opt-in. Decide at v1.3.
 - **CIS Certification pursuit:** worth the paperwork for credibility? Decide post-launch once audience traction is known.
 - **Web UI framework for `serve`:** server-rendered HTML (htmx?) vs. a real SPA. Stay server-rendered as long as we can.

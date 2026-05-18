@@ -39,8 +39,8 @@ Available on every subcommand:
 | `version` | v0.1 | print version + commit + build date |
 | `remediate` | v0.15 | generate remediation snippets |
 | `ingest` | v0.13 | import Trivy / Checkov / OCSF / OSCAL / SCAP |
-| `serve` | v1.1 | continuous monitoring daemon |
-| `trust-center` | v1.3 | generate public security page |
+| `serve` | v1.3 | continuous monitoring daemon |
+| `trust-center` | v1.5 | generate public security page |
 | `plugins` | v2.0 | manage plugin packages |
 
 ---
@@ -347,7 +347,7 @@ Flags:
 
 ---
 
-### `compliancekit serve` (v1.1+)
+### `compliancekit serve` (v1.3+)
 
 Run the continuous monitoring daemon.
 

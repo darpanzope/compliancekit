@@ -64,9 +64,10 @@ See ARCHITECTURE.md §5. Short version:
 
 ```
 cmd/compliancekit/     binary entry point (main package, thin)
-internal/              private packages — CLI, engine, collectors, evaluators, reporters, ...
-pkg/                   public API — empty until v1.0
-web/report/            HTML/CSS for the embedded report
+cmd/gencheckdocs/      maintainer tool — regenerates docs/checks.md
+cmd/genapi/            maintainer tool — regenerates pkg/compliancekit/api.txt (v1.0+ contract gate)
+internal/              private packages — CLI, engine, collectors, evaluators, reporters, ingest, remediate, notify, waivers, policy, ...
+pkg/compliancekit/     v1.0+ SemVer-stable public API (types + interfaces, embedders import from here)
 test/                  integration test fixtures + docker harness
 ```
 
