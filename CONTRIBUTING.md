@@ -49,7 +49,9 @@ Most contributions are new checks. The bar:
 
 1. **One new check per file** under `internal/checks/<provider>/<service>.go`,
    matching the convention in the existing files. The check metadata
-   (`core.Check{...}`) and the evaluator function live next to each other.
+   (`compliancekit.Check{...}` — note `pkg/compliancekit` is the v1.0+
+   public import; `internal/core` was deleted at v1.0) and the evaluator
+   function live next to each other.
 2. **Framework mappings are mandatory.** Every check must reference at least
    one control in each of `soc2`, `iso27001`, and `cis-v8` (the three
    frameworks bundled at v0.4). If your check legitimately covers nothing in

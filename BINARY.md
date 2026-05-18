@@ -75,22 +75,24 @@ Everything required for a scan ships **inside** the binary. Nothing is fetched a
 binary
 ├── go code (compiled)
 │   ├── cmd/compliancekit         CLI entrypoint
+│   ├── pkg/compliancekit         v1.0+ SemVer-stable public surface (types + interfaces)
 │   ├── internal/cli              cobra command definitions
 │   ├── internal/engine           orchestrator
-│   ├── internal/core             types
-│   ├── internal/collectors/...   DO + Linux (v0.2+)
-│   ├── internal/evaluators/...   Go-native, eventually Rego
-│   ├── internal/reporters/...    json, html, sarif, ocsf, ...
-│   ├── internal/frameworks/...   soc2, iso27001, cis-v8 ...
-│   ├── internal/state            local state store
+│   ├── internal/collectors/...   DO, AWS, GCP, Hetzner, K8s, Linux
+│   ├── internal/checks/...       check evaluators (go) + YAML metadata
+│   ├── internal/policy           Rego evaluator (v0.16+ embedded OPA)
+│   ├── internal/report           json, html, sarif, ocsf, markdown reporters
+│   ├── internal/frameworks       soc2, iso27001, cis-v8, cis-linux-server, nsa-cisa-k8s, nist-800-53, hipaa, pci-dss, mitre-attack
+│   ├── internal/ingest/...       SARIF, OCSF, OSCAL, Trivy, Grype, Checkov, gitleaks
+│   ├── internal/remediate/...    terraform, kubectl, helm, ansible, *-cli, bash, doctl, hcloud
+│   ├── internal/notify           slack, discord, teams, email, webhook, github-pr, jira, pagerduty
+│   ├── internal/waivers          waiver loader + matcher (v0.18+)
 │   └── internal/config           viper config loader
 │
 └── embedded files (go:embed)
-    ├── internal/checks/digitalocean/*.yaml       check metadata
-    ├── internal/checks/linux/*.yaml              check metadata
-    ├── internal/frameworks/*.yaml                control mappings
-    ├── web/report/*.{html,css,js,svg}            HTML report assets
-    └── internal/policies/*.rego                  (v0.16+) Rego checks
+    ├── internal/checks/<provider>/*.yaml         check metadata
+    ├── internal/frameworks/*.yaml                control mappings (9 frameworks)
+    └── internal/report/assets/*.html             HTML report template + inline CSS/JS
 ```
 
 **Why embedded:** one binary, zero install steps, no "missing config" failure mode. Updating the check catalogue means a new release — which is the right cadence for compliance content anyway.

@@ -103,7 +103,7 @@ Check IDs are forever-stable. Format: `<provider>-<service>-<concise-rule>`. All
 ## Scanner function (Go)
 
 ```go
-// internal/collectors/digitalocean/spaces.go
+// internal/checks/digitalocean/spaces.go
 
 package digitalocean
 
@@ -111,22 +111,22 @@ import (
     "context"
     "fmt"
 
-    "github.com/darpanzope/compliancekit/internal/core"
+    "github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // PublicACL is the scanner referenced by spaces.yaml#scanner.
 // Signature is fixed: takes context + graph, returns findings.
-func PublicACL(ctx context.Context, graph core.ResourceGraph) ([]core.Finding, error) {
-    var findings []core.Finding
+func PublicACL(ctx context.Context, graph *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+    var findings []compliancekit.Finding
 
     for _, bucket := range graph.ByType("digitalocean.spaces.bucket") {
         if bucket.Attr("acl") != "private" {
-            findings = append(findings, core.Finding{
+            findings = append(findings, compliancekit.Finding{
                 CheckID:  "do-spaces-public-acl",
-                Status:   core.Fail,
+                Status:   compliancekit.StatusFail,
                 Resource: bucket.Ref(),
-                Message:  fmt.Sprintf("bucket %q has acl=%s", bucket.Name(), bucket.Attr("acl")),
-                Evidence: core.EvidencePtr{Path: bucket.RawPath()},
+                Message:  fmt.Sprintf("bucket %q has acl=%s", bucket.Name, bucket.Attr("acl")),
+                Evidence: compliancekit.EvidencePtr{Path: bucket.RawPath},
             })
         }
     }
@@ -157,24 +157,25 @@ graph.Query(`type = "digitalocean.droplet" AND tag CONTAINS "prod"`) // filter e
 Resource attribute access:
 
 ```go
-bucket.Attr("acl")            // string
-bucket.AttrInt("size_bytes")  // int
-bucket.AttrBool("encrypted")  // bool
-bucket.Tags()                 // []string
+bucket.Attr("acl")            // string, "" on miss
+bucket.AttrInt("size_bytes")  // int, 0 on miss
+bucket.AttrBool("encrypted")  // bool, false on miss
+bucket.HasTag("prod")         // bool
+bucket.Tags                   // []string field
 ```
 
 ## Status values
 
 | Status | Meaning |
 |---|---|
-| `core.Pass` | the check evaluated and the resource is compliant |
-| `core.Fail` | the check evaluated and the resource is non-compliant |
-| `core.Skip` | the check was not applicable (e.g. resource type doesn't apply) |
-| `core.Error` | the check could not be evaluated (data missing, ambiguous) |
+| `compliancekit.StatusPass` | the check evaluated and the resource is compliant |
+| `compliancekit.StatusFail` | the check evaluated and the resource is non-compliant |
+| `compliancekit.StatusSkip` | the check was not applicable (e.g. resource type doesn't apply) |
+| `compliancekit.StatusError` | the check could not be evaluated (data missing, ambiguous) |
 
-A scanner function may emit a mix — for a graph of 10 buckets, you might emit 7 `Pass`, 2 `Fail`, 1 `Skip`.
+A scanner function may emit a mix — for a graph of 10 buckets, you might emit 7 `StatusPass`, 2 `StatusFail`, 1 `StatusSkip`.
 
-Only `Fail` and `Error` count against severity gates. `Pass` and `Skip` are recorded for evidence-pack completeness.
+Only `StatusFail` and `StatusError` count against severity gates. `StatusPass` and `StatusSkip` are recorded for evidence-pack completeness.
 
 ## Test pattern
 
@@ -188,15 +189,15 @@ func TestPublicACL(t *testing.T) {
     require.NoError(t, err)
     require.Len(t, findings, 1)
     assert.Equal(t, "do-spaces-public-acl", findings[0].CheckID)
-    assert.Equal(t, core.Fail, findings[0].Status)
+    assert.Equal(t, compliancekit.StatusFail, findings[0].Status)
     assert.Equal(t, "public-read-bucket", findings[0].Resource.Name)
 }
 ```
 
 Every check requires at least:
 
-1. One test with a fixture containing a non-compliant resource (must produce `Fail`).
-2. One test with a fixture containing only compliant resources (must produce no `Fail`).
+1. One test with a fixture containing a non-compliant resource (must produce `StatusFail`).
+2. One test with a fixture containing only compliant resources (must produce no `StatusFail`).
 
 ## Fixtures
 
@@ -299,14 +300,14 @@ Template context exposes:
 
 ```go
 type RemediationContext struct {
-    Resource core.Resource   // the failing resource
-    Finding  core.Finding    // the finding being remediated
-    Project  string          // from config
-    Env      string          // from config
+    Resource compliancekit.Resource   // the failing resource
+    Finding  compliancekit.Finding    // the finding being remediated
+    Project  string                   // from config
+    Env      string                   // from config
 }
 ```
 
-Use only `{{ .Resource.* }}` and `{{ .Finding.* }}` fields documented in `core/`. Anything else may change without notice.
+Use only `{{ .Resource.* }}` and `{{ .Finding.* }}` fields documented in the [`compliancekit` godoc](https://pkg.go.dev/github.com/darpanzope/compliancekit/pkg/compliancekit). Anything else may change without notice.
 
 ## Deprecating a check
 
@@ -324,17 +325,17 @@ Deprecated checks still run unless `severity: info` is set; they print a warning
 When a check needs to relate multiple resources, walk the graph via `Related`:
 
 ```go
-func DropletWithoutFirewall(ctx context.Context, graph core.ResourceGraph) ([]core.Finding, error) {
-    var findings []core.Finding
+func DropletWithoutFirewall(ctx context.Context, graph *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+    var findings []compliancekit.Finding
 
     for _, droplet := range graph.ByType("digitalocean.droplet") {
         firewalls := graph.Related(droplet, "firewall")
         if len(firewalls) == 0 {
-            findings = append(findings, core.Finding{
+            findings = append(findings, compliancekit.Finding{
                 CheckID:  "do-droplet-no-firewall",
-                Status:   core.Fail,
+                Status:   compliancekit.StatusFail,
                 Resource: droplet.Ref(),
-                Message:  fmt.Sprintf("droplet %q has no firewall attached", droplet.Name()),
+                Message:  fmt.Sprintf("droplet %q has no firewall attached", droplet.Name),
             })
         }
     }
@@ -357,7 +358,7 @@ for _, droplet := range prod {
 }
 ```
 
-Supported syntax: `=`, `!=`, `CONTAINS`, `AND`, `OR`, `NOT`, `(...)`. Identifiers map to `type`, `provider`, `region`, `name`, `id`, the special `tag` (matches any tag in the slice), or any key in `Resource.Attributes`. Values are quoted strings, bare integers, or `true`/`false`. See `internal/core/query.go` for the parser and `internal/core/query_test.go` for runnable examples.
+Supported syntax: `=`, `!=`, `CONTAINS`, `AND`, `OR`, `NOT`, `(...)`. Identifiers map to `type`, `provider`, `region`, `name`, `id`, the special `tag` (matches any tag in the slice), or any key in `Resource.Attributes`. Values are quoted strings, bare integers, or `true`/`false`. See [`pkg/compliancekit/query.go`](pkg/compliancekit/query.go) for the parser and [`pkg/compliancekit/query_test.go`](pkg/compliancekit/query_test.go) for runnable examples.
 
 A parse error is the loud signal — the check author has a typo. The function returns `(nil, error)`; the scanner surfaces it as `StatusError` per check, so the operator sees what's wrong without losing findings from other checks.
 
@@ -435,7 +436,7 @@ Four `compliancekit.` built-ins eliminate the most common boilerplate:
 | `compliancekit.attr_bool(resource, key)` | bool | resource.attributes[key] as bool; `false` on miss or wrong type. |
 | `compliancekit.cvss_band(score)` | string | CVSS v3 score → `"critical"` (9+), `"high"` (7+), `"medium"` (4+), `"low"` (0.1+), `"info"`. |
 
-These match the semantics of `core.Resource.Attr` / `AttrBool` / `HasTag` in Go and the `cvssToSeverity` helper in the ingest packages, so a check author moving between Go and Rego doesn't have to learn two sets of rules.
+These match the semantics of `compliancekit.Resource.Attr` / `AttrBool` / `HasTag` in Go and the `cvssToSeverity` helper in the ingest packages, so a check author moving between Go and Rego doesn't have to learn two sets of rules.
 
 ### Local authoring loop
 

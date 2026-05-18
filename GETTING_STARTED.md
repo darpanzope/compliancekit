@@ -103,7 +103,7 @@ compliancekit scan digitalocean
 Expected (numbers depend on your account):
 
 ```
-scanning digitalocean (298 checks)...
+scanning digitalocean (574 checks)...
 wrote ./out/findings.json
 wrote ./out/findings.html
 wrote ./out/findings.markdown
@@ -258,9 +258,14 @@ compliancekit doctor                  # confirms the kubeconfig context resolves
 compliancekit scan kubernetes
 ```
 
-You'll get the **139 K8s checks** (95 generic Kubernetes + EKS/GKE/DOKS
-enrichment) across every workload, RBAC binding, NetworkPolicy,
-Secret, namespace, and node in the cluster.
+You'll get the **241 K8s checks** (full CIS K8s Benchmark + NSA/CISA
+Kubernetes Hardening Guide v1.2 surface — v0.11 baseline of 149
+generic-K8s + EKS/GKE/DOKS enrichment, plus the v0.21 deepening pass
+across pod-security extras, reliability, supply-chain, RBAC depth,
+network depth, admission, control-plane manual-verify, and managed
+cluster deepening) across every workload, RBAC binding, NetworkPolicy,
+Secret, namespace, and node in the cluster. Every K8s check ships
+bespoke kubectl remediation, parity-gated at strict 0.
 
 **Multi-cluster:** list contexts explicitly under
 `providers.kubernetes.contexts:` to scan many clusters in one pass.

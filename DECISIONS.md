@@ -269,7 +269,7 @@ A parallel `coverage` metric reports the fraction of findings that were evaluabl
 - **Award credit for fail findings that have a waiver.** Rejected at v0.6. Waivers don't land until v0.18; designing the score around them now is premature.
 
 ### Consequences
-- v0.6 ships `internal/score/` as a small, pure package. Inputs: `[]core.Finding`. Outputs: `{Score int, Coverage int, Total, Passing, Failing, Skipped int}`.
+- v0.6 ships `internal/score/` as a small, pure package. Inputs: `[]compliancekit.Finding`. Outputs: `{Score int, Coverage int, Total, Passing, Failing, Skipped int}`.
 - The number is deterministic by construction — identical input produces identical output. Tests pin this with table-driven cases.
 - The number is monotonic by construction — converting a fail to a pass cannot decrease the score; converting a pass to a fail cannot increase it.
 - v0.7 (AWS) and v0.8 (GCP) inherit the same weights automatically because severity is provider-agnostic. No re-tuning per cloud.
@@ -301,7 +301,7 @@ Should compliancekit grow a native CVE / vulnerability scanner — its own NVD /
 - **Native CVE-database mirror at v0.14, replacing the ingest path.** Rejected. The original v0.14 ROADMAP framing was already "ingest, not detection"; reversing that here would invalidate the v0.13 work and double the v0.14 scope.
 
 ### Consequences
-- v0.13's ingest pipeline (SARIF / OCSF) is the canonical path for vulnerability findings entering compliancekit. v0.14 will extend the same pipeline with explicit adapters for Trivy / Grype / Checkov / gitleaks plus the `core.Finding.Vulnerability` + `core.Finding.Secret` typed metadata blocks so reporters render CVE IDs natively.
+- v0.13's ingest pipeline (SARIF / OCSF) is the canonical path for vulnerability findings entering compliancekit. v0.14 will extend the same pipeline with explicit adapters for Trivy / Grype / Checkov / gitleaks plus the `compliancekit.Finding.Vulnerability` + `compliancekit.Finding.Secret` typed metadata blocks so reporters render CVE IDs natively.
 - The evidence pack's `vulnerabilities.csv` index (v0.14 deliverable) joins ingested vuln findings to the cloud resource graph by image SHA, package PURL, and ARN — the join we DO offer, layered over external detection we do not.
 - The ROADMAP design-principle note "Vulnerability scanning is composed, not native" (ROADMAP.md §"Success metrics") is now load-bearing and codified as this ADR. Reopening this decision requires another ADR explicitly reversing it.
 
@@ -315,7 +315,7 @@ Should compliancekit grow a native CVE / vulnerability scanner — its own NVD /
 v0.14 ingests output from secret scanners (gitleaks, Trivy's secret detector). Every raw match a scanner reports IS the leaked credential, by definition. Where does that raw value live inside compliancekit, and what guarantees do we offer the operator that it stays bounded?
 
 ### Decision
-**The raw secret value never enters compliancekit's data plane.** Adapters consume the producing tool's report, derive a non-reversible fingerprint via `ingest.RedactSecret`, and write only the fingerprint into `core.Finding.Secret.Fingerprint`. The raw value is never stored in a Finding field, written to a log line, embedded in an evidence-pack artifact, or transmitted across an HTTP boundary.
+**The raw secret value never enters compliancekit's data plane.** Adapters consume the producing tool's report, derive a non-reversible fingerprint via `ingest.RedactSecret`, and write only the fingerprint into `compliancekit.Finding.Secret.Fingerprint`. The raw value is never stored in a Finding field, written to a log line, embedded in an evidence-pack artifact, or transmitted across an HTTP boundary.
 
 `ingest.RedactSecret` is the single canonical helper:
 
@@ -341,7 +341,7 @@ Every adapter package (`internal/ingest/{trivy,gitleaks,...}/redact.go`) defines
 ### Consequences
 - `internal/ingest/redact.go` ships `RedactSecret` as the public, ADR-anchored helper. Every adapter aliases it.
 - A property test in each adapter test suite confirms that known fixture secrets (`AKIAIOSFODNN7EXAMPLE`, etc.) never appear as substrings of the produced Finding's Fingerprint. This is the regression-proof layer for the redaction policy.
-- `core.Finding.Secret.Fingerprint` doc-comment carries a redaction notice so future reporter authors know not to "enrich" it.
+- `compliancekit.Finding.Secret.Fingerprint` doc-comment carries a redaction notice so future reporter authors know not to "enrich" it.
 - `compliancekit ingest --format=gitleaks-json` will reject a payload where `Match` field is missing only if it would also have to fabricate a fingerprint; otherwise it produces an empty Fingerprint rather than guessing.
 - The OCSF emit's `unmapped.compliancekit_secret` slot carries the redacted Secret struct verbatim — no additional transformation.
 
@@ -355,7 +355,7 @@ Every adapter package (`internal/ingest/{trivy,gitleaks,...}/redact.go`) defines
 v0.15 turns every finding into a copy-pasteable fix in the operator's tool of choice (Terraform, kubectl, aws/gcloud/az/doctl/hcloud CLI, Helm overlay, Ansible, bash). Three architectural shapes are plausible:
 
 1. **Templates.** Strategies are go:embed text templates, one per (CheckID, Format). Easiest to author; weakest at expressing branching logic ("if KMS not present, also generate a Key resource").
-2. **One method on each check.** `core.Check` gains `Remediate(Finding) -> Snippet`. Locality is great; every check carries its remediation. But the method has to know every output format, which forces format-specific logic into the check files.
+2. **One method on each check.** `compliancekit.Check` gains `Remediate(Finding) -> Snippet`. Locality is great; every check carries its remediation. But the method has to know every output format, which forces format-specific logic into the check files.
 3. **Per-format Go strategy packages.** `internal/remediate/<format>/` each registers Strategy implementations against the CheckIDs it can fix. Verbose but every output format owns its own correctness boundary and tests.
 
 We also need to decide whether remediation can ever auto-apply (and if so, when), how risky changes are signaled, and what happens to findings without a strategy.
@@ -410,14 +410,14 @@ Each has different trade-offs around binary size, performance, sandboxing, and t
 **Embed OPA as a Go library** at v0.16. The Rego compiler + interpreter live inside the compliancekit binary; policies evaluate against an in-memory snapshot of the ResourceGraph; no separate OPA installation required.
 
 Concrete shape:
-- `internal/policy/policy.go` wraps `rego.New(...).Eval(ctx)` into the existing `core.CheckFunc` signature.
-- `internal/policy/loader.go` walks `*.rego` files, extracts `metadata := {...}` constants into `core.Check` records, and registers each as a CheckFunc alongside the Go-evaluator checks.
+- `internal/policy/policy.go` wraps `rego.New(...).Eval(ctx)` into the existing `compliancekit.CheckFunc` signature.
+- `internal/policy/loader.go` walks `*.rego` files, extracts `metadata := {...}` constants into `compliancekit.Check` records, and registers each as a CheckFunc alongside the Go-evaluator checks.
 - Custom built-ins (`compliancekit.has_tag`, `compliancekit.attr_str`, `compliancekit.attr_bool`, `compliancekit.cvss_band`) are registered on the `rego.New` builder so policy authors aren't forced to re-derive common idioms.
 
 ### Reasoning
 - **Binary-size cost is acceptable.** OPA's Go dependency adds ~15 MB to the compliancekit binary (8 MB → 23 MB). That's the upper bound of what we're willing to spend for the contribution-bar reduction Rego unlocks. The v2.0 plugin marketplace can revisit if the size becomes painful.
 - **Sandboxing is free with embed-as-library.** Rego is pure-functional with no I/O primitives; we don't need a separate sandbox. The data plane is the `ResourceGraph` snapshot we pass into `rego.Input(...)` — the policy cannot reach back into the live graph or make HTTP calls.
-- **Byte-identical Findings without serialization round-trips.** A Rego policy that emits `{"resource_id": "x", "status": "fail"}` produces a `core.Finding` in the same process where Go-evaluator checks produce theirs. Parity testing (Phase 6) asserts byte-equality; shell-out would require JSON marshaling at every boundary and introduce subtle drift.
+- **Byte-identical Findings without serialization round-trips.** A Rego policy that emits `{"resource_id": "x", "status": "fail"}` produces a `compliancekit.Finding` in the same process where Go-evaluator checks produce theirs. Parity testing (Phase 6) asserts byte-equality; shell-out would require JSON marshaling at every boundary and introduce subtle drift.
 - **One distribution story.** "Install compliancekit; write Rego if you want." Shell-out would mean "install compliancekit; also install OPA; configure the path; debug version mismatches." Loses the appeal that lets the audience adopt the binary in the first place.
 
 ### Rejected alternatives
@@ -456,7 +456,7 @@ Waivers and baselines are **two different mechanisms for two different problems*
 - A required Approver field (an unattributed acceptance is not accountable)
 - One purpose: mute a specific (check, resource) pair WITHOUT hiding it from the auditor
 
-Concretely: a waived finding flows through every reporter as `StatusSkip` with a `core.WaiverRef` block populated. The auditor sees the finding AND the reason AND the approver AND the expiry. Baselines, by contrast, drop pre-existing findings from `diff` output entirely — the auditor sees them only by re-comparing to the older baseline.
+Concretely: a waived finding flows through every reporter as `StatusSkip` with a `compliancekit.WaiverRef` block populated. The auditor sees the finding AND the reason AND the approver AND the expiry. Baselines, by contrast, drop pre-existing findings from `diff` output entirely — the auditor sees them only by re-comparing to the older baseline.
 
 When to use which:
 - "I am building a new fleet on a 10-year-old codebase; I want to know what's NEW from today forward" → **baseline**.
@@ -477,7 +477,7 @@ When to use which:
 - **Per-framework / per-tag broader waivers.** Considered for v0.18; deferred. The exact (CheckID, ResourceID) pair is the operator-facing unit of acceptance; broader scopes (e.g. "waive all NIST 800-53 SI-2 across the staging account") risk overreach. Add only when narrow waivers prove insufficient in practice.
 
 ### Consequences
-- `internal/waivers/` ships the loader + matcher + expiry logic. `core.WaiverRef` joins `Vulnerability` + `Secret` as a typed metadata block on `core.Finding`.
+- `internal/waivers/` ships the loader + matcher + expiry logic. `compliancekit.WaiverRef` joins `Vulnerability` + `Secret` as a typed metadata block on `compliancekit.Finding`.
 - Two declaration paths: `waivers.yaml` central file + `// compliancekit:waive <check-id> <reason>` in-code annotations. Both lift into the same WaiverList with `WaiverRef.Source` recording the provenance.
 - The evidence pack's `control-mapping.csv` gains 4 waiver columns at v0.18: `waiver_active`, `waiver_reason`, `waiver_approver`, `waiver_expires`. Additive — v0.4+ consumers reading by column name keep working.
 - Expired waivers emit a new info-level CheckID `compliancekit-waiver-expired` per expiry, so an auditor sees the lapse as an explicit finding rather than as a silently-revived prior finding.

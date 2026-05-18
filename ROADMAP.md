@@ -309,7 +309,7 @@ in `internal/checks/aws/` as the work lands; the shape:
   to learn.
 - Per-service rate limiting using the SDK's adaptive throttle mode
   so a 50-account fleet does not get throttled into the next year.
-- **Account / region resource scope** added to `core.Resource`:
+- **Account / region resource scope** added to `compliancekit.Resource`:
   every AWS resource carries `account_id` and `region` attributes
   so cross-account fleets render in the evidence pack with
   unambiguous identity.
@@ -384,7 +384,7 @@ identical so the second cloud is much cheaper than the first.
 - Authentication: `gcloud` ADC, explicit service-account JSON,
   Workload Identity Federation when running in the Action. Same
   shape as AWS — env-first, file fallback, federated for CI.
-- Resource scope adds `project_id` to `core.Resource`. Fleet-wide
+- Resource scope adds `project_id` to `compliancekit.Resource`. Fleet-wide
   scans against an organization happen via the `--projects` filter
   (defaults to "all visible to the credential"), not a special
   org-traversal mode (which lands at v1.2).
@@ -690,7 +690,7 @@ shuttle layer, no per-tool integration glue.
 
 | Phase | Theme | Output |
 |---|---|---|
-| 0 | Ingest scaffolding | `internal/ingest/` package, `Ingester` interface, concurrent-safe registry, `compliancekit ingest` CLI, `core.Finding.Source` provenance field, `config.Ingest[]` block |
+| 0 | Ingest scaffolding | `internal/ingest/` package, `Ingester` interface, concurrent-safe registry, `compliancekit ingest` CLI, `compliancekit.Finding.Source` provenance field, `config.Ingest[]` block |
 | 1 | SARIF 2.1.0 | Adapter + 4 embedded mapping tables (Trivy / Checkov / KICS / Terrascan); 62 starter rule mappings; tool auto-detection; CVSS-to-severity |
 | 2 | OCSF 1.x | Adapter + 3 embedded mapping tables (AWS Security Hub / GCP SCC / Defender for Cloud); 39 starter rule mappings; auto-detect array/JSONL/single-object shape; ARN-to-graph projection |
 | 3 | OCSF emit polish + round-trip | Reporter enriched with `finding_info`, `compliance.standards/requirements`, `cloud.account`, `unmapped.compliancekit_source`; ingest → emit → ingest is lossless on CheckID / Severity / Status / Resource / Source / Fingerprint |
@@ -759,7 +759,7 @@ attribution.
 **Goal:** every CVE tied to a real resource in the graph. v0.14 layers
 on top of v0.13's generic SARIF/OCSF ingest paths with four
 purpose-built native-JSON adapters, typed Vulnerability + Secret
-metadata blocks on core.Finding, and an image-SHA correlation pass
+metadata blocks on compliancekit.Finding, and an image-SHA correlation pass
 that maps a CVE-on-an-image onto every running K8s Deployment / DO
 App Platform service / ECS task that references the same SHA.
 
@@ -767,7 +767,7 @@ App Platform service / ECS task that references the same SHA.
 
 | Phase | Theme | Output |
 |---|---|---|
-| 0 | Schema scaffolding | `core.Finding.Vulnerability` + `Secret` typed blocks; default CVE/GHSA → vuln-mgmt framework mapping (SOC 2 CC7.1 / NIST SI-2 / ISO A.8.8 / PCI 6.3 / CIS 7.1) retroactively lights up the v0.13 SARIF path for advisory-shaped rules |
+| 0 | Schema scaffolding | `compliancekit.Finding.Vulnerability` + `Secret` typed blocks; default CVE/GHSA → vuln-mgmt framework mapping (SOC 2 CC7.1 / NIST SI-2 / ISO A.8.8 / PCI 6.3 / CIS 7.1) retroactively lights up the v0.13 SARIF path for advisory-shaped rules |
 | 1 | Trivy native JSON | `--format=trivy-json` — per-package CVE / PURL / fixed-version / CVSS vector / image SHA. NVD-preferred CVSS scoring; auto-redacted secret detector output |
 | 2 | Grype ingest | `--format=grype-json` — sibling tool, distinct schema, same Vulnerability shape |
 | 3 | Checkov native JSON | `--format=checkov-json` — richer than SARIF (per-resource graph projection, file_line_range, guideline URL) |
@@ -781,7 +781,7 @@ App Platform service / ECS task that references the same SHA.
 
 **Aggregate:** 4 new ingest formats (`trivy-json`, `grype-json`,
 `checkov-json`, `gitleaks-json`), 2 typed metadata blocks on
-`core.Finding`, 1 new evidence-pack artifact, 1 new graph-correlation
+`compliancekit.Finding`, 1 new evidence-pack artifact, 1 new graph-correlation
 pass, 1 new ADR (ADR-010 secret redaction). Zero new external
 dependencies — every parser hand-rolled against `encoding/json`.
 
@@ -917,10 +917,10 @@ is now Resolved.
 **What shipped (7 phases, 7 commits, ~3.5k LOC)**
 
 - **`internal/policy/policy.go` + loader.** Rego evaluator that wraps
-  `rego.New(...).Eval` into the existing `core.CheckFunc` signature.
+  `rego.New(...).Eval` into the existing `compliancekit.CheckFunc` signature.
   Modules parse + compile at load time (syntax errors surface at
   startup, not at first scan). Per-rule `metadata := {...}` constant
-  lifts onto a typed `core.Check` with required-field guarding.
+  lifts onto a typed `compliancekit.Check` with required-field guarding.
 - **OPA embedded** via `github.com/open-policy-agent/opa/v1/rego`
   v1.16.2. ~15MB binary cost accepted because (a) Rego is
   pure-functional with no I/O — sandboxing is free; (b) byte-
@@ -932,7 +932,7 @@ is now Resolved.
   boilerplate every policy would otherwise repeat. Stable surface
   per ADR-012; adding a fifth is a SemVer 2.0 change.
 - **Registry mirror.** Rego modules register into the same
-  `core.DefaultRegistry` as Go checks via `policy.RegisterModule`;
+  `compliancekit.DefaultRegistry` as Go checks via `policy.RegisterModule`;
   mutual-exclusion enforced at registration (duplicate IDs are
   programmer errors caught at startup, not silent overwrites).
 - **`compliancekit checks list/show` annotation.** New SOURCE column
@@ -1075,7 +1075,7 @@ integration. Architectural shape codified in
   reason floor of 16 non-whitespace chars (catches "OK" / "see
   ticket" without rejecting real prose); duplicate (CheckID,
   ResourceID) rejected because it hides which approver authorized.
-- **`core.WaiverRef`** typed metadata block on `core.Finding`
+- **`compliancekit.WaiverRef`** typed metadata block on `compliancekit.Finding`
   (joins Vulnerability + Secret from v0.14). Auditor-visible by
   design — a waived finding flows through every reporter as
   StatusSkip with WaiverRef populated, NOT hidden.
@@ -1106,7 +1106,7 @@ integration. Architectural shape codified in
   - 4 new columns on `control-mapping.csv`: `waiver_active`,
     `waiver_reason`, `waiver_approver`, `waiver_expires`.
   - New `waivers.json` artifact at the pack root with one entry
-    per muted finding (cross-references the full `core.Finding`
+    per muted finding (cross-references the full `compliancekit.Finding`
     so an auditor can pivot from waiver → original finding).
 - **`compliancekit waivers` CLI** — 4 subcommands:
   - `list` — tabulate active + expired with expiring-within-30d
@@ -1319,7 +1319,7 @@ future Linux work compliant.
   (`ParseOSRelease`, `ParseSysctlOutput`, `ParseLoginDefs`,
   `parseSSHDConfig`, etc.) are at 90%+.
 - Integration tests against per-distro rootfs JSON fixtures —
-  the spec-driven check tests with constructed `core.Resource`
+  the spec-driven check tests with constructed `compliancekit.Resource`
   literals cover the check logic exhaustively; rootfs fixtures
   would mostly re-exercise the collectors' SSH path which is the
   same gap as above.
@@ -1645,7 +1645,7 @@ coverage + lint v2 + deep cookbook to v0.22.x point releases.
   combining it with the refactor would have produced a thin pass
   on both.
 - **`internal/testutil/` extraction** — consolidate the
-  `core.Resource` builder helpers. Cosmetic; ships with the
+  `compliancekit.Resource` builder helpers. Cosmetic; ships with the
   spec-lift work.
 
 **Definition of done — checklist**
@@ -1740,7 +1740,7 @@ exists to recognize the shape worth lifting out.
     the v0.20 deferred coverage gap (53.7% → ≥85%). The
     `gatherX` / `Dial` / `RunCommand` 0% blocks all gate on this.
   - **Test helpers consolidation** — `internal/testutil/` for
-    the `core.Resource` builder helpers that have drifted into
+    the `compliancekit.Resource` builder helpers that have drifted into
     per-package `*_test.go` files (`hostWithSSHD`, `hostWithMAC`,
     `hostWithAuditRules` in checks/linux; equivalents in checks/k8s,
     checks/digitalocean). One canonical builder, per-provider

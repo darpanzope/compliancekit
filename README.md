@@ -3,12 +3,17 @@
 # compliancekit
 
 **The open-source compliance scanner for the rest of us.**
-Scan DigitalOcean accounts and Linux fleets, get findings mapped to SOC 2 /
-ISO 27001 / CIS Controls v8, generate an audit-ready evidence pack — in one binary.
+Scan DigitalOcean, AWS, GCP, Hetzner, Kubernetes, and Linux fleets;
+get findings mapped to nine compliance frameworks (SOC 2, ISO 27001,
+CIS Controls v8, CIS Linux Server, NSA/CISA Kubernetes Hardening,
+NIST 800-53 r5, HIPAA, PCI DSS, MITRE ATT&CK); generate an audit-ready
+evidence pack — in one static binary.
 
 [![ci](https://github.com/darpanzope/compliancekit/actions/workflows/ci.yaml/badge.svg)](https://github.com/darpanzope/compliancekit/actions/workflows/ci.yaml)
 [![govulncheck](https://github.com/darpanzope/compliancekit/actions/workflows/govulncheck.yaml/badge.svg)](https://github.com/darpanzope/compliancekit/actions/workflows/govulncheck.yaml)
 [![go report](https://goreportcard.com/badge/github.com/darpanzope/compliancekit)](https://goreportcard.com/report/github.com/darpanzope/compliancekit)
+[![go reference](https://pkg.go.dev/badge/github.com/darpanzope/compliancekit/pkg/compliancekit.svg)](https://pkg.go.dev/github.com/darpanzope/compliancekit/pkg/compliancekit)
+[![release](https://img.shields.io/github/v/release/darpanzope/compliancekit?sort=semver)](https://github.com/darpanzope/compliancekit/releases/latest)
 [![license](https://img.shields.io/github/license/darpanzope/compliancekit)](LICENSE)
 
 </div>
@@ -39,7 +44,7 @@ You don't have a security team. You don't have an SRE. You have a Saturday.
 
 ```
 $ compliancekit scan
-scanning digitalocean, linux (298 checks)...
+scanning digitalocean, linux (574 checks)...
 ✗ web-01: no firewall attached                       (high, soc2/CC6.6)
 ✗ web-01: SSH allowed from 0.0.0.0/0                 (high, iso27001/A.8.21)
 ✓ web-01: backups enabled                            (medium)
@@ -182,7 +187,7 @@ compliancekit scan                  # writes findings.{json,html,markdown} into 
 Expected output (numbers vary by account):
 
 ```
-scanning digitalocean (298 checks)...
+scanning digitalocean (574 checks)...
 wrote ./out/findings.json
 wrote ./out/findings.html
 wrote ./out/findings.markdown
@@ -521,6 +526,76 @@ jobs:
 
 Findings appear inline on the PR and in the Code Scanning tab. Exit code 2
 on any new finding at or above `fail-on` blocks the merge.
+
+## Embed compliancekit in your own tool (v1.0+)
+
+`pkg/compliancekit` is the SemVer-stable public surface — covered by
+SemVer 2.0 for the entire v1.x line, with a machine-enforced CI gate
+against [`pkg/compliancekit/api.txt`](pkg/compliancekit/api.txt) that
+fails the build if any exported identifier drifts without an explicit,
+reviewed diff. Anyone building a tool on top of compliancekit gets a
+real contract for the first time at v1.0; see
+[ADR-014](DECISIONS.md#adr-014--v10-api-freeze-pkgcompliancekit-is-the-semver-surface)
+for the full rationale.
+
+```go
+import (
+    "context"
+    "github.com/darpanzope/compliancekit/pkg/compliancekit"
+)
+
+g := compliancekit.NewResourceGraph()
+g.Add(compliancekit.Resource{
+    ID:       "linux.host.web-01",
+    Type:     "linux.host",
+    Provider: "linux",
+    Attributes: map[string]any{"ssh_password_auth": true},
+})
+
+reg := compliancekit.NewRegistry()
+reg.Register(
+    compliancekit.Check{
+        ID:       "ssh-password-auth-disabled",
+        Severity: compliancekit.SeverityHigh,
+        Provider: "linux",
+    },
+    func(_ context.Context, graph *compliancekit.ResourceGraph) ([]compliancekit.Finding, error) {
+        var out []compliancekit.Finding
+        for _, r := range graph.ByType("linux.host") {
+            if r.AttrBool("ssh_password_auth") {
+                out = append(out, compliancekit.Finding{
+                    CheckID:  "ssh-password-auth-disabled",
+                    Status:   compliancekit.StatusFail,
+                    Severity: compliancekit.SeverityHigh,
+                    Resource: r.Ref(),
+                    Message:  "ssh password auth enabled",
+                })
+            }
+        }
+        return out, nil
+    },
+)
+```
+
+What graduates to the contract: the load-bearing types — `Severity`,
+`Status`, `Resource` / `ResourceRef` / `EvidencePtr`, `ResourceGraph`
+(with the `Query` DSL), `Vulnerability` / `Package` / `Secret` /
+`WaiverRef`, `Source` / `Finding`, `Check` / `CheckFunc` / `Registry`,
+the `Reporter` / `Collector` / `Evaluator` interfaces, and the
+`Framework` / `Control` / `Tactic` catalog types. Everything under
+`internal/` (engine, collectors, ingest adapters, reporter
+implementations, policy evaluator, notify sinks, waivers loader)
+stays internal and may change in any release.
+
+Compat promise (per [SECURITY.md](SECURITY.md#two-year-compatibility-commitment-v10)):
+security patches land on the last two minor versions of v1.x for at
+least two years from each minor's release date.
+
+Full canonical example with JSON round-trip + `Query` DSL +
+custom-framework instantiation:
+[`pkg/compliancekit/example_embed_test.go`](pkg/compliancekit/example_embed_test.go).
+API reference rendered on
+[pkg.go.dev](https://pkg.go.dev/github.com/darpanzope/compliancekit/pkg/compliancekit).
 
 ## FAQ
 
