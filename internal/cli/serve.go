@@ -97,6 +97,9 @@ func runServe(ctx context.Context, stdout interface {
 	// Mount the v1.3 REST API on the daemon's chi router.
 	apiH := api.New(st, users, tokens, sessions)
 	apiH.Mount(srv.Router())
+	// Mount /api/auth/{login,logout,me} so the UI login form has a
+	// real POST target. Missing in v1.3.0; fixed in v1.3.1.
+	auth.Mount(srv.Router(), users, sessions)
 	// Mount the v1.3 webhook receivers (/webhooks/github + /webhooks/{id}).
 	webhookH := webhook.New(st, webhook.Config{GitHubSecret: githubSecret})
 	webhookH.Mount(srv.Router())
