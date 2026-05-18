@@ -16,8 +16,15 @@ const SeverityInfo
 const SeverityLow
 const SeverityMedium
 const SeverityUnknown Severity
+const StatusError Status
+const StatusFail Status
+const StatusPass Status
+const StatusSkip Status
 func ParseSeverity(s string) (Severity, error)
+func ParseStatus(s string) (Status, error)
 method (*Severity) UnmarshalJSON(b []byte) error
 method (Severity) MarshalJSON() ([]byte, error)
 method (Severity) String() string
+method (Status) IsActionable() bool
 type Severity int
+type Status string
