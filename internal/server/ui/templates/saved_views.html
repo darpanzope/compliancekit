@@ -1,0 +1,81 @@
+{{define "content"}}
+<div class="max-w-4xl mx-auto">
+  <div class="mb-6">
+    <a href="/findings" class="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5">
+      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      Findings
+    </a>
+    <h1 class="mt-2 text-2xl font-semibold tracking-tight">Saved views</h1>
+    <p class="text-sm text-muted-foreground mt-1">Name + pin a filter set. Pinned views appear under Findings in the sidebar — one click to load them.</p>
+  </div>
+
+  {{ if eq .Flash "created" }}<div class="mb-4 rounded-md border border-success/30 bg-success/10 px-3 py-2 text-sm text-success">View saved.</div>{{ end }}
+  {{ if eq .Flash "pinned" }}<div class="mb-4 rounded-md border border-success/30 bg-success/10 px-3 py-2 text-sm text-success">Pin state toggled.</div>{{ end }}
+  {{ if eq .Flash "deleted" }}<div class="mb-4 rounded-md border border-warning/30 bg-warning/10 px-3 py-2 text-sm text-warning">View deleted.</div>{{ end }}
+  {{ if eq .Error "missing-name" }}<div class="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">Name is required.</div>{{ end }}
+
+  <!-- Create form -->
+  <form action="/findings/views" method="post" class="ck-card p-5 mb-6 space-y-3">
+    <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
+    <div>
+      <label for="name" class="block text-xs font-medium text-foreground mb-1">Name</label>
+      <input type="text" id="name" name="name" required placeholder="My critical AWS findings this week"
+             class="w-full h-10 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring transition">
+    </div>
+    <div>
+      <label for="query_string" class="block text-xs font-medium text-foreground mb-1">Filter URL (optional)</label>
+      <input type="text" id="query_string" name="query_string" placeholder="severity=critical,high&provider=aws&since_days=7"
+             class="w-full h-10 rounded-md border border-input bg-background px-3 text-sm font-mono placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring transition">
+      <p class="text-xs text-muted-foreground mt-1">Leave empty to capture the filters from the page you came from.</p>
+    </div>
+    <div class="flex items-center justify-between pt-1">
+      <label class="inline-flex items-center gap-2 text-xs">
+        <input type="checkbox" name="pinned" value="1" class="h-4 w-4 rounded border-input text-primary focus:ring-ring">
+        <span class="text-muted-foreground">Pin to sidebar (visible on every page)</span>
+      </label>
+      <button type="submit" class="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary text-primary-foreground px-4 text-sm font-medium hover:opacity-90 transition">Save view</button>
+    </div>
+  </form>
+
+  <!-- Existing views -->
+  <div class="ck-card overflow-hidden">
+    <table class="w-full text-sm">
+      <thead class="bg-muted/50">
+        <tr class="text-left">
+          <th class="px-4 py-3 text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Name</th>
+          <th class="px-4 py-3 text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Filters</th>
+          <th class="px-4 py-3 text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Pinned</th>
+          <th class="px-4 py-3 text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Created</th>
+          <th class="px-4 py-3"></th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-border">
+        {{ range .Items }}
+        <tr class="hover:bg-muted/30 transition-colors">
+          <td class="px-4 py-3">
+            <a href="/findings?{{ .QueryString }}" class="font-medium text-primary hover:underline">{{ .Name }}</a>
+            {{ if not .IsMine }}<span class="ml-2 text-[10px] uppercase tracking-wider text-muted-foreground bg-muted px-1.5 py-0.5 rounded">team</span>{{ end }}
+          </td>
+          <td class="px-4 py-3 font-mono text-[11px] text-muted-foreground max-w-md truncate">{{ if .QueryString }}{{ .QueryString }}{{ else }}(no filters){{ end }}</td>
+          <td class="px-4 py-3">
+            <form action="/findings/views/{{ .ID }}/pin" method="post" class="inline-flex">
+              <input type="hidden" name="csrf_token" value="{{ $.CSRFToken }}">
+              <button type="submit" class="text-xs {{ if .Pinned }}text-primary{{ else }}text-muted-foreground{{ end }} hover:underline">{{ if .Pinned }}Pinned{{ else }}Pin{{ end }}</button>
+            </form>
+          </td>
+          <td class="px-4 py-3 text-xs text-muted-foreground tabular-nums">{{ .CreatedIn }}</td>
+          <td class="px-4 py-3 text-right">
+            <form action="/findings/views/{{ .ID }}/delete" method="post" class="inline-flex" onsubmit="return confirm('Delete this saved view?');">
+              <input type="hidden" name="csrf_token" value="{{ $.CSRFToken }}">
+              <button type="submit" class="text-xs text-destructive hover:underline">Delete</button>
+            </form>
+          </td>
+        </tr>
+        {{ else }}
+        <tr><td colspan="5" class="p-8 text-center text-sm text-muted-foreground">No saved views yet. Filter the <a href="/findings" class="text-primary hover:underline">findings explorer</a>, then save the URL above.</td></tr>
+        {{ end }}
+      </tbody>
+    </table>
+  </div>
+</div>
+{{end}}

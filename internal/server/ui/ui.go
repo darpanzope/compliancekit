@@ -258,6 +258,7 @@ func (u *UI) Mount(r chi.Router) {
 		u.mountScheduleRoutes(r)
 		u.mountAuditRoutes(r)
 		u.mountFindingsRoutes(r)
+		u.mountSavedViewRoutes(r)
 	})
 }
 
