@@ -1,0 +1,64 @@
+{{define "content"}}
+<div class="max-w-6xl mx-auto">
+  <div class="flex items-end justify-between gap-4 mb-6">
+    <div>
+      <h1 class="text-2xl font-semibold tracking-tight">Resources</h1>
+      <p class="text-sm text-muted-foreground mt-1"><span class="tabular-nums">{{ .Total }}</span> resource{{ if ne .Total 1 }}s{{ end }} with open findings. Click a row to view its findings.</p>
+    </div>
+    <a href="/resources/map" class="inline-flex h-9 items-center gap-1.5 rounded-md border border-border bg-background px-3 text-sm font-medium hover:bg-muted transition">
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+      View map
+    </a>
+  </div>
+
+  <!-- Search -->
+  <form method="get" action="/resources" class="ck-card p-3 mb-4">
+    <div class="relative">
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" name="q" value="{{ .Query }}" placeholder="Search resource name / id / type / provider"
+             class="w-full h-10 rounded-md border border-input bg-background pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring transition">
+      <input type="hidden" name="sort" value="{{ .Sort }}">
+    </div>
+  </form>
+
+  <!-- Table -->
+  <div class="ck-card overflow-hidden">
+    <table class="w-full text-sm">
+      <thead class="bg-muted/50">
+        <tr class="text-left">
+          {{ $sort := .Sort }}{{ $q := .Query }}
+          <th class="px-4 py-3 text-[11px] uppercase tracking-wider text-muted-foreground font-medium"><a href="/resources?sort=name&q={{ $q }}" class="{{ if eq $sort "name" }}text-foreground{{ end }} hover:text-foreground">Name</a></th>
+          <th class="px-4 py-3 text-[11px] uppercase tracking-wider text-muted-foreground font-medium"><a href="/resources?sort=type&q={{ $q }}" class="{{ if eq $sort "type" }}text-foreground{{ end }} hover:text-foreground">Type</a></th>
+          <th class="px-4 py-3 text-[11px] uppercase tracking-wider text-muted-foreground font-medium"><a href="/resources?sort=provider&q={{ $q }}" class="{{ if eq $sort "provider" }}text-foreground{{ end }} hover:text-foreground">Provider</a></th>
+          <th class="px-4 py-3 text-[11px] uppercase tracking-wider text-muted-foreground font-medium"><a href="/resources?sort=severity&q={{ $q }}" class="{{ if eq $sort "severity" }}text-foreground{{ end }} hover:text-foreground">Max severity</a></th>
+          <th class="px-4 py-3 text-[11px] uppercase tracking-wider text-muted-foreground font-medium text-right"><a href="/resources?sort=findings&q={{ $q }}" class="{{ if eq $sort "findings" }}text-foreground{{ end }} hover:text-foreground">Open findings</a></th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-border">
+        {{ range .Items }}
+        <tr onclick="window.location='/findings?provider={{ .Provider }}&q={{ .ResourceName }}'" class="hover:bg-muted/30 cursor-pointer transition-colors">
+          <td class="px-4 py-3">
+            <div class="font-medium">{{ .ResourceName }}</div>
+            <div class="text-[11px] font-mono text-muted-foreground mt-0.5">{{ .ResourceID }}</div>
+          </td>
+          <td class="px-4 py-3 font-mono text-xs text-muted-foreground">{{ .ResourceType }}</td>
+          <td class="px-4 py-3 text-xs text-muted-foreground">{{ .Provider }}</td>
+          <td class="px-4 py-3">{{ template "severity_pill" .MaxSeverity }}</td>
+          <td class="px-4 py-3 text-right">
+            <div class="inline-flex items-center gap-1 text-[11px]">
+              {{ if gt .Critical 0 }}<span class="inline-flex h-4 items-center px-1.5 rounded-sm bg-severity-critical text-white font-semibold tabular-nums">{{ .Critical }}</span>{{ end }}
+              {{ if gt .High 0 }}<span class="inline-flex h-4 items-center px-1.5 rounded-sm bg-severity-high text-white font-semibold tabular-nums">{{ .High }}</span>{{ end }}
+              {{ if gt .Medium 0 }}<span class="inline-flex h-4 items-center px-1.5 rounded-sm bg-severity-medium text-foreground font-semibold tabular-nums">{{ .Medium }}</span>{{ end }}
+              {{ if gt .Low 0 }}<span class="inline-flex h-4 items-center px-1.5 rounded-sm bg-severity-low text-white font-semibold tabular-nums">{{ .Low }}</span>{{ end }}
+              <span class="ml-2 tabular-nums">{{ .Total }}</span>
+            </div>
+          </td>
+        </tr>
+        {{ else }}
+        <tr><td colspan="5" class="p-12 text-center text-sm text-muted-foreground">{{ if .Query }}No resources match "{{ .Query }}"{{ else }}No resources with open findings yet{{ end }}</td></tr>
+        {{ end }}
+      </tbody>
+    </table>
+  </div>
+</div>
+{{end}}
