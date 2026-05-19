@@ -240,6 +240,12 @@ func (u *UI) Mount(r chi.Router) {
 
 	r.Group(func(r chi.Router) {
 		r.Use(u.sessions.RequireAuth)
+		// CSRF: chained after RequireAuth so the middleware can read
+		// the session out of the request context. v1.5.1 F16 — every
+		// UI form already renders <input name="csrf_token"> + every
+		// htmx POST already mirrors ck_csrf into X-CSRF-Token, but
+		// the middleware was never wired before this commit.
+		r.Use(u.sessions.RequireCSRF)
 		r.Get("/scans", u.listScans)
 		r.Get("/scans/{id}", u.showScan)
 		// v1.3 read-only /providers redirects to the v1.4 Phase 2

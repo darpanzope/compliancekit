@@ -65,10 +65,20 @@ func (s *Sessions) RequireAuth(next http.Handler) http.Handler {
 //
 // Safe methods (GET / HEAD / OPTIONS) pass through unchecked; the
 // browser doesn't trigger CSRF on those.
+//
+// Token-auth callers (Authorization: Bearer ck_…) skip the CSRF
+// check entirely — bearer tokens are not browser-resident credentials
+// so cross-site requests can't smuggle them; CSRF protects only
+// against cookie-based session hijacks.
 func (s *Sessions) RequireCSRF(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet, http.MethodHead, http.MethodOptions:
+			next.ServeHTTP(w, r)
+			return
+		}
+		// Token auth: skip CSRF (see doc comment).
+		if TokenFromContext(r.Context()) != nil {
 			next.ServeHTTP(w, r)
 			return
 		}

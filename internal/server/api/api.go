@@ -48,9 +48,16 @@ func (a *API) Mount(r chi.Router) {
 	r.Route("/api/v1", func(r chi.Router) {
 		// Auth: a request may carry either a session cookie or a
 		// Bearer token. The eitherAuth middleware tries both in
-		// sequence; downstream RequireScope checks the token (when
-		// present) or a fallback admin bit for the session user.
+		// sequence; downstream scopeGate enforces the right policy
+		// for each flow.
 		r.Use(a.eitherAuth)
+
+		// CSRF: protects cookie-auth callers from cross-site mutating
+		// requests. Skips automatically for token callers (bearer
+		// tokens aren't browser-resident, so cross-site requests
+		// can't smuggle them). v1.5.1 F16 — middleware was defined
+		// in v1.3 but never wired.
+		r.Use(a.sessions.RequireCSRF)
 
 		r.Get("/scans", a.scopeGate(auth.ScopeScansRead, a.listScans))
 		r.Get("/scans/{id}", a.scopeGate(auth.ScopeScansRead, a.getScan))
