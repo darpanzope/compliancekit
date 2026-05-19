@@ -1,0 +1,44 @@
+{{ define "drift_timeline" }}
+<div class="space-y-3 text-sm">
+  {{ if not .Events }}
+    <div class="text-muted-foreground text-xs">No timeline data — this finding has only ever appeared in one scan.</div>
+  {{ else }}
+    <div class="text-[11px] uppercase tracking-wider text-muted-foreground">Lifecycle ({{ len .Events }} scan{{ if ne (len .Events) 1 }}s{{ end }})</div>
+
+    <div class="relative pl-6 space-y-3">
+      <!-- Vertical line down the left side -->
+      <div class="absolute left-2 top-1.5 bottom-1.5 w-px bg-border"></div>
+
+      {{ range .Events }}
+      <div class="relative">
+        <!-- Dot -->
+        <span class="absolute -left-[18px] top-1 inline-flex h-3 w-3 rounded-full
+          {{ if eq .StatusKind "first" }}bg-primary
+          {{ else if eq .StatusKind "change" }}bg-warning
+          {{ else if eq .StatusKind "latest" }}bg-success
+          {{ else }}bg-muted-foreground/40
+          {{ end }} ring-4 ring-card"></span>
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <div class="flex items-center gap-2 text-xs">
+              {{ if eq .StatusKind "first" }}<span class="text-[10px] uppercase tracking-wider text-primary font-semibold">first seen</span>
+              {{ else if eq .StatusKind "change" }}<span class="text-[10px] uppercase tracking-wider text-warning font-semibold">status change</span>
+              {{ else if eq .StatusKind "latest" }}<span class="text-[10px] uppercase tracking-wider text-success font-semibold">latest</span>
+              {{ else }}<span class="text-[10px] uppercase tracking-wider text-muted-foreground">stable</span>
+              {{ end }}
+              <span class="text-muted-foreground tabular-nums">{{ .ScanIn }}</span>
+            </div>
+            <div class="mt-1 text-xs">
+              status: <span class="font-medium">{{ .Status }}</span>
+              <span class="text-muted-foreground mx-1">·</span>
+              severity: {{ template "severity_pill" .Severity }}
+            </div>
+            <a href="/scans/{{ .ScanID }}" class="mt-1 inline-block text-[11px] text-primary hover:underline font-mono">{{ .ScanID }}</a>
+          </div>
+        </div>
+      </div>
+      {{ end }}
+    </div>
+  {{ end }}
+</div>
+{{ end }}

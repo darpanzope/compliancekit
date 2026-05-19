@@ -263,6 +263,7 @@ func (u *UI) Mount(r chi.Router) {
 		u.mountRemediationRoutes(r)
 		u.mountResourceMapRoutes(r)
 		u.mountResourcesRoutes(r)
+		u.mountDriftRoutes(r)
 	})
 }
 

@@ -28,6 +28,7 @@
     <nav class="flex gap-1 -mb-px">
       <button type="button" @click="tab = 'overview'" :class="tab === 'overview' ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'" class="px-3 py-2 text-xs font-medium border-b-2 transition">Overview</button>
       <button type="button" @click="tab = 'remediation'" :class="tab === 'remediation' ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'" class="px-3 py-2 text-xs font-medium border-b-2 transition">Remediation</button>
+      <button type="button" @click="tab = 'timeline'" :class="tab === 'timeline' ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'" class="px-3 py-2 text-xs font-medium border-b-2 transition">Timeline</button>
       <button type="button" @click="tab = 'context'" :class="tab === 'context' ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'" class="px-3 py-2 text-xs font-medium border-b-2 transition">Context</button>
     </nav>
   </div>
@@ -103,6 +104,14 @@
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
       </a>
       <p class="text-xs text-muted-foreground">Multi-format snippets (bash / terraform / kubectl / doctl / etc.) with copy + download per format.</p>
+    </div>
+
+    <!-- Timeline tab — lazy-loads /findings/{id}/timeline -->
+    <div x-show="tab === 'timeline'" x-cloak class="p-5"
+         hx-get="/findings/{{ .Row.ID }}/timeline"
+         hx-trigger="intersect once"
+         hx-swap="innerHTML">
+      <div class="text-xs text-muted-foreground">Loading timeline...</div>
     </div>
 
     <!-- Context tab -->
