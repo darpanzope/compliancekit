@@ -1,0 +1,14 @@
+{{/*
+Shared partials used by multiple content templates. Add new
+top-level {{ define }} blocks here rather than nesting them inside
+content templates — Go html/template forbids define-inside-define.
+*/}}
+
+{{ define "severity_pill" }}
+{{ if eq . "critical" }}<span class="ck-pill-critical">{{.}}</span>
+{{ else if eq . "high" }}<span class="ck-pill-high">{{.}}</span>
+{{ else if eq . "medium" }}<span class="ck-pill-medium">{{.}}</span>
+{{ else if eq . "low" }}<span class="ck-pill-low">{{.}}</span>
+{{ else }}<span class="ck-pill-info">{{.}}</span>
+{{ end }}
+{{ end }}

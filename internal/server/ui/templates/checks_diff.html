@@ -1,0 +1,48 @@
+{{define "content"}}
+<div class="max-w-5xl mx-auto">
+  <div class="mb-6">
+    <a href="/checks" class="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5">
+      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      Back to checks
+    </a>
+    <h1 class="mt-2 text-2xl font-semibold tracking-tight">Tailoring diff</h1>
+    <p class="text-sm text-muted-foreground mt-1">Every check the operator has explicitly overridden vs the shipped default. This is the artifact auditors ask for to confirm scoping decisions are recorded.</p>
+  </div>
+
+  {{ if eq .OverrideCount 0 }}
+    <div class="ck-card p-8 text-center">
+      <p class="text-sm text-muted-foreground">No tailoring overrides yet. Toggle a check off (or back on) from the catalog to record an override here.</p>
+      <a href="/checks" class="mt-4 inline-flex h-9 items-center gap-1.5 rounded-md bg-primary text-primary-foreground px-4 text-sm font-medium hover:opacity-90 transition">Open catalog</a>
+    </div>
+  {{ else }}
+    <div class="ck-card overflow-hidden">
+      <table class="w-full text-sm">
+        <thead class="bg-muted/50">
+          <tr class="text-left">
+            <th class="px-4 py-3 text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Check</th>
+            <th class="px-4 py-3 text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Provider</th>
+            <th class="px-4 py-3 text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Severity</th>
+            <th class="px-4 py-3 text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Default</th>
+            <th class="px-4 py-3 text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Tailored</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-border">
+          {{ range .Items }}
+          <tr>
+            <td class="px-4 py-3">
+              <div class="font-mono text-xs">{{ .ID }}</div>
+              <div class="text-xs text-muted-foreground mt-0.5">{{ .Title }}</div>
+            </td>
+            <td class="px-4 py-3 text-xs text-muted-foreground">{{ .Provider }}</td>
+            <td class="px-4 py-3">{{ template "severity_pill" .Severity }}</td>
+            <td class="px-4 py-3"><span class="text-xs text-success">on</span></td>
+            <td class="px-4 py-3">{{ if .Enabled }}<span class="text-xs text-success font-medium">on</span>{{ else }}<span class="text-xs text-destructive font-medium">off</span>{{ end }}</td>
+          </tr>
+          {{ end }}
+        </tbody>
+      </table>
+    </div>
+  {{ end }}
+</div>
+
+{{end}}

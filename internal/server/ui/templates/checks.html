@@ -1,31 +1,92 @@
 {{define "content"}}
-<h1 class="page-title">Checks</h1>
-<p class="page-sub">{{ .Total }} checks compiled into this binary. v1.4 Studio adds per-check toggle UI; v1.5 Explorer adds filters + saved views.</p>
+<div class="max-w-7xl mx-auto">
 
-<div class="card" style="padding:0">
-<table class="list">
-<thead>
-<tr>
-<th>ID</th>
-<th>Severity</th>
-<th>Provider</th>
-<th>Service</th>
-<th>Title</th>
-<th>Enabled</th>
-</tr>
-</thead>
-<tbody>
-{{ range .Items }}
-<tr>
-<td class="mono">{{ .ID }}</td>
-<td><span class="status-pill {{.Severity}}">{{ .Severity }}</span></td>
-<td class="mono muted">{{ .Provider }}</td>
-<td class="mono muted">{{ .Service }}</td>
-<td>{{ .Title }}</td>
-<td>{{ if .Enabled }}<span class="status-pill completed">on</span>{{ else }}<span class="status-pill canceled">off</span>{{ end }}</td>
-</tr>
-{{ end }}
-</tbody>
-</table>
+  <!-- Header -->
+  <div class="flex flex-wrap items-end justify-between gap-4 mb-6">
+    <div>
+      <h1 class="text-2xl font-semibold tracking-tight">Checks</h1>
+      <p class="text-sm text-muted-foreground mt-1">
+        <span class="tabular-nums">{{ .Matching }}</span> matching of <span class="tabular-nums">{{ .Total }}</span> shipped checks
+        {{ if gt .OverrideCount 0 }}<span class="mx-1.5 text-border">·</span><a href="/checks/diff" class="text-primary hover:underline tabular-nums">{{ .OverrideCount }} tailored</a>{{ end }}
+      </p>
+    </div>
+    {{ if gt .OverrideCount 0 }}
+    <a href="/checks/diff" class="inline-flex h-9 items-center gap-1.5 rounded-md border border-border bg-background px-3 text-sm font-medium hover:bg-muted transition">
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+      View tailoring diff
+    </a>
+    {{ end }}
+  </div>
+
+  <!-- Filter bar -->
+  <form method="get" action="/checks" class="ck-card p-4 mb-4">
+    <div class="grid grid-cols-1 lg:grid-cols-[2fr_1fr_1fr_1fr_auto] gap-3">
+      <div class="relative">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" name="q" value="{{ .Query }}" placeholder="Search id / title / service" class="w-full h-10 rounded-md border border-input bg-background pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring transition">
+      </div>
+      <select name="severity" class="h-10 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring transition">
+        <option value="">All severities</option>
+        {{ $picked := first .Severities }}
+        {{ range .AllSeverities }}<option value="{{.}}" {{ if eq . $picked }}selected{{ end }}>{{.}}</option>{{ end }}
+      </select>
+      <select name="provider" class="h-10 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring transition">
+        <option value="">All providers</option>
+        {{ $pp := first .Providers }}
+        {{ range .AllProviders }}<option value="{{.}}" {{ if eq . $pp }}selected{{ end }}>{{.}}</option>{{ end }}
+      </select>
+      <select name="framework" class="h-10 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring transition">
+        <option value="">All frameworks</option>
+        {{ $fp := first .Frameworks }}
+        {{ range .AllFrameworks }}<option value="{{.}}" {{ if eq . $fp }}selected{{ end }}>{{.}}</option>{{ end }}
+      </select>
+      <div class="flex items-center gap-2">
+        <button type="submit" class="inline-flex h-10 items-center gap-1.5 rounded-md bg-primary text-primary-foreground px-4 text-sm font-medium hover:opacity-90 transition">Apply</button>
+        <a href="/checks" class="inline-flex h-10 items-center text-sm text-muted-foreground hover:text-foreground transition">Reset</a>
+      </div>
+    </div>
+  </form>
+
+  <!-- Table -->
+  <div class="ck-card overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-muted/50">
+          <tr class="text-left">
+            <th class="px-4 py-3 text-[11px] uppercase tracking-wider text-muted-foreground font-medium">ID</th>
+            <th class="px-4 py-3 text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Severity</th>
+            <th class="px-4 py-3 text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Provider</th>
+            <th class="px-4 py-3 text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Service</th>
+            <th class="px-4 py-3 text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Title</th>
+            <th class="px-4 py-3 text-[11px] uppercase tracking-wider text-muted-foreground font-medium text-right">State</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-border">
+          {{ range .Items }}
+          <tr class="hover:bg-muted/30 transition-colors">
+            <td class="px-4 py-3 font-mono text-xs whitespace-nowrap">{{ .ID }}</td>
+            <td class="px-4 py-3">{{ template "severity_pill" .Severity }}</td>
+            <td class="px-4 py-3 text-xs text-muted-foreground">{{ .Provider }}</td>
+            <td class="px-4 py-3 text-xs text-muted-foreground">{{ .Service }}</td>
+            <td class="px-4 py-3">{{ .Title }}</td>
+            <td class="px-4 py-3 text-right">
+              <form action="/checks/{{ .ID }}/toggle" method="post" class="inline-flex items-center gap-2">
+                <input type="hidden" name="csrf_token" value="{{ $.CSRFToken }}">
+                <button type="submit" aria-label="Toggle {{ .ID }}" class="relative inline-flex h-5 w-9 items-center rounded-full transition-colors {{ if .Enabled }}bg-success{{ else }}bg-muted-foreground/40{{ end }} focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
+                  <span class="inline-block h-4 w-4 transform rounded-full bg-background shadow-soft transition-transform {{ if .Enabled }}translate-x-4{{ else }}translate-x-0.5{{ end }}"></span>
+                </button>
+                {{ if .Overridden }}<span class="text-[10px] uppercase tracking-wider text-warning">tailored</span>{{ end }}
+              </form>
+            </td>
+          </tr>
+          {{ else }}
+          <tr><td colspan="6" class="p-8 text-center text-sm text-muted-foreground">No checks match the current filters.</td></tr>
+          {{ end }}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
 </div>
+
 {{end}}

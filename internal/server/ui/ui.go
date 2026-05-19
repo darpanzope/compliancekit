@@ -75,6 +75,16 @@ var templateFuncs = template.FuncMap{
 	// progress bar uses.
 	"list": func(items ...string) []string { return items },
 	"add":  func(a, b int) int { return a + b },
+	// first returns the first element of a []string or "" if the
+	// slice is nil/empty. Lets templates safely echo the currently-
+	// selected value of a single-select form control without
+	// length-guards everywhere.
+	"first": func(s []string) string {
+		if len(s) == 0 {
+			return ""
+		}
+		return s[0]
+	},
 }
 
 // initialsFromEmail returns up to 2 upper-case characters derived from
@@ -171,7 +181,7 @@ func (u *UI) Mount(r chi.Router) {
 		r.Get("/providers", func(w http.ResponseWriter, req *http.Request) {
 			http.Redirect(w, req, "/settings/providers", http.StatusMovedPermanently)
 		})
-		r.Get("/checks", u.listChecks)
+		u.mountChecksRoutes(r)
 		u.mountSetupRoutes(r)
 		u.mountSettingsRoutes(r)
 	})
@@ -297,33 +307,6 @@ func (u *UI) showScan(w http.ResponseWriter, r *http.Request) {
 	// renders the same template the v1.2 release ships.
 	rep := htmlReport{}
 	rep.RenderInline(w, findings)
-}
-
-type checkItem struct {
-	ID       string
-	Severity string
-	Provider string
-	Service  string
-	Title    string
-	Enabled  bool
-}
-
-func (u *UI) listChecks(w http.ResponseWriter, r *http.Request) {
-	overrides := u.loadCheckOverrides(r.Context())
-	checks := compliancekit.RegisteredChecks()
-	items := make([]checkItem, 0, len(checks))
-	for _, c := range checks {
-		enabled := true
-		if v, ok := overrides[c.ID]; ok {
-			enabled = v
-		}
-		items = append(items, checkItem{
-			ID: c.ID, Severity: c.Severity.String(),
-			Provider: c.Provider, Service: c.Service,
-			Title: c.Title, Enabled: enabled,
-		})
-	}
-	u.render(w, "checks.html", u.viewFor(r, "Checks", "checks", View{Items: items, Total: len(items)}))
 }
 
 func (u *UI) loadCheckOverrides(ctx context.Context) map[string]bool {
