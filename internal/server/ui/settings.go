@@ -34,6 +34,8 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
 // providerRow is what the settings list iterates over — the catalog
@@ -60,21 +62,24 @@ type providerRow struct {
 // fields without doing JSON-parsing in the template layer.
 type providerDetail struct {
 	View
-	Row    providerRow
-	Config providerConfig
-	Flash  string
-	Error  string
+	Row               providerRow
+	Config            providerConfig
+	AvailableServices []string // Phase 4: every service known for this provider
+	Flash             string
+	Error             string
 }
 
 // providerConfig is the typed view of providers.config_json. v1.4
 // Phase 2 ships DO + the cross-provider Region / Exclusions / Tags
-// shape; later phases add provider-specific extensions (K8s
-// contexts, GCP projects, AWS assume-role-arn) without breaking the
-// JSON column.
+// shape; Phase 4 adds Services (explicit allow-list — empty means
+// "every service the catalog defines"). Later phases add provider-
+// specific extensions (K8s contexts, GCP projects, AWS assume-role-
+// arn) without breaking the JSON column.
 type providerConfig struct {
 	Token      string   `json:"token,omitempty"`
 	Region     string   `json:"region,omitempty"`
 	Exclusions []string `json:"exclusions,omitempty"`
+	Services   []string `json:"services,omitempty"` // Phase 4: granular per-service allow-list
 }
 
 // mountSettingsRoutes registers the /settings/* surface. Called from
@@ -85,7 +90,27 @@ func (u *UI) mountSettingsRoutes(r chi.Router) {
 	r.Post("/settings/providers/{id}/test", u.settingsTestProvider)
 	r.Post("/settings/providers/{id}/credentials", u.settingsRotateCredentials)
 	r.Post("/settings/providers/{id}/config", u.settingsUpdateConfig)
+	r.Post("/settings/providers/{id}/services", u.settingsUpdateServices)
 	r.Post("/settings/providers/{id}/enabled", u.settingsToggleEnabled)
+}
+
+// providerServicesFromRegistry returns the sorted set of service ids
+// known for a given provider, derived from compliancekit.RegisteredChecks.
+// Drives the Phase 4 service-selector chip set without hard-coding
+// per-provider service lists — adding a new check under a new service
+// surfaces it automatically.
+func providerServicesFromRegistry(providerID string) []string {
+	seen := map[string]struct{}{}
+	for _, c := range compliancekit.RegisteredChecks() {
+		if c.Provider != providerID {
+			continue
+		}
+		if c.Service == "" {
+			continue
+		}
+		seen[c.Service] = struct{}{}
+	}
+	return sortedKeys(seen)
 }
 
 // settingsListProviders renders the providers list with auth-status
@@ -110,11 +135,12 @@ func (u *UI) settingsShowProvider(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	detail := providerDetail{
-		View:   u.viewFor(r, row.Name+" · Providers", "settings", View{}),
-		Row:    row,
-		Config: row.parsedConfig(),
-		Flash:  r.URL.Query().Get("flash"),
-		Error:  r.URL.Query().Get("err"),
+		View:              u.viewFor(r, row.Name+" · Providers", "settings", View{}),
+		Row:               row,
+		Config:            row.parsedConfig(),
+		AvailableServices: providerServicesFromRegistry(id),
+		Flash:             r.URL.Query().Get("flash"),
+		Error:             r.URL.Query().Get("err"),
 	}
 	u.render(w, "settings_provider_detail.html", detail)
 }
@@ -223,6 +249,50 @@ func (u *UI) settingsUpdateConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	http.Redirect(w, r, "/settings/providers/"+id+"?flash=saved", http.StatusSeeOther)
+}
+
+// settingsUpdateServices saves the per-provider service allow-list.
+// Empty allow-list (zero checked boxes) is the explicit "scan every
+// service" signal — equivalent to the unconfigured default. Storing
+// it that way keeps the YAML preview (Phase 6) clean.
+func (u *UI) settingsUpdateServices(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	row, err := u.loadProviderRow(r.Context(), id)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "parse form: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Validate each posted service against the registry — guards
+	// against a tampered POST writing arbitrary strings into config.
+	known := map[string]struct{}{}
+	for _, s := range providerServicesFromRegistry(id) {
+		known[s] = struct{}{}
+	}
+	cfg := row.parsedConfig()
+	picked := []string{}
+	for _, s := range r.PostForm["service"] {
+		if _, ok := known[s]; ok {
+			picked = append(picked, s)
+		}
+	}
+	// If every known service is picked, store nil (the "all" sentinel)
+	// so Phase 6's YAML preview doesn't emit a 30-line allow-list.
+	if len(picked) == len(known) {
+		cfg.Services = nil
+	} else {
+		cfg.Services = picked
+	}
+
+	if err := u.writeProviderConfig(r.Context(), id, cfg, errKeepExistingStatus); err != nil {
+		u.fail(w, "persist services: "+err.Error())
+		return
+	}
+	http.Redirect(w, r, "/settings/providers/"+id+"?flash=services-saved", http.StatusSeeOther)
 }
 
 // settingsToggleEnabled flips the enabled flag. Disabled providers

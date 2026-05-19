@@ -85,6 +85,17 @@ var templateFuncs = template.FuncMap{
 		}
 		return s[0]
 	},
+	// contains reports whether `haystack` includes `needle`. Used by
+	// Phase 4 service-selector checkboxes to mark previously-picked
+	// services as checked.
+	"contains": func(haystack []string, needle string) bool {
+		for _, h := range haystack {
+			if h == needle {
+				return true
+			}
+		}
+		return false
+	},
 }
 
 // initialsFromEmail returns up to 2 upper-case characters derived from

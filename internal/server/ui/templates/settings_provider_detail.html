@@ -20,6 +20,8 @@
     <div class="mb-4 rounded-md border border-success/30 bg-success/10 px-3 py-2 text-sm text-success">Credentials rotated. The new token is now active.</div>
   {{ else if eq .Flash "saved" }}
     <div class="mb-4 rounded-md border border-success/30 bg-success/10 px-3 py-2 text-sm text-success">Settings saved.</div>
+  {{ else if eq .Flash "services-saved" }}
+    <div class="mb-4 rounded-md border border-success/30 bg-success/10 px-3 py-2 text-sm text-success">Service selection saved.</div>
   {{ else if eq .Flash "enabled" }}
     <div class="mb-4 rounded-md border border-success/30 bg-success/10 px-3 py-2 text-sm text-success">Provider enabled — scans will now include {{ .Row.Name }}.</div>
   {{ else if eq .Flash "disabled" }}
@@ -141,6 +143,47 @@
         </div>
         {{ end }}
       </div>
+
+      <!-- Service selector (Phase 4) -->
+      {{ if and .Row.Configured .Row.Available .AvailableServices }}
+      <div class="ck-card p-5">
+        <div class="flex items-center justify-between gap-3">
+          <div>
+            <h2 class="text-base font-semibold">Services</h2>
+            <p class="text-xs text-muted-foreground mt-1">Untick a service to skip its collector entirely. Faster scans, smaller findings.</p>
+          </div>
+          <span class="text-[10px] uppercase tracking-wider text-muted-foreground bg-muted px-2 py-0.5 rounded">
+            {{ if .Config.Services }}{{ len .Config.Services }} / {{ len .AvailableServices }} picked{{ else }}all {{ len .AvailableServices }} enabled{{ end }}
+          </span>
+        </div>
+
+        <form action="/settings/providers/{{ .Row.ID }}/services" method="post" class="mt-4 space-y-3">
+          <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
+
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {{ $picked := .Config.Services }}
+            {{ range .AvailableServices }}
+            <label class="relative flex items-center gap-2 rounded-md border border-border px-3 py-2 cursor-pointer hover:bg-muted/40 transition has-[:checked]:border-primary has-[:checked]:bg-primary/5">
+              <input type="checkbox"
+                     name="service"
+                     value="{{ . }}"
+                     {{ if or (not $picked) (contains $picked .) }}checked{{ end }}
+                     class="h-4 w-4 rounded border-input text-primary focus:ring-ring">
+              <span class="font-mono text-xs">{{ . }}</span>
+            </label>
+            {{ end }}
+          </div>
+
+          <div class="flex items-center justify-between gap-2 pt-2">
+            <p class="text-xs text-muted-foreground">Empty = scan every service. Mirrors <code class="text-[11px] px-1 py-0.5 rounded bg-muted">services:</code> in <code class="text-[11px] px-1 py-0.5 rounded bg-muted">compliancekit.yaml</code>.</p>
+            <button type="submit"
+                    class="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary text-primary-foreground px-4 text-sm font-medium hover:opacity-90 transition shadow-soft">
+              Save services
+            </button>
+          </div>
+        </form>
+      </div>
+      {{ end }}
 
       <!-- Per-provider settings -->
       {{ if and .Row.Configured .Row.Available }}
