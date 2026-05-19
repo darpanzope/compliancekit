@@ -21,11 +21,14 @@ import (
 	"errors"
 	"fmt"
 	"html/template"
+	"io/fs"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/darpanzope/compliancekit/internal/server/assets"
 	"github.com/darpanzope/compliancekit/internal/server/auth"
 	"github.com/darpanzope/compliancekit/internal/server/store"
 	"github.com/darpanzope/compliancekit/pkg/compliancekit"
@@ -34,9 +37,78 @@ import (
 //go:embed templates/*.html
 var tmplFS embed.FS
 
-// tmpl is parsed once at init. Each render takes the page-specific
-// content template name + the View payload.
-var tmpl = template.Must(template.ParseFS(tmplFS, "templates/*.html"))
+// navItem is a single sidebar entry — href, label, the .Active key
+// the page sets to highlight itself, and the inline SVG glyph (raw
+// HTML, trusted at build time). New nav rows go here and base.html
+// renders them automatically.
+type navItem struct {
+	Href, Key, Label string
+	Icon             template.HTML
+}
+
+// defaultNav lists the v1.4 nav surface. v1.5+ extends with explorer,
+// resource map, score-over-time. Add rows here, not in base.html, so
+// every layout (including v1.4 Studio sub-pages later) renders the
+// same chrome.
+var defaultNav = []navItem{
+	{Href: "/scans", Key: "scans", Label: "Scans",
+		Icon: template.HTML(`<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>`)},
+	{Href: "/providers", Key: "providers", Label: "Providers",
+		Icon: template.HTML(`<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>`)},
+	{Href: "/checks", Key: "checks", Label: "Checks",
+		Icon: template.HTML(`<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`)},
+}
+
+// templateFuncs are exposed to base.html + every content template.
+// Keep this tiny — heavy logic stays in Go, templates stay layout-only.
+var templateFuncs = template.FuncMap{
+	"navItems":     func() []navItem { return defaultNav },
+	"userInitials": initialsFromEmail,
+}
+
+// initialsFromEmail returns up to 2 upper-case characters derived from
+// the email's local part (before the @). "jane.doe@acme.com" → "JD";
+// "alice@acme.com" → "A"; empty input → "?". Drives the gradient
+// avatar in the topbar — no third-party avatar service.
+func initialsFromEmail(email string) string {
+	at := strings.IndexByte(email, '@')
+	local := email
+	if at >= 0 {
+		local = email[:at]
+	}
+	if local == "" {
+		return "?"
+	}
+	var out []byte
+	prevWasSep := true
+	for i := 0; i < len(local) && len(out) < 2; i++ {
+		c := local[i]
+		if c == '.' || c == '-' || c == '_' || c == '+' {
+			prevWasSep = true
+			continue
+		}
+		if prevWasSep {
+			out = append(out, byteUpper(c))
+			prevWasSep = false
+		}
+	}
+	if len(out) == 0 {
+		return "?"
+	}
+	return string(out)
+}
+
+func byteUpper(b byte) byte {
+	if b >= 'a' && b <= 'z' {
+		return b - 32
+	}
+	return b
+}
+
+// tmpl is parsed once at init with the shared funcmap so navItems +
+// userInitials resolve inside base.html. Each render takes the
+// page-specific content template name + the View payload.
+var tmpl = template.Must(template.New("ui").Funcs(templateFuncs).ParseFS(tmplFS, "templates/*.html"))
 
 // UI is the handler bundle. Constructed with the same store + auth
 // dependencies the API layer uses.
@@ -70,8 +142,12 @@ type View struct {
 }
 
 // Mount installs the UI routes on r. Login is open; everything else
-// gated by sessions.RequireAuth.
+// gated by sessions.RequireAuth. /assets/* is unauthenticated by
+// design — CSS + vendored JS that the login page needs before a
+// session exists.
 func (u *UI) Mount(r chi.Router) {
+	r.Get("/assets/*", assetsHandler())
+
 	r.Get("/", u.rootRedirect)
 	r.Get("/login", u.login)
 	r.Post("/logout", u.logout)
@@ -83,6 +159,25 @@ func (u *UI) Mount(r chi.Router) {
 		r.Get("/providers", u.listProviders)
 		r.Get("/checks", u.listChecks)
 	})
+}
+
+// assetsHandler serves the embedded UI bundle (Tailwind CSS + vendored
+// htmx/Alpine/Preline). Strips the /assets/ prefix and delegates to
+// http.FileServerFS. Sets a long Cache-Control because asset filenames
+// are version-pinned at build time (the bundle changes only when
+// `make ui` regenerates it, which means a daemon redeploy anyway).
+func assetsHandler() http.HandlerFunc {
+	sub, _ := fs.Sub(assets.FS, ".")
+	fileServer := http.FileServerFS(sub)
+	return func(w http.ResponseWriter, r *http.Request) {
+		// chi strips the route prefix when using {pattern}, but the
+		// catch-all (*) keeps it; trim manually so FileServerFS sees
+		// the bare filename it expects under the embed root.
+		r2 := r.Clone(r.Context())
+		r2.URL.Path = strings.TrimPrefix(r.URL.Path, "/assets")
+		w.Header().Set("Cache-Control", "public, max-age=86400, immutable")
+		fileServer.ServeHTTP(w, r2)
+	}
 }
 
 func (u *UI) rootRedirect(w http.ResponseWriter, r *http.Request) {

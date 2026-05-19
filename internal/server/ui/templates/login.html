@@ -1,15 +1,45 @@
 {{define "content"}}
-<div class="login-card">
-  <h1>Sign in</h1>
-  {{ if .Flash }}<div class="alert error">{{ .Flash }}</div>{{ end }}
-  <form action="/api/auth/login" method="post">
+<div class="ck-card-elevated w-full max-w-sm p-8">
+  <div class="flex items-center gap-2.5 mb-6">
+    <span class="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-primary text-white font-bold text-sm">ck</span>
+    <span class="flex flex-col leading-tight">
+      <span class="font-semibold text-base text-foreground">compliancekit</span>
+      <span class="text-[10px] uppercase tracking-wider text-muted-foreground">security platform</span>
+    </span>
+  </div>
+
+  <h1 class="text-xl font-semibold tracking-tight mb-1">Sign in</h1>
+  <p class="text-sm text-muted-foreground mb-6">Access your daemon's findings, scans and settings.</p>
+
+  {{ if .Flash }}
+    <div class="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">{{ .Flash }}</div>
+  {{ end }}
+
+  <form action="/api/auth/login" method="post" class="space-y-4">
     {{ if .Next }}<input type="hidden" name="next" value="{{ .Next }}">{{ end }}
-    <label for="email">Email</label>
-    <input type="email" id="email" name="email" autocomplete="username" required autofocus>
-    <label for="password">Password</label>
-    <input type="password" id="password" name="password" autocomplete="current-password" required>
-    <button type="submit">Sign in</button>
+
+    <div class="space-y-1.5">
+      <label for="email" class="block text-xs font-medium text-foreground">Email</label>
+      <input type="email" id="email" name="email"
+             autocomplete="username" required autofocus
+             class="w-full h-10 rounded-md border border-input bg-background px-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring transition">
+    </div>
+
+    <div class="space-y-1.5">
+      <label for="password" class="block text-xs font-medium text-foreground">Password</label>
+      <input type="password" id="password" name="password"
+             autocomplete="current-password" required
+             class="w-full h-10 rounded-md border border-input bg-background px-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring transition">
+    </div>
+
+    <button type="submit"
+            class="w-full h-10 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-ring transition shadow-soft">
+      Sign in
+    </button>
   </form>
-  <p class="footer-link">Or use an upstream identity provider — see the <a href="/docs/oidc">OIDC setup guide</a>.</p>
+
+  <p class="mt-6 text-center text-xs text-muted-foreground">
+    Or use an upstream identity provider — see the <a href="/docs/oidc" class="text-primary hover:underline">OIDC setup guide</a>.
+  </p>
 </div>
 {{end}}

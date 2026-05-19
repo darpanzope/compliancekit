@@ -1,0 +1,173 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+  v1.4 Phase 0 design tokens — the foundation v1.18 design-system
+  expansion (ADR-016 magnificent-dashboard layer) builds on. Three
+  palettes (light / dark / high-contrast) reference the same token
+  names; per-domain palettes give security UIs domain-semantic colors
+  instead of generic primary/secondary.
+
+  All HSL so Tailwind's hsl() consumption works cleanly. Add new
+  tokens here; never inline a color anywhere else.
+*/
+
+@layer base {
+  :root {
+    /* Brand */
+    --primary: 239 66% 58%;
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 251 71% 67%;
+
+    /* Surfaces */
+    --background: 220 25% 98%;
+    --foreground: 234 20% 12%;
+    --card: 0 0% 100%;
+    --card-foreground: 234 20% 12%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 234 20% 12%;
+
+    --muted: 220 14% 96%;
+    --muted-foreground: 234 10% 50%;
+    --accent: 192 91% 48%;
+    --accent-foreground: 0 0% 100%;
+    --secondary: 220 14% 96%;
+    --secondary-foreground: 234 20% 12%;
+
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 239 66% 58%;
+
+    /* Semantics */
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+
+    /* Severity (per-domain) */
+    --severity-critical: 0 84% 60%;
+    --severity-critical-bg: 0 86% 97%;
+    --severity-high: 25 95% 53%;
+    --severity-high-bg: 33 100% 96%;
+    --severity-medium: 43 96% 56%;
+    --severity-medium-bg: 55 92% 95%;
+    --severity-low: 217 91% 60%;
+    --severity-low-bg: 214 95% 93%;
+    --severity-info: 215 16% 47%;
+    --severity-info-bg: 210 40% 96%;
+
+    /* Status (per-domain) */
+    --status-open: 0 84% 60%;
+    --status-acknowledged: 43 96% 56%;
+    --status-resolved: 142 71% 45%;
+    --status-false-positive: 215 16% 47%;
+    --status-running: 217 91% 60%;
+    --status-completed: 142 71% 45%;
+    --status-failed: 0 84% 60%;
+    --status-pending: 215 16% 47%;
+
+    /* Resource type (per-domain) — covers every provider compliancekit
+       ships at v1.3; extended in v1.18 for the full DO/AWS/GCP/Hetzner/
+       K8s/Linux taxonomy. */
+    --resource-droplet: 217 91% 60%;
+    --resource-database: 271 91% 65%;
+    --resource-kubernetes: 189 94% 43%;
+    --resource-spaces: 25 95% 53%;
+    --resource-load-balancer: 142 76% 36%;
+    --resource-firewall: 0 84% 60%;
+    --resource-vpc: 251 71% 67%;
+    --resource-domain: 178 78% 40%;
+
+    /* Sidebar palette family */
+    --sidebar: 0 0% 100%;
+    --sidebar-foreground: 234 20% 12%;
+    --sidebar-primary: 239 66% 58%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 14% 96%;
+    --sidebar-accent-foreground: 234 20% 12%;
+    --sidebar-border: 220 13% 91%;
+
+    /* Geometry */
+    --radius: 0.75rem;
+
+    /* Named shadow scale */
+    --shadow-soft: 0 4px 16px -4px rgb(0 0 0 / 0.08);
+    --shadow-elevated: 0 10px 30px -10px rgb(99 102 241 / 0.2);
+    --shadow-floating: 0 20px 50px -12px rgb(0 0 0 / 0.25);
+  }
+
+  .dark {
+    --background: 234 25% 8%;
+    --foreground: 220 14% 96%;
+    --card: 234 20% 12%;
+    --card-foreground: 220 14% 96%;
+    --popover: 234 20% 12%;
+    --popover-foreground: 220 14% 96%;
+
+    --primary: 251 71% 67%;
+    --primary-foreground: 234 25% 8%;
+    --primary-glow: 239 66% 58%;
+
+    --secondary: 234 15% 16%;
+    --secondary-foreground: 220 14% 96%;
+    --muted: 234 15% 16%;
+    --muted-foreground: 234 10% 65%;
+    --accent: 192 91% 48%;
+    --accent-foreground: 0 0% 100%;
+
+    --border: 234 15% 20%;
+    --input: 234 15% 20%;
+    --ring: 251 71% 67%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+
+    /* Severity bg variants get reduced opacity overlay in dark mode */
+    --severity-critical-bg: 0 63% 31%;
+    --severity-high-bg: 25 63% 31%;
+    --severity-medium-bg: 43 63% 31%;
+    --severity-low-bg: 217 63% 31%;
+    --severity-info-bg: 215 16% 27%;
+
+    --sidebar: 234 20% 12%;
+    --sidebar-foreground: 220 14% 96%;
+    --sidebar-primary: 251 71% 67%;
+    --sidebar-primary-foreground: 234 25% 8%;
+    --sidebar-accent: 234 15% 16%;
+    --sidebar-accent-foreground: 220 14% 96%;
+    --sidebar-border: 234 15% 20%;
+
+    --shadow-soft: 0 4px 16px -4px rgb(0 0 0 / 0.4);
+    --shadow-elevated: 0 10px 30px -10px rgb(0 0 0 / 0.6);
+    --shadow-floating: 0 20px 50px -12px rgb(0 0 0 / 0.7);
+  }
+}
+
+@layer components {
+  /* Card surface used across the daemon UI. Composes the card token +
+     soft shadow. Add new variants here (flat/raised/floating/glass at
+     v1.18). */
+  .ck-card {
+    @apply rounded-xl border border-border bg-card text-card-foreground;
+    box-shadow: var(--shadow-soft);
+  }
+
+  .ck-card-elevated {
+    @apply rounded-xl border border-border bg-card text-card-foreground;
+    box-shadow: var(--shadow-elevated);
+  }
+
+  /* Severity pill — solid label-on-bg. */
+  .ck-pill-critical { @apply px-2 py-0.5 rounded-full text-xs font-medium text-white; background-color: hsl(var(--severity-critical)); }
+  .ck-pill-high     { @apply px-2 py-0.5 rounded-full text-xs font-medium text-white; background-color: hsl(var(--severity-high)); }
+  .ck-pill-medium   { @apply px-2 py-0.5 rounded-full text-xs font-medium text-white; background-color: hsl(var(--severity-medium)); }
+  .ck-pill-low      { @apply px-2 py-0.5 rounded-full text-xs font-medium text-white; background-color: hsl(var(--severity-low)); }
+  .ck-pill-info     { @apply px-2 py-0.5 rounded-full text-xs font-medium text-white; background-color: hsl(var(--severity-info)); }
+}

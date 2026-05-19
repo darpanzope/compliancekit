@@ -1,0 +1,18 @@
+// Package assets embeds the compiled UI bundle (Tailwind output +
+// vendored htmx, Alpine, Preline) produced by `make ui`. The files
+// are committed under internal/server/assets/ and re-generated from
+// internal/server/ui/src/ + internal/server/ui/vendor/ by the build
+// pipeline. CI gates on `make ui-check`.
+//
+// Why a separate package: go:embed paths cannot traverse upward
+// (no ".."), so the embed.FS lives next to the bundled files. The
+// UI package imports this FS and serves it at /assets/*.
+package assets
+
+import "embed"
+
+// FS holds the daemon's compiled UI bundle: Tailwind output + vendored
+// JS libraries. Served at /assets/* by the ui package.
+//
+//go:embed app.css htmx.min.js alpine.min.js preline.js
+var FS embed.FS

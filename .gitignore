@@ -6,6 +6,12 @@ dist/
 coverage.txt
 coverage.html
 
+# v1.4 UI build pipeline (per-developer toolchain cache; the standalone
+# Tailwind CLI lives here after `make ui-setup`). Compiled assets
+# under internal/server/assets/ ARE committed — CI gates on their
+# freshness via `make ui-check`.
+.cache/
+
 # IDE
 .idea/
 .vscode/

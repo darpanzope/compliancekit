@@ -35,6 +35,25 @@ make test
 make check        # lint + test, the gate you must clear before pushing
 ```
 
+### UI development (v1.4 Phase 0+)
+
+Touching `internal/server/ui/templates/` or `internal/server/ui/src/input.css`?
+You'll need the Tailwind standalone CLI — no Node, no npm:
+
+```
+make ui-setup     # one-time: downloads pinned tailwindcss binary into .cache/
+make ui           # recompiles internal/server/assets/{app.css,*.js}
+git add internal/server/assets/
+```
+
+`make check` includes `make ui-check`, which fails if the committed
+`internal/server/assets/` is stale vs. the sources. Bumping a vendored
+JS library (htmx / Alpine / Preline) means: drop the new file under
+`internal/server/ui/vendor/` with the version suffix in the filename,
+bump the matching `*_VERSION` variable in the Makefile, run `make ui`,
+commit both. See [ADR-015](DECISIONS.md#adr-015--serve-ui-is-htmx--alpine--tailwind--preline--vanilla-svg-embedded-at-build-time)
+for the UI stack rationale.
+
 lefthook installs three Git hooks that mirror CI:
 
 - `pre-commit`: `go fmt`, `goimports`, `go mod tidy`, `go vet`, `golangci-lint run` on staged Go files only
