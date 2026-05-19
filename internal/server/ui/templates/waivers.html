@@ -1,0 +1,114 @@
+{{define "content"}}
+<div class="max-w-6xl mx-auto">
+  <div class="flex items-end justify-between gap-4 mb-6">
+    <div>
+      <h1 class="text-2xl font-semibold tracking-tight">Waivers</h1>
+      <p class="text-sm text-muted-foreground mt-1">Mute findings the right way — every waiver carries a reason, an approver, and an optional expiry date. Auditors see all three in the evidence pack.</p>
+    </div>
+  </div>
+
+  {{ if eq .Flash "created" }}<div class="mb-4 rounded-md border border-success/30 bg-success/10 px-3 py-2 text-sm text-success">Waiver created.</div>{{ end }}
+  {{ if eq .Flash "revoked" }}<div class="mb-4 rounded-md border border-warning/30 bg-warning/10 px-3 py-2 text-sm text-warning">Waiver revoked. Audit trail preserved.</div>{{ end }}
+  {{ if eq .Error "missing-fields" }}<div class="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">All fields except expiry are required.</div>{{ end }}
+  {{ if eq .Error "bad-date" }}<div class="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">Expiry date must be YYYY-MM-DD.</div>{{ end }}
+  {{ if eq .Error "not-found" }}<div class="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">Waiver not found or already revoked.</div>{{ end }}
+
+  <!-- Stats row -->
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+    <div class="ck-card p-4">
+      <div class="text-[11px] uppercase tracking-wider text-muted-foreground">Active</div>
+      <div class="mt-1 text-2xl font-semibold tabular-nums text-success">{{ .ActiveCount }}</div>
+    </div>
+    <div class="ck-card p-4 {{ if gt .ExpiringSoon 0 }}border-warning/40 bg-warning/5{{ end }}">
+      <div class="text-[11px] uppercase tracking-wider text-muted-foreground">Expiring within 14d</div>
+      <div class="mt-1 text-2xl font-semibold tabular-nums {{ if gt .ExpiringSoon 0 }}text-warning{{ end }}">{{ .ExpiringSoon }}</div>
+    </div>
+    <div class="ck-card p-4">
+      <div class="text-[11px] uppercase tracking-wider text-muted-foreground">Expired</div>
+      <div class="mt-1 text-2xl font-semibold tabular-nums text-muted-foreground">{{ .ExpiredCount }}</div>
+    </div>
+  </div>
+
+  <!-- Create form -->
+  <div class="ck-card p-5 mb-6">
+    <h2 class="text-base font-semibold mb-1">Add waiver</h2>
+    <p class="text-xs text-muted-foreground mb-4">resource_id supports glob wildcards (<code class="text-[11px] px-1 py-0.5 rounded bg-muted">droplet/test-*</code>).</p>
+
+    <form action="/waivers" method="post" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
+      <div class="space-y-1">
+        <label for="check_id" class="block text-xs font-medium text-foreground">Check ID</label>
+        <input type="text" id="check_id" name="check_id" required placeholder="do-spaces-public-acl"
+               class="w-full h-10 rounded-md border border-input bg-background px-3 text-sm font-mono placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring transition">
+      </div>
+      <div class="space-y-1">
+        <label for="resource_id" class="block text-xs font-medium text-foreground">Resource ID (glob OK)</label>
+        <input type="text" id="resource_id" name="resource_id" required placeholder="droplet/test-* or *"
+               class="w-full h-10 rounded-md border border-input bg-background px-3 text-sm font-mono placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring transition">
+      </div>
+      <div class="md:col-span-2 space-y-1">
+        <label for="reason" class="block text-xs font-medium text-foreground">Justification</label>
+        <textarea id="reason" name="reason" rows="2" required placeholder="Acceptable risk — staging only; data is synthetic."
+                  class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring transition"></textarea>
+      </div>
+      <div class="space-y-1">
+        <label for="approver" class="block text-xs font-medium text-foreground">Approver</label>
+        <input type="text" id="approver" name="approver" required placeholder="security-team@example.com"
+               class="w-full h-10 rounded-md border border-input bg-background px-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring transition">
+      </div>
+      <div class="space-y-1">
+        <label for="expires_at" class="block text-xs font-medium text-foreground">Expires (optional)</label>
+        <input type="date" id="expires_at" name="expires_at"
+               class="w-full h-10 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring transition">
+      </div>
+      <div class="md:col-span-2 flex justify-end">
+        <button type="submit" class="inline-flex h-10 items-center gap-1.5 rounded-md bg-primary text-primary-foreground px-4 text-sm font-medium hover:opacity-90 transition shadow-soft">Add waiver</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Table -->
+  <div class="ck-card overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-muted/50">
+          <tr class="text-left">
+            <th class="px-4 py-3 text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Status</th>
+            <th class="px-4 py-3 text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Check</th>
+            <th class="px-4 py-3 text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Resource</th>
+            <th class="px-4 py-3 text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Approver</th>
+            <th class="px-4 py-3 text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Expires</th>
+            <th class="px-4 py-3"></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-border">
+          {{ range .Items }}
+          <tr class="hover:bg-muted/30 transition-colors">
+            <td class="px-4 py-3">
+              {{ if eq .Status "active" }}<span class="inline-flex items-center gap-1.5 text-xs"><span class="h-2 w-2 rounded-full bg-success"></span>Active</span>
+              {{ else if eq .Status "expired" }}<span class="inline-flex items-center gap-1.5 text-xs text-muted-foreground"><span class="h-2 w-2 rounded-full bg-muted-foreground"></span>Expired</span>
+              {{ else }}<span class="inline-flex items-center gap-1.5 text-xs text-muted-foreground"><span class="h-2 w-2 rounded-full bg-destructive"></span>Revoked</span>
+              {{ end }}
+            </td>
+            <td class="px-4 py-3 font-mono text-xs">{{ .CheckID }}</td>
+            <td class="px-4 py-3 font-mono text-xs text-muted-foreground">{{ .ResourceID }}</td>
+            <td class="px-4 py-3 text-xs">{{ .Approver }}</td>
+            <td class="px-4 py-3 text-xs tabular-nums {{ if eq .Status "expired" }}text-destructive{{ end }}">{{ .ExpiresIn }}</td>
+            <td class="px-4 py-3 text-right">
+              {{ if eq .Status "active" }}
+              <form action="/waivers/{{ .ID }}/revoke" method="post" class="inline-flex" onsubmit="return confirm('Revoke this waiver? The audit trail is preserved but the finding will return at the next scan.');">
+                <input type="hidden" name="csrf_token" value="{{ $.CSRFToken }}">
+                <button type="submit" class="text-xs text-destructive hover:underline">Revoke</button>
+              </form>
+              {{ end }}
+            </td>
+          </tr>
+          {{ else }}
+          <tr><td colspan="6" class="p-8 text-center text-sm text-muted-foreground">No waivers yet. The form above adds the first one.</td></tr>
+          {{ end }}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{{end}}
