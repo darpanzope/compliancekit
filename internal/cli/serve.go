@@ -32,6 +32,7 @@ func newServeCmd() *cobra.Command {
 	cfg := server.Default()
 	var dbPath string
 	var githubSecret string
+	var demoSeed bool
 	cmd := &cobra.Command{
 		Use:   "serve",
 		Short: "Run the compliancekit daemon (HTTP server + web UI)",
@@ -61,13 +62,20 @@ period for in-flight requests to drain.`,
   compliancekit serve --port=9000
   compliancekit serve --addr=0.0.0.0 --port=8080  # bind all interfaces (review your firewall)`,
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			return runServe(cmd.Context(), cmd.OutOrStdout(), cfg, dbPath, githubSecret)
+			return runServe(cmd.Context(), cmd.OutOrStdout(), cfg, dbPath, githubSecret, demoSeed)
 		},
 	}
 	cmd.Flags().StringVar(&cfg.Addr, "addr", cfg.Addr, "bind interface (use 0.0.0.0 to expose on every NIC)")
 	cmd.Flags().IntVar(&cfg.Port, "port", cfg.Port, "TCP port")
 	cmd.Flags().StringVar(&dbPath, "db", "./.compliancekit/serve.db", "SQLite file path (or postgres://... DSN; see CONFIGURATION.md)")
 	cmd.Flags().StringVar(&githubSecret, "github-webhook-secret", "", "shared secret for the /webhooks/github HMAC verification (empty disables the route)")
+	cmd.Flags().BoolVar(&demoSeed, "demo", false, "seed a realistic demo dataset (users / providers / scans / inbox) into a fresh SQLite — screenshot-grade evaluator UX day one")
+
+	// v1.4 Phase 12: daemon-bootstrap subcommands (users / tokens).
+	// `compliancekit serve users create --admin --email=…` no longer
+	// requires a throwaway Go program to call auth.NewUsers().Create()
+	// directly — same factories the daemon uses.
+	addBootstrapSubcommands(cmd)
 	return cmd
 }
 
@@ -76,7 +84,7 @@ period for in-flight requests to drain.`,
 // the same code path without going through cobra.
 func runServe(ctx context.Context, stdout interface {
 	Write([]byte) (int, error)
-}, cfg server.Config, dbPath, githubSecret string) error {
+}, cfg server.Config, dbPath, githubSecret string, demoSeed bool) error {
 	// Open the persistent store. SQLite path or postgres:// DSN —
 	// both backends behind the same Store interface (phase 1 + 2).
 	st, err := openStore(ctx, dbPath)
@@ -86,6 +94,17 @@ func runServe(ctx context.Context, stdout interface {
 	defer func() { _ = st.Close() }()
 	if err := st.MigrateUp(ctx); err != nil {
 		return fmt.Errorf("migrate: %w", err)
+	}
+
+	// v1.4 Phase 12: --demo seeds a realistic dataset (demo admin
+	// user, two providers, three completed scans w/ descending trend,
+	// inbox alert) so evaluators see something interesting on every
+	// page within five seconds of boot.
+	if demoSeed {
+		if err := seedDemoData(ctx, st); err != nil {
+			return fmt.Errorf("seed demo: %w", err)
+		}
+		fmt.Fprintln(stdout, "  demo:    seeded (login demo@compliancekit.dev / demo-please-change)")
 	}
 
 	// Auth subjects.
