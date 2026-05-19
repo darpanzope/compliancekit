@@ -1,0 +1,55 @@
+{{define "content"}}
+<div class="max-w-3xl mx-auto">
+  <div class="flex items-end justify-between gap-4 mb-6">
+    <div>
+      <h1 class="text-2xl font-semibold tracking-tight">Inbox</h1>
+      <p class="text-sm text-muted-foreground mt-1">{{ if .UnreadCount }}<span class="text-primary font-medium tabular-nums">{{ .UnreadCount }}</span> unread{{ else }}All caught up.{{ end }}</p>
+    </div>
+    {{ if gt .UnreadCount 0 }}
+    <form action="/inbox/read-all" method="post">
+      <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
+      <button type="submit" class="inline-flex h-9 items-center gap-1.5 rounded-md border border-border bg-background px-3 text-sm font-medium hover:bg-muted transition">Mark all read</button>
+    </form>
+    {{ end }}
+  </div>
+
+  {{ if eq .Flash "read-all" }}<div class="mb-4 rounded-md border border-success/30 bg-success/10 px-3 py-2 text-sm text-success">All notifications marked read.</div>{{ end }}
+
+  <div class="space-y-2">
+    {{ range .Items }}
+    <div class="ck-card p-4 flex items-start gap-3 {{ if not .Read }}border-l-4 border-l-primary{{ end }}">
+      <span class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full mt-0.5
+        {{ if eq .Severity "critical" }}bg-destructive/10 text-destructive
+        {{ else if eq .Severity "warning" }}bg-warning/10 text-warning
+        {{ else if eq .Severity "success" }}bg-success/10 text-success
+        {{ else }}bg-primary/10 text-primary
+        {{ end }}">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          {{ if eq .Severity "critical" }}<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+          {{ else if eq .Severity "warning" }}<path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+          {{ else if eq .Severity "success" }}<polyline points="20 6 9 17 4 12"/>
+          {{ else }}<circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
+          {{ end }}
+        </svg>
+      </span>
+      <div class="flex-1 min-w-0">
+        <div class="flex items-center gap-2 text-sm font-semibold">
+          {{ if .Href }}<a href="{{ .Href }}" class="hover:underline">{{ .Title }}</a>{{ else }}{{ .Title }}{{ end }}
+          {{ if not .Read }}<span class="text-[10px] uppercase tracking-wider text-primary">new</span>{{ end }}
+        </div>
+        {{ if .Body }}<p class="text-xs text-muted-foreground mt-0.5">{{ .Body }}</p>{{ end }}
+        <div class="text-[11px] text-muted-foreground mt-1.5 tabular-nums">{{ .CreatedIn }}</div>
+      </div>
+      {{ if not .Read }}
+      <form action="/inbox/{{ .ID }}/read" method="post" class="shrink-0">
+        <input type="hidden" name="csrf_token" value="{{ $.CSRFToken }}">
+        <button type="submit" class="text-xs text-muted-foreground hover:text-foreground">Mark read</button>
+      </form>
+      {{ end }}
+    </div>
+    {{ else }}
+    <div class="ck-card p-8 text-center text-sm text-muted-foreground">No notifications yet. Critical findings + scan results + waiver expirations land here.</div>
+    {{ end }}
+  </div>
+</div>
+{{end}}

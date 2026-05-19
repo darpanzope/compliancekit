@@ -1,0 +1,44 @@
+{{define "content"}}
+<div class="max-w-6xl mx-auto">
+  <div class="mb-6">
+    <h1 class="text-2xl font-semibold tracking-tight">Audit log</h1>
+    <p class="text-sm text-muted-foreground mt-1">Append-only record of every config change, scan trigger, waiver addition, and credential rotation. Newest first.</p>
+  </div>
+
+  <div class="ck-card overflow-hidden">
+    <table class="w-full text-sm">
+      <thead class="bg-muted/50">
+        <tr class="text-left">
+          <th class="px-4 py-3 text-[11px] uppercase tracking-wider text-muted-foreground font-medium">When</th>
+          <th class="px-4 py-3 text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Actor</th>
+          <th class="px-4 py-3 text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Action</th>
+          <th class="px-4 py-3 text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Entity</th>
+          <th class="px-4 py-3 text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Metadata</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-border">
+        {{ range .Items }}
+        <tr class="hover:bg-muted/30 transition-colors">
+          <td class="px-4 py-3 text-xs text-muted-foreground tabular-nums whitespace-nowrap">{{ .CreatedIn }}</td>
+          <td class="px-4 py-3 text-xs">{{ if .ActorEmail }}{{ .ActorEmail }}{{ else }}<span class="text-muted-foreground">system</span>{{ end }}</td>
+          <td class="px-4 py-3 font-mono text-xs">{{ .Action }}</td>
+          <td class="px-4 py-3 font-mono text-xs text-muted-foreground">
+            {{ if .EntityType }}{{ .EntityType }}{{ if .EntityID }} / {{ .EntityID }}{{ end }}{{ else }}—{{ end }}
+          </td>
+          <td class="px-4 py-3 font-mono text-[11px] text-muted-foreground max-w-xs truncate">{{ .Metadata }}</td>
+        </tr>
+        {{ else }}
+        <tr><td colspan="5" class="p-8 text-center text-sm text-muted-foreground">No audit events yet.</td></tr>
+        {{ end }}
+      </tbody>
+    </table>
+  </div>
+
+  {{ if or (gt .Page 1) .HasNext }}
+  <div class="mt-4 flex items-center justify-between text-xs">
+    {{ if gt .Page 1 }}<a href="/audit?page={{ add .Page -1 }}" class="text-primary hover:underline">← Prev</a>{{ else }}<span></span>{{ end }}
+    {{ if .HasNext }}<a href="/audit?page={{ add .Page 1 }}" class="text-primary hover:underline">Next →</a>{{ end }}
+  </div>
+  {{ end }}
+</div>
+{{end}}
