@@ -1,0 +1,75 @@
+{{define "content"}}
+<div class="max-w-5xl mx-auto" x-data="{ tab: 'github', copied: '' }">
+  <div class="mb-6">
+    <a href="/settings/providers" class="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5">
+      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      Settings
+    </a>
+    <h1 class="mt-2 text-2xl font-semibold tracking-tight">CI workflows</h1>
+    <p class="text-sm text-muted-foreground mt-1">Drop the right file into your repo and the same scan runs on every PR + on a weekly schedule. Each tab targets a different CI runtime.</p>
+  </div>
+
+  <!-- Tab bar -->
+  <div class="border-b border-border mb-4">
+    <nav class="flex gap-1 -mb-px">
+      <button type="button" @click="tab = 'github'" :class="tab === 'github' ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'" class="px-4 py-2 text-sm font-medium border-b-2 transition">GitHub Actions</button>
+      <button type="button" @click="tab = 'gitlab'" :class="tab === 'gitlab' ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'" class="px-4 py-2 text-sm font-medium border-b-2 transition">GitLab CI</button>
+      <button type="button" @click="tab = 'circleci'" :class="tab === 'circleci' ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'" class="px-4 py-2 text-sm font-medium border-b-2 transition">CircleCI</button>
+    </nav>
+  </div>
+
+  <!-- GitHub panel -->
+  <div x-show="tab === 'github'">
+    <div class="flex items-center justify-between gap-3 mb-3">
+      <code class="text-xs font-mono text-muted-foreground">.github/workflows/compliance.yaml</code>
+      <div class="flex items-center gap-2">
+        <button type="button" @click="navigator.clipboard.writeText(document.getElementById('ci-github').textContent); copied = 'github'; setTimeout(() => copied = '', 2000)" class="inline-flex h-9 items-center gap-1.5 rounded-md border border-border bg-background px-3 text-sm font-medium hover:bg-muted transition">
+          <span x-show="copied !== 'github'" class="inline-flex items-center gap-1.5"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Copy</span>
+          <span x-show="copied === 'github'" x-cloak class="inline-flex items-center gap-1.5 text-success"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Copied</span>
+        </button>
+        <a href="/export/ci/github/download" class="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary text-primary-foreground px-4 text-sm font-medium hover:opacity-90 transition shadow-soft">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Download
+        </a>
+      </div>
+    </div>
+    <div class="ck-card overflow-hidden"><pre id="ci-github" class="font-mono text-xs leading-relaxed p-5 overflow-x-auto whitespace-pre">{{ .GitHub }}</pre></div>
+  </div>
+
+  <!-- GitLab panel -->
+  <div x-show="tab === 'gitlab'" x-cloak>
+    <div class="flex items-center justify-between gap-3 mb-3">
+      <code class="text-xs font-mono text-muted-foreground">.gitlab-ci.yml</code>
+      <div class="flex items-center gap-2">
+        <button type="button" @click="navigator.clipboard.writeText(document.getElementById('ci-gitlab').textContent); copied = 'gitlab'; setTimeout(() => copied = '', 2000)" class="inline-flex h-9 items-center gap-1.5 rounded-md border border-border bg-background px-3 text-sm font-medium hover:bg-muted transition">
+          <span x-show="copied !== 'gitlab'" class="inline-flex items-center gap-1.5"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Copy</span>
+          <span x-show="copied === 'gitlab'" x-cloak class="inline-flex items-center gap-1.5 text-success"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Copied</span>
+        </button>
+        <a href="/export/ci/gitlab/download" class="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary text-primary-foreground px-4 text-sm font-medium hover:opacity-90 transition shadow-soft">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Download
+        </a>
+      </div>
+    </div>
+    <div class="ck-card overflow-hidden"><pre id="ci-gitlab" class="font-mono text-xs leading-relaxed p-5 overflow-x-auto whitespace-pre">{{ .GitLab }}</pre></div>
+  </div>
+
+  <!-- CircleCI panel -->
+  <div x-show="tab === 'circleci'" x-cloak>
+    <div class="flex items-center justify-between gap-3 mb-3">
+      <code class="text-xs font-mono text-muted-foreground">.circleci/config.yml</code>
+      <div class="flex items-center gap-2">
+        <button type="button" @click="navigator.clipboard.writeText(document.getElementById('ci-circleci').textContent); copied = 'circleci'; setTimeout(() => copied = '', 2000)" class="inline-flex h-9 items-center gap-1.5 rounded-md border border-border bg-background px-3 text-sm font-medium hover:bg-muted transition">
+          <span x-show="copied !== 'circleci'" class="inline-flex items-center gap-1.5"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Copy</span>
+          <span x-show="copied === 'circleci'" x-cloak class="inline-flex items-center gap-1.5 text-success"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Copied</span>
+        </button>
+        <a href="/export/ci/circleci/download" class="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary text-primary-foreground px-4 text-sm font-medium hover:opacity-90 transition shadow-soft">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Download
+        </a>
+      </div>
+    </div>
+    <div class="ck-card overflow-hidden"><pre id="ci-circleci" class="font-mono text-xs leading-relaxed p-5 overflow-x-auto whitespace-pre">{{ .CircleCI }}</pre></div>
+  </div>
+</div>
+{{end}}
