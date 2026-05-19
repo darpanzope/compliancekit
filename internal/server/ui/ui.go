@@ -98,6 +98,59 @@ var templateFuncs = template.FuncMap{
 		}
 		return false
 	},
+	// chipGroupArgs packs the 4 fields filter_chip_group needs into
+	// a struct the template can iterate against. Go html/template
+	// forbids define-with-args, so the partial reads from a single
+	// `.` payload — this helper builds that payload.
+	"chipGroupArgs": func(label, name string, options []string, picked []string) any {
+		return chipGroup{Label: label, Name: name, Options: options, Picked: picked}
+	},
+	// activeFilterCount sums every non-empty filter dimension for the
+	// "N active filters" hint in the findings page footer.
+	"activeFilterCount": activeFilterCount,
+}
+
+// chipGroup is the partial-args struct filter_chip_group renders
+// against.
+type chipGroup struct {
+	Label   string
+	Name    string
+	Options []string
+	Picked  []string
+}
+
+// activeFilterCount returns the number of populated dimensions on
+// findingFilters. Empty / zero-value dimensions don't count.
+func activeFilterCount(f findingFilters) int {
+	n := 0
+	if len(f.Severities) > 0 {
+		n++
+	}
+	if len(f.Statuses) > 0 {
+		n++
+	}
+	if len(f.Providers) > 0 {
+		n++
+	}
+	if len(f.Frameworks) > 0 {
+		n++
+	}
+	if len(f.ResourceTypes) > 0 {
+		n++
+	}
+	if len(f.CheckIDs) > 0 {
+		n++
+	}
+	if f.NameQuery != "" {
+		n++
+	}
+	if f.ScanID != "" {
+		n++
+	}
+	if f.SinceDays > 0 {
+		n++
+	}
+	return n
 }
 
 // initialsFromEmail returns up to 2 upper-case characters derived from

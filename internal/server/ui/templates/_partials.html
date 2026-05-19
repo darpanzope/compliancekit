@@ -4,6 +4,28 @@ top-level {{ define }} blocks here rather than nesting them inside
 content templates — Go html/template forbids define-inside-define.
 */}}
 
+{{/*
+filter_chip_group renders a chip-style multi-select for one filter
+dimension. Picked chips are styled primary; unpicked are bordered.
+Each chip is a styled checkbox so the browser submits all checked
+values as repeated name=value pairs natively. v1.5 Phase 1.
+*/}}
+{{ define "filter_chip_group" }}
+<div>
+  <div class="text-[11px] uppercase tracking-wider text-muted-foreground mb-1.5">{{ .Label }}</div>
+  <div class="flex flex-wrap gap-1.5">
+    {{ $picked := .Picked }}
+    {{ $name := .Name }}
+    {{ range .Options }}
+    <label class="cursor-pointer">
+      <input type="checkbox" name="{{ $name }}" value="{{ . }}" {{ if contains $picked . }}checked{{ end }} class="peer sr-only">
+      <span class="inline-flex h-7 items-center px-2.5 rounded-full border border-border text-xs hover:bg-muted peer-checked:bg-primary peer-checked:text-primary-foreground peer-checked:border-primary transition">{{ . }}</span>
+    </label>
+    {{ end }}
+  </div>
+</div>
+{{ end }}
+
 {{ define "findings_row_body" }}
 {{ range .Items }}
 <tr class="hover:bg-muted/30 transition-colors">
