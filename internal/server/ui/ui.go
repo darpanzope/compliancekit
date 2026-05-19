@@ -259,6 +259,7 @@ func (u *UI) Mount(r chi.Router) {
 		u.mountAuditRoutes(r)
 		u.mountFindingsRoutes(r)
 		u.mountSavedViewRoutes(r)
+		u.mountFindingDetailRoutes(r)
 	})
 }
 
@@ -438,6 +439,25 @@ func (u *UI) viewFor(r *http.Request, title, active string, v View) View {
 		}
 	}
 	return v
+}
+
+// renderPartial executes one named template against view without
+// wrapping in the "base" chrome. Used by htmx endpoints (side-panel
+// detail / row sentinel) that swap into an existing page.
+//
+// Clones tmpl first so the cached parse stays untouched — html/template
+// disallows Clone after Execute, and the chrome-wrapping render path
+// relies on Cloning to inject the right content template per page.
+func (u *UI) renderPartial(w http.ResponseWriter, partialName string, view any) {
+	t, err := tmpl.Clone()
+	if err != nil {
+		http.Error(w, "render: clone: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	if err := t.ExecuteTemplate(w, partialName, view); err != nil {
+		http.Error(w, "render: "+err.Error(), http.StatusInternalServerError)
+	}
 }
 
 // render takes any view payload. The base + content templates resolve

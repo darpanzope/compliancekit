@@ -28,7 +28,11 @@ values as repeated name=value pairs natively. v1.5 Phase 1.
 
 {{ define "findings_row_body" }}
 {{ range .Items }}
-<tr class="hover:bg-muted/30 transition-colors">
+<tr class="hover:bg-muted/30 cursor-pointer transition-colors"
+    hx-get="/findings/{{ .ID }}/detail"
+    hx-target="#finding-detail-panel"
+    hx-swap="innerHTML"
+    @click="window.dispatchEvent(new CustomEvent('open-detail'))">
   <td class="px-4 py-3">{{ template "severity_pill" .Severity }}</td>
   <td class="px-4 py-3">
     {{ if eq .Status "fail" }}<span class="text-xs text-destructive font-medium">fail</span>

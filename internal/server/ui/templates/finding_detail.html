@@ -1,0 +1,126 @@
+{{ define "finding_detail" }}
+<div class="h-full flex flex-col" x-data="{ tab: 'overview' }">
+  <!-- Header -->
+  <div class="p-5 border-b border-border">
+    <div class="flex items-start justify-between gap-3">
+      <div class="min-w-0 flex-1">
+        <div class="flex items-center gap-2 mb-1.5">
+          {{ template "severity_pill" .Row.Severity }}
+          {{ if eq .Row.Status "fail" }}<span class="text-[10px] uppercase tracking-wider text-destructive font-medium">fail</span>
+          {{ else if eq .Row.Status "pass" }}<span class="text-[10px] uppercase tracking-wider text-success font-medium">pass</span>
+          {{ else if eq .Row.Status "error" }}<span class="text-[10px] uppercase tracking-wider text-warning font-medium">error</span>
+          {{ end }}
+          {{ if .WaiverActive }}<span class="text-[10px] uppercase tracking-wider text-muted-foreground bg-muted px-1.5 py-0.5 rounded">waived</span>{{ end }}
+        </div>
+        <h2 class="text-base font-semibold leading-snug">{{ if .CheckTitle }}{{ .CheckTitle }}{{ else }}{{ .Row.CheckID }}{{ end }}</h2>
+        <div class="text-xs font-mono text-muted-foreground mt-1">{{ .Row.CheckID }}</div>
+      </div>
+      <button type="button" @click="$dispatch('close-detail')"
+              class="shrink-0 inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition"
+              aria-label="Close detail panel">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Tab bar -->
+  <div class="border-b border-border px-5">
+    <nav class="flex gap-1 -mb-px">
+      <button type="button" @click="tab = 'overview'" :class="tab === 'overview' ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'" class="px-3 py-2 text-xs font-medium border-b-2 transition">Overview</button>
+      <button type="button" @click="tab = 'remediation'" :class="tab === 'remediation' ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'" class="px-3 py-2 text-xs font-medium border-b-2 transition">Remediation</button>
+      <button type="button" @click="tab = 'context'" :class="tab === 'context' ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'" class="px-3 py-2 text-xs font-medium border-b-2 transition">Context</button>
+    </nav>
+  </div>
+
+  <!-- Body -->
+  <div class="flex-1 overflow-y-auto">
+
+    <!-- Overview tab -->
+    <div x-show="tab === 'overview'" class="p-5 space-y-5 text-sm">
+      {{ if .Row.Message }}
+      <div>
+        <div class="text-[11px] uppercase tracking-wider text-muted-foreground mb-1.5">Finding</div>
+        <p class="text-foreground leading-relaxed">{{ .Row.Message }}</p>
+      </div>
+      {{ end }}
+
+      {{ if .CheckDesc }}
+      <div>
+        <div class="text-[11px] uppercase tracking-wider text-muted-foreground mb-1.5">Why this matters</div>
+        <p class="text-muted-foreground leading-relaxed">{{ .CheckDesc }}</p>
+      </div>
+      {{ end }}
+
+      <div>
+        <div class="text-[11px] uppercase tracking-wider text-muted-foreground mb-1.5">Resource</div>
+        <div class="ck-card p-3 text-xs space-y-1">
+          <div><span class="text-muted-foreground">name</span> <span class="font-medium ml-2">{{ .Row.ResourceName }}</span></div>
+          <div><span class="text-muted-foreground">id</span>   <span class="font-mono ml-2">{{ .Row.ResourceID }}</span></div>
+          <div><span class="text-muted-foreground">type</span> <span class="font-mono ml-2">{{ .Row.ResourceType }}</span></div>
+          <div><span class="text-muted-foreground">provider</span> <span class="font-mono ml-2">{{ .Row.Provider }}</span></div>
+        </div>
+      </div>
+
+      {{ if .Row.Frameworks }}
+      <div>
+        <div class="text-[11px] uppercase tracking-wider text-muted-foreground mb-1.5">Frameworks</div>
+        <div class="flex flex-wrap gap-1.5">
+          {{ range .Row.Frameworks }}<span class="inline-flex h-6 items-center px-2 rounded-full border border-border text-[11px]">{{ . }}</span>{{ end }}
+        </div>
+      </div>
+      {{ end }}
+
+      <div>
+        <div class="text-[11px] uppercase tracking-wider text-muted-foreground mb-1.5">Timeline</div>
+        <div class="ck-card p-3 text-xs space-y-1">
+          <div><span class="text-muted-foreground">first seen</span> <span class="font-medium tabular-nums ml-2">{{ .Row.FirstSeenIn }}</span></div>
+          <div><span class="text-muted-foreground">last seen</span>  <span class="font-medium tabular-nums ml-2">{{ .Row.LastSeenIn }}</span></div>
+        </div>
+      </div>
+
+      {{ if gt .WaiverCount 0 }}
+      <div>
+        <div class="text-[11px] uppercase tracking-wider text-muted-foreground mb-1.5">Waivers</div>
+        <div class="ck-card p-3 text-xs">
+          <div class="flex items-center gap-2">
+            <span class="tabular-nums">{{ .WaiverCount }}</span> waiver{{ if ne .WaiverCount 1 }}s{{ end }} match this resource
+            {{ if .WaiverActive }}<span class="text-[10px] uppercase tracking-wider text-warning">active</span>{{ end }}
+          </div>
+          <a href="/waivers" class="text-primary hover:underline mt-1.5 inline-block">Manage waivers →</a>
+        </div>
+      </div>
+      {{ end }}
+    </div>
+
+    <!-- Remediation tab -->
+    <div x-show="tab === 'remediation'" x-cloak class="p-5 text-sm">
+      {{ if .CheckRemed }}
+      <pre class="ck-card p-4 font-mono text-xs leading-relaxed whitespace-pre-wrap">{{ .CheckRemed }}</pre>
+      <p class="mt-3 text-xs text-muted-foreground">Phase 4 layers syntax-highlighted multi-format remediation (bash / terraform / kubectl / doctl / etc.) on top of this base shape.</p>
+      {{ else }}
+      <div class="ck-card p-6 text-center text-sm text-muted-foreground">No remediation documented for this check yet.</div>
+      {{ end }}
+    </div>
+
+    <!-- Context tab -->
+    <div x-show="tab === 'context'" x-cloak class="p-5 text-sm space-y-4">
+      <div>
+        <div class="text-[11px] uppercase tracking-wider text-muted-foreground mb-1.5">Scan</div>
+        <a href="/scans/{{ .Row.ScanID }}" class="font-mono text-xs text-primary hover:underline">{{ .Row.ScanID }}</a>
+      </div>
+      {{ if .CheckRefs }}
+      <div>
+        <div class="text-[11px] uppercase tracking-wider text-muted-foreground mb-1.5">References</div>
+        <ul class="space-y-1 text-xs">
+          {{ range .CheckRefs }}<li><a href="{{ . }}" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline break-all">{{ . }}</a></li>{{ end }}
+        </ul>
+      </div>
+      {{ end }}
+      <div>
+        <div class="text-[11px] uppercase tracking-wider text-muted-foreground mb-1.5">Finding id</div>
+        <div class="font-mono text-[11px] text-muted-foreground break-all">{{ .Row.ID }}</div>
+      </div>
+    </div>
+  </div>
+</div>
+{{ end }}
