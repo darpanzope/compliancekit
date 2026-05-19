@@ -19,7 +19,7 @@ For anything larger than a typo:
 - Wait for a maintainer to ack before opening a sizeable PR. Drive-by
   refactors and "modernizations" of working code are likely to be closed.
 - Check the [ROADMAP.md](ROADMAP.md) -- the next two or three milestones are
-  fixed, and changes that pull a v1.5+ feature forward usually need a
+  fixed, and changes that pull a v1.6+ feature forward usually need a
   conversation first.
 
 ## Development setup
@@ -35,7 +35,7 @@ make test
 make check        # lint + test, the gate you must clear before pushing
 ```
 
-### UI development (v1.4 Phase 0+)
+### UI development (v1.4+)
 
 Touching `internal/server/ui/templates/` or `internal/server/ui/src/input.css`?
 You'll need the Tailwind standalone CLI — no Node, no npm:

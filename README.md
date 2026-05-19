@@ -638,9 +638,13 @@ One static binary, no runtime, friendly to CI environments that don't have
 Python or Node. The same binary works on macOS, Linux, x86, and arm.
 
 **Is there a hosted version?**
-Not from us. The MIT licence lets anyone host one; the `serve` mode at v1.3
-is the same binary running long-lived with a SQLite/Postgres backend so
-you can self-host without writing a new server.
+Not from us. The MIT licence lets anyone host one; `serve` mode (v1.3 foundation +
+v1.4 Studio + v1.5 Explorer) is the same binary running long-lived with a SQLite/Postgres
+backend so you can self-host without writing a new server. v1.4 added the config-builder
+studio (`/settings`, `/checks`, framework tailoring, CI generator, waivers, scheduler,
+audit + inbox) and v1.5 added the findings explorer (saved views, side-panel finding
+detail, remediation studio, resource map, drift timeline, score-over-time, cross-scan
+diff, Cmd+K global search, PDF export).
 
 **Comparison to Prowler / ScoutSuite / Steampipe?**
 They target enterprise security teams on the big three clouds. We target

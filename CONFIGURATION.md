@@ -219,13 +219,17 @@ notify:                         # v0.14+
       X-Token-Env: WEBHOOK_TOKEN
 
 server:                         # v1.3+, only used by `compliancekit serve`
-  listen: 0.0.0.0:8080
+  listen: 0.0.0.0:8080           # bind addr; CLI override via --listen
   base_url: https://compliance.acme.com
+  state_dir: .compliancekit/serve # SQLite-on-disk default; --state-dir override
   auth:
     mode: oidc                  # none | local | oidc
     oidc:
       issuer: https://accounts.example.com
       client_id: compliancekit
+# Daemon schema is on migration 0005 (schema v5) as of v1.5 — saved_views.
+# Bootstrap the first admin with `compliancekit serve users create --admin`
+# (v1.4+); issue scoped tokens with `compliancekit serve tokens issue`.
 ```
 
 ## inventory.yaml — for the linux provider (v0.2+)

@@ -40,6 +40,8 @@ Available on every subcommand:
 | `remediate` | v0.15 | generate remediation snippets |
 | `ingest` | v0.13 | import Trivy / Checkov / OCSF / OSCAL / SCAP |
 | `serve` | v1.3 | continuous monitoring daemon |
+| `serve users create` | v1.4 ✅ | bootstrap an admin user for the daemon |
+| `serve tokens issue` | v1.4 ✅ | issue a scoped API token for the daemon |
 | `tui` | v1.7 | k9s-style terminal UI client (local findings.json or daemon) |
 | `plugins` | v1.13 | manage plugin packages (SDK + signing); marketplace federation at v2.9 |
 | `warehouse` | v1.17 | export findings to Parquet / BigQuery / Snowflake / Redshift / DuckDB |
@@ -361,7 +363,9 @@ Flags:
 
 ### `compliancekit serve` (v1.3+)
 
-Run the continuous monitoring daemon.
+Run the continuous monitoring daemon. SQLite by default, Postgres
+opt-in. UI stack: htmx + Alpine + Tailwind + Preline + vanilla SVG
+([ADR-015](DECISIONS.md#adr-015--serve-ui-is-htmx--alpine--tailwind--preline--vanilla-svg-embedded-at-build-time)).
 
 ```
 compliancekit serve [flags]
@@ -374,14 +378,70 @@ Flags:
 | `--listen <addr>` | bind address (default `0.0.0.0:8080`) |
 | `--state-dir <path>` | state directory for the daemon |
 | `--schedule <cron>` | scan interval (default: every 6h) |
+| `--demo` *(v1.4+)* | seed realistic findings + resources for first-impression demos |
 
-The daemon exposes:
+API endpoints:
 
 - `GET /healthz`, `GET /readyz`
-- `GET /api/v1/findings`
-- `GET /api/v1/scans`
+- `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me`
+- `GET /api/v1/findings`, `GET /api/v1/scans`
 - `POST /api/v1/scans` (trigger an on-demand scan)
-- `GET /` — server-rendered HTML dashboard
+- `GET /scans/{id}/stream` *(v1.4+)* — SSE live scan-progress stream
+
+UI routes (HTML, server-rendered):
+
+| Route | Shipped | Purpose |
+|---|---|---|
+| `/` | v1.3 | dashboard |
+| `/login` | v1.3 | login form (local auth) |
+| `/settings/providers`, `/settings/providers/{id}` | v1.4 | provider auth + test-connection + per-service toggle |
+| `/checks`, `/checks/diff`, `POST /checks/{id}/toggle` | v1.4 | check-catalog browser (search / filter / per-check toggle) |
+| `/settings/frameworks`, `/settings/frameworks/{id}` | v1.4 | framework tailoring UI (include / exclude w/ justification) |
+| `/settings/yaml`, `/settings/yaml/{raw,download}` | v1.4 | live `compliancekit.yaml` preview + download |
+| `/export/ci`, `/export/ci/{flavor}/{raw,download}` | v1.4 | CI workflow generator (GH Actions / GitLab / CircleCI) |
+| `/waivers` | v1.4 | waivers manager (add / edit / expire) |
+| `/scans/new`, `/scans/{id}/stream` | v1.4 | scan trigger w/ SSE live progress |
+| `/schedules`, `/schedules/new` | v1.4 | cron scheduler (timezone-aware) |
+| `/audit`, `/inbox` | v1.4 | audit log + in-UI notifications inbox |
+| `/findings` | v1.5 | SQL-backed findings explorer + cursor pagination + infinite scroll |
+| `/findings/views` | v1.5 | saved filter views (per-user + team-wide, pinned) |
+| `/findings/{id}/detail` | v1.5 | Linear-style side-panel finding detail |
+| `/findings/{id}/remediation` | v1.5 | remediation studio (tabbed per format) |
+| `/findings/{id}/timeline` | v1.5 | drift timeline per finding (fingerprint join) |
+| `/resources`, `/resources/map` | v1.5 | resource inventory table + hierarchical SVG map |
+| `/scores` | v1.5 | score-over-time chart (last 60 completed scans) |
+| `/scans/diff` | v1.5 | cross-scan diff (New / Resolved / Changed) |
+| `/search` | v1.5 | Cmd+K global JSON search across resources / findings / checks / providers / views |
+| `/scans/{id}/pdf` | v1.5 | PDF export via browser-native save-as (window.print) |
+
+---
+
+### `compliancekit serve users create` (v1.4+)
+
+Bootstrap the first admin user before the daemon serves the login form.
+Closes the v1.3.1 "manual SQL insert" gap.
+
+```
+compliancekit serve users create --email <e> --name <n> [--admin] [--password <p>]
+```
+
+If `--password` is omitted, a strong random one is generated and printed
+once on stdout. The user is written into the daemon's SQLite/Postgres
+state directly — no daemon needs to be running.
+
+---
+
+### `compliancekit serve tokens issue` (v1.4+)
+
+Issue a scoped API token for the daemon (for CI runners, terraform
+modules, internal automations).
+
+```
+compliancekit serve tokens issue --user <email> --scope <s>[,<s>...] [--expires <duration>]
+```
+
+The plaintext token is printed once on stdout; only its bcrypt hash
+is stored. Scopes are documented in [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ---
 

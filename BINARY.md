@@ -64,7 +64,7 @@ External I/O (outbound only by default):
    ──► (v0.13+) HTTPS to ingestor sources
    ──► (v0.17+) HTTPS to webhook / Slack / Discord / email sinks
 
-No inbound listener until v1.3's `compliancekit serve`.
+No inbound listener unless `compliancekit serve` is invoked (v1.3+).
 ```
 
 ## 3. What's embedded vs. fetched at runtime
@@ -144,7 +144,7 @@ A scan is bounded by the size of the resource graph, not the size of the cloud. 
 | Mid-sized fleet | 1k-5k | 1k-5k | <500 MB |
 | Large (v1.x territory) | 10k+ | 10k+ | streams to disk |
 
-At v1.3's `serve` mode, the resource graph stays in memory for the daemon's lifetime; refreshes are deltas against the prior snapshot.
+In `serve` mode (v1.3+), the resource graph stays in memory for the daemon's lifetime; refreshes are deltas against the prior snapshot.
 
 ## 6. I/O policy — security invariants
 
@@ -173,6 +173,8 @@ What the binary needs to run:
 | `scan linux` | SSH agent or key file with read access to target hosts |
 | `report` / `evidence` | Local filesystem write access only |
 | `serve` (v1.3+) | Bind to configured port (default 8080); local FS or DB write |
+| `serve users create` (v1.4+) | Local DB write only — bootstraps the first admin user |
+| `serve tokens issue` (v1.4+) | Local DB write only — issues scoped API tokens for the daemon |
 | `remediate` (v2.x, opt-in) | Write-scope cloud token + explicit `--apply` |
 
 Audit-only by default. The binary cannot mutate cloud or host state until v2.x, and even then only with explicit flags.
@@ -253,6 +255,8 @@ How the artifact changes shape over time:
 | v1.1 | lipgloss + bubbletea (CLI styling + progress bar) | +3 MB |
 | v1.2 | (no new deps; HTML overhaul reuses html/template + go:embed) | negligible |
 | v1.3 | SQLite (pure Go), HTTP server, REST handlers | +3 MB |
+| v1.4 | robfig/cron/v3 (cron parsing) + vendored htmx/Alpine/Preline/Tailwind CSS (built at `make ui` time) | <1 MB |
+| v1.5 | (no new deps; cytoscape.js documented as v1.5.x escape hatch if pan/zoom demand grows) | negligible |
 | v2.0 | wazero (WASM), gRPC | +4 MB |
 
 At v2.0, the binary trajectory lands around 170 MB single artifact — the v0.11 client-go dependency dominates from here on. Comparable: Trivy is ~75 MB (no K8s typed clients), kubescape ~110 MB (uses client-go like we do), Prowler (Python) ships as a 200+ MB Docker image.
@@ -261,7 +265,7 @@ At v2.0, the binary trajectory lands around 170 MB single artifact — the v0.11
 
 - **No embedded vuln database.** Trivy's CVE DB is 100s of MB and updates constantly. We compose with Trivy; we don't ship CVE data.
 - **No bundled framework PDFs.** SOC 2 / ISO standards are copyrighted. We ship our derivative control mappings, not the source docs.
-- **No web UI framework.** v1.3's `serve` UI is server-rendered HTML (htmx-style) embedded via `go:embed`. No React, no Vue, no bundler. The v1.2 HTML report overhaul uses pure SVG charts + ~300 LoC of vanilla JS, also no framework.
+- **No web UI framework.** v1.3-v1.5's `serve` UI is htmx + Alpine + Tailwind + Preline + vanilla SVG (ADR-015), embedded via `go:embed`. No React, no Vue, no bundler — `make ui` regenerates the embedded asset bundle. The v1.2 HTML report overhaul uses pure SVG charts + ~300 LoC of vanilla JS, also no framework.
 - **No mandatory database.** v1.3 introduces SQLite as a *default* state store; file-only state remains valid.
 - **No telemetry SDK.** Period.
 

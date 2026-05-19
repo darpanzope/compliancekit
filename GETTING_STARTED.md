@@ -117,8 +117,10 @@ Open `out/findings.html` in your browser. v1.2 adds summary cards (score
 gauge + severity donut + framework coverage bars), filter chips that
 encode their selection in the URL fragment for share-views, a sticky
 resource sidebar, dark/light/system theme toggle, and `@media print`
-for clean PDF export. Pass `--baseline=...` to a re-render to add a
-"Drift vs baseline" card + score/actionable sparklines + "New" badges:
+for clean PDF export. (Want a live multi-scan UI instead of single-file HTML?
+Run `compliancekit serve` — v1.3 daemon, v1.4 Studio, v1.5 Explorer; see
+[CLI.md](CLI.md#compliancekit-serve-v13).) Pass `--baseline=...` to a re-render
+to add a "Drift vs baseline" card + score/actionable sparklines + "New" badges:
 
 ```sh
 compliancekit render --in=out/findings.json --baseline=.compliancekit/baseline.json --out=out/trend.html
