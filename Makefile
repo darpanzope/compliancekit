@@ -94,6 +94,7 @@ ui: ## compile internal/server/assets/ from src/input.css + vendor/ (requires ui
 	@cp internal/server/ui/vendor/htmx-$(HTMX_VERSION).min.js     internal/server/assets/htmx.min.js
 	@cp internal/server/ui/vendor/alpine-$(ALPINE_VERSION).min.js internal/server/assets/alpine.min.js
 	@cp internal/server/ui/vendor/preline-$(PRELINE_VERSION).js   internal/server/assets/preline.js
+	@cp internal/server/ui/src/app.js                              internal/server/assets/app.js
 	@echo "ui assets compiled → internal/server/assets/"
 
 ui-check: ## fail if internal/server/assets/ is stale (CI gate)

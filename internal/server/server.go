@@ -209,23 +209,29 @@ func statusBucket(code int) string {
 }
 
 // securityHeaders sets every header that the OWASP secure-headers
-// project recommends as a baseline. CSP is strict (no inline scripts
-// or styles except those the v1.3 UI shell expressly needs) and will
-// loosen narrowly in v1.4 when the htmx/Alpine bundles need
-// 'unsafe-inline' style attribute support — gated on a per-route
-// override at that point.
+// project recommends as a baseline. CSP is strict (no inline scripts;
+// 'unsafe-eval' is needed for Alpine 3's expression evaluator and
+// 'unsafe-inline' for Tailwind's utility-class style attributes).
 func securityHeaders(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		h := w.Header()
-		// Strict CSP for v1.3 (foundation): default-src 'self' covers
-		// everything; later phases expand explicitly. The /metrics +
-		// /health endpoints don't render HTML so CSP is a no-op there
-		// but harmless.
+		// CSP shape: 'self' for everything by default; 'unsafe-eval' on
+		// script-src because Alpine 3's default build evaluates x-data /
+		// x-show / @keydown expressions via `(async function(){}).constructor(...)`
+		// (the indirect AsyncFunction trick), which CSP gates the same
+		// way it gates `new Function`. The CSP-friendly Alpine build
+		// (@alpinejs/csp) is the only way to drop 'unsafe-eval', and it
+		// requires every binding to be precompiled — out of scope for
+		// the htmx + Alpine stack ADR-015 codified. 'unsafe-inline' on
+		// style-src covers Tailwind's compiled utility classes that
+		// land as inline `style=` attributes. No inline `<script>` tags
+		// ship — the No-FOUC bootstrap + cmdk factory live in
+		// /assets/app.js (v1.5.1).
 		h.Set("Content-Security-Policy",
 			"default-src 'self'; "+
 				"img-src 'self' data:; "+
-				"style-src 'self' 'unsafe-inline'; "+ // Tailwind utility classes inline at build
-				"script-src 'self'; "+
+				"style-src 'self' 'unsafe-inline'; "+
+				"script-src 'self' 'unsafe-eval'; "+
 				"connect-src 'self'; "+
 				"frame-ancestors 'none'; "+
 				"base-uri 'self'; "+

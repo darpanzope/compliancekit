@@ -14,5 +14,5 @@ import "embed"
 // FS holds the daemon's compiled UI bundle: Tailwind output + vendored
 // JS libraries. Served at /assets/* by the ui package.
 //
-//go:embed app.css htmx.min.js alpine.min.js preline.js
+//go:embed app.css app.js htmx.min.js alpine.min.js preline.js
 var FS embed.FS

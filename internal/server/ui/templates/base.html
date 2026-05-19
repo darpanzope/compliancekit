@@ -7,21 +7,13 @@
 <title>{{ .Title }} · compliancekit</title>
 
 <!--
-  No-FOUC theme bootstrap. Reads the persisted theme choice (light /
-  dark / system) and applies the right class on <html> before paint,
-  so the first frame matches the operator's preference instead of
-  flashing the default. Matches the v1.2 HTML report convention.
+  v1.5.1 — No-FOUC theme bootstrap + Cmd+K factory. Lives in
+  internal/server/ui/src/app.js so the daemon's strict CSP
+  (script-src 'self', no 'unsafe-inline') doesn't block it. Loaded
+  synchronously (no `defer`) because the theme bootstrap MUST run
+  before first paint to avoid the light→dark flash on reload.
 -->
-<script>
-  (function(){
-    try {
-      var saved = localStorage.getItem('ck-theme') || 'system';
-      var dark  = saved === 'dark' || (saved === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-      if (dark) document.documentElement.classList.add('dark');
-      document.documentElement.dataset.theme = saved;
-    } catch (e) {}
-  })();
-</script>
+<script src="/assets/app.js"></script>
 
 <!-- v1.4 Phase 0: compiled Tailwind bundle (tokens + utilities). -->
 <link rel="stylesheet" href="/assets/app.css">
@@ -271,24 +263,6 @@ table.list tbody tr:hover { background: var(--legacy-panel-2); }
     </div>
   </div>
 </div>
-<script>
-function cmdk() {
-  return {
-    visible: false,
-    query: '',
-    results: [],
-    open() {
-      this.visible = true;
-      this.$nextTick(() => this.$refs.input && this.$refs.input.focus());
-    },
-    async run() {
-      if (this.query.length === 0) { this.results = []; return; }
-      const r = await fetch('/search?q=' + encodeURIComponent(this.query));
-      this.results = await r.json();
-    },
-  };
-}
-</script>
 {{ end }}
 
 <!-- Alpine cloak: hide x-cloak nodes before Alpine boots so popovers
