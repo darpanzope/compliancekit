@@ -327,10 +327,10 @@ func (u *UI) upsertProvider(ctx context.Context, id, token string, probeErr erro
 	cfg := map[string]any{"token": token}
 	cfgJSON, _ := json.Marshal(cfg)
 	now := time.Now().UTC().Format(time.RFC3339)
-	status := "ok"
+	status := authStatusOK
 	var lastErr string
 	if probeErr != nil {
-		status = "failed"
+		status = authStatusFailed
 		lastErr = probeErr.Error()
 	}
 	q := `INSERT INTO providers (id, enabled, config_json, last_auth_check_at,

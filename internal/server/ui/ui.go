@@ -50,13 +50,17 @@ type navItem struct {
 // resource map, score-over-time. Add rows here, not in base.html, so
 // every layout (including v1.4 Studio sub-pages later) renders the
 // same chrome.
+//
+// v1.4 Phase 2: "Providers" replaced with "Settings" → /settings/providers
+// (the v1.4 interactive settings page). The v1.3 read-only /providers
+// route stays as a 302 → /settings/providers so any bookmarks survive.
 var defaultNav = []navItem{
 	{Href: "/scans", Key: "scans", Label: "Scans",
 		Icon: template.HTML(`<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>`)},
-	{Href: "/providers", Key: "providers", Label: "Providers",
-		Icon: template.HTML(`<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>`)},
 	{Href: "/checks", Key: "checks", Label: "Checks",
 		Icon: template.HTML(`<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`)},
+	{Href: "/settings/providers", Key: "settings", Label: "Settings",
+		Icon: template.HTML(`<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`)},
 }
 
 // templateFuncs are exposed to base.html + every content template.
@@ -143,9 +147,8 @@ type View struct {
 	CSRFToken string
 
 	// Page-specific
-	Items     any
-	Total     int
-	Providers []providerView
+	Items any
+	Total int
 }
 
 // Mount installs the UI routes on r. Login is open; everything else
@@ -163,9 +166,14 @@ func (u *UI) Mount(r chi.Router) {
 		r.Use(u.sessions.RequireAuth)
 		r.Get("/scans", u.listScans)
 		r.Get("/scans/{id}", u.showScan)
-		r.Get("/providers", u.listProviders)
+		// v1.3 read-only /providers redirects to the v1.4 Phase 2
+		// interactive settings page so existing bookmarks survive.
+		r.Get("/providers", func(w http.ResponseWriter, req *http.Request) {
+			http.Redirect(w, req, "/settings/providers", http.StatusMovedPermanently)
+		})
 		r.Get("/checks", u.listChecks)
 		u.mountSetupRoutes(r)
+		u.mountSettingsRoutes(r)
 	})
 }
 
@@ -289,38 +297,6 @@ func (u *UI) showScan(w http.ResponseWriter, r *http.Request) {
 	// renders the same template the v1.2 release ships.
 	rep := htmlReport{}
 	rep.RenderInline(w, findings)
-}
-
-// listProviders renders the table from the providers table.
-type providerView struct {
-	ID              string
-	Enabled         bool
-	LastAuthStatus  string
-	LastAuthError   string
-	LastAuthCheckAt string
-}
-
-func (u *UI) listProviders(w http.ResponseWriter, r *http.Request) {
-	rows, err := u.store.DB().QueryContext(r.Context(),
-		`SELECT id, enabled, COALESCE(last_auth_status,''), COALESCE(last_auth_error,''), COALESCE(last_auth_check_at,'')
-		 FROM providers ORDER BY id ASC`)
-	if err != nil {
-		u.fail(w, "list providers: "+err.Error())
-		return
-	}
-	defer func() { _ = rows.Close() }()
-	items := []providerView{}
-	for rows.Next() {
-		var p providerView
-		var enabled int
-		if err := rows.Scan(&p.ID, &enabled, &p.LastAuthStatus, &p.LastAuthError, &p.LastAuthCheckAt); err != nil {
-			u.fail(w, "provider row: "+err.Error())
-			return
-		}
-		p.Enabled = enabled != 0
-		items = append(items, p)
-	}
-	u.render(w, "providers.html", u.viewFor(r, "Providers", "providers", View{Providers: items}))
 }
 
 type checkItem struct {

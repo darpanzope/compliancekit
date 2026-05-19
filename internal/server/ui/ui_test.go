@@ -86,12 +86,15 @@ func TestAssetsRoute(t *testing.T) {
 // TestDefaultNavStable guards against accidental nav-row deletion in
 // base.html refactors — every page key the .Active sentinel uses must
 // have a matching nav entry, otherwise the sidebar quietly stops
-// highlighting that page.
+// highlighting that page. v1.4 Phase 2 replaced the read-only
+// "providers" key with the interactive "settings" entry pointing at
+// /settings/providers; /providers itself now 302s to the settings
+// page so old bookmarks still work.
 func TestDefaultNavStable(t *testing.T) {
 	want := map[string]string{
-		"scans":     "/scans",
-		"providers": "/providers",
-		"checks":    "/checks",
+		"scans":    "/scans",
+		"checks":   "/checks",
+		"settings": "/settings/providers",
 	}
 	got := map[string]string{}
 	for _, n := range defaultNav {

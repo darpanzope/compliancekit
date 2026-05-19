@@ -1,0 +1,83 @@
+{{define "content"}}
+<div class="max-w-6xl mx-auto">
+
+  <!-- Page header -->
+  <div class="flex items-center justify-between gap-4 mb-8">
+    <div>
+      <h1 class="text-2xl font-semibold tracking-tight">Providers</h1>
+      <p class="text-sm text-muted-foreground mt-1">Manage credentials, test connectivity, and toggle each provider on or off.</p>
+    </div>
+    <a href="/setup" class="inline-flex h-9 items-center gap-1.5 rounded-md border border-border bg-background px-3 text-sm font-medium hover:bg-muted transition">
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Run setup wizard
+    </a>
+  </div>
+
+  <!-- Provider grid -->
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    {{ range .Items }}
+    <a href="/settings/providers/{{ .ID }}" class="ck-card p-5 transition hover:shadow-elevated focus:outline-none focus:ring-2 focus:ring-ring">
+      <div class="flex items-start justify-between gap-3">
+        <div class="min-w-0">
+          <div class="flex items-center gap-2">
+            <span class="font-semibold text-foreground">{{ .Name }}</span>
+            {{ if not .Available }}
+              <span class="text-[10px] uppercase tracking-wider text-muted-foreground bg-muted px-1.5 py-0.5 rounded">Soon</span>
+            {{ end }}
+          </div>
+          <p class="text-xs text-muted-foreground mt-1.5 leading-relaxed line-clamp-2">{{ .Description }}</p>
+        </div>
+
+        <!-- Status badge -->
+        {{ if .Configured }}
+          {{ if eq .LastStatus "ok" }}
+            <span class="shrink-0 inline-flex items-center gap-1.5 text-[11px] font-medium text-success">
+              <span class="inline-block h-2 w-2 rounded-full bg-success"></span>
+              Connected
+            </span>
+          {{ else if eq .LastStatus "failed" }}
+            <span class="shrink-0 inline-flex items-center gap-1.5 text-[11px] font-medium text-destructive">
+              <span class="inline-block h-2 w-2 rounded-full bg-destructive"></span>
+              Failed
+            </span>
+          {{ else }}
+            <span class="shrink-0 inline-flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
+              <span class="inline-block h-2 w-2 rounded-full bg-muted-foreground"></span>
+              Unknown
+            </span>
+          {{ end }}
+        {{ else }}
+          <span class="shrink-0 inline-flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
+            <span class="inline-block h-2 w-2 rounded-full bg-border"></span>
+            Not configured
+          </span>
+        {{ end }}
+      </div>
+
+      <div class="mt-4 pt-4 border-t border-border flex items-center justify-between gap-2 text-xs">
+        <div class="text-muted-foreground">
+          {{ if .Configured }}
+            {{ if .Enabled }}<span class="text-success">Enabled</span>{{ else }}<span class="text-muted-foreground">Disabled</span>{{ end }}
+            <span class="mx-1.5 text-border">·</span>
+            <span class="tabular-nums">Last checked {{ .LastCheckHuman }}</span>
+          {{ else }}
+            <span>Click to configure</span>
+          {{ end }}
+        </div>
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-muted-foreground"><polyline points="9 18 15 12 9 6"/></svg>
+      </div>
+    </a>
+    {{ end }}
+  </div>
+
+  <!-- Empty-state hint when nothing is configured yet -->
+  {{ $hasConfigured := false }}
+  {{ range .Items }}{{ if .Configured }}{{ $hasConfigured = true }}{{ end }}{{ end }}
+  {{ if not $hasConfigured }}
+  <div class="mt-8 rounded-md border border-dashed border-border bg-muted/30 p-6 text-center">
+    <p class="text-sm text-muted-foreground">No providers configured yet. The <a href="/setup" class="text-primary hover:underline">5-step wizard</a> walks you through your first one.</p>
+  </div>
+  {{ end }}
+
+</div>
+{{end}}

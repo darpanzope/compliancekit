@@ -1,0 +1,188 @@
+{{define "content"}}
+<div class="max-w-4xl mx-auto">
+
+  <!-- Breadcrumb + header -->
+  <div class="mb-6">
+    <a href="/settings/providers" class="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5">
+      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      All providers
+    </a>
+    <h1 class="mt-2 text-2xl font-semibold tracking-tight">{{ .Row.Name }}</h1>
+    <p class="text-sm text-muted-foreground mt-1">{{ .Row.Description }}</p>
+  </div>
+
+  <!-- Flash banners -->
+  {{ if eq .Flash "tested-ok" }}
+    <div class="mb-4 rounded-md border border-success/30 bg-success/10 px-3 py-2 text-sm text-success">Connection test succeeded.</div>
+  {{ else if eq .Flash "tested-failed" }}
+    <div class="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">Connection test failed. See details below.</div>
+  {{ else if eq .Flash "rotated" }}
+    <div class="mb-4 rounded-md border border-success/30 bg-success/10 px-3 py-2 text-sm text-success">Credentials rotated. The new token is now active.</div>
+  {{ else if eq .Flash "saved" }}
+    <div class="mb-4 rounded-md border border-success/30 bg-success/10 px-3 py-2 text-sm text-success">Settings saved.</div>
+  {{ else if eq .Flash "enabled" }}
+    <div class="mb-4 rounded-md border border-success/30 bg-success/10 px-3 py-2 text-sm text-success">Provider enabled — scans will now include {{ .Row.Name }}.</div>
+  {{ else if eq .Flash "disabled" }}
+    <div class="mb-4 rounded-md border border-warning/30 bg-warning/10 px-3 py-2 text-sm text-warning">Provider disabled. Credentials are preserved.</div>
+  {{ end }}
+
+  {{ if eq .Error "rotation-probe-failed" }}
+    <div class="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">The new token couldn't authenticate against {{ .Row.Name }}. The old token is still active.</div>
+  {{ else if eq .Error "empty-token" }}
+    <div class="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">Please paste a token to rotate.</div>
+  {{ else if eq .Error "no-token" }}
+    <div class="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">No token saved yet — set one below before enabling the provider.</div>
+  {{ else if eq .Error "unavailable" }}
+    <div class="mb-4 rounded-md border border-warning/30 bg-warning/10 px-3 py-2 text-sm text-warning">{{ .Row.Name }} is in the catalog but its probe isn't ready yet — coming in a later phase.</div>
+  {{ end }}
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+    <!-- Left column: status + actions -->
+    <div class="lg:col-span-1 space-y-4">
+
+      <!-- Status panel -->
+      <div class="ck-card p-5">
+        <div class="text-[11px] uppercase tracking-wider text-muted-foreground">Connection</div>
+        <div class="mt-2 flex items-center gap-2">
+          {{ if eq .Row.LastStatus "ok" }}
+            <span class="inline-block h-2.5 w-2.5 rounded-full bg-success"></span>
+            <span class="text-sm font-semibold text-success">Connected</span>
+          {{ else if eq .Row.LastStatus "failed" }}
+            <span class="inline-block h-2.5 w-2.5 rounded-full bg-destructive"></span>
+            <span class="text-sm font-semibold text-destructive">Failed</span>
+          {{ else if .Row.Configured }}
+            <span class="inline-block h-2.5 w-2.5 rounded-full bg-muted-foreground"></span>
+            <span class="text-sm font-semibold text-muted-foreground">Untested</span>
+          {{ else }}
+            <span class="inline-block h-2.5 w-2.5 rounded-full bg-border"></span>
+            <span class="text-sm font-semibold text-muted-foreground">Not configured</span>
+          {{ end }}
+        </div>
+        <div class="mt-3 text-xs text-muted-foreground tabular-nums">Last checked: {{ .Row.LastCheckHuman }}</div>
+        {{ if .Row.LastError }}
+          <div class="mt-3 text-[11px] font-mono text-destructive break-words border-t border-border pt-3">{{ .Row.LastError }}</div>
+        {{ end }}
+
+        {{ if .Row.Configured }}
+          {{ if .Row.Available }}
+          <form action="/settings/providers/{{ .Row.ID }}/test" method="post" class="mt-4">
+            <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
+            <button type="submit"
+                    class="w-full inline-flex h-9 items-center justify-center gap-1.5 rounded-md border border-border bg-background text-sm font-medium hover:bg-muted transition">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+              Test connection
+            </button>
+          </form>
+          {{ end }}
+        {{ end }}
+      </div>
+
+      <!-- Enable / Disable -->
+      {{ if .Row.Configured }}
+      <div class="ck-card p-5">
+        <div class="text-[11px] uppercase tracking-wider text-muted-foreground">Status</div>
+        <div class="mt-2 flex items-center justify-between gap-3">
+          <div>
+            <div class="text-sm font-semibold">{{ if .Row.Enabled }}Enabled{{ else }}Disabled{{ end }}</div>
+            <p class="text-xs text-muted-foreground mt-0.5">{{ if .Row.Enabled }}Included in every scan.{{ else }}Skipped during scans; credentials preserved.{{ end }}</p>
+          </div>
+          <form action="/settings/providers/{{ .Row.ID }}/enabled" method="post">
+            <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
+            <input type="hidden" name="target" value="{{ if .Row.Enabled }}disable{{ else }}enable{{ end }}">
+            <button type="submit"
+                    class="inline-flex h-9 items-center gap-1.5 rounded-md border border-border bg-background px-3 text-xs font-medium hover:bg-muted transition">
+              {{ if .Row.Enabled }}Disable{{ else }}Enable{{ end }}
+            </button>
+          </form>
+        </div>
+      </div>
+      {{ end }}
+    </div>
+
+    <!-- Right column: credentials + per-provider settings -->
+    <div class="lg:col-span-2 space-y-4">
+
+      <!-- Credentials -->
+      <div class="ck-card p-5">
+        <div class="flex items-center justify-between gap-3">
+          <div>
+            <h2 class="text-base font-semibold">{{ if .Row.Configured }}Rotate credentials{{ else }}Connect {{ .Row.Name }}{{ end }}</h2>
+            <p class="text-xs text-muted-foreground mt-1">{{ if .Row.Configured }}Verifies the new token against {{ .Row.Name }} before replacing the old one — zero-downtime rotation.{{ else }}Paste an API token to enable this provider.{{ end }}</p>
+          </div>
+          {{ if .Row.DocsURL }}
+          <a href="{{ .Row.DocsURL }}" target="_blank" rel="noopener noreferrer"
+             class="shrink-0 text-xs text-primary hover:underline inline-flex items-center gap-1">
+            Token guide
+            <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          </a>
+          {{ end }}
+        </div>
+
+        {{ if .Row.Available }}
+        <form action="/settings/providers/{{ .Row.ID }}/credentials" method="post" class="mt-4 space-y-3">
+          <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
+          <input type="password"
+                 name="token"
+                 autocomplete="off"
+                 required
+                 placeholder="{{ if eq .Row.ID "digitalocean" }}dop_v1_…{{ else }}token{{ end }}"
+                 class="w-full h-10 rounded-md border border-input bg-background px-3 text-sm font-mono placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring transition">
+          <div class="flex items-center justify-end gap-2">
+            <button type="submit"
+                    class="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary text-primary-foreground px-4 text-sm font-medium hover:opacity-90 transition shadow-soft">
+              {{ if .Row.Configured }}Verify &amp; rotate{{ else }}Verify &amp; save{{ end }}
+            </button>
+          </div>
+        </form>
+        {{ else }}
+        <div class="mt-4 rounded-md border border-dashed border-border bg-muted/30 p-4 text-xs text-muted-foreground">
+          {{ .Row.Name }} support is on the v1.4 roadmap. Once available, this form accepts the same paste-token flow as DigitalOcean.
+        </div>
+        {{ end }}
+      </div>
+
+      <!-- Per-provider settings -->
+      {{ if and .Row.Configured .Row.Available }}
+      <div class="ck-card p-5">
+        <h2 class="text-base font-semibold">Scan settings</h2>
+        <p class="text-xs text-muted-foreground mt-1">Tune what compliancekit scans for {{ .Row.Name }}. Empty fields mean "all".</p>
+
+        <form action="/settings/providers/{{ .Row.ID }}/config" method="post" class="mt-4 space-y-4">
+          <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
+
+          <div class="space-y-1.5">
+            <label for="region" class="block text-xs font-medium text-foreground">Region filter</label>
+            <input type="text"
+                   id="region"
+                   name="region"
+                   value="{{ .Config.Region }}"
+                   placeholder="{{ if eq .Row.ID "digitalocean" }}fra1, nyc1, …{{ else }}region{{ end }}"
+                   class="w-full h-10 rounded-md border border-input bg-background px-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring transition">
+            <p class="text-xs text-muted-foreground">Comma-separated list. Leave empty to scan every region the token can see.</p>
+          </div>
+
+          <div class="space-y-1.5">
+            <label for="exclusions" class="block text-xs font-medium text-foreground">Resource exclusions</label>
+            <textarea id="exclusions"
+                      name="exclusions"
+                      rows="4"
+                      placeholder="droplet/test-*&#10;spaces/staging-bucket"
+                      class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm font-mono placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring transition">{{ range .Config.Exclusions }}{{ . }}&#10;{{ end }}</textarea>
+            <p class="text-xs text-muted-foreground">One pattern per line. Supports glob syntax — same shape as <code class="text-[11px] px-1 py-0.5 rounded bg-muted">waivers.yaml</code>.</p>
+          </div>
+
+          <div class="flex items-center justify-end">
+            <button type="submit"
+                    class="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary text-primary-foreground px-4 text-sm font-medium hover:opacity-90 transition shadow-soft">
+              Save settings
+            </button>
+          </div>
+        </form>
+      </div>
+      {{ end }}
+    </div>
+  </div>
+
+</div>
+{{end}}
