@@ -37,14 +37,14 @@ func withSession(ctx context.Context, sess *Session) context.Context {
 // machine-friendly status; browser callers get the human redirect.
 func (s *Sessions) RequireAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		c, err := r.Cookie(SessionCookieName)
+		c, err := r.Cookie(s.CookieName())
 		if err != nil || c.Value == "" {
 			s.deny(w, r, http.StatusUnauthorized)
 			return
 		}
 		sess, err := s.Load(r.Context(), c.Value)
 		if err != nil {
-			ClearCookies(w)
+			s.ClearCookies(w)
 			switch {
 			case errors.Is(err, ErrSessionNotFound), errors.Is(err, ErrSessionExpired):
 				s.deny(w, r, http.StatusUnauthorized)

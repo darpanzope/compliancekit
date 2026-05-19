@@ -59,7 +59,7 @@ func LoginHandler(users *Users, sessions *Sessions) http.HandlerFunc {
 		// Best-effort.
 		_ = users.TouchLastLogin(r.Context(), user.ID)
 
-		SetCookies(w, sess)
+		sessions.SetCookies(w, sess)
 
 		// HTML form → redirect; JSON caller → JSON body.
 		if isFormPost(r) {
@@ -85,10 +85,10 @@ func LoginHandler(users *Users, sessions *Sessions) http.HandlerFunc {
 // /login; JSON callers get 204.
 func LogoutHandler(sessions *Sessions) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if c, err := r.Cookie(SessionCookieName); err == nil && c.Value != "" {
+		if c, err := r.Cookie(sessions.CookieName()); err == nil && c.Value != "" {
 			_ = sessions.Destroy(r.Context(), c.Value)
 		}
-		ClearCookies(w)
+		sessions.ClearCookies(w)
 		if isFormPost(r) {
 			http.Redirect(w, r, "/login", http.StatusSeeOther)
 			return

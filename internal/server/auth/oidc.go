@@ -201,7 +201,7 @@ func (o *OIDC) CallbackHandler() http.HandlerFunc {
 			http.Error(w, "create session: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
-		SetCookies(w, sess)
+		o.sessions.SetCookies(w, sess)
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 	}
 }

@@ -290,7 +290,7 @@ func assetsHandler() http.HandlerFunc {
 }
 
 func (u *UI) rootRedirect(w http.ResponseWriter, r *http.Request) {
-	if _, err := r.Cookie(auth.SessionCookieName); err == nil {
+	if _, err := r.Cookie(u.sessions.CookieName()); err == nil {
 		// v1.4 Phase 1 onboarding gate: a logged-in operator landing
 		// on "/" with no providers configured goes through the
 		// first-run wizard at /setup. Once any provider is enabled,

@@ -17,6 +17,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 
@@ -94,10 +95,14 @@ func (a *API) eitherAuth(next http.Handler) http.Handler {
 	})
 }
 
-// scopeGate enforces auth.RequireScope for token-auth callers; for
-// session-auth callers it just runs next (session users get the
-// scopes they're entitled to elsewhere — phase 7 / v1.4 settings).
-// The result is that the same handler is mountable for both flows.
+// scopeGate enforces the needed scope for both auth flows. For token
+// auth (Authorization: Bearer ck_…) it consults tok.HasScope. For
+// session auth (cookie) it loads the session's user and treats admin
+// users as having every scope (parity with token's `*` scope); non-
+// admin session users get every `:read` scope but are forbidden from
+// any `:write` action. F18 fix for v1.5.1 — the v1.3 implementation
+// silently fell through for session callers, letting any logged-in
+// local user trigger scans, mutate providers, and revoke waivers.
 func (a *API) scopeGate(needed auth.Scope, next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if tok := auth.TokenFromContext(r.Context()); tok != nil {
@@ -105,9 +110,32 @@ func (a *API) scopeGate(needed auth.Scope, next http.HandlerFunc) http.HandlerFu
 				respondError(w, http.StatusForbidden, "missing scope: "+string(needed))
 				return
 			}
+			next(w, r)
+			return
+		}
+		// Session-auth path: load the user, check IsAdmin.
+		sess := auth.FromContext(r.Context())
+		if sess == nil {
+			respondError(w, http.StatusUnauthorized, "auth required")
+			return
+		}
+		user, err := a.users.ByID(r.Context(), sess.UserID)
+		if err != nil || user == nil {
+			respondError(w, http.StatusUnauthorized, "session user lookup failed")
+			return
+		}
+		if !user.IsAdmin && isWriteScope(needed) {
+			respondError(w, http.StatusForbidden, "admin required for scope: "+string(needed))
+			return
 		}
 		next(w, r)
 	}
+}
+
+// isWriteScope returns true for scopes that mutate state. Used by
+// scopeGate to gate non-admin session users to read-only routes.
+func isWriteScope(s auth.Scope) bool {
+	return strings.HasSuffix(string(s), ":write") || s == auth.ScopeAdmin
 }
 
 // respondJSON marshals v + writes it with status. Caches via ETag

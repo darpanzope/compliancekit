@@ -11,12 +11,21 @@ import (
 	"github.com/darpanzope/compliancekit/internal/server/store"
 )
 
-// SessionCookieName is the cookie carrying the opaque session ID.
+// SessionCookieName is the cookie carrying the opaque session ID
+// when the daemon serves under TLS (the production default).
 // Prefixed __Host- to opt into the strictest browser cookie policy:
 // HTTPS-only, no Domain attribute, Path=/. Modern browsers refuse to
 // honor __Host- prefixed cookies that violate the rules — fail-loud
 // is the right default for an auth cookie.
-const SessionCookieName = "__Host-ck_session"
+//
+// InsecureSessionCookieName is used when the daemon serves plain HTTP
+// (dev / localhost / behind a TLS-terminating proxy on a private
+// network). __Host- prefix mandates Secure, so we have to use a
+// different name; clients pick which to read via Sessions.CookieName.
+const (
+	SessionCookieName         = "__Host-ck_session"
+	InsecureSessionCookieName = "ck_session"
+)
 
 // CSRFCookieName is the readable companion cookie for the double-
 // submit CSRF pattern. Not prefixed __Host- because JS needs to read
@@ -66,11 +75,30 @@ var ErrSessionNotFound = errors.New("session not found")
 // http middleware and the login/logout handlers go through this type.
 type Sessions struct {
 	store *store.Store
+
+	// SecureCookies controls whether the session + CSRF cookies carry
+	// the Secure attribute + __Host- prefix. Default is true (production
+	// safe). Flip to false via `compliancekit serve --insecure-cookies`
+	// for plain-HTTP dev / internal-network deploys where Secure cookies
+	// get silently dropped by browsers.
+	SecureCookies bool
 }
 
-// NewSessions returns a Sessions handle bound to st.
+// NewSessions returns a Sessions handle bound to st with secure cookies
+// enabled (production default). Callers can flip SecureCookies = false
+// for dev / plain-HTTP usage.
 func NewSessions(st *store.Store) *Sessions {
-	return &Sessions{store: st}
+	return &Sessions{store: st, SecureCookies: true}
+}
+
+// CookieName returns the session cookie name appropriate to the current
+// SecureCookies setting. Use this from any handler that needs to read
+// the cookie off the request.
+func (s *Sessions) CookieName() string {
+	if s.SecureCookies {
+		return SessionCookieName
+	}
+	return InsecureSessionCookieName
 }
 
 // Create issues a new session row for userID. Returns the session +
@@ -182,20 +210,22 @@ func (s *Sessions) ph(n int) string {
 	return "?"
 }
 
-// SetCookies writes the SessionCookieName + CSRFCookieName onto w.
-// __Host-ck_session is HttpOnly + Secure + SameSite=Lax + Path=/ +
-// no Domain (the __Host- prefix mandates these). ck_csrf is the
+// SetCookies writes the session + CSRF cookies onto w. In secure mode
+// the session cookie is named __Host-ck_session and carries Secure +
+// HttpOnly + SameSite=Lax + Path=/ (the __Host- prefix mandates the
+// absence of Domain). In insecure mode the cookie is ck_session and
+// drops Secure so plain-HTTP browsers will keep it. ck_csrf is the
 // readable companion (not HttpOnly) so client-side JS can mirror it
 // into the X-CSRF-Token header on every state-mutating request.
-func SetCookies(w http.ResponseWriter, sess *Session) {
+func (s *Sessions) SetCookies(w http.ResponseWriter, sess *Session) {
 	maxAge := int(time.Until(sess.ExpiresAt).Seconds())
 	http.SetCookie(w, &http.Cookie{
-		Name:     SessionCookieName,
+		Name:     s.CookieName(),
 		Value:    sess.ID,
 		Path:     "/",
 		MaxAge:   maxAge,
 		HttpOnly: true,
-		Secure:   true,
+		Secure:   s.SecureCookies,
 		SameSite: http.SameSiteLaxMode,
 	})
 	http.SetCookie(w, &http.Cookie{
@@ -204,22 +234,23 @@ func SetCookies(w http.ResponseWriter, sess *Session) {
 		Path:     "/",
 		MaxAge:   maxAge,
 		HttpOnly: false,
-		Secure:   true,
+		Secure:   s.SecureCookies,
 		SameSite: http.SameSiteLaxMode,
 	})
 }
 
 // ClearCookies tells the browser to drop both cookies. Used by
 // logout + by middleware when a stored session is missing / expired.
-func ClearCookies(w http.ResponseWriter) {
-	for _, name := range []string{SessionCookieName, CSRFCookieName} {
+func (s *Sessions) ClearCookies(w http.ResponseWriter) {
+	sessName := s.CookieName()
+	for _, name := range []string{sessName, CSRFCookieName} {
 		http.SetCookie(w, &http.Cookie{
 			Name:     name,
 			Value:    "",
 			Path:     "/",
 			MaxAge:   -1,
-			HttpOnly: name == SessionCookieName,
-			Secure:   true,
+			HttpOnly: name == sessName,
+			Secure:   s.SecureCookies,
 			SameSite: http.SameSiteLaxMode,
 		})
 	}
