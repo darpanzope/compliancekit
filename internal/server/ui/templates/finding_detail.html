@@ -93,13 +93,16 @@
     </div>
 
     <!-- Remediation tab -->
-    <div x-show="tab === 'remediation'" x-cloak class="p-5 text-sm">
+    <div x-show="tab === 'remediation'" x-cloak class="p-5 text-sm space-y-3">
       {{ if .CheckRemed }}
       <pre class="ck-card p-4 font-mono text-xs leading-relaxed whitespace-pre-wrap">{{ .CheckRemed }}</pre>
-      <p class="mt-3 text-xs text-muted-foreground">Phase 4 layers syntax-highlighted multi-format remediation (bash / terraform / kubectl / doctl / etc.) on top of this base shape.</p>
-      {{ else }}
-      <div class="ck-card p-6 text-center text-sm text-muted-foreground">No remediation documented for this check yet.</div>
       {{ end }}
+      <a href="/findings/{{ .Row.ID }}/remediation"
+         class="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary text-primary-foreground px-4 text-sm font-medium hover:opacity-90 transition shadow-soft">
+        Open remediation studio
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+      </a>
+      <p class="text-xs text-muted-foreground">Multi-format snippets (bash / terraform / kubectl / doctl / etc.) with copy + download per format.</p>
     </div>
 
     <!-- Context tab -->

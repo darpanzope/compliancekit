@@ -260,6 +260,7 @@ func (u *UI) Mount(r chi.Router) {
 		u.mountFindingsRoutes(r)
 		u.mountSavedViewRoutes(r)
 		u.mountFindingDetailRoutes(r)
+		u.mountRemediationRoutes(r)
 	})
 }
 
