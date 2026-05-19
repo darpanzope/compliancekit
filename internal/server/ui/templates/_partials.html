@@ -4,6 +4,42 @@ top-level {{ define }} blocks here rather than nesting them inside
 content templates — Go html/template forbids define-inside-define.
 */}}
 
+{{ define "findings_row_body" }}
+{{ range .Items }}
+<tr class="hover:bg-muted/30 transition-colors">
+  <td class="px-4 py-3">{{ template "severity_pill" .Severity }}</td>
+  <td class="px-4 py-3">
+    {{ if eq .Status "fail" }}<span class="text-xs text-destructive font-medium">fail</span>
+    {{ else if eq .Status "pass" }}<span class="text-xs text-success font-medium">pass</span>
+    {{ else if eq .Status "error" }}<span class="text-xs text-warning font-medium">error</span>
+    {{ else }}<span class="text-xs text-muted-foreground">{{ .Status }}</span>{{ end }}
+  </td>
+  <td class="px-4 py-3 font-mono text-xs whitespace-nowrap">{{ .CheckID }}</td>
+  <td class="px-4 py-3 text-xs">
+    <div class="font-medium">{{ .ResourceName }}</div>
+    <div class="text-muted-foreground font-mono text-[11px] mt-0.5">{{ .ResourceType }} · {{ .ResourceID }}</div>
+  </td>
+  <td class="px-4 py-3 text-xs text-muted-foreground">{{ .Provider }}</td>
+  <td class="px-4 py-3 text-xs">{{ range $i, $f := .Frameworks }}{{ if $i }}, {{ end }}<span class="text-muted-foreground">{{ $f }}</span>{{ end }}</td>
+  <td class="px-4 py-3 text-xs text-muted-foreground tabular-nums whitespace-nowrap">{{ .LastSeenIn }}</td>
+</tr>
+{{ else }}
+{{ if not .HasNext }}<tr><td colspan="7" class="p-12 text-center text-sm text-muted-foreground">No findings match the current filters.</td></tr>{{ end }}
+{{ end }}
+{{ if .HasNext }}
+<tr hx-get="/findings/rows?cursor={{ .NextCursor }}{{ range .Filters.Severities }}&severity={{.}}{{ end }}{{ range .Filters.Statuses }}&status={{.}}{{ end }}{{ range .Filters.Providers }}&provider={{.}}{{ end }}{{ if .Filters.NameQuery }}&q={{ .Filters.NameQuery }}{{ end }}{{ if .Filters.ScanID }}&scan={{ .Filters.ScanID }}{{ end }}"
+    hx-trigger="revealed"
+    hx-swap="outerHTML">
+  <td colspan="7" class="p-4 text-center text-xs text-muted-foreground">
+    <span class="inline-flex items-center gap-2">
+      <span class="inline-block h-3 w-3 rounded-full border-2 border-primary border-t-transparent animate-spin"></span>
+      Loading more...
+    </span>
+  </td>
+</tr>
+{{ end }}
+{{ end }}
+
 {{ define "severity_pill" }}
 {{ if eq . "critical" }}<span class="ck-pill-critical">{{.}}</span>
 {{ else if eq . "high" }}<span class="ck-pill-high">{{.}}</span>
