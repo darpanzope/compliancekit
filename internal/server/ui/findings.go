@@ -32,6 +32,16 @@ import (
 	"github.com/darpanzope/compliancekit/internal/server/store"
 )
 
+// Severity labels — extracted to constants so goconst doesn't fire
+// on the case-switches in findings.go + resourcemap.go.
+const (
+	sevCritical = "critical"
+	sevHigh     = "high"
+	sevMedium   = "medium"
+	sevLow      = "low"
+	sevInfo     = "info"
+)
+
 // findingRow is the per-row payload the explorer template iterates
 // over. Wider than the API row because the explorer needs the
 // resource type + the framework array for chip-rendering.
@@ -315,15 +325,15 @@ func (u *UI) countFindingsBySeverity(ctx context.Context, f findingFilters) (fin
 		}
 		stats.Total += n
 		switch sev {
-		case "critical":
+		case sevCritical:
 			stats.Critical = n
-		case "high":
+		case sevHigh:
 			stats.High = n
-		case "medium":
+		case sevMedium:
 			stats.Medium = n
-		case "low":
+		case sevLow:
 			stats.Low = n
-		case "info":
+		case sevInfo:
 			stats.Info = n
 		}
 	}
