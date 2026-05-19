@@ -1,0 +1,97 @@
+{{define "content"}}
+<div class="max-w-2xl mx-auto" x-data="scanLive('{{ .ScanID }}', '{{ .Status }}')" x-init="start()">
+  <div class="mb-6">
+    <a href="/scans" class="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5">
+      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      Scans
+    </a>
+    <h1 class="mt-2 text-2xl font-semibold tracking-tight">Scan running</h1>
+    <p class="text-sm text-muted-foreground mt-1" x-text="message"></p>
+  </div>
+
+  <div class="ck-card p-8 text-center">
+    <!-- Spinner -->
+    <div x-show="!terminal" class="flex flex-col items-center gap-4">
+      <div class="relative h-16 w-16">
+        <div class="absolute inset-0 rounded-full border-4 border-muted"></div>
+        <div class="absolute inset-0 rounded-full border-4 border-primary border-t-transparent animate-spin"></div>
+      </div>
+      <div class="space-y-1">
+        <div class="text-base font-semibold" x-text="statusLabel"></div>
+        <div class="text-xs text-muted-foreground">Scan id <code class="text-[11px] px-1 py-0.5 rounded bg-muted">{{ .ScanID }}</code></div>
+      </div>
+    </div>
+
+    <!-- Terminal state — auto-reload to load the report -->
+    <div x-show="terminal" x-cloak class="flex flex-col items-center gap-4">
+      <div class="inline-flex h-16 w-16 items-center justify-center rounded-full" :class="success ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive'">
+        <svg x-show="success" xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        <svg x-show="!success" xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      </div>
+      <div class="space-y-1">
+        <div class="text-base font-semibold" x-text="statusLabel"></div>
+        <div class="text-xs text-muted-foreground" x-text="terminalSummary"></div>
+      </div>
+      <a href="/scans/{{ .ScanID }}" class="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary text-primary-foreground px-4 text-sm font-medium hover:opacity-90 transition shadow-soft">
+        View report
+      </a>
+    </div>
+  </div>
+
+  <p class="mt-4 text-xs text-muted-foreground text-center">Live updates over Server-Sent Events. Refresh manually if your network blocks long-lived connections.</p>
+</div>
+
+<script>
+function scanLive(id, initialStatus) {
+  return {
+    id: id,
+    status: initialStatus,
+    terminal: false,
+    success: false,
+    findings: 0,
+    actionable: 0,
+    score: 0,
+    es: null,
+    get message() {
+      if (this.terminal) return 'Scan finished — view the report below.';
+      if (this.status === 'queued') return 'Waiting for a worker to pick this scan up.';
+      if (this.status === 'running') return 'Scanning your fleet — this can take a few minutes.';
+      return 'Connecting to live progress stream...';
+    },
+    get statusLabel() {
+      if (this.terminal) {
+        if (this.success) return `Completed · ${this.findings} findings`;
+        return `${this.status[0].toUpperCase()}${this.status.slice(1)}`;
+      }
+      return `${this.status[0].toUpperCase()}${this.status.slice(1)}...`;
+    },
+    get terminalSummary() {
+      if (this.success) return `Score ${this.score} · ${this.actionable} actionable findings`;
+      return 'See the report for the failure details.';
+    },
+    start() {
+      try {
+        this.es = new EventSource('/scans/' + this.id + '/stream');
+        this.es.addEventListener('status', e => this.onStatus(e));
+        this.es.addEventListener('error', () => this.es && this.es.close());
+        this.es.addEventListener('timeout', () => this.es && this.es.close());
+      } catch (e) {
+        console.error('SSE failed', e);
+      }
+    },
+    onStatus(e) {
+      const d = JSON.parse(e.data);
+      this.status = d.status;
+      this.findings = d.total_findings;
+      this.actionable = d.actionable_findings;
+      this.score = d.score;
+      if (d.status === 'completed' || d.status === 'failed' || d.status === 'canceled') {
+        this.terminal = true;
+        this.success = d.status === 'completed';
+        if (this.es) this.es.close();
+      }
+    },
+  };
+}
+</script>
+{{end}}

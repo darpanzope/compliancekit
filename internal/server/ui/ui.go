@@ -199,6 +199,7 @@ func (u *UI) Mount(r chi.Router) {
 		u.mountYAMLRoutes(r)
 		u.mountCIRoutes(r)
 		u.mountWaiversRoutes(r)
+		u.mountScanNewRoutes(r)
 	})
 }
 
@@ -306,6 +307,30 @@ func (u *UI) listScans(w http.ResponseWriter, r *http.Request) {
 // report.
 func (u *UI) showScan(w http.ResponseWriter, r *http.Request) {
 	scanID := chi.URLParam(r, "id")
+
+	// v1.4 Phase 9: when the scan is still queued/running, render a
+	// live-progress page that subscribes to /scans/{id}/stream and
+	// flips to the report once the row hits a terminal status.
+	var status string
+	_ = u.store.DB().QueryRowContext(r.Context(),
+		`SELECT status FROM scans WHERE id = `+ph(u.store, 1), scanID).Scan(&status)
+	if status == "" {
+		http.NotFound(w, r)
+		return
+	}
+	if status == "queued" || status == "running" {
+		v := struct {
+			View
+			ScanID string
+			Status string
+		}{
+			View:   u.viewFor(r, "Scan running", "scans", View{}),
+			ScanID: scanID,
+			Status: status,
+		}
+		u.render(w, "scan_progress.html", v)
+		return
+	}
 
 	findings, err := u.loadFindings(r.Context(), scanID)
 	if err != nil {

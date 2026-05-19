@@ -1,0 +1,52 @@
+{{define "content"}}
+<div class="max-w-3xl mx-auto">
+  <div class="mb-6">
+    <a href="/scans" class="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5">
+      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      Scans
+    </a>
+    <h1 class="mt-2 text-2xl font-semibold tracking-tight">Run a scan</h1>
+    <p class="text-sm text-muted-foreground mt-1">Pick which providers to include. Disabled providers don't appear — toggle them on under <a href="/settings/providers" class="text-primary hover:underline">Settings</a> first.</p>
+  </div>
+
+  {{ if eq .Error "no-providers" }}<div class="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">Pick at least one provider before running a scan.</div>{{ end }}
+  {{ if eq .Error "none-enabled" }}<div class="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">None of the picked providers are enabled. Toggle them on in Settings first.</div>{{ end }}
+
+  <form action="/scans/new" method="post" class="space-y-4">
+    <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      {{ range .Providers }}
+      <label class="relative flex items-center gap-3 ck-card p-4 cursor-pointer transition hover:shadow-elevated has-[:checked]:border-primary has-[:checked]:bg-primary/5
+                    {{ if not .Enabled }}opacity-60 cursor-not-allowed{{ end }}">
+        <input type="checkbox"
+               name="provider"
+               value="{{ .ID }}"
+               {{ if not .Enabled }}disabled{{ end }}
+               {{ if and .Enabled .HasToken }}checked{{ end }}
+               class="h-4 w-4 rounded border-input text-primary focus:ring-ring">
+        <div class="flex-1 min-w-0">
+          <div class="font-semibold text-sm">{{ .Name }}</div>
+          <div class="text-xs text-muted-foreground mt-0.5">
+            {{ if not .Enabled }}Disabled in Settings{{ else if not .HasToken }}No token saved{{ else }}Ready to scan{{ end }}
+          </div>
+        </div>
+      </label>
+      {{ else }}
+      <div class="col-span-full ck-card p-6 text-center text-sm text-muted-foreground">
+        No providers configured. <a href="/setup" class="text-primary hover:underline">Run the setup wizard</a> first.
+      </div>
+      {{ end }}
+    </div>
+
+    <div class="flex items-center justify-between gap-3 pt-2">
+      <a href="/scans" class="text-sm text-muted-foreground hover:text-foreground">Cancel</a>
+      <button type="submit" class="inline-flex h-10 items-center gap-1.5 rounded-md bg-primary text-primary-foreground px-4 text-sm font-medium hover:opacity-90 transition shadow-soft"
+              {{ if not .Providers }}disabled{{ end }}>
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        Run scan
+      </button>
+    </div>
+  </form>
+</div>
+{{end}}
