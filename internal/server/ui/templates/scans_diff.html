@@ -1,0 +1,89 @@
+{{define "content"}}
+<div class="max-w-7xl mx-auto">
+  <div class="mb-6">
+    <a href="/scans" class="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5">
+      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      Scans
+    </a>
+    <h1 class="mt-2 text-2xl font-semibold tracking-tight">Cross-scan diff</h1>
+    <p class="text-sm text-muted-foreground mt-1">Pick two completed scans; see what's new, resolved, or changed status between them. Finds join on fingerprint (the baseline-tracking primitive).</p>
+  </div>
+
+  <!-- Picker -->
+  <form method="get" action="/scans/diff" class="ck-card p-4 mb-6">
+    <div class="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr_auto] gap-3 items-end">
+      <div>
+        <label for="a" class="block text-xs font-medium text-foreground mb-1">Scan A (baseline)</label>
+        <select id="a" name="a" class="w-full h-10 rounded-md border border-input bg-background px-3 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring transition">
+          {{ $a := .ScanA }}
+          {{ range .AllScans }}<option value="{{ .ID }}" {{ if eq .ID $a }}selected{{ end }}>{{ .CreatedAt }} · score {{ .Score }}</option>{{ end }}
+        </select>
+      </div>
+      <div class="text-2xl text-muted-foreground self-center hidden md:block">→</div>
+      <div>
+        <label for="b" class="block text-xs font-medium text-foreground mb-1">Scan B (compare)</label>
+        <select id="b" name="b" class="w-full h-10 rounded-md border border-input bg-background px-3 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring transition">
+          {{ $b := .ScanB }}
+          {{ range .AllScans }}<option value="{{ .ID }}" {{ if eq .ID $b }}selected{{ end }}>{{ .CreatedAt }} · score {{ .Score }}</option>{{ end }}
+        </select>
+      </div>
+      <button type="submit" class="inline-flex h-10 items-center gap-1.5 rounded-md bg-primary text-primary-foreground px-4 text-sm font-medium hover:opacity-90 transition">Compare</button>
+    </div>
+  </form>
+
+  {{ if not .ScanA }}
+    <div class="ck-card p-12 text-center">
+      <div class="text-base font-semibold">Not enough completed scans</div>
+      <p class="text-sm text-muted-foreground mt-1.5">Cross-scan diff needs at least two completed scans. Run a scan from <a href="/scans/new" class="text-primary hover:underline">/scans/new</a> to populate history.</p>
+    </div>
+  {{ else }}
+
+  <!-- Three-column diff layout -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+    <!-- New -->
+    <section class="ck-card overflow-hidden">
+      <header class="bg-success/10 px-4 py-2 border-b border-success/20 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-success"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          <span class="text-sm font-semibold text-success">New</span>
+        </div>
+        <span class="text-xs tabular-nums text-success">{{ len .New }}</span>
+      </header>
+      <ul class="divide-y divide-border max-h-[480px] overflow-y-auto">
+        {{ range .New }}{{ template "diff_entry" . }}{{ else }}<li class="p-4 text-xs text-muted-foreground text-center">none</li>{{ end }}
+      </ul>
+    </section>
+
+    <!-- Resolved -->
+    <section class="ck-card overflow-hidden">
+      <header class="bg-muted/40 px-4 py-2 border-b border-border flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-muted-foreground"><polyline points="20 6 9 17 4 12"/></svg>
+          <span class="text-sm font-semibold">Resolved</span>
+        </div>
+        <span class="text-xs tabular-nums text-muted-foreground">{{ len .Resolved }}</span>
+      </header>
+      <ul class="divide-y divide-border max-h-[480px] overflow-y-auto">
+        {{ range .Resolved }}{{ template "diff_entry" . }}{{ else }}<li class="p-4 text-xs text-muted-foreground text-center">none</li>{{ end }}
+      </ul>
+    </section>
+
+    <!-- Changed -->
+    <section class="ck-card overflow-hidden">
+      <header class="bg-warning/10 px-4 py-2 border-b border-warning/20 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-warning"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+          <span class="text-sm font-semibold text-warning">Changed</span>
+        </div>
+        <span class="text-xs tabular-nums text-warning">{{ len .Changed }}</span>
+      </header>
+      <ul class="divide-y divide-border max-h-[480px] overflow-y-auto">
+        {{ range .Changed }}{{ template "diff_entry" . }}{{ else }}<li class="p-4 text-xs text-muted-foreground text-center">none</li>{{ end }}
+      </ul>
+    </section>
+  </div>
+
+  <p class="mt-4 text-xs text-muted-foreground">A: <code class="text-[11px] px-1 py-0.5 rounded bg-muted">{{ .ScanA }}</code> ({{ .ScanACreated }}) → B: <code class="text-[11px] px-1 py-0.5 rounded bg-muted">{{ .ScanB }}</code> ({{ .ScanBCreated }})</p>
+  {{ end }}
+</div>
+{{end}}

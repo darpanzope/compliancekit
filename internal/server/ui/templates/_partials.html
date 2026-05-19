@@ -66,6 +66,20 @@ values as repeated name=value pairs natively. v1.5 Phase 1.
 {{ end }}
 {{ end }}
 
+{{ define "diff_entry" }}
+<li class="p-3 hover:bg-muted/30 transition-colors">
+  <a href="/findings?q={{ .CheckID }}" class="block">
+    <div class="flex items-center gap-2 text-xs">
+      {{ template "severity_pill" .Severity }}
+      <code class="font-mono text-[11px] truncate">{{ .CheckID }}</code>
+    </div>
+    <div class="text-xs text-foreground mt-1 truncate">{{ .ResourceName }}</div>
+    <div class="text-[11px] text-muted-foreground font-mono mt-0.5 truncate">{{ .ResourceID }}</div>
+    {{ if and .StatusA .StatusB }}<div class="text-[11px] text-warning mt-1">{{ .StatusA }} → {{ .StatusB }}</div>{{ end }}
+  </a>
+</li>
+{{ end }}
+
 {{ define "severity_pill" }}
 {{ if eq . "critical" }}<span class="ck-pill-critical">{{.}}</span>
 {{ else if eq . "high" }}<span class="ck-pill-high">{{.}}</span>
