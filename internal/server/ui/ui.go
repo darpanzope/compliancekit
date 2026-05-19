@@ -266,6 +266,7 @@ func (u *UI) Mount(r chi.Router) {
 		u.mountDriftRoutes(r)
 		u.mountScoresRoutes(r)
 		u.mountDiffRoutes(r)
+		u.mountSearchRoutes(r)
 	})
 }
 

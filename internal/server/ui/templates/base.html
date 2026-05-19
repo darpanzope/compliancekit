@@ -232,6 +232,65 @@ table.list tbody tr:hover { background: var(--legacy-panel-2); }
   </div>
 {{ end }}
 
+<!-- v1.5 Phase 10 — Cmd+K global search palette. Mounted at body
+     level so every authenticated page can open it via the keyboard
+     shortcut. Vanilla Alpine — no extra JS library. -->
+{{ if not .LoginPage }}
+<div x-data="cmdk()" @keydown.window.prevent.cmd.k="open()" @keydown.window.prevent.ctrl.k="open()"
+     @keydown.escape.window="visible = false">
+  <div x-show="visible" x-cloak class="fixed inset-0 z-50 flex items-start justify-center pt-[10vh]"
+       x-transition:enter="transition ease-out duration-150"
+       x-transition:enter-start="opacity-0"
+       x-transition:enter-end="opacity-100">
+    <div class="absolute inset-0 bg-foreground/30 backdrop-blur-sm" @click="visible = false"></div>
+    <div class="relative w-[640px] max-w-[90vw] ck-card-elevated overflow-hidden">
+      <div class="border-b border-border p-3 flex items-center gap-2">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-muted-foreground"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" x-model="query" @input.debounce.150ms="run()" placeholder="Search resources, findings, checks, providers..."
+               x-ref="input" class="flex-1 bg-transparent text-sm focus:outline-none placeholder:text-muted-foreground">
+        <kbd class="px-1.5 py-0.5 text-[10px] rounded bg-muted border border-border text-muted-foreground font-mono">esc</kbd>
+      </div>
+      <ul class="max-h-[400px] overflow-y-auto divide-y divide-border">
+        <template x-for="r in results" :key="r.kind + r.href">
+          <li>
+            <a :href="r.href" class="flex items-start gap-3 px-4 py-2.5 hover:bg-muted transition">
+              <span class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded text-[10px] uppercase tracking-wider font-bold
+                bg-muted text-muted-foreground"
+                x-text="r.kind.slice(0,3)"></span>
+              <span class="flex-1 min-w-0">
+                <span class="block text-sm truncate" x-text="r.label"></span>
+                <span class="block text-xs text-muted-foreground truncate" x-text="r.sub"></span>
+              </span>
+              <span x-show="r.hint" class="text-[10px] uppercase tracking-wider text-muted-foreground" x-text="r.hint"></span>
+            </a>
+          </li>
+        </template>
+        <li x-show="results.length === 0 && query.length > 0" x-cloak class="px-4 py-6 text-center text-xs text-muted-foreground">No matches</li>
+        <li x-show="results.length === 0 && query.length === 0" x-cloak class="px-4 py-6 text-center text-xs text-muted-foreground">Type to search across resources, findings, checks, providers, saved views.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+<script>
+function cmdk() {
+  return {
+    visible: false,
+    query: '',
+    results: [],
+    open() {
+      this.visible = true;
+      this.$nextTick(() => this.$refs.input && this.$refs.input.focus());
+    },
+    async run() {
+      if (this.query.length === 0) { this.results = []; return; }
+      const r = await fetch('/search?q=' + encodeURIComponent(this.query));
+      this.results = await r.json();
+    },
+  };
+}
+</script>
+{{ end }}
+
 <!-- Alpine cloak: hide x-cloak nodes before Alpine boots so popovers
      don't flash open on first paint. -->
 <style>[x-cloak] { display: none !important; }</style>
