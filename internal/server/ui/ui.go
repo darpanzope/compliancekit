@@ -200,6 +200,7 @@ func (u *UI) Mount(r chi.Router) {
 		u.mountCIRoutes(r)
 		u.mountWaiversRoutes(r)
 		u.mountScanNewRoutes(r)
+		u.mountScheduleRoutes(r)
 	})
 }
 
