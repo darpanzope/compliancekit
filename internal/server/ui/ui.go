@@ -200,14 +200,23 @@ var tmpl = template.Must(template.New("ui").Funcs(templateFuncs).ParseFS(tmplFS,
 // UI is the handler bundle. Constructed with the same store + auth
 // dependencies the API layer uses.
 type UI struct {
-	store    *store.Store
-	users    *auth.Users
-	sessions *auth.Sessions
+	store         *store.Store
+	users         *auth.Users
+	sessions      *auth.Sessions
+	oidcProviders []auth.OIDCProviderButton
 }
 
 // New constructs the UI handle.
 func New(st *store.Store, users *auth.Users, sessions *auth.Sessions) *UI {
 	return &UI{store: st, users: users, sessions: sessions}
+}
+
+// SetOIDCProviders installs the list of upstream identity providers
+// the daemon accepts logins from. Called by cli/serve.go after
+// constructing each auth.OIDC handler so the /login template can
+// render the right button set. Empty list → password-only login.
+func (u *UI) SetOIDCProviders(providers []auth.OIDCProviderButton) {
+	u.oidcProviders = providers
 }
 
 // View is the layout-template payload. The Content sub-template
@@ -221,6 +230,11 @@ type View struct {
 	Next      string
 	User      *auth.User
 	CSRFToken string
+
+	// OIDCProviders enumerates the upstream identity providers the
+	// daemon is configured for. The login template renders one button
+	// per entry; empty slice → password-only login. v1.5.1 F15.
+	OIDCProviders []auth.OIDCProviderButton
 
 	// Page-specific
 	Items any
@@ -315,10 +329,11 @@ func (u *UI) rootRedirect(w http.ResponseWriter, r *http.Request) {
 
 func (u *UI) login(w http.ResponseWriter, r *http.Request) {
 	view := View{
-		Title:     "Sign in",
-		LoginPage: true,
-		Next:      r.URL.Query().Get("next"),
-		Flash:     r.URL.Query().Get("flash"),
+		Title:         "Sign in",
+		LoginPage:     true,
+		Next:          r.URL.Query().Get("next"),
+		Flash:         r.URL.Query().Get("flash"),
+		OIDCProviders: u.oidcProviders,
 	}
 	u.render(w, "login.html", view)
 }

@@ -38,8 +38,24 @@
     </button>
   </form>
 
-  <p class="mt-6 text-center text-xs text-muted-foreground">
-    Or use an upstream identity provider — see the <a href="/docs/oidc" class="text-primary hover:underline">OIDC setup guide</a>.
-  </p>
+  {{ if .OIDCProviders }}
+    <div class="mt-6 flex items-center gap-3">
+      <span class="flex-1 h-px bg-border"></span>
+      <span class="text-[10px] uppercase tracking-wider text-muted-foreground">or</span>
+      <span class="flex-1 h-px bg-border"></span>
+    </div>
+    <div class="mt-4 space-y-2">
+      {{ range .OIDCProviders }}
+        <a href="/oidc/{{ .ID }}/login"
+           class="flex items-center justify-center w-full h-10 rounded-md border border-input bg-background text-sm font-medium text-foreground hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring transition">
+          {{ .Label }}
+        </a>
+      {{ end }}
+    </div>
+  {{ else }}
+    <p class="mt-6 text-center text-xs text-muted-foreground">
+      Configure OIDC (Google / Okta / GitHub / custom) via <code class="text-xs px-1 py-0.5 rounded bg-muted">CK_OIDC_*</code> env vars to add an upstream identity provider here.
+    </p>
+  {{ end }}
 </div>
 {{end}}

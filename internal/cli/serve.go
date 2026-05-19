@@ -130,6 +130,22 @@ func runServe(ctx context.Context, stdout interface {
 	uiH := ui.New(st, users, sessions)
 	uiH.Mount(srv.Router())
 
+	// v1.5.1 F15: discover OIDC providers via env vars + mount each
+	// one's /oidc/{id}/{login,callback} routes. Each constructed
+	// provider also produces a button entry for the /login template.
+	// The OIDC handler code shipped in v1.3 with unit tests but was
+	// never wired into production by NewOIDC + Mount.
+	if buttons, err := loadOIDCFromEnv(ctx, srv.Router(), users, sessions, st); err != nil {
+		fmt.Fprintf(stdout, "  oidc:    warning — %v\n", err)
+	} else if len(buttons) > 0 {
+		uiH.SetOIDCProviders(buttons)
+		ids := make([]string, 0, len(buttons))
+		for _, b := range buttons {
+			ids = append(ids, b.ID)
+		}
+		fmt.Fprintf(stdout, "  oidc:    %s\n", strings.Join(ids, ", "))
+	}
+
 	// Spawn the background worker pool. Phase 8 ships StubRunner so
 	// queued scans transition to completed without running anything;
 	// v1.4 phase 9 swaps it for a real scan-engine Runner.

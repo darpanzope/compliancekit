@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/coreos/go-oidc/v3/oidc"
+	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"golang.org/x/oauth2"
 
@@ -21,6 +22,15 @@ import (
 // URL; GitHub uses a separate OAuth2-only path (it doesn't ship
 // OpenID Connect, only OAuth2 + a /user endpoint we read separately).
 type OIDCProvider string
+
+// OIDCProviderButton is the display-side projection of an OIDC config
+// for rendering on the /login page. v1.5.1 F15 — populated by the
+// daemon at boot for every configured provider and passed to the UI
+// via UI.SetOIDCProviders.
+type OIDCProviderButton struct {
+	ID    string // url-safe id; matches the path segment in /oidc/{id}/login
+	Label string // human display label, e.g. "Sign in with Google"
+}
 
 const (
 	OIDCProviderGoogle OIDCProvider = "google"
@@ -131,6 +141,16 @@ func NewOIDC(ctx context.Context, cfg OIDCConfig, users *Users, sessions *Sessio
 // useful for the v1.4 settings page to surface what's configured.
 func (o *OIDC) Config() OIDCConfig { return o.cfg }
 
+// Mount wires the per-provider routes under /oidc/{id}/login and
+// /oidc/{id}/callback. v1.5.1 F15 — `auth.NewOIDC` + every handler
+// shipped in v1.3 with unit tests, but the routes were never mounted
+// onto the daemon's chi router. The login template even advertised
+// OIDC; the corresponding paths returned 404 in production.
+func (o *OIDC) Mount(r chi.Router) {
+	r.Get("/oidc/"+o.cfg.ID+"/login", o.LoginHandler())
+	r.Get("/oidc/"+o.cfg.ID+"/callback", o.CallbackHandler())
+}
+
 // LoginHandler kicks off the authorization-code flow: generates a
 // random state, sets it in a short-lived cookie, redirects the user
 // to the upstream's authorize URL.
@@ -147,7 +167,7 @@ func (o *OIDC) LoginHandler() http.HandlerFunc {
 			Path:     "/",
 			MaxAge:   300, // 5 min
 			HttpOnly: true,
-			Secure:   true,
+			Secure:   o.sessions.SecureCookies,
 			SameSite: http.SameSiteLaxMode,
 		})
 		http.Redirect(w, r, o.oauth2.AuthCodeURL(state), http.StatusSeeOther)
@@ -171,7 +191,7 @@ func (o *OIDC) CallbackHandler() http.HandlerFunc {
 			return
 		}
 		// Best-effort delete of the state cookie.
-		http.SetCookie(w, &http.Cookie{Name: oidcStateCookieName, Path: "/", MaxAge: -1, HttpOnly: true, Secure: true, SameSite: http.SameSiteLaxMode})
+		http.SetCookie(w, &http.Cookie{Name: oidcStateCookieName, Path: "/", MaxAge: -1, HttpOnly: true, Secure: o.sessions.SecureCookies, SameSite: http.SameSiteLaxMode})
 
 		code := r.URL.Query().Get("code")
 		if code == "" {
