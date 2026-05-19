@@ -1,0 +1,40 @@
+{{define "content"}}
+<div class="max-w-6xl mx-auto">
+  <div class="mb-6">
+    <a href="/settings/providers" class="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5">
+      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      Settings
+    </a>
+    <h1 class="mt-2 text-2xl font-semibold tracking-tight">Frameworks</h1>
+    <p class="text-sm text-muted-foreground mt-1">Scope controls in or out of audit. Excluded controls require a justification — auditors see the rationale in the evidence pack.</p>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    {{ range .Items }}
+    <a href="/settings/frameworks/{{ .ID }}" class="ck-card p-5 transition hover:shadow-elevated focus:outline-none focus:ring-2 focus:ring-ring">
+      <div class="flex items-start justify-between gap-3">
+        <div class="min-w-0">
+          <div class="flex items-center gap-2 flex-wrap">
+            <span class="font-semibold text-foreground">{{ .Name }}</span>
+            {{ if .Version }}<span class="text-[10px] uppercase tracking-wider text-muted-foreground bg-muted px-1.5 py-0.5 rounded">v{{ .Version }}</span>{{ end }}
+            {{ if eq .Category "threat-model" }}<span class="text-[10px] uppercase tracking-wider text-warning bg-warning/10 px-1.5 py-0.5 rounded">Threat model</span>{{ end }}
+          </div>
+          {{ if .Description }}<p class="text-xs text-muted-foreground mt-1.5 leading-relaxed line-clamp-2">{{ .Description }}</p>{{ end }}
+        </div>
+      </div>
+      <div class="mt-4 pt-4 border-t border-border flex items-center justify-between gap-2 text-xs">
+        <div class="text-muted-foreground">
+          <span class="tabular-nums">{{ .ControlCount }}</span> controls
+          {{ if gt .TailoredCount 0 }}<span class="mx-1.5 text-border">·</span><span class="text-warning tabular-nums">{{ .TailoredCount }} tailored</span>{{ end }}
+        </div>
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-muted-foreground"><polyline points="9 18 15 12 9 6"/></svg>
+      </div>
+    </a>
+    {{ else }}
+    <div class="col-span-full rounded-md border border-dashed border-border bg-muted/30 p-6 text-center text-sm text-muted-foreground">
+      No frameworks loaded — this build ships without an embedded catalog.
+    </div>
+    {{ end }}
+  </div>
+</div>
+{{end}}

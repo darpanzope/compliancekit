@@ -195,6 +195,7 @@ func (u *UI) Mount(r chi.Router) {
 		u.mountChecksRoutes(r)
 		u.mountSetupRoutes(r)
 		u.mountSettingsRoutes(r)
+		u.mountFrameworksRoutes(r)
 	})
 }
 

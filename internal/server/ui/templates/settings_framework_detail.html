@@ -1,0 +1,89 @@
+{{define "content"}}
+<div class="max-w-5xl mx-auto">
+  <div class="mb-6">
+    <a href="/settings/frameworks" class="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5">
+      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      All frameworks
+    </a>
+    <div class="mt-2 flex items-center gap-2 flex-wrap">
+      <h1 class="text-2xl font-semibold tracking-tight">{{ .Framework.Name }}</h1>
+      {{ if .Framework.Version }}<span class="text-[10px] uppercase tracking-wider text-muted-foreground bg-muted px-1.5 py-0.5 rounded">v{{ .Framework.Version }}</span>{{ end }}
+    </div>
+    {{ if .Framework.Description }}<p class="text-sm text-muted-foreground mt-2">{{ .Framework.Description }}</p>{{ end }}
+    <div class="mt-3 text-xs text-muted-foreground tabular-nums">
+      <span class="text-success font-medium">{{ .IncludedCount }} in scope</span>
+      <span class="mx-1.5 text-border">·</span>
+      <span class="text-warning font-medium">{{ .ExcludedCount }} excluded</span>
+    </div>
+  </div>
+
+  {{ if eq .Flash "control-excluded" }}<div class="mb-4 rounded-md border border-warning/30 bg-warning/10 px-3 py-2 text-sm text-warning">Control excluded from this framework's audit scope.</div>{{ end }}
+  {{ if eq .Flash "control-tailored" }}<div class="mb-4 rounded-md border border-success/30 bg-success/10 px-3 py-2 text-sm text-success">Tailoring decision saved.</div>{{ end }}
+  {{ if eq .Flash "control-restored" }}<div class="mb-4 rounded-md border border-success/30 bg-success/10 px-3 py-2 text-sm text-success">Control restored to default scope.</div>{{ end }}
+  {{ if eq .Error "need-justification" }}<div class="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">Justification is required when excluding a control. Paste a sentence or two explaining why.</div>{{ end }}
+
+  <div class="space-y-3">
+    {{ range .Controls }}
+    <div class="ck-card p-5">
+      <details class="group">
+        <summary class="flex items-start justify-between gap-3 cursor-pointer list-none">
+          <div class="min-w-0">
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="font-mono text-xs text-muted-foreground">{{ .ID }}</span>
+              {{ if .Family }}<span class="text-[10px] uppercase tracking-wider text-muted-foreground bg-muted px-1.5 py-0.5 rounded">{{ .Family }}</span>{{ end }}
+              {{ if not .Included }}<span class="text-[10px] uppercase tracking-wider text-warning bg-warning/10 px-1.5 py-0.5 rounded">excluded</span>{{ end }}
+              {{ if and .Included .Overridden }}<span class="text-[10px] uppercase tracking-wider text-muted-foreground bg-muted px-1.5 py-0.5 rounded">restored</span>{{ end }}
+            </div>
+            <h2 class="mt-1.5 text-sm font-semibold">{{ .Name }}</h2>
+            {{ if .Description }}<p class="text-xs text-muted-foreground mt-1 line-clamp-2 group-open:line-clamp-none transition-all">{{ .Description }}</p>{{ end }}
+            {{ if not .Included }}{{ if .Justification }}
+            <div class="mt-2 rounded-md bg-warning/5 border border-warning/30 p-2">
+              <div class="text-[10px] uppercase tracking-wider text-warning font-medium">Justification</div>
+              <p class="text-xs text-foreground mt-0.5">{{ .Justification }}</p>
+            </div>
+            {{ end }}{{ end }}
+          </div>
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 text-muted-foreground transition-transform group-open:rotate-180"><polyline points="6 9 12 15 18 9"/></svg>
+        </summary>
+
+        <form action="/settings/frameworks/{{ $.Framework.ID }}/control/{{ .ID }}" method="post" class="mt-4 pt-4 border-t border-border space-y-3">
+          <input type="hidden" name="csrf_token" value="{{ $.CSRFToken }}">
+
+          {{ if .Included }}
+          <p class="text-xs text-muted-foreground">This control is currently <span class="text-success font-medium">in scope</span>. Exclude it from audit (and provide a justification) when it doesn't apply to your fleet.</p>
+          <div class="space-y-1.5">
+            <label for="just-{{ .ID }}" class="block text-xs font-medium text-foreground">Justification</label>
+            <textarea id="just-{{ .ID }}" name="justification" rows="2" placeholder="e.g. We do not store cardholder data; the PCI scope is bounded to the payment gateway."
+                      class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring transition"></textarea>
+          </div>
+          <div class="flex items-center justify-end">
+            <button type="submit" name="action" value="exclude"
+                    class="inline-flex h-9 items-center gap-1.5 rounded-md border border-warning/40 bg-warning/10 text-warning px-4 text-sm font-medium hover:bg-warning/20 transition">
+              Exclude from scope
+            </button>
+          </div>
+          {{ else }}
+          <p class="text-xs text-muted-foreground">This control is currently <span class="text-warning font-medium">excluded</span> with the justification above. Restore it to scope or update the justification.</p>
+          <div class="space-y-1.5">
+            <label for="just-{{ .ID }}" class="block text-xs font-medium text-foreground">Justification</label>
+            <textarea id="just-{{ .ID }}" name="justification" rows="2"
+                      class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring transition">{{ .Justification }}</textarea>
+          </div>
+          <div class="flex items-center justify-end gap-2">
+            <button type="submit" name="action" value="exclude"
+                    class="inline-flex h-9 items-center gap-1.5 rounded-md border border-border bg-background px-3 text-xs font-medium hover:bg-muted transition">
+              Update justification
+            </button>
+            <button type="submit" name="action" value="include"
+                    class="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary text-primary-foreground px-4 text-sm font-medium hover:opacity-90 transition shadow-soft">
+              Restore to scope
+            </button>
+          </div>
+          {{ end }}
+        </form>
+      </details>
+    </div>
+    {{ end }}
+  </div>
+</div>
+{{end}}
