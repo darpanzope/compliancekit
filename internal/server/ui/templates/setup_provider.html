@@ -1,0 +1,61 @@
+{{define "content"}}
+<div class="max-w-4xl mx-auto">
+  {{ template "setup_progress" . }}
+
+  <div class="mt-8">
+    <h1 class="text-2xl font-semibold tracking-tight">Pick your first provider</h1>
+    <p class="text-sm text-muted-foreground mt-2">Compliancekit can scan many fleets, but we'll start with one. You'll add more from <a href="/providers" class="text-primary hover:underline">Settings → Providers</a> later.</p>
+
+    <form action="/setup/provider" method="post" class="mt-6">
+      <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
+      <fieldset class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {{ range .Providers }}
+        <label class="relative ck-card p-5 cursor-pointer transition hover:shadow-elevated focus-within:ring-2 focus-within:ring-ring
+                      {{ if not .Available }}opacity-60 cursor-not-allowed{{ end }}">
+          <input type="radio"
+                 name="provider"
+                 value="{{ .ID }}"
+                 class="peer sr-only"
+                 {{ if not .Available }}disabled{{ end }}
+                 {{ if eq .ID "digitalocean" }}required{{ end }}>
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <div class="font-semibold text-foreground">{{ .Name }}</div>
+              <p class="text-xs text-muted-foreground mt-1.5 leading-relaxed">{{ .Description }}</p>
+            </div>
+            {{ if .Available }}
+              <span class="hidden peer-checked:inline-flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              </span>
+            {{ else }}
+              <span class="text-[10px] uppercase tracking-wider text-muted-foreground bg-muted px-2 py-0.5 rounded-full whitespace-nowrap">Phase 2</span>
+            {{ end }}
+          </div>
+          {{ if .DocsURL }}
+            <a href="{{ .DocsURL }}" target="_blank" rel="noopener noreferrer"
+               class="mt-3 inline-flex items-center gap-1 text-xs text-primary hover:underline"
+               onclick="event.stopPropagation()">
+              How to create a token
+              <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+            </a>
+          {{ end }}
+          <div class="absolute inset-0 rounded-xl ring-0 peer-checked:ring-2 peer-checked:ring-primary pointer-events-none transition"></div>
+        </label>
+        {{ end }}
+      </fieldset>
+
+      <div class="mt-8 flex items-center justify-between gap-3">
+        <a href="/setup/welcome" class="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+          Back
+        </a>
+        <button type="submit"
+                class="inline-flex h-10 items-center gap-2 rounded-md bg-primary text-primary-foreground px-4 text-sm font-medium hover:opacity-90 transition shadow-soft">
+          Continue
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{{end}}

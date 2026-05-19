@@ -1,0 +1,77 @@
+{{define "content"}}
+<div class="max-w-2xl mx-auto">
+  {{ template "setup_progress" . }}
+
+  <div class="ck-card p-8 mt-8">
+    {{ if and .Probe .Probe.OK }}
+      <div class="flex items-start gap-4">
+        <span class="inline-flex h-12 w-12 items-center justify-center rounded-full bg-success/10 text-success shrink-0" aria-hidden="true">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        </span>
+        <div class="flex-1 min-w-0">
+          <h1 class="text-xl font-semibold tracking-tight">Connected to {{ .Provider.Name }}</h1>
+          <p class="text-sm text-muted-foreground mt-1">{{ .Probe.Message }} The API responded in <strong class="text-foreground tabular-nums">{{ .Probe.Duration }}</strong>.</p>
+        </div>
+      </div>
+
+      <div class="mt-6 rounded-md border border-border bg-muted/40 p-4 text-xs space-y-2">
+        <div class="font-medium text-foreground">What happens in the first scan</div>
+        <ul class="space-y-1 text-muted-foreground">
+          <li class="flex items-start gap-2"><span class="text-success">•</span>Enumerate {{ .Provider.Name }} resources visible to the token (read-only).</li>
+          <li class="flex items-start gap-2"><span class="text-success">•</span>Evaluate every shipped check that targets {{ .Provider.Name }}.</li>
+          <li class="flex items-start gap-2"><span class="text-success">•</span>Persist findings to this daemon's database — no third-party upload, no telemetry.</li>
+        </ul>
+      </div>
+
+      <div class="mt-8 flex items-center justify-between gap-3">
+        <a href="/setup/auth?provider={{ .Provider.ID }}" class="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+          Change token
+        </a>
+        <a href="/setup/scan?provider={{ .Provider.ID }}"
+           class="inline-flex h-10 items-center gap-2 rounded-md bg-primary text-primary-foreground px-4 text-sm font-medium hover:opacity-90 transition shadow-soft">
+          Continue to first scan
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </a>
+      </div>
+    {{ else }}
+      <div class="flex items-start gap-4">
+        <span class="inline-flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10 text-destructive shrink-0" aria-hidden="true">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        </span>
+        <div class="flex-1 min-w-0">
+          <h1 class="text-xl font-semibold tracking-tight">Couldn't reach {{ .Provider.Name }}</h1>
+          <p class="text-sm text-muted-foreground mt-1">The provider API rejected the token, or the daemon couldn't reach it. The token wasn't saved as authenticated — fix the issue and try again.</p>
+        </div>
+      </div>
+
+      {{ if .Probe }}{{ if .Probe.Message }}
+      <div class="mt-6 rounded-md border border-destructive/30 bg-destructive/5 p-3">
+        <div class="text-xs font-mono text-destructive break-words">{{ .Probe.Message }}</div>
+      </div>
+      {{ end }}{{ end }}
+
+      <div class="mt-6 rounded-md border border-border bg-muted/40 p-4 text-xs text-muted-foreground space-y-1.5">
+        <div class="font-medium text-foreground">Common causes</div>
+        <ul class="space-y-1">
+          <li class="flex items-start gap-2">•<span>Token revoked or expired — generate a fresh one in the {{ .Provider.Name }} console.</span></li>
+          <li class="flex items-start gap-2">•<span>Token scoped without the read permissions compliancekit needs.</span></li>
+          <li class="flex items-start gap-2">•<span>Outbound network blocked — check firewall / proxy on this host.</span></li>
+        </ul>
+      </div>
+
+      <div class="mt-8 flex items-center justify-between gap-3">
+        <a href="/setup/provider" class="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+          Pick a different provider
+        </a>
+        <a href="/setup/auth?provider={{ .Provider.ID }}"
+           class="inline-flex h-10 items-center gap-2 rounded-md bg-primary text-primary-foreground px-4 text-sm font-medium hover:opacity-90 transition shadow-soft">
+          Try a different token
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+        </a>
+      </div>
+    {{ end }}
+  </div>
+</div>
+{{end}}

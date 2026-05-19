@@ -1,0 +1,60 @@
+{{define "content"}}
+<div class="max-w-2xl mx-auto">
+  {{ template "setup_progress" . }}
+
+  <div class="ck-card p-8 mt-8">
+    <h1 class="text-2xl font-semibold tracking-tight">Connect {{ .Provider.Name }}</h1>
+    <p class="text-sm text-muted-foreground mt-2">Paste a personal-access token with read scope. The daemon stores it in <code class="text-xs px-1 py-0.5 rounded bg-muted">providers.config_json</code> on this database only — never logged, never transmitted off-host.</p>
+
+    {{ if .Error }}
+    <div class="mt-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+      {{ if eq .Error "empty" }}Please paste a token to continue.{{ else }}{{ .Error }}{{ end }}
+    </div>
+    {{ end }}
+
+    <form action="/setup/auth" method="post" class="mt-6 space-y-4">
+      <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
+      <input type="hidden" name="provider"   value="{{ .Provider.ID }}">
+
+      <div class="space-y-1.5">
+        <label for="token" class="block text-xs font-medium text-foreground">{{ .Provider.Name }} API token</label>
+        <input type="password"
+               id="token"
+               name="token"
+               autocomplete="off"
+               required autofocus
+               placeholder="dop_v1_…"
+               class="w-full h-10 rounded-md border border-input bg-background px-3 text-sm font-mono placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring transition">
+        {{ if .Provider.DocsURL }}
+        <p class="text-xs text-muted-foreground mt-1">
+          Need a token?
+          <a href="{{ .Provider.DocsURL }}" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline">
+            Open the {{ .Provider.Name }} token guide
+            <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline align-baseline"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          </a>
+        </p>
+        {{ end }}
+      </div>
+
+      <div class="rounded-md border border-border bg-muted/40 p-3 text-xs text-muted-foreground space-y-1">
+        <div class="flex items-start gap-2">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mt-0.5 shrink-0 text-primary"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+          <span>The next step calls <code class="text-[11px] px-1 py-0.5 rounded bg-background">{{ .Provider.Name }} /v2/account</code> exactly once. Nothing is created, modified, or deleted on your account.</span>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-between gap-3 pt-2">
+        <a href="/setup/provider" class="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+          Back
+        </a>
+        <button type="submit"
+                class="inline-flex h-10 items-center gap-2 rounded-md bg-primary text-primary-foreground px-4 text-sm font-medium hover:opacity-90 transition shadow-soft">
+          Verify token
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{{end}}

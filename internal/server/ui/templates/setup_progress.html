@@ -1,0 +1,24 @@
+{{define "setup_progress"}}
+{{/* Shared step indicator rendered above every wizard panel.
+     Reads .StepNumber + .TotalSteps from setupView. Five circles +
+     four connectors; current step is filled, previous steps are
+     done (tick), future steps are dim. */}}
+<ol class="flex items-center w-full justify-between gap-2" aria-label="Setup progress">
+  {{ $cur := .StepNumber }}
+  {{ $labels := list "Welcome" "Provider" "Authenticate" "Verify" "Scan" }}
+  {{ range $i, $label := $labels }}
+  {{ $n := add $i 1 }}
+  <li class="flex items-center gap-2 flex-1 last:flex-none">
+    <span class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold transition
+                 {{ if lt $n $cur }}bg-primary text-primary-foreground
+                 {{ else if eq $n $cur }}bg-primary text-primary-foreground ring-4 ring-primary/15
+                 {{ else }}bg-muted text-muted-foreground
+                 {{ end }}">
+      {{ if lt $n $cur }}<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>{{ else }}{{ $n }}{{ end }}
+    </span>
+    <span class="text-xs font-medium {{ if le $n $cur }}text-foreground{{ else }}text-muted-foreground{{ end }} hidden sm:inline">{{ $label }}</span>
+    {{ if lt $n 5 }}<span class="h-px flex-1 {{ if lt $n $cur }}bg-primary{{ else }}bg-border{{ end }}"></span>{{ end }}
+  </li>
+  {{ end }}
+</ol>
+{{end}}

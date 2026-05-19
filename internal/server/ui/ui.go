@@ -64,6 +64,13 @@ var defaultNav = []navItem{
 var templateFuncs = template.FuncMap{
 	"navItems":     func() []navItem { return defaultNav },
 	"userInitials": initialsFromEmail,
+	// list + add are tiny template-only helpers — list lets a template
+	// declare an inline []string literal (avoids passing labels as
+	// extra View fields for one-off panels); add is the 0-indexed
+	// $i → 1-indexed step number converter the v1.4 setup wizard
+	// progress bar uses.
+	"list": func(items ...string) []string { return items },
+	"add":  func(a, b int) int { return a + b },
 }
 
 // initialsFromEmail returns up to 2 upper-case characters derived from
@@ -158,6 +165,7 @@ func (u *UI) Mount(r chi.Router) {
 		r.Get("/scans/{id}", u.showScan)
 		r.Get("/providers", u.listProviders)
 		r.Get("/checks", u.listChecks)
+		u.mountSetupRoutes(r)
 	})
 }
 
@@ -182,6 +190,16 @@ func assetsHandler() http.HandlerFunc {
 
 func (u *UI) rootRedirect(w http.ResponseWriter, r *http.Request) {
 	if _, err := r.Cookie(auth.SessionCookieName); err == nil {
+		// v1.4 Phase 1 onboarding gate: a logged-in operator landing
+		// on "/" with no providers configured goes through the
+		// first-run wizard at /setup. Once any provider is enabled,
+		// "/" routes to the scans list as before. The session itself
+		// gets validated by the auth middleware on the destination
+		// route — this is just routing.
+		if u.enabledProviderCount(r.Context()) == 0 {
+			http.Redirect(w, r, "/setup", http.StatusSeeOther)
+			return
+		}
 		http.Redirect(w, r, "/scans", http.StatusSeeOther)
 		return
 	}
@@ -364,7 +382,11 @@ func (u *UI) viewFor(r *http.Request, title, active string, v View) View {
 	return v
 }
 
-func (u *UI) render(w http.ResponseWriter, contentTemplate string, view View) {
+// render takes any view payload. The base + content templates resolve
+// embedded fields (e.g. setupView embeds View) the same as direct
+// ones, so wizard pages render with both the chrome fields and the
+// step-specific fields available under `.`.
+func (u *UI) render(w http.ResponseWriter, contentTemplate string, view any) {
 	// The base template references {{ template "content" . }} which
 	// resolves to whichever content template defined it; we drop the
 	// right one in by re-parsing on each call (cheap; ~10 KB of text).

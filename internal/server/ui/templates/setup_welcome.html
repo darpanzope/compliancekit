@@ -1,0 +1,45 @@
+{{define "content"}}
+<div class="max-w-3xl mx-auto">
+  {{ template "setup_progress" . }}
+
+  <div class="ck-card p-8 mt-8">
+    <div class="flex items-center gap-3 mb-4">
+      <span class="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-primary text-white" aria-hidden="true">
+        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      </span>
+      <div>
+        <h1 class="text-2xl font-semibold tracking-tight">Welcome to compliancekit</h1>
+        <p class="text-sm text-muted-foreground mt-1">Five short steps and you'll have your first scan running.</p>
+      </div>
+    </div>
+
+    <ul class="mt-6 space-y-3 text-sm">
+      <li class="flex items-start gap-3">
+        <span class="mt-0.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary/10 text-primary text-[10px] font-bold">1</span>
+        <span>Pick a provider — we'll start with one and you can add more later in <a href="/providers" class="text-primary hover:underline">Settings → Providers</a>.</span>
+      </li>
+      <li class="flex items-start gap-3">
+        <span class="mt-0.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary/10 text-primary text-[10px] font-bold">2</span>
+        <span>Drop in an API token (or connect via OIDC at v1.4 Phase 6). The daemon never logs the secret — it goes straight to the encrypted config column.</span>
+      </li>
+      <li class="flex items-start gap-3">
+        <span class="mt-0.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary/10 text-primary text-[10px] font-bold">3</span>
+        <span>We probe the provider's API once to confirm the token works. No mutating calls, no resources changed.</span>
+      </li>
+      <li class="flex items-start gap-3">
+        <span class="mt-0.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary/10 text-primary text-[10px] font-bold">4</span>
+        <span>Kick off the first scan. Results land in the dashboard within minutes for typical fleets.</span>
+      </li>
+    </ul>
+
+    <div class="mt-8 flex items-center justify-between gap-3">
+      <span class="text-xs text-muted-foreground">No data leaves your daemon. No telemetry. No phone-home.</span>
+      <a href="/setup/provider"
+         class="inline-flex h-10 items-center gap-2 rounded-md bg-primary text-primary-foreground px-4 text-sm font-medium hover:opacity-90 transition shadow-soft">
+        Get started
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+      </a>
+    </div>
+  </div>
+</div>
+{{end}}
