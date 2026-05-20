@@ -130,7 +130,10 @@ func runServe(ctx context.Context, stdout interface {
 	// real POST target. Missing in v1.3.0; fixed in v1.3.1.
 	auth.Mount(srv.Router(), users, sessions)
 	// Mount the v1.3 webhook receivers (/webhooks/github + /webhooks/{id}).
-	webhookH := webhook.New(st, webhook.Config{GitHubSecret: githubSecret})
+	// v1.6 phase 5: thread the event bus so accepted webhooks fan out
+	// webhook.received events to /api/v1/events subscribers (toasts +
+	// activity timeline + scans-list banner).
+	webhookH := webhook.New(st, webhook.Config{GitHubSecret: githubSecret}).WithEvents(eventBus)
 	webhookH.Mount(srv.Router())
 
 	// Mount the v1.3 minimal UI shell (login + scans + providers + checks).

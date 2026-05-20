@@ -25,6 +25,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 
+	"github.com/darpanzope/compliancekit/internal/server/events"
 	"github.com/darpanzope/compliancekit/internal/server/store"
 )
 
@@ -47,6 +48,11 @@ type Receiver struct {
 	// githubSecret is the global secret operators configure for the
 	// /webhooks/github endpoint. Empty disables the route.
 	githubSecret string
+
+	// events is the optional v1.6 SSE producer. When set, every
+	// accepted webhook fires a webhook.received event so dashboards
+	// + toasts + the activity timeline see the request live.
+	events *events.Producer
 }
 
 // Config carries the operator-controlled inbound-secrets. v1.4
@@ -60,6 +66,26 @@ type Config struct {
 // will then 403 every request (no secret = no verify = no trust).
 func New(st *store.Store, cfg Config) *Receiver {
 	return &Receiver{store: st, githubSecret: cfg.GitHubSecret}
+}
+
+// WithEvents installs the v1.6 SSE producer so accepted webhooks
+// publish webhook.received events. Returns the receiver for
+// chaining.
+func (rc *Receiver) WithEvents(p *events.Producer) *Receiver {
+	rc.events = p
+	return rc
+}
+
+// publishWebhookReceived fans out one webhook.received event to
+// the bus. Safe when rc.events is nil.
+func (rc *Receiver) publishWebhookReceived(source, scanID string) {
+	if rc.events == nil {
+		return
+	}
+	rc.events.Publish(events.TypeWebhookReceived, scanID, map[string]any{
+		"source":  source,
+		"scan_id": scanID,
+	})
 }
 
 // Mount installs /webhooks/{...} routes on r. No auth middleware
@@ -97,14 +123,16 @@ func (rc *Receiver) handleGitHub(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNoContent) // valid sig, uninteresting event
 		return
 	}
-	scanID, err := rc.enqueueScan(r.Context(), "github."+event+"."+action, "webhook")
+	trigger := "github." + event + "." + action
+	scanID, err := rc.enqueueScan(r.Context(), trigger, "webhook")
 	if err != nil {
 		http.Error(w, "enqueue: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
+	rc.publishWebhookReceived(trigger, scanID)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
-	_, _ = w.Write([]byte(`{"scan_id":` + jsonString(scanID) + `,"trigger":` + jsonString("github."+event+"."+action) + `}`))
+	_, _ = w.Write([]byte(`{"scan_id":` + jsonString(scanID) + `,"trigger":` + jsonString(trigger) + `}`))
 }
 
 // handleGeneric verifies X-CK-Signature against the per-row secret
@@ -134,12 +162,14 @@ func (rc *Receiver) handleGeneric(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	scanID, err := rc.enqueueScan(r.Context(), "webhook:"+hook.id, "webhook")
+	trigger := "webhook:" + hook.id
+	scanID, err := rc.enqueueScan(r.Context(), trigger, "webhook")
 	if err != nil {
 		http.Error(w, "enqueue: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	rc.touchHook(r.Context(), hook.id)
+	rc.publishWebhookReceived(trigger, scanID)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
 	_, _ = w.Write([]byte(`{"scan_id":` + jsonString(scanID) + `,"webhook":` + jsonString(hook.id) + `}`))
