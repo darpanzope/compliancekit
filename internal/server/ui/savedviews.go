@@ -104,10 +104,20 @@ func (u *UI) savedViewsCreate(w http.ResponseWriter, r *http.Request) {
 	id := uuid.NewString()
 	now := time.Now().UTC().Format(time.RFC3339)
 	userID := userIDFromCtx(r.Context())
+
+	// v1.5.1 F10: "Share with team" makes the view visible to every
+	// user via owner_user_id NULL. Schema supported this from v1.5;
+	// the create form just never exposed the checkbox + the handler
+	// always defaulted ownerArg to the session user. Admin-gated to
+	// prevent any logged-in user from broadcasting noisy views.
+	teamShare := r.PostForm.Get("team") == "1"
 	var ownerArg any
-	if userID != "" {
+	if teamShare && u.isAdmin(r.Context()) {
+		ownerArg = nil // team-wide
+	} else if userID != "" {
 		ownerArg = userID
 	}
+
 	q := `INSERT INTO saved_views (id, owner_user_id, created_at, name, query_string, pinned)
 	      VALUES (` + phList(u.store, 6) + `)`
 	if _, err := u.store.DB().ExecContext(r.Context(), q,
@@ -116,9 +126,24 @@ func (u *UI) savedViewsCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	u.AuditLog(r.Context(), "saved_view.create", "saved_view", id, map[string]any{
-		"name": name, "pinned": pinned,
+		"name": name, "pinned": pinned, "team_wide": ownerArg == nil,
 	})
 	http.Redirect(w, r, "/findings/views?flash=created", http.StatusSeeOther)
+}
+
+// isAdmin returns true when the session-attached user has IsAdmin
+// set. Returns false on missing session or DB error — defensive
+// default for write-side gates (F10 + future admin-only paths).
+func (u *UI) isAdmin(ctx context.Context) bool {
+	sess := auth.FromContext(ctx)
+	if sess == nil || sess.UserID == "" {
+		return false
+	}
+	user, err := u.users.ByID(ctx, sess.UserID)
+	if err != nil || user == nil {
+		return false
+	}
+	return user.IsAdmin
 }
 
 func (u *UI) savedViewsPin(w http.ResponseWriter, r *http.Request) {

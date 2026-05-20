@@ -28,11 +28,19 @@
              class="w-full h-10 rounded-md border border-input bg-background px-3 text-sm font-mono placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring transition">
       <p class="text-xs text-muted-foreground mt-1">Leave empty to capture the filters from the page you came from.</p>
     </div>
-    <div class="flex items-center justify-between pt-1">
-      <label class="inline-flex items-center gap-2 text-xs">
-        <input type="checkbox" name="pinned" value="1" class="h-4 w-4 rounded border-input text-primary focus:ring-ring">
-        <span class="text-muted-foreground">Pin to sidebar (visible on every page)</span>
-      </label>
+    <div class="flex items-center justify-between pt-1 gap-4 flex-wrap">
+      <div class="flex items-center gap-4">
+        <label class="inline-flex items-center gap-2 text-xs">
+          <input type="checkbox" name="pinned" value="1" class="h-4 w-4 rounded border-input text-primary focus:ring-ring">
+          <span class="text-muted-foreground">Pin to sidebar (visible on every page)</span>
+        </label>
+        {{ if .User.IsAdmin }}
+          <label class="inline-flex items-center gap-2 text-xs">
+            <input type="checkbox" name="team" value="1" class="h-4 w-4 rounded border-input text-primary focus:ring-ring">
+            <span class="text-muted-foreground">Share with team (admin only — visible to every user)</span>
+          </label>
+        {{ end }}
+      </div>
       <button type="submit" class="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary text-primary-foreground px-4 text-sm font-medium hover:opacity-90 transition">Save view</button>
     </div>
   </form>
