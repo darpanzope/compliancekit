@@ -305,6 +305,59 @@ function findingsLive() {
   };
 }
 
+// v1.6 phase 6 — admin log tail. Opens a dedicated EventSource
+// against /admin/logs/stream (separate from the main /api/v1/events
+// bus so log volume doesn't compete with finding events). Maintains
+// a capped in-memory line list + follow-tail auto-scroll.
+function logsTail() {
+  return {
+    lines: [],
+    connected: false,
+    paused: false,
+    follow: true,
+    es: null,
+    bind: function () {
+      var self = this;
+      var es = new EventSource('/admin/logs/stream');
+      self.es = es;
+      es.onopen = function () { self.connected = true; };
+      es.onerror = function () {
+        self.connected = false;
+        try { es.close(); } catch (_) {}
+        // Auto-reconnect after 2s.
+        setTimeout(function () { self.bind(); }, 2000);
+      };
+      es.addEventListener('log', function (e) {
+        if (self.paused) return;
+        try {
+          var line = JSON.parse(e.data);
+          self.lines.push(line);
+          // Cap at 2000 to keep DOM size sane on a busy daemon.
+          while (self.lines.length > 2000) self.lines.shift();
+          if (self.follow) {
+            self.$nextTick(function () {
+              var el = self.$refs.scroll;
+              if (el) el.scrollTop = el.scrollHeight;
+            });
+          }
+        } catch (_) {}
+      });
+    },
+    formatTime: function (iso) {
+      try { return new Date(iso).toLocaleTimeString(); } catch (_) { return iso; }
+    },
+    levelClass: function (level) {
+      switch ((level || '').toUpperCase()) {
+        case 'ERROR': return 'bg-destructive/10 text-destructive';
+        case 'WARN': return 'bg-warning/10 text-warning';
+        case 'INFO': return 'bg-primary/10 text-primary';
+        case 'DEBUG': return 'bg-muted text-muted-foreground';
+        default: return 'bg-muted text-muted-foreground';
+      }
+    },
+  };
+}
+
 // Cmd+K global search palette factory. Referenced from base.html as
 // `x-data="cmdk()"`. Vanilla Alpine — no extra JS library. Modal is
 // mounted at body level so every authenticated page can open it via

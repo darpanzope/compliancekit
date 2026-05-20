@@ -31,6 +31,7 @@ import (
 
 	"github.com/darpanzope/compliancekit/internal/server/assets"
 	"github.com/darpanzope/compliancekit/internal/server/auth"
+	"github.com/darpanzope/compliancekit/internal/server/logs"
 	"github.com/darpanzope/compliancekit/internal/server/store"
 	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
@@ -205,6 +206,7 @@ type UI struct {
 	users         *auth.Users
 	sessions      *auth.Sessions
 	oidcProviders []auth.OIDCProviderButton
+	logBuf        *logs.Buffer // v1.6 phase 6 — nil-safe; route absent when nil
 }
 
 // New constructs the UI handle.
@@ -218,6 +220,14 @@ func New(st *store.Store, users *auth.Users, sessions *auth.Sessions) *UI {
 // render the right button set. Empty list → password-only login.
 func (u *UI) SetOIDCProviders(providers []auth.OIDCProviderButton) {
 	u.oidcProviders = providers
+}
+
+// WithLogBuffer installs the v1.6 phase 6 log-tail buffer so the
+// /admin/logs page + /admin/logs/stream SSE handler get mounted.
+// nil-safe: callers can omit + the routes simply 404.
+func (u *UI) WithLogBuffer(b *logs.Buffer) *UI {
+	u.logBuf = b
+	return u
 }
 
 // View is the layout-template payload. The Content sub-template
@@ -289,7 +299,35 @@ func (u *UI) Mount(r chi.Router) {
 		u.mountScoresRoutes(r)
 		u.mountDiffRoutes(r)
 		u.mountSearchRoutes(r)
+		// v1.6 phase 6 — admin-only log tail. Both routes nested
+		// inside the existing RequireAuth + RequireCSRF group;
+		// adminOnly adds an IsAdmin check on top.
+		if u.logBuf != nil {
+			r.Get("/admin/logs", u.adminOnly(u.adminLogsPage))
+			r.Get("/admin/logs/stream", u.adminOnly(u.logBuf.StreamHandler()))
+		}
 	})
+}
+
+// adminOnly wraps a handler with an IsAdmin gate. Non-admin sessions
+// get a 403 + a JSON error body (matches the v1.5.1 scopeGate
+// convention from api.go).
+func (u *UI) adminOnly(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !u.isAdmin(r.Context()) {
+			http.Error(w, "admin required", http.StatusForbidden)
+			return
+		}
+		next(w, r)
+	}
+}
+
+// adminLogsPage renders the /admin/logs UI. Stream tap lives at
+// /admin/logs/stream — the template opens an EventSource against
+// that URL on load.
+func (u *UI) adminLogsPage(w http.ResponseWriter, r *http.Request) {
+	view := u.viewFor(r, "Daemon logs", "admin", View{})
+	u.render(w, "admin_logs.html", view)
 }
 
 // assetsHandler serves the embedded UI bundle (Tailwind CSS + vendored

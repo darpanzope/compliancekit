@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -15,6 +16,7 @@ import (
 	"github.com/darpanzope/compliancekit/internal/server/api"
 	"github.com/darpanzope/compliancekit/internal/server/auth"
 	"github.com/darpanzope/compliancekit/internal/server/events"
+	"github.com/darpanzope/compliancekit/internal/server/logs"
 	"github.com/darpanzope/compliancekit/internal/server/store"
 	"github.com/darpanzope/compliancekit/internal/server/ui"
 	"github.com/darpanzope/compliancekit/internal/server/webhook"
@@ -122,6 +124,14 @@ func runServe(ctx context.Context, stdout interface {
 	// the daemon still boots without it, the route just 404s.
 	eventBus := events.NewProducer()
 
+	// v1.6 phase 6: in-UI log tail. Wrap the default slog handler so
+	// every structured log line ALSO captures into a 500-line ring
+	// buffer the /admin/logs page streams via SSE. Stderr output is
+	// preserved (the wrapper writes through).
+	logBuf := logs.New()
+	stderrH := slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelInfo})
+	slog.SetDefault(slog.New(logBuf.Handler(stderrH)))
+
 	srv := server.New(cfg)
 	// Mount the v1.3 REST API on the daemon's chi router.
 	apiH := api.New(st, users, tokens, sessions).WithEvents(eventBus)
@@ -137,7 +147,7 @@ func runServe(ctx context.Context, stdout interface {
 	webhookH.Mount(srv.Router())
 
 	// Mount the v1.3 minimal UI shell (login + scans + providers + checks).
-	uiH := ui.New(st, users, sessions)
+	uiH := ui.New(st, users, sessions).WithLogBuffer(logBuf)
 	uiH.Mount(srv.Router())
 
 	// v1.5.1 F15: discover OIDC providers via env vars + mount each

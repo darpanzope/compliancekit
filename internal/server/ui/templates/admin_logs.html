@@ -1,0 +1,49 @@
+{{define "content"}}
+<div class="max-w-7xl mx-auto" x-data="logsTail()" x-init="bind()">
+  <div class="flex items-end justify-between gap-4 mb-6">
+    <div>
+      <h1 class="text-2xl font-semibold tracking-tight">Daemon logs</h1>
+      <p class="text-sm text-muted-foreground mt-1">Live tail of the daemon's slog stream — 500-line in-memory ring buffer. Admin-only.</p>
+    </div>
+    <div class="flex items-center gap-2">
+      <span class="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] uppercase tracking-wider"
+            :class="connected ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning'">
+        <span class="h-1.5 w-1.5 rounded-full" :class="connected ? 'bg-success animate-pulse' : 'bg-warning'"></span>
+        <span x-text="connected ? 'Streaming' : 'Disconnected'"></span>
+      </span>
+      <button type="button" @click="paused = !paused"
+              class="inline-flex h-9 items-center gap-1.5 rounded-md border border-border bg-background px-3 text-sm font-medium hover:bg-muted transition">
+        <span x-text="paused ? 'Resume' : 'Pause'"></span>
+      </button>
+      <button type="button" @click="lines = []"
+              class="inline-flex h-9 items-center gap-1.5 rounded-md border border-border bg-background px-3 text-sm font-medium hover:bg-muted transition">
+        Clear
+      </button>
+    </div>
+  </div>
+
+  <div class="ck-card overflow-hidden">
+    <div class="px-4 py-2 border-b border-border flex items-center justify-between">
+      <span class="text-xs text-muted-foreground"><span x-text="lines.length"></span> lines buffered</span>
+      <label class="inline-flex items-center gap-2 text-xs text-muted-foreground">
+        <input type="checkbox" x-model="follow" class="h-3 w-3 rounded border-input">
+        Follow tail
+      </label>
+    </div>
+    <div x-ref="scroll" class="font-mono text-xs leading-relaxed bg-muted/30 overflow-y-auto h-[60vh] divide-y divide-border">
+      <template x-for="l in lines" :key="l.id">
+        <div class="px-4 py-1.5 flex items-start gap-3 hover:bg-muted/50">
+          <span class="text-[10px] text-muted-foreground tabular-nums shrink-0" x-text="formatTime(l.time)"></span>
+          <span class="inline-flex items-center justify-center rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider shrink-0"
+                :class="levelClass(l.level)" x-text="l.level"></span>
+          <span class="flex-1 break-all" x-text="l.msg"></span>
+          <span class="text-[10px] text-muted-foreground break-all shrink-0 max-w-md text-right" x-text="l.attrs" x-show="l.attrs"></span>
+        </div>
+      </template>
+      <div x-show="lines.length === 0" class="p-8 text-center text-sm text-muted-foreground">
+        Waiting for log lines…
+      </div>
+    </div>
+  </div>
+</div>
+{{end}}
