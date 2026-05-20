@@ -16,6 +16,7 @@ package tui
 // vim keys + ":" command-mode + `/`-search; phase 3 layers live tail.
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"strings"
@@ -68,6 +69,13 @@ type listModel struct {
 	input  string         // /search query or :command buffer
 	flash  string         // transient status message (under footer)
 	filter filterCriteria // applied AND'd with provider selection
+
+	// v1.7 phase 3 — live tail state. src + ctx are filled by Run();
+	// tailing is the user-facing flag flipped by `:tail` command.
+	src     Source
+	ctx     context.Context //nolint:containedctx // bubbletea program scope
+	tailing bool
+	tailCh  chan compliancekit.Finding
 }
 
 func newListModel(findings []compliancekit.Finding) listModel {
@@ -141,6 +149,21 @@ func (m listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.height = msg.Height
 	case tea.KeyMsg:
 		return m.handleKey(msg.String())
+	case liveFindingMsg:
+		// v1.7 phase 3 — append + re-filter + show flash. Drain the
+		// channel again with waitForFindingCmd so the next event
+		// flows in without a per-event setup cost.
+		m.all = append(m.all, compliancekit.Finding(msg))
+		m.providers = buildProviderBuckets(m.all)
+		m.applyFilter()
+		m.flash = fmt.Sprintf("tail: +%s %s", compliancekit.Finding(msg).Severity.String(), compliancekit.Finding(msg).CheckID)
+		if m.tailing && m.tailCh != nil {
+			return m, waitForFindingCmd(m.tailCh)
+		}
+	case tailEndedMsg:
+		m.tailing = false
+		m.tailCh = nil
+		m.flash = "tail: disconnected"
 	}
 	return m, nil
 }
@@ -237,9 +260,9 @@ func (m listModel) handleEditKey(key string) (tea.Model, tea.Cmd) {
 		m.input = ""
 		return m, nil
 	case "enter":
-		m.commitEditor()
+		cmd := m.commitEditor()
 		m.mode = modeNormal
-		return m, nil
+		return m, cmd
 	case "backspace":
 		if m.input != "" {
 			r := []rune(m.input)
@@ -257,19 +280,57 @@ func (m listModel) handleEditKey(key string) (tea.Model, tea.Cmd) {
 }
 
 // commitEditor applies the pending /search or :command buffer to
-// the filter state + refreshes m.filtered.
-func (m *listModel) commitEditor() {
+// the filter state + refreshes m.filtered. Returns an optional
+// tea.Cmd when the command had a side effect (e.g. `:tail`
+// starting an SSE subscription).
+func (m *listModel) commitEditor() tea.Cmd {
+	var cmd tea.Cmd
 	switch m.mode {
 	case modeSearch:
 		m.filter.search = m.input
 		m.flash = "search: " + m.input
 	case modeCommand:
-		m.filter = parseCommandLine(m.input)
-		m.flash = "filter: " + m.input
+		switch strings.TrimSpace(m.input) {
+		case "tail":
+			cmd = m.startTail()
+		case "untail":
+			m.stopTail()
+		default:
+			m.filter = parseCommandLine(m.input)
+			m.flash = "filter: " + m.input
+		}
 	}
 	m.input = ""
 	m.applyFilter()
 	m.listCursor = 0
+	return cmd
+}
+
+// startTail opens an SSE subscription via the configured Source +
+// arms the channel-drainer command. Idempotent — calling twice is
+// a no-op.
+func (m *listModel) startTail() tea.Cmd {
+	if m.tailing || m.src == nil {
+		return nil
+	}
+	m.tailing = true
+	m.flash = "tail: subscribing…"
+	ch := make(chan compliancekit.Finding, 64)
+	m.tailCh = ch
+	go func() {
+		defer close(ch)
+		_ = m.src.Subscribe(m.ctx, ch)
+	}()
+	return waitForFindingCmd(ch)
+}
+
+// stopTail tears down the SSE subscription. The drainer goroutine
+// exits when the daemon closes the connection or ctx cancels;
+// stopTail flags the model so newly arriving events are ignored
+// (the buffered channel drains naturally).
+func (m *listModel) stopTail() {
+	m.tailing = false
+	m.flash = "tail: stopped"
 }
 
 // stepSearch advances the cursor to the next (dir=+1) or previous
