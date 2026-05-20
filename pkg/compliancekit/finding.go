@@ -79,6 +79,24 @@ type Finding struct {
 	// the finding ran through the normal status machinery, NOT
 	// that it was waived for an unrelated reason. See ADR-013.
 	Waiver *WaiverRef `json:"waiver,omitempty"`
+
+	// Comments is the v1.8+ ordered conversation attached to this
+	// finding by Fingerprint(). Empty for CLI-only scans; populated
+	// only when the finding is loaded from the serve daemon or
+	// re-rendered through `compliancekit render --server=...`. ADR-014
+	// — additive, backwards-compatible.
+	Comments []Comment `json:"comments,omitempty"`
+
+	// Assignee is the v1.8+ operator currently accountable for the
+	// finding. nil when no assignee is set. Resolves to the same
+	// fingerprint-keyed row across scans.
+	Assignee *User `json:"assignee,omitempty"`
+
+	// Followers is the v1.8+ set of operators who opted in to receive
+	// notifications about findings on this Resource. Populated from
+	// the resource_follower table when the finding is loaded from the
+	// daemon. nil/empty for CLI-only scans.
+	Followers []User `json:"followers,omitempty"`
 }
 
 // Source describes where a Finding came from. Native findings produced

@@ -72,7 +72,7 @@ func assertMigrateUpFresh(ctx context.Context, t *testing.T, s *Store) {
 	}
 	// Update this when a new migration lands; mismatch = "did we
 	// forget to add the new file to the assertion."
-	const wantVersion = 7
+	const wantVersion = 8
 	if v != wantVersion {
 		t.Errorf("Version = %d, want %d", v, wantVersion)
 	}
@@ -82,6 +82,8 @@ func assertMigrateUpFresh(ctx context.Context, t *testing.T, s *Store) {
 		"waivers", "users", "api_tokens",
 		"schedules", "webhooks", "audit_log",
 		"sessions",
+		"comments", "finding_activity", "finding_assignment",
+		"resource_owner", "resource_follower",
 		"schema_migrations",
 	}
 	have := listTables(ctx, t, s)
@@ -105,7 +107,7 @@ func assertMigrateUpIdempotent(ctx context.Context, t *testing.T, s *Store) {
 	if err != nil {
 		t.Fatalf("count migrations: %v", err)
 	}
-	const wantCount = 7
+	const wantCount = 8
 	if count != wantCount {
 		t.Errorf("schema_migrations rows = %d, want %d (idempotent)", count, wantCount)
 	}

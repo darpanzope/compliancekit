@@ -52,6 +52,7 @@ method (*ResourceGraph) Related(r Resource, edge string) []Resource
 method (*Severity) UnmarshalJSON(b []byte) error
 method (*WaiverRef) DaysUntilExpiry(t time.Time) int
 method (*WaiverRef) IsActive(t time.Time) bool
+method (Comment) IsEdited() bool
 method (Control) HasTag(tag string) bool
 method (Finding) Fingerprint() string
 method (Finding) IsNative() bool
@@ -63,9 +64,11 @@ method (Resource) Ref() ResourceRef
 method (Severity) MarshalJSON() ([]byte, error)
 method (Severity) String() string
 method (Status) IsActionable() bool
+method (User) Label() string
 type Check struct
 type CheckFunc func(ctx context.Context, graph *ResourceGraph) ([]Finding, error)
 type Collector interface
+type Comment struct
 type Control struct
 type Evaluator interface
 type EvidencePtr struct
@@ -83,5 +86,6 @@ type Severity int
 type Source struct
 type Status string
 type Tactic struct
+type User struct
 type Vulnerability struct
 type WaiverRef struct
