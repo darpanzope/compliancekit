@@ -103,22 +103,47 @@ func (a *API) getScan(w http.ResponseWriter, r *http.Request) {
 
 // findingRow is the JSON shape returned by /api/v1/findings + nested
 // /api/v1/scans/:id/findings.
+//
+// v1.5.1 F22: the CheckTitle / CheckDescription / CheckRemediation
+// fields are populated from the in-binary registry via LookupCheck
+// at marshal time. Downstream consumers (CI integrations, third-
+// party dashboards, the v1.5 Studio's external clients) used to
+// see opaque CheckID strings; now the JSON carries the human-
+// facing metadata the registry holds without an extra round-trip.
 type findingRow struct {
-	ID           string `json:"id"`
-	ScanID       string `json:"scan_id"`
-	Fingerprint  string `json:"fingerprint"`
-	CheckID      string `json:"check_id"`
-	Severity     string `json:"severity"`
-	Status       string `json:"status"`
-	Provider     string `json:"provider"`
-	ResourceID   string `json:"resource_id"`
-	ResourceName string `json:"resource_name"`
-	ResourceType string `json:"resource_type"`
-	Message      string `json:"message,omitempty"`
-	FrameworkIDs string `json:"framework_ids"`
-	FirstSeenAt  string `json:"first_seen_at"`
-	LastSeenAt   string `json:"last_seen_at"`
-	CreatedAt    string `json:"created_at"`
+	ID               string `json:"id"`
+	ScanID           string `json:"scan_id"`
+	Fingerprint      string `json:"fingerprint"`
+	CheckID          string `json:"check_id"`
+	CheckTitle       string `json:"check_title,omitempty"`
+	CheckDescription string `json:"check_description,omitempty"`
+	CheckRemediation string `json:"check_remediation,omitempty"`
+	Severity         string `json:"severity"`
+	Status           string `json:"status"`
+	Provider         string `json:"provider"`
+	ResourceID       string `json:"resource_id"`
+	ResourceName     string `json:"resource_name"`
+	ResourceType     string `json:"resource_type"`
+	Message          string `json:"message,omitempty"`
+	FrameworkIDs     string `json:"framework_ids"`
+	FirstSeenAt      string `json:"first_seen_at"`
+	LastSeenAt       string `json:"last_seen_at"`
+	CreatedAt        string `json:"created_at"`
+}
+
+// enrichFromRegistry populates the CheckTitle / CheckDescription /
+// CheckRemediation fields from the in-binary check registry. v1.5.1
+// F22. Silently no-ops for check IDs the daemon's registry doesn't
+// know (e.g. CLI-pushed findings from a newer compliancekit binary
+// than the daemon's).
+func (f *findingRow) enrichFromRegistry() {
+	check, ok := compliancekit.LookupCheck(f.CheckID)
+	if !ok {
+		return
+	}
+	f.CheckTitle = check.Title
+	f.CheckDescription = check.Description
+	f.CheckRemediation = check.Remediation
 }
 
 // listFindings returns the paginated global findings list with
@@ -178,6 +203,7 @@ func (a *API) listFindings(w http.ResponseWriter, r *http.Request) {
 			respondError(w, http.StatusInternalServerError, "finding row: "+err.Error())
 			return
 		}
+		f.enrichFromRegistry()
 		items = append(items, f)
 	}
 	total := a.count(r.Context(), "findings", whereSQL, args[:i-1]...)
@@ -216,6 +242,7 @@ func (a *API) getFinding(w http.ResponseWriter, r *http.Request) {
 		respondError(w, http.StatusInternalServerError, "get finding: "+err.Error())
 		return
 	}
+	f.enrichFromRegistry()
 	respondJSON(w, r, http.StatusOK, f)
 }
 

@@ -25,6 +25,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 
@@ -517,9 +518,17 @@ func (u *UI) fail(w http.ResponseWriter, msg string) {
 // compliancekit.Finding shape so the v1.2 report renderer can emit
 // the same single-file HTML.
 func (u *UI) loadFindings(ctx context.Context, scanID string) ([]compliancekit.Finding, error) {
+	// v1.5.1 F20: project every column the v1.2 HTML report
+	// + the v1.5 explorer depend on. The original 8-column SELECT
+	// dropped provider, framework_ids, fingerprint, first_seen_at,
+	// last_seen_at — which made the framework-coverage bars + the
+	// severity-by-provider donut + drift sparklines render empty.
 	rows, err := u.store.DB().QueryContext(ctx,
-		`SELECT check_id, severity, status, resource_id, resource_name, resource_type,
-		        COALESCE(message,''), first_seen_at
+		`SELECT check_id, severity, status, COALESCE(provider,''),
+		        resource_id, resource_name, resource_type,
+		        COALESCE(message,''), COALESCE(framework_ids,'[]'),
+		        COALESCE(fingerprint,''),
+		        COALESCE(first_seen_at,''), COALESCE(last_seen_at,'')
 		 FROM findings WHERE scan_id = `+ph(u.store, 1), scanID)
 	if err != nil {
 		return nil, err
@@ -528,13 +537,28 @@ func (u *UI) loadFindings(ctx context.Context, scanID string) ([]compliancekit.F
 	var out []compliancekit.Finding
 	for rows.Next() {
 		var f compliancekit.Finding
-		var sevStr, statusStr string
-		if err := rows.Scan(&f.CheckID, &sevStr, &statusStr, &f.Resource.ID,
-			&f.Resource.Name, &f.Resource.Type, &f.Message, new(string)); err != nil {
+		var sevStr, statusStr, provider, frameworksJSON, fingerprint string
+		var firstSeen, lastSeen string
+		if err := rows.Scan(&f.CheckID, &sevStr, &statusStr, &provider,
+			&f.Resource.ID, &f.Resource.Name, &f.Resource.Type,
+			&f.Message, &frameworksJSON, &fingerprint,
+			&firstSeen, &lastSeen); err != nil {
 			return nil, err
 		}
 		f.Severity = parseSeverity(sevStr)
 		f.Status = compliancekit.Status(statusStr)
+		f.Resource.Provider = provider
+		// Carry the row-level timestamp into the finding so v1.2
+		// drift sparklines can group by first-seen.
+		if firstSeen != "" {
+			if t, err := time.Parse(time.RFC3339, firstSeen); err == nil {
+				f.Timestamp = t
+			}
+		}
+		_ = frameworksJSON // framework refs ride the check registry —
+		// the v1.2 report enriches via LookupCheck at render time.
+		_ = lastSeen
+		_ = fingerprint
 		out = append(out, f)
 	}
 	return out, rows.Err()

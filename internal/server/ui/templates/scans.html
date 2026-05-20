@@ -37,7 +37,13 @@
               {{ else if eq .Status "failed" }}<span class="inline-flex items-center gap-1.5 text-xs text-destructive"><span class="h-2 w-2 rounded-full bg-destructive"></span>failed</span>
               {{ else }}<span class="text-xs text-muted-foreground">{{ .Status }}</span>{{ end }}
             </td>
-            <td class="px-4 py-3 text-xs text-muted-foreground">{{ .Source }}</td>
+            <td class="px-4 py-3 text-xs">
+              {{ if eq .Source "cli" }}<span class="inline-flex items-center gap-1 rounded bg-primary/10 text-primary px-1.5 py-0.5 text-[10px] uppercase tracking-wider">CLI push</span>
+              {{ else if eq .Source "schedule" }}<span class="inline-flex items-center gap-1 rounded bg-warning/10 text-warning px-1.5 py-0.5 text-[10px] uppercase tracking-wider">Scheduled</span>
+              {{ else if eq .Source "webhook" }}<span class="inline-flex items-center gap-1 rounded bg-success/10 text-success px-1.5 py-0.5 text-[10px] uppercase tracking-wider">Webhook</span>
+              {{ else if eq .Source "daemon" }}<span class="inline-flex items-center gap-1 rounded bg-muted text-muted-foreground px-1.5 py-0.5 text-[10px] uppercase tracking-wider">Daemon</span>
+              {{ else }}<span class="text-muted-foreground">{{ .Source }}</span>{{ end }}
+            </td>
             <td class="px-4 py-3 font-mono text-xs text-muted-foreground">{{ .ProvidersScanned }}</td>
             <td class="px-4 py-3 tabular-nums">{{ .Score }}/100</td>
             <td class="px-4 py-3 tabular-nums">{{ .TotalFindings }}</td>
