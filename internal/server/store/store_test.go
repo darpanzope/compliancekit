@@ -72,7 +72,7 @@ func assertMigrateUpFresh(ctx context.Context, t *testing.T, s *Store) {
 	}
 	// Update this when a new migration lands; mismatch = "did we
 	// forget to add the new file to the assertion."
-	const wantVersion = 14
+	const wantVersion = 15
 	if v != wantVersion {
 		t.Errorf("Version = %d, want %d", v, wantVersion)
 	}
@@ -112,7 +112,7 @@ func assertMigrateUpIdempotent(ctx context.Context, t *testing.T, s *Store) {
 	if err != nil {
 		t.Fatalf("count migrations: %v", err)
 	}
-	const wantCount = 14
+	const wantCount = 15
 	if count != wantCount {
 		t.Errorf("schema_migrations rows = %d, want %d (idempotent)", count, wantCount)
 	}
