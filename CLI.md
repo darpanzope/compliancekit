@@ -460,6 +460,62 @@ is stored. Scopes are documented in [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ---
 
+### `compliancekit tui` (v1.7+)
+
+k9s-style terminal client. Two source modes:
+
+```
+compliancekit tui --findings=path.json
+compliancekit tui --server=http://localhost:8080 --api-token=ck_…
+```
+
+`CK_API_TOKEN` env var honored as a fallback for `--api-token`.
+
+**Keybindings — normal mode:**
+
+| Key | Action |
+|---|---|
+| `j` / `↓` | next finding |
+| `k` / `↑` | previous finding |
+| `g` / `G` | top / bottom |
+| `Tab` / `Shift+Tab` | cycle pane focus (tree / list / detail) |
+| `Enter` | activate (tree filter / focus detail) |
+| `Backspace` | clear provider filter |
+| `/<text>` | substring search across check_id + resource |
+| `:<command>` | command mode (see below) |
+| `n` / `N` | next / previous match |
+| `R` | resource-tree navigator |
+| `w` | waive focused finding (prompts for reason) |
+| `a` | ack focused finding (v1.8 plumbing) |
+| `c` | comment focused finding (v1.8 plumbing) |
+| `r` | remediate-preview (bash strategy) |
+| `?` | toggle help overlay |
+| `q` / `Esc` / `Ctrl+C` | quit |
+
+**Command mode (after `:`):**
+
+| Syntax | Effect |
+|---|---|
+| `sev=critical` / `sev>=high` | severity filter (exact / gte) |
+| `status=fail` | status exact |
+| `provider=aws` | provider exact |
+| `check=do-droplet` | check_id substring |
+| `fw=soc2` | framework id (via in-binary registry lookup) |
+| `reset` | clear every active filter |
+| `tail` / `untail` | start / stop live SSE tail (daemon mode) |
+| `diff <path>` | overlay baseline diff (+ new, - resolved, ~ changed) |
+| `undiff` | clear diff overlay |
+| `waive: <reason>` | waive focused finding (used by `w` key) |
+
+Live tail (`:tail`) subscribes to the v1.6 SSE event bus at
+`/api/v1/events` + appends each `finding.created` event into
+the list in real time. The diff-overlay (`:diff <path>`)
+joins via `compliancekit.Finding.Fingerprint()`; gutter
+glyph in each row reflects new / resolved / changed vs.
+baseline.
+
+---
+
 ## Exit codes
 
 | Code | Meaning |
