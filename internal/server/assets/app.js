@@ -227,6 +227,69 @@ function scansLive() {
   };
 }
 
+// v1.6 phase 4 — toast system. Mounted once at body level via
+// base.html `x-data="toastSystem()"`. Subscribes to the ck.events
+// bus + pushes toast objects into a reactive list. Cap at 5
+// visible; auto-dismiss at 8s; click anywhere on the toast to
+// dismiss early. Toast color is severity-driven (destructive for
+// critical findings, success for scan completion, primary for
+// webhook receipt).
+function toastSystem() {
+  return {
+    toasts: [],
+    nextId: 0,
+    bind: function () {
+      var self = this;
+      window.ck.events.on('finding.created', function (ev) {
+        var sev = ev.data && ev.data.severity;
+        if (sev !== 'critical') return; // only critical-severity findings toast
+        self.push({
+          variant: 'destructive',
+          title: 'Critical finding',
+          body: (ev.data.check_id || '') + ' on ' + (ev.data.resource || '—'),
+          href: '/findings?severity=critical',
+        });
+      });
+      window.ck.events.on('scan.completed', function (ev) {
+        var dur = ev.data && ev.data.duration_ms ? ' in ' + ev.data.duration_ms + 'ms' : '';
+        self.push({
+          variant: 'success',
+          title: 'Scan completed' + dur,
+          body: ev.entity_id ? 'Scan ' + ev.entity_id.slice(0, 8) : '',
+          href: ev.entity_id ? '/scans/' + ev.entity_id : '/scans',
+        });
+      });
+      window.ck.events.on('scan.failed', function (ev) {
+        self.push({
+          variant: 'destructive',
+          title: 'Scan failed',
+          body: (ev.data && ev.data.error) || 'See /scans for detail',
+          href: ev.entity_id ? '/scans/' + ev.entity_id : '/scans',
+        });
+      });
+      window.ck.events.on('webhook.received', function (ev) {
+        self.push({
+          variant: 'primary',
+          title: 'Webhook received',
+          body: (ev.data && ev.data.source) || ev.entity_id || '',
+          href: '/audit',
+        });
+      });
+    },
+    push: function (t) {
+      t.id = ++this.nextId;
+      this.toasts.push(t);
+      // Cap at 5 — drop the oldest if we'd exceed.
+      while (this.toasts.length > 5) this.toasts.shift();
+      var self = this;
+      setTimeout(function () { self.dismiss(t.id); }, 8000);
+    },
+    dismiss: function (id) {
+      this.toasts = this.toasts.filter(function (t) { return t.id !== id; });
+    },
+  };
+}
+
 // findingsLive — bumps a `banner` counter on every finding.created
 // event. The /findings page's filter context can't safely auto-
 // inject a row without disrupting the cursor-paginated scroll;
