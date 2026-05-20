@@ -1,33 +1,121 @@
 package tui
 
-// v1.7 phase 0 model — minimum-viable findings list. Header row
-// shows total + scope of the data source; the list is a scrollable
-// viewport over the loaded findings. Single-pane; phase 1 adds the
-// tree / list / detail split.
+// v1.7 phase 1 — multi-pane layout. Three vertical panes:
+//
+//   ┌──────────┬──────────────────────────┬──────────────────┐
+//   │  TREE    │  FINDINGS                │  DETAIL          │
+//   │ ──────── │ ───────────────────────  │ ───────────────  │
+//   │ ▾ aws    │ > critical   fail  …     │ check_id  do-…   │
+//   │   gcp    │   high       fail  …     │ severity  high   │
+//   │   linux  │   medium     pass  …     │ resource  …      │
+//   └──────────┴──────────────────────────┴──────────────────┘
+//
+// Tab cycles focus between panes; j/k scrolls within the focused
+// pane. Tree selection narrows the findings list to one provider.
+// Detail pane re-renders on every list-cursor move. Phase 2 layers
+// vim keys + ":" command-mode + `/`-search; phase 3 layers live tail.
 
 import (
 	"fmt"
+	"sort"
+	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 
 	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
+// pane identifies the focused pane for keybinding dispatch.
+type pane int
+
 const (
-	defaultListHeight = 20 // rows visible when terminal height is unknown
+	paneTree pane = iota
+	paneList
+	paneDetail
 )
 
+// providerBucket is one row in the tree pane.
+type providerBucket struct {
+	name  string
+	total int
+}
+
 type listModel struct {
-	findings []compliancekit.Finding
-	cursor   int
-	height   int
-	width    int
+	all       []compliancekit.Finding
+	filtered  []compliancekit.Finding
+	providers []providerBucket
+
+	focused     pane
+	treeCursor  int
+	listCursor  int
+	providerSel string // "" = all
+	height      int
+	width       int
 }
 
 func newListModel(findings []compliancekit.Finding) listModel {
-	return listModel{
-		findings: findings,
-		height:   defaultListHeight,
+	m := listModel{
+		all:     findings,
+		focused: paneList,
+		height:  defaultListHeight,
+	}
+	m.providers = buildProviderBuckets(findings)
+	m.applyFilter()
+	return m
+}
+
+const defaultListHeight = 24
+
+// buildProviderBuckets walks findings + tallies per-provider counts.
+func buildProviderBuckets(findings []compliancekit.Finding) []providerBucket {
+	counts := map[string]int{}
+	for _, f := range findings {
+		p := f.Resource.Provider
+		if p == "" {
+			p = providerFromType(f.Resource.Type)
+		}
+		if p == "" {
+			p = "(unknown)"
+		}
+		counts[p]++
+	}
+	out := make([]providerBucket, 0, len(counts))
+	for p, n := range counts {
+		out = append(out, providerBucket{name: p, total: n})
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].name < out[j].name })
+	return out
+}
+
+func providerFromType(t string) string {
+	if i := strings.Index(t, "."); i >= 0 {
+		return t[:i]
+	}
+	return ""
+}
+
+// applyFilter re-derives m.filtered from m.all + the current
+// provider selection. Idempotent; called whenever filter state
+// changes or the underlying data refreshes.
+func (m *listModel) applyFilter() {
+	if m.providerSel == "" {
+		m.filtered = m.all
+		return
+	}
+	out := make([]compliancekit.Finding, 0, len(m.all))
+	for _, f := range m.all {
+		p := f.Resource.Provider
+		if p == "" {
+			p = providerFromType(f.Resource.Type)
+		}
+		if p == m.providerSel {
+			out = append(out, f)
+		}
+	}
+	m.filtered = out
+	if m.listCursor >= len(out) {
+		m.listCursor = 0
 	}
 }
 
@@ -39,48 +127,177 @@ func (m listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.width = msg.Width
 		m.height = msg.Height
 	case tea.KeyMsg:
-		switch msg.String() {
-		case "q", "ctrl+c", "esc":
-			return m, tea.Quit
-		case "j", "down":
-			if m.cursor < len(m.findings)-1 {
-				m.cursor++
-			}
-		case "k", "up":
-			if m.cursor > 0 {
-				m.cursor--
-			}
-		case "g":
-			m.cursor = 0
-		case "G":
-			m.cursor = len(m.findings) - 1
-			if m.cursor < 0 {
-				m.cursor = 0
-			}
+		return m.handleKey(msg.String())
+	}
+	return m, nil
+}
+
+func (m listModel) handleKey(key string) (tea.Model, tea.Cmd) {
+	switch key {
+	case "q", "ctrl+c", "esc":
+		return m, tea.Quit
+	case "tab":
+		m.focused = (m.focused + 1) % 3
+	case "shift+tab":
+		m.focused = (m.focused + 2) % 3
+	case "j", "down":
+		m.cursorDown()
+	case "k", "up":
+		m.cursorUp()
+	case "g":
+		m.cursorTop()
+	case "G":
+		m.cursorBottom()
+	case "enter":
+		m.activate()
+	case "backspace":
+		// Clear provider filter — back to "all".
+		if m.focused == paneTree || m.providerSel != "" {
+			m.providerSel = ""
+			m.applyFilter()
 		}
 	}
 	return m, nil
 }
 
-func (m listModel) View() string {
-	header := fmt.Sprintf("compliancekit tui — %d findings  (q to quit, j/k to scroll, g/G to top/bottom)\n\n", len(m.findings))
-	if len(m.findings) == 0 {
-		return header + "  (no findings to display)\n"
+func (m *listModel) activate() {
+	if m.focused == paneTree && len(m.providers) > 0 {
+		m.providerSel = m.providers[m.treeCursor].name
+		m.applyFilter()
+		m.focused = paneList
+		return
 	}
+	if m.focused == paneList {
+		m.focused = paneDetail
+	}
+}
 
-	// Calculate visible window — rows around the cursor with a small
-	// buffer. defaultListHeight - 4 leaves room for header + footer.
-	maxRows := m.height - 4
-	if maxRows <= 0 {
-		maxRows = defaultListHeight - 4
+func (m *listModel) cursorDown() {
+	switch m.focused {
+	case paneTree:
+		if m.treeCursor < len(m.providers)-1 {
+			m.treeCursor++
+		}
+	case paneList:
+		if m.listCursor < len(m.filtered)-1 {
+			m.listCursor++
+		}
 	}
-	start := m.cursor - maxRows/2
+}
+
+func (m *listModel) cursorUp() {
+	switch m.focused {
+	case paneTree:
+		if m.treeCursor > 0 {
+			m.treeCursor--
+		}
+	case paneList:
+		if m.listCursor > 0 {
+			m.listCursor--
+		}
+	}
+}
+
+func (m *listModel) cursorTop() {
+	switch m.focused {
+	case paneTree:
+		m.treeCursor = 0
+	case paneList:
+		m.listCursor = 0
+	}
+}
+
+func (m *listModel) cursorBottom() {
+	switch m.focused {
+	case paneTree:
+		m.treeCursor = len(m.providers) - 1
+		if m.treeCursor < 0 {
+			m.treeCursor = 0
+		}
+	case paneList:
+		m.listCursor = len(m.filtered) - 1
+		if m.listCursor < 0 {
+			m.listCursor = 0
+		}
+	}
+}
+
+func (m listModel) View() string {
+	w := m.width
+	if w == 0 {
+		w = 120
+	}
+	h := m.height
+	if h == 0 {
+		h = defaultListHeight
+	}
+	// 20% tree / 50% list / 30% detail; ensure each gets ≥10 cols.
+	tw := imax(10, w*20/100)
+	dw := imax(10, w*30/100)
+	lw := imax(10, w-tw-dw-3) // -3 for the two vertical separators
+	innerH := h - 3           // -3 for header + footer + status row
+
+	tree := m.renderTree(tw, innerH)
+	list := m.renderList(lw, innerH)
+	detail := m.renderDetail(dw, innerH)
+
+	row := lipgloss.JoinHorizontal(lipgloss.Top, tree, vsep(innerH), list, vsep(innerH), detail)
+	header := lipgloss.NewStyle().Bold(true).Render(fmt.Sprintf("compliancekit tui — %d findings (filter: %s)", len(m.filtered), m.filterLabel()))
+	footer := lipgloss.NewStyle().Faint(true).Render(
+		"tab cycle  j/k scroll  g/G top/bottom  enter select  backspace clear  q quit")
+	return header + "\n\n" + row + "\n" + footer + "\n"
+}
+
+func (m listModel) filterLabel() string {
+	if m.providerSel == "" {
+		return "all providers"
+	}
+	return "provider=" + m.providerSel
+}
+
+func vsep(h int) string {
+	col := strings.Repeat("│\n", h)
+	return lipgloss.NewStyle().Faint(true).Render(strings.TrimRight(col, "\n"))
+}
+
+func (m listModel) renderTree(width, height int) string {
+	title := boldUnder("Providers", width)
+	body := []string{title}
+	maxRows := height - 1
+	for i := 0; i < len(m.providers) && i < maxRows; i++ {
+		p := m.providers[i]
+		marker := "  "
+		if m.focused == paneTree && i == m.treeCursor {
+			marker = "▸ "
+		}
+		line := fmt.Sprintf("%s%-12s %d", marker, truncate(p.name, 12), p.total)
+		body = append(body, padRight(line, width))
+	}
+	for len(body) < height {
+		body = append(body, padRight("", width))
+	}
+	return strings.Join(body, "\n")
+}
+
+func (m listModel) renderList(width, height int) string {
+	title := boldUnder(fmt.Sprintf("Findings (%d)", len(m.filtered)), width)
+	body := []string{title}
+	maxRows := height - 1
+	if len(m.filtered) == 0 {
+		body = append(body, padRight("  (no findings match filter)", width))
+		for len(body) < height {
+			body = append(body, padRight("", width))
+		}
+		return strings.Join(body, "\n")
+	}
+	// Window around cursor.
+	start := m.listCursor - maxRows/2
 	if start < 0 {
 		start = 0
 	}
 	end := start + maxRows
-	if end > len(m.findings) {
-		end = len(m.findings)
+	if end > len(m.filtered) {
+		end = len(m.filtered)
 	}
 	if end-start < maxRows {
 		start = end - maxRows
@@ -88,39 +305,115 @@ func (m listModel) View() string {
 			start = 0
 		}
 	}
-
-	out := header
 	for i := start; i < end; i++ {
-		f := m.findings[i]
+		f := m.filtered[i]
 		marker := "  "
-		if i == m.cursor {
-			marker = "> "
+		if m.focused == paneList && i == m.listCursor {
+			marker = "▸ "
 		}
-		sev := padRight(f.Severity.String(), 8)
-		status := padRight(string(f.Status), 6)
-		resource := f.Resource.Name
-		if resource == "" {
-			resource = f.Resource.ID
-		}
-		out += fmt.Sprintf("%s%s  %s  %s  %s\n",
-			marker, sev, status, padRight(f.CheckID, 40), resource)
+		line := fmt.Sprintf("%s%-8s %-6s %-30s %s",
+			marker, severityShort(f.Severity), string(f.Status),
+			truncate(f.CheckID, 30), truncate(displayResource(f), width-50))
+		body = append(body, padRight(line, width))
 	}
-	out += fmt.Sprintf("\n  %d / %d\n", m.cursor+1, len(m.findings))
-	return out
+	for len(body) < height {
+		body = append(body, padRight("", width))
+	}
+	return strings.Join(body, "\n")
+}
+
+func (m listModel) renderDetail(width, height int) string {
+	title := boldUnder("Detail", width)
+	body := []string{title}
+	if len(m.filtered) == 0 || m.listCursor >= len(m.filtered) {
+		body = append(body, padRight("  (select a finding)", width))
+		for len(body) < height {
+			body = append(body, padRight("", width))
+		}
+		return strings.Join(body, "\n")
+	}
+	f := m.filtered[m.listCursor]
+	rows := []string{
+		fmt.Sprintf("check     %s", f.CheckID),
+		fmt.Sprintf("severity  %s", f.Severity.String()),
+		fmt.Sprintf("status    %s", string(f.Status)),
+		fmt.Sprintf("provider  %s", f.Resource.Provider),
+		fmt.Sprintf("resource  %s", displayResource(f)),
+	}
+	if f.Message != "" {
+		rows = append(rows, "", wrap(f.Message, width-2))
+	}
+	for _, r := range rows {
+		body = append(body, padRight(r, width))
+	}
+	for len(body) < height {
+		body = append(body, padRight("", width))
+	}
+	return strings.Join(body, "\n")
+}
+
+func boldUnder(s string, w int) string {
+	return lipgloss.NewStyle().Bold(true).Render(s) + "\n" + strings.Repeat("─", w-1)
+}
+
+func displayResource(f compliancekit.Finding) string {
+	if f.Resource.Name != "" {
+		return f.Resource.Name
+	}
+	return f.Resource.ID
+}
+
+func severityShort(s compliancekit.Severity) string {
+	switch s {
+	case compliancekit.SeverityCritical:
+		return "CRIT"
+	case compliancekit.SeverityHigh:
+		return "HIGH"
+	case compliancekit.SeverityMedium:
+		return "MED"
+	case compliancekit.SeverityLow:
+		return "LOW"
+	default:
+		return "INFO"
+	}
+}
+
+func truncate(s string, n int) string {
+	if len(s) <= n {
+		return s
+	}
+	if n <= 1 {
+		return s[:n]
+	}
+	return s[:n-1] + "…"
 }
 
 func padRight(s string, n int) string {
-	if len(s) >= n {
-		return s[:n]
+	visible := runeLen(s)
+	if visible >= n {
+		return s
 	}
-	pad := n - len(s)
-	return s + spaces(pad)
+	return s + strings.Repeat(" ", n-visible)
 }
 
-func spaces(n int) string {
-	out := make([]byte, n)
-	for i := range out {
-		out[i] = ' '
+func runeLen(s string) int { return len([]rune(s)) }
+
+func wrap(s string, w int) string {
+	if w <= 0 {
+		return s
 	}
-	return string(out)
+	out := []string{}
+	for len(s) > w {
+		out = append(out, s[:w])
+		s = s[w:]
+	}
+	out = append(out, s)
+	return strings.Join(out, "\n")
+}
+
+func imax(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
 }
