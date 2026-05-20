@@ -41,9 +41,32 @@ window.ck = window.ck || {};
 window.ck.events = (function () {
   var listeners = {};      // {type: [callback, ...]}
   var allListeners = [];   // wildcard handlers (receive every event)
-  var lastID = 0;
+  // v1.6 phase 7 — cursor persistence across tabs. localStorage
+  // survives leader-election handoffs (the new leader reads the
+  // last known ID + reconnects with ?since=<id> so the bus's 5-min
+  // ring replays anything missed during the ~250ms election gap).
+  var LAST_ID_KEY = 'ck-events-lastID';
+  function loadLastID() {
+    try { return parseInt(localStorage.getItem(LAST_ID_KEY) || '0', 10) || 0; } catch (_) { return 0; }
+  }
+  function saveLastID(id) {
+    try { localStorage.setItem(LAST_ID_KEY, String(id)); } catch (_) {}
+  }
+  var lastID = loadLastID();
   var es = null;
   var stopped = false;
+  // v1.6 phase 7 — exponential backoff with jitter. 1s → 2s → 4s →
+  // 8s → 16s (cap 30s); ±20% jitter per attempt avoids the
+  // thundering-herd problem if every tab reconnects after a daemon
+  // restart.
+  var reconnectAttempt = 0;
+  var maxBackoffMs = 30000;
+  function nextBackoff() {
+    var base = Math.min(1000 * Math.pow(2, reconnectAttempt), maxBackoffMs);
+    var jitter = base * (0.8 + Math.random() * 0.4); // ±20%
+    reconnectAttempt++;
+    return Math.floor(jitter);
+  }
   var eventTypes = [
     'scan.queued', 'scan.started', 'scan.progress',
     'scan.completed', 'scan.failed', 'finding.created',
@@ -74,11 +97,37 @@ window.ck.events = (function () {
     }
   }
 
+  // v1.6 phase 7 — track how many events arrive in the first 2s
+  // after reconnect; if >0, fire a "X events replayed while
+  // disconnected" toast so operators know nothing was lost.
+  var reconnectBacklogCount = 0;
+  var reconnectBacklogTimer = null;
+  function startReconnectBacklogWindow() {
+    reconnectBacklogCount = 0;
+    if (reconnectBacklogTimer) clearTimeout(reconnectBacklogTimer);
+    reconnectBacklogTimer = setTimeout(function () {
+      if (reconnectBacklogCount > 0 && window.ck.toastQueue) {
+        window.ck.toastQueue({
+          variant: 'primary',
+          title: 'Replayed ' + reconnectBacklogCount + ' missed event(s)',
+          body: 'Daemon connection restored.',
+          href: '/audit',
+        });
+      }
+      reconnectBacklogCount = 0;
+      reconnectBacklogTimer = null;
+    }, 2000);
+  }
+
   function connectSSE() {
     if (stopped) return;
     var url = '/api/v1/events?since=' + lastID;
     try { es = new EventSource(url); } catch (e) { scheduleReconnect(); return; }
-    es.onopen = function () { api.connected = true; };
+    es.onopen = function () {
+      api.connected = true;
+      reconnectAttempt = 0; // reset backoff on a clean connect
+      startReconnectBacklogWindow();
+    };
     es.onerror = function () {
       api.connected = false;
       try { es.close(); } catch (_) {}
@@ -88,7 +137,11 @@ window.ck.events = (function () {
       es.addEventListener(t, function (e) {
         try {
           var payload = JSON.parse(e.data);
-          lastID = payload.id || lastID;
+          if (payload.id) {
+            lastID = payload.id;
+            saveLastID(lastID);
+          }
+          reconnectBacklogCount++;
           // Leader fans out to follower tabs first, then local emit.
           if (leader && bc) {
             bc.postMessage({ kind: 'event', type: t, payload: payload });
@@ -101,7 +154,7 @@ window.ck.events = (function () {
 
   function scheduleReconnect() {
     if (stopped) return;
-    setTimeout(function () { if (leader) connectSSE(); }, 2000);
+    setTimeout(function () { if (leader) connectSSE(); }, nextBackoff());
   }
 
   // BroadcastChannel message handler. Receives leader election +
@@ -240,6 +293,11 @@ function toastSystem() {
     nextId: 0,
     bind: function () {
       var self = this;
+      // Register a global push so non-Alpine callers (the v1.6
+      // phase 7 reconnect-backlog notice; future log-tail alerts)
+      // can drop a toast without a separate Alpine context.
+      window.ck = window.ck || {};
+      window.ck.toastQueue = function (t) { self.push(t); };
       window.ck.events.on('finding.created', function (ev) {
         var sev = ev.data && ev.data.severity;
         if (sev !== 'critical') return; // only critical-severity findings toast
