@@ -156,6 +156,13 @@ func (p *Pool) Start(ctx context.Context) {
 		}
 	}()
 
+	// v1.5.1 phase 6 (F4): schedules cron loop. Polls the schedules
+	// table for rows whose next_run_at has passed, enqueues a scan
+	// for each, rolls next_run_at forward via robfig/cron/v3. The
+	// v1.4 Studio's /schedules form already writes rows here; this
+	// is the missing producer that turns them into actual scans.
+	p.startCronLoop(ctx)
+
 	// Consumers.
 	for i := 0; i < p.concurrency; i++ {
 		p.wg.Add(1)
