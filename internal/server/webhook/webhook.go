@@ -163,6 +163,16 @@ func (rc *Receiver) handleGitHub(w http.ResponseWriter, r *http.Request) {
 	}
 
 	event := r.Header.Get("X-GitHub-Event")
+
+	// v1.8 phase 6 — handle issue_comment events (PR comment replies)
+	// before the scan-trigger fall-through. A scan-trigger isn't
+	// needed for a comment reply; we ingest it as a compliancekit
+	// comment instead.
+	if event == "issue_comment" {
+		rc.handleGitHubIssueComment(w, r, body)
+		return
+	}
+
 	action, ok := githubScanTrigger(event, body)
 	if !ok {
 		w.WriteHeader(http.StatusNoContent) // valid sig, uninteresting event
