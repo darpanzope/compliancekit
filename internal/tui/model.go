@@ -92,6 +92,9 @@ type listModel struct {
 	diffPerFP    map[string]diffKind
 	diffResolved []compliancekit.Finding
 	diffActive   bool
+
+	// v1.7 phase 7 — help overlay.
+	helpMode bool
 }
 
 func newListModel(findings []compliancekit.Finding) listModel {
@@ -114,6 +117,7 @@ const (
 	keyEnter     = "enter"
 	keyEsc       = "esc"
 	keyBackspace = "backspace"
+	keyCtrlC     = "ctrl+c"
 	cursorMarker = "▸ "
 	unknownLabel = "(unknown)"
 )
@@ -196,6 +200,16 @@ func (m listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m listModel) handleKey(key string) (tea.Model, tea.Cmd) {
+	// Help overlay swallows everything except quit + close keys.
+	if m.helpMode {
+		switch key {
+		case "q", keyCtrlC:
+			return m, tea.Quit
+		case keyEsc, "?":
+			m.helpMode = false
+		}
+		return m, nil
+	}
 	// In graph mode, route every key through the graph handler.
 	if m.graphMode {
 		return m.handleGraphKey(key)
@@ -204,6 +218,10 @@ func (m listModel) handleKey(key string) (tea.Model, tea.Cmd) {
 	// edits the input buffer.
 	if m.mode == modeSearch || m.mode == modeCommand {
 		return m.handleEditKey(key)
+	}
+	if helpKeyMatches(key) {
+		m.helpMode = true
+		return m, nil
 	}
 	return m.handleNormalKey(key)
 }
@@ -214,7 +232,7 @@ func (m listModel) handleKey(key string) (tea.Model, tea.Cmd) {
 // applying.
 func (m listModel) handleGraphKey(key string) (tea.Model, tea.Cmd) {
 	switch key {
-	case "q", "ctrl+c":
+	case "q", keyCtrlC:
 		return m, tea.Quit
 	case keyEsc, "R":
 		m.graphMode = false
@@ -266,7 +284,7 @@ func (m listModel) handleNormalKey(key string) (tea.Model, tea.Cmd) {
 // when the key is consumed.
 func (m *listModel) handleNormalChrome(key string) (tea.Cmd, bool) {
 	switch key {
-	case "q", "ctrl+c":
+	case "q", keyCtrlC:
 		return tea.Quit, true
 	case keyEsc:
 		m.flash = ""
@@ -537,6 +555,9 @@ func (m listModel) View() string {
 	if h == 0 {
 		h = defaultListHeight
 	}
+	if m.helpMode {
+		return renderHelp(w, h)
+	}
 	if m.graphMode {
 		return renderGraph(m.graphRows, m.graphCursor, w, h)
 	}
@@ -641,8 +662,8 @@ func (m listModel) renderList(width, height int) string {
 				gutter = k.glyph()
 			}
 		}
-		line := fmt.Sprintf("%s%s %-8s %-6s %-30s %s",
-			marker, gutter, severityShort(f.Severity), string(f.Status),
+		line := fmt.Sprintf("%s%s %s %-6s %-30s %s",
+			marker, gutter, severityStyled(f.Severity), string(f.Status),
 			truncate(f.CheckID, 30), truncate(displayResource(f), width-52))
 		body = append(body, padRight(line, width))
 	}
