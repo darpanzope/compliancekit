@@ -3,10 +3,10 @@
 // the compliancekit.Check registry. v0.16+.
 //
 // The seam was set up at v0.1 specifically for this milestone: the
-// Evaluator interface (internal/core/evaluator.go) and the
-// Scanner/Policy mutual-exclusion fields on compliancekit.Check were both
-// shaped so a second evaluator could land without touching any
-// existing Go check.
+// Evaluator interface (pkg/compliancekit/evaluator.go after the v1.0
+// API freeze — see ADR-014) and the Scanner/Policy mutual-exclusion
+// fields on compliancekit.Check were both shaped so a second evaluator
+// could land without touching any existing Go check.
 //
 // Per ADR-002 (Policy DSL is Rego, landing at v0.16): community
 // authors can contribute checks in <10 lines of Rego with no Go

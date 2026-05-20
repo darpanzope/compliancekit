@@ -619,8 +619,40 @@ The v2.x lineup absorbs the displaced items: v2.1 multi-tenant, v2.2 Trust Cente
 - **Stack-independent visual ceiling commitment**: ADR-015 fixes the daemon UI stack to htmx + Alpine + Tailwind + Preline + vanilla SVG. v1.18 + v1.19 commit that this stack choice is **not** a quality ceiling — whatever modern React + shadcn/ui dashboards (Linear / Vercel / Wiz) achieve "for free" via vendored component libraries, compliancekit invests equivalent effort to hit the same visual + interaction ceiling via carefully crafted htmx + Alpine partials. The concrete patterns codified into the v1.18/v1.19 expansions: per-domain color tokens (severity-/status-/resource-) extended across every provider compliancekit ships; gradient utility tokens; MetricCard component spec with variant + tooltip + trend + icon-in-rounded-bg; InfoTooltip-on-every-card-title pattern as the in-context discovery layer; named shadow scale (soft/elevated/floating/glass); 20–25 carefully crafted components modeled on shadcn's API shape (not breadth); filter-card convention; page-header convention; bulk-actions-in-page-header pattern. The htmx stack constrains *how* we implement, never *what quality* we ship.
 - **v1.5 resource graph escape hatch**: vanilla SVG is the default per ADR-015 spirit. v1.5 shipped (2026-05-19) with the hierarchical-SVG resource map and stayed inside budget — no cytoscape.js needed. The cytoscape.js (~150KB, vanilla JS, no React) escape hatch remains documented for v1.5.x if pan/zoom/drag demand grows beyond a 1500+ LoC budget. Explicit escape hatch, not a yak-shave.
 - **v2.x grows from 3 rows (plugin marketplace, K8s operator, auto-remediation) to 12 rows** (those three plus the eight displaced items plus a reserved v2.0 slot for the next API-surface refinement cycle).
-- **Tracking issue cadence**: issues open just-in-time (only the next 1-2 milestones), not all 12 upfront. The roadmap is the long-form planning artifact; issues are the work artifacts. Status: #25 (v1.3, closed 2026-05-18), #26 (v1.4, closed 2026-05-19), #27 (v1.5, closed 2026-05-19). v1.6 tracking issue (#28) opens next.
+- **Tracking issue cadence**: issues open just-in-time (only the next 1-2 milestones), not all 12 upfront. The roadmap is the long-form planning artifact; issues are the work artifacts. Status: #25 (v1.3, closed 2026-05-18), #26 (v1.4, closed 2026-05-19), #27 (v1.5, closed 2026-05-19), v1.5.1 patch (shipped 2026-05-19 without a tracking issue — patches don't get one per the just-in-time convention). v1.6 tracking issue (#28) opens next.
 - **ADR-006 unchanged**: auto-remediation remains a v2.x trust gate. The v2.x slot moves from "v2.x" to v2.11 (concrete numbering).
+
+---
+
+## ADR-018 — Strict CSP with `'unsafe-eval'`: the cost-of-doing-business for Alpine 3
+**Date:** 2026-05-19
+**Status:** Accepted
+
+### Question
+v1.5.0's demo testing surfaced two latent CSP-blocked bugs in the daemon UI: the Cmd+K palette + the No-FOUC theme bootstrap silently failed because the templates' inline `<script>` blocks ran into `script-src 'self'`. Extracting the inline scripts to `/assets/app.js` fixed those two specific cases — but Alpine 3.13's expression evaluator uses `(async function(){}).constructor(...)` (the indirect AsyncFunction trick), which CSP gates the same way it gates `new Function`. Without `'unsafe-eval'` in `script-src`, every `x-data` / `x-show` / `@keydown` binding in every template silently no-ops too.
+
+How do we keep ADR-015's "single binary, no Node runtime, htmx + Alpine stack" promise without shipping a UI that's silently broken under strict CSP?
+
+### Decision
+The daemon's CSP carries **`script-src 'self' 'unsafe-eval'`**. `'unsafe-inline'` stays OUT (no inline `<script>` tags ship — the No-FOUC bootstrap + cmdk factory live in `/assets/app.js`). Inline `<style>` attributes remain allowed via `style-src 'self' 'unsafe-inline'` for Tailwind's compiled utility classes.
+
+### Reasoning
+- **Alpine 3 needs eval-equivalent.** The default Alpine 3.x build evaluates string expressions via the indirect AsyncFunction constructor pattern. Every binding (`x-data="cmdk()"`, `x-show="visible"`, `@keydown.window.prevent.cmd.k="open()"`) goes through it. There is no way to use the default build without `'unsafe-eval'`.
+- **The CSP-friendly Alpine build (`@alpinejs/csp`) requires every binding to be precompiled.** No string expressions; every reactive method registered via `Alpine.data()` factories; every event handler bound declaratively. Migrating the v1.3-v1.5 templates (50+ Alpine bindings across 20+ templates) to the CSP build is a milestone-scale rewrite, not a patch. Out of scope for the htmx + Alpine stack ADR-015 codifies.
+- **`'unsafe-eval'` is the standard cost-of-doing-business for any runtime-expression UI framework** — Alpine, Vue inline templates, Knockout, AngularJS legacy. With `script-src 'self'` (no `'unsafe-inline'`) still in place, an attacker who finds a reflected-HTML injection cannot execute their own script — they'd need to also inject into a build-time Alpine template expression, which is server-controlled. The XSS attack surface is tighter than `'unsafe-inline' 'unsafe-eval'`, which other htmx-stack projects ship without controversy.
+- **No inline `<script>` tags ship anywhere.** The two latent inline-block bugs from v1.5.0 (No-FOUC theme bootstrap + cmdk factory) were extracted to `internal/server/ui/src/app.js`, wired into `make ui`, and embedded via `go:embed`. Future templates must follow the same pattern (codified in `feedback-csp-alpine` memory). Inline scripts are a CSP-violation footgun + a v1.5.0-style silent-failure mode in one.
+
+### Rejected alternatives
+- **`script-src 'self' 'unsafe-inline'` (drop unsafe-eval, allow inline).** Rejected: weaker security posture (an XSS attacker can inject `<script>` tags inline + run them; with `unsafe-eval` they need to also inject into a template expression). Also a step backward — the v1.3 ship already established no-inline-script as the norm.
+- **Switch to `@alpinejs/csp` build.** Rejected for v1.5.1: would require rewriting every `x-data` / `x-show` / `@event` in 20+ templates to declarative form + registering every reactive method via `Alpine.data()`. Milestone-scale work. v1.6 may revisit if a security audit / FedRAMP-style CSP-strict requirement makes `'unsafe-eval'` a non-starter.
+- **Hash-based inline-script CSP (`script-src 'self' 'sha256-...'`).** Considered for the inline blocks alone: SHA-256-pin each inline script. Rejected: doesn't solve the Alpine-eval problem (every binding still needs `'unsafe-eval'`); adds build-time hash-emission tooling for no security gain; brittle (every template edit invalidates the hash).
+
+### Consequences
+- The daemon's CSP `Content-Security-Policy` response header carries `script-src 'self' 'unsafe-eval'`.
+- `internal/server/server.go::securityHeaders` documents the choice + the F15 lesson it came from in its body comment.
+- `feedback-csp-alpine` memory codifies "never add an inline `<script>` block to any template" as a hard rule.
+- ADR-015's stack ceiling commitment is preserved; this ADR clarifies the CSP boundary the stack lives within.
+- A v1.6+ "FedRAMP-strict mode" or hardening track may migrate to `@alpinejs/csp`; recorded as a future possibility, not a current commitment.
 
 ---
 

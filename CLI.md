@@ -379,6 +379,16 @@ Flags:
 | `--state-dir <path>` | state directory for the daemon |
 | `--schedule <cron>` | scan interval (default: every 6h) |
 | `--demo` *(v1.4+)* | seed realistic findings + resources for first-impression demos |
+| `--insecure-cookies` *(v1.5.1+)* | drop the Secure attribute + `__Host-` prefix on session cookies — for plain-HTTP dev / loopback only, NEVER in production (see SECURITY.md) |
+
+OIDC env vars *(v1.5.1+)* — set any of these to add an upstream identity provider button to the `/login` page. Required: `_CLIENT_ID` + `_CLIENT_SECRET` + `_REDIRECT_URL`; `_ISSUER_URL` is also required for Okta + Custom.
+
+```
+CK_OIDC_GOOGLE_{CLIENT_ID,CLIENT_SECRET,REDIRECT_URL}
+CK_OIDC_OKTA_{CLIENT_ID,CLIENT_SECRET,REDIRECT_URL,ISSUER_URL}
+CK_OIDC_GITHUB_{CLIENT_ID,CLIENT_SECRET,REDIRECT_URL}
+CK_OIDC_CUSTOM_{CLIENT_ID,CLIENT_SECRET,REDIRECT_URL,ISSUER_URL}
+```
 
 API endpoints:
 
@@ -395,6 +405,8 @@ UI routes (HTML, server-rendered):
 | `/` | v1.3 | dashboard |
 | `/login` | v1.3 | login form (local auth) |
 | `/settings/providers`, `/settings/providers/{id}` | v1.4 | provider auth + test-connection + per-service toggle |
+| `/settings/webhooks`, `POST .../{id}/{delete,toggle}` | v1.5.1 | inbound webhook receivers — create with auto-gen HMAC secret (read-once), delete, enable/disable |
+| `/oidc/{provider}/{login,callback}` | v1.5.1 | OIDC handshake routes (one set per CK_OIDC_* configured provider) |
 | `/checks`, `/checks/diff`, `POST /checks/{id}/toggle` | v1.4 | check-catalog browser (search / filter / per-check toggle) |
 | `/settings/frameworks`, `/settings/frameworks/{id}` | v1.4 | framework tailoring UI (include / exclude w/ justification) |
 | `/settings/yaml`, `/settings/yaml/{raw,download}` | v1.4 | live `compliancekit.yaml` preview + download |

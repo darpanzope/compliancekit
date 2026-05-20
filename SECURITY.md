@@ -128,3 +128,40 @@ to remain anonymous, say so in your initial report.
   an entire class of dynamic-linker attacks.
 - `govulncheck` runs on every CI build against the call graph; vulnerable
   stdlib paths block merge.
+
+## Hardening defaults for `serve` mode (v1.3+)
+
+- **Session cookies** default to `__Host-ck_session` with `Secure`,
+  `HttpOnly`, `SameSite=Lax`, and `Path=/`. The `__Host-` prefix is
+  browser-enforced (no `Domain`, no insecure transport). Plain-HTTP
+  dev deploys (e.g. behind a TLS-terminating proxy on a private
+  network) can opt in to a non-`__Host-` cookie via
+  `compliancekit serve --insecure-cookies` — production must never
+  set this flag (v1.5.1 F17).
+- **CSRF**: every cookie-auth POST/PUT/DELETE on the API + every
+  mutating UI form is gated by a double-submit-cookie check. Forms
+  render `<input type="hidden" name="csrf_token" value="...">`;
+  fetch-based callers mirror the readable `ck_csrf` cookie into
+  the `X-CSRF-Token` header. Bearer-token callers skip CSRF since
+  the token isn't a browser-resident credential (v1.5.1 F16).
+- **Session-auth scope gate**: non-admin local users created via
+  `compliancekit serve users create` (no `--admin` flag) only
+  have read scopes against the v1 API. Write actions (POST scans,
+  PUT providers, DELETE waivers, etc.) require `IsAdmin = true`
+  (v1.5.1 F18).
+- **OIDC**: Google / Okta / GitHub / custom upstreams are wired
+  via `CK_OIDC_<PROVIDER>_{CLIENT_ID,CLIENT_SECRET,REDIRECT_URL,
+  ISSUER_URL}` env vars. Partial config is logged + skipped; the
+  daemon never refuses to boot for a malformed OIDC config
+  (v1.5.1 F15).
+- **Content Security Policy**: `default-src 'self'; script-src
+  'self' 'unsafe-eval'; style-src 'self' 'unsafe-inline';
+  frame-ancestors 'none'; ...`. `'unsafe-eval'` is required for
+  Alpine 3's expression evaluator (see ADR-018); `'unsafe-inline'`
+  is required for Tailwind's compiled utility classes. Inline
+  `<script>` blocks are forbidden — both extracted in v1.5.1.
+- **Webhook signing secrets** are stored plaintext at-rest in the
+  daemon's database file. Operators secure the DB at rest; the
+  v1.6 hardening track adds encryption-at-rest with a daemon-side
+  KEK. The v1.3-era `secret_hash` (bcrypt) design was unusable
+  as an HMAC key and was renamed in v1.5.1 (F19, migration 0006).
