@@ -107,14 +107,27 @@
       <textarea name="actions_json" x-model="actionsJSON" hidden></textarea>
     </div>
 
-    <div class="flex items-center justify-end gap-2">
-      {{ if .Editing }}
-      <a href="/rules" class="text-xs text-muted-foreground hover:text-foreground">Cancel</a>
-      {{ end }}
-      <button type="submit" {{ if not .CanEdit }}disabled{{ end }}
-              class="inline-flex h-9 items-center rounded-md bg-primary text-primary-foreground px-4 text-sm font-medium hover:opacity-90 transition disabled:opacity-50">
-        {{ if .Editing }}Save changes{{ else }}Create rule{{ end }}
-      </button>
+    {{ if .Flash }}<div class="rounded-md border border-success/30 bg-success/10 px-3 py-2 text-xs text-success">{{ .Flash }}</div>{{ end }}
+
+    <div class="flex items-center justify-between gap-2">
+      <div>
+        {{ if .Editing }}
+        <button type="button" formaction="/rules/{{ .Rule.ID }}/simulate" formmethod="post"
+                {{ if not .CanEdit }}disabled{{ end }}
+                class="inline-flex h-9 items-center rounded-md border border-border bg-background px-3 text-xs hover:bg-muted transition disabled:opacity-50">
+          Run simulator (last 30d)
+        </button>
+        {{ end }}
+      </div>
+      <div class="flex items-center gap-2">
+        {{ if .Editing }}
+        <a href="/rules" class="text-xs text-muted-foreground hover:text-foreground">Cancel</a>
+        {{ end }}
+        <button type="submit" {{ if not .CanEdit }}disabled{{ end }}
+                class="inline-flex h-9 items-center rounded-md bg-primary text-primary-foreground px-4 text-sm font-medium hover:opacity-90 transition disabled:opacity-50">
+          {{ if .Editing }}Save changes{{ else }}Create rule{{ end }}
+        </button>
+      </div>
     </div>
   </form>
 

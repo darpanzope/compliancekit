@@ -85,6 +85,7 @@ func (u *UI) mountRulesRoutes(r chi.Router) {
 	r.Post("/rules/{id}", u.rulesSave)
 	r.Post("/rules/{id}/delete", u.rulesDelete)
 	r.Post("/rules/{id}/toggle", u.rulesToggle)
+	r.Post("/rules/{id}/simulate", u.rulesSimulate)
 }
 
 // rulesList renders /rules.
@@ -259,6 +260,63 @@ func (u *UI) rulesToggle(w http.ResponseWriter, r *http.Request) {
 	}
 	u.AuditLog(r.Context(), "rule.toggle", "rule", id, map[string]any{"enabled": rl.Enabled})
 	http.Redirect(w, r, "/rules", http.StatusSeeOther)
+}
+
+// rulesSimulate replays the rule against the last 30 days of
+// findings + redirects back to the editor with a flash carrying the
+// would-fire count. The detailed run rows persist in rule_runs with
+// simulated=1; the editor's history pane (future addition) reads
+// those.
+func (u *UI) rulesSimulate(w http.ResponseWriter, r *http.Request) {
+	if !u.isAdmin(r.Context()) {
+		http.Error(w, "admin only", http.StatusForbidden)
+		return
+	}
+	id := chi.URLParam(r, "id")
+	eng := rules.New(u.rulesRepoHandle(), rules.DefaultRegistry)
+	results, err := eng.Simulate(r.Context(), rules.SimulateOptions{
+		RuleIDs: []string{id},
+	})
+	if err != nil {
+		http.Error(w, "simulate: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	would := 0
+	considered := 0
+	for _, res := range results {
+		would += res.WouldFire
+		considered += res.FindingsConsidered
+	}
+	u.AuditLog(r.Context(), "rule.simulate", "rule", id, map[string]any{
+		"would_fire": would, "findings_considered": considered,
+	})
+	flash := fmt.Sprintf("Simulator: would have fired %d times against %d findings", would, considered)
+	http.Redirect(w, r, "/rules/"+id+"?flash="+pathEscape(flash), http.StatusSeeOther)
+}
+
+// pathEscape URL-encodes for the redirect query param. We can't
+// import net/url here without renaming — keep a tiny local helper.
+func pathEscape(s string) string {
+	out := make([]byte, 0, len(s))
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		switch {
+		case c == ' ':
+			out = append(out, '+')
+		case (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '-' || c == '_' || c == '.' || c == ',':
+			out = append(out, c)
+		default:
+			out = append(out, '%', hexNibble(c>>4), hexNibble(c&0xF))
+		}
+	}
+	return string(out)
+}
+
+func hexNibble(n byte) byte {
+	if n < 10 {
+		return '0' + n
+	}
+	return 'a' + (n - 10)
 }
 
 // rulesExport renders the full ruleset as YAML for git versioning.
