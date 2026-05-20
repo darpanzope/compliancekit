@@ -396,7 +396,9 @@ API endpoints:
 - `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me`
 - `GET /api/v1/findings`, `GET /api/v1/scans`
 - `POST /api/v1/scans` (trigger an on-demand scan)
-- `GET /scans/{id}/stream` *(v1.4+)* — SSE live scan-progress stream
+- `GET /scans/{id}/stream` *(v1.4+)* — SSE live scan-progress stream (per-scan polling tail)
+- `GET /api/v1/events` *(v1.6+)* — SSE live event bus across every scan / finding / webhook. Cursor replay via `?since=<id>`; 5-min in-memory ring buffer. Event types: `scan.queued`, `scan.started`, `scan.progress`, `scan.completed`, `scan.failed`, `finding.created`, `finding.resolved`, `webhook.received`, `auth.session.created`. Auth-gated (token or session) under `ScopeScansRead`.
+- `GET /admin/logs/stream` *(v1.6+)* — SSE live tail of the daemon's slog output. Admin-only. 500-line in-memory ring.
 
 UI routes (HTML, server-rendered):
 
@@ -425,6 +427,7 @@ UI routes (HTML, server-rendered):
 | `/scans/diff` | v1.5 | cross-scan diff (New / Resolved / Changed) |
 | `/search` | v1.5 | Cmd+K global JSON search across resources / findings / checks / providers / views |
 | `/scans/{id}/pdf` | v1.5 | PDF export via browser-native save-as (window.print) |
+| `/admin/logs` | v1.6 | Live daemon log tail (admin-only); subscribes to `/admin/logs/stream` |
 
 ---
 
