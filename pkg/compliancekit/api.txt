@@ -89,3 +89,24 @@ type Tactic struct
 type User struct
 type Vulnerability struct
 type WaiverRef struct
+
+# subpackage: pkg/compliancekit/rules
+const OpAnd Op
+const OpNone Op
+const OpOr Op
+const TriggerCron Trigger
+const TriggerFindingCreated Trigger
+const TriggerFindingResolved Trigger
+const TriggerScanCompleted Trigger
+const TriggerWaiverExpired Trigger
+func MarshalActions(a []Action) ([]byte, error)
+func MarshalCondition(c Condition) ([]byte, error)
+func UnmarshalActions(data []byte) ([]Action, error)
+func UnmarshalCondition(data []byte) (Condition, error)
+method (Condition) IsAlwaysMatch() bool
+type Action struct
+type Condition struct
+type Op string
+type Rule struct
+type Term struct
+type Trigger string

@@ -39,6 +39,14 @@ import (
 // pkgDir is the on-disk location of the v1.0 public package.
 const pkgDir = "pkg/compliancekit"
 
+// subpkgDirs are stable public subpackages also covered by the
+// api-check gate. Each one gets its own block in api.txt with a
+// "# subpackage: <path>" header so additions to a subpackage are
+// just as visible at review time as additions to the root.
+var subpkgDirs = []string{
+	"pkg/compliancekit/rules", // v1.9+
+}
+
 // defaultOut is where the canonical snapshot lives. -check reads from
 // here; the default write target is also here.
 const defaultOut = "pkg/compliancekit/api.txt"
@@ -73,11 +81,33 @@ func main() {
 	}
 	sort.Strings(lines)
 
+	subBlocks := make(map[string][]string, len(subpkgDirs))
+	subPaths := make([]string, 0, len(subpkgDirs))
+	for _, dir := range subpkgDirs {
+		sub, err := scanPackage(dir)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "genapi: scan %s: %v\n", dir, err)
+			os.Exit(2)
+		}
+		sort.Strings(sub)
+		subBlocks[dir] = sub
+		subPaths = append(subPaths, dir)
+	}
+	sort.Strings(subPaths)
+
 	var buf bytes.Buffer
 	buf.WriteString(header)
 	if len(lines) > 0 {
 		buf.WriteByte('\n')
 		for _, l := range lines {
+			buf.WriteString(l)
+			buf.WriteByte('\n')
+		}
+	}
+	for _, dir := range subPaths {
+		buf.WriteByte('\n')
+		fmt.Fprintf(&buf, "# subpackage: %s\n", dir)
+		for _, l := range subBlocks[dir] {
 			buf.WriteString(l)
 			buf.WriteByte('\n')
 		}
