@@ -146,10 +146,15 @@ func runServe(ctx context.Context, stdout interface {
 		fmt.Fprintf(stdout, "  oidc:    %s\n", strings.Join(ids, ", "))
 	}
 
-	// Spawn the background worker pool. Phase 8 ships StubRunner so
-	// queued scans transition to completed without running anything;
-	// v1.4 phase 9 swaps it for a real scan-engine Runner.
-	pool := worker.New(st, worker.Default())
+	// Spawn the background worker pool. v1.5.1 phase 5 swaps the
+	// v1.3 StubRunner (50ms sleep + zero findings) for a RealRunner
+	// that builds collectors from the DB providers table, filters
+	// the check registry by checks_state, and runs engine.Run for
+	// real findings. The control-plane gap that made /scans/new
+	// feel like it worked but insert nothing (F1) is closed here.
+	workerCfg := worker.Default()
+	workerCfg.Runner = worker.NewRealRunner(st)
+	pool := worker.New(st, workerCfg)
 
 	// Install signal handlers on the parent context. When the user
 	// hits Ctrl-C or systemd sends SIGTERM, the signal-aware context
