@@ -43,8 +43,26 @@ window.ck.events = (function () {
   var allListeners = [];   // wildcard handlers (receive every event)
   var lastID = 0;
   var es = null;
-  var connected = false;
   var stopped = false;
+  var eventTypes = [
+    'scan.queued', 'scan.started', 'scan.progress',
+    'scan.completed', 'scan.failed', 'finding.created',
+    'finding.resolved', 'webhook.received', 'auth.session.created',
+  ];
+
+  // v1.6 phase 3 — multi-tab BroadcastChannel sync. The leader tab
+  // holds the only EventSource; followers receive events forwarded
+  // through the channel. Saves daemon connection budget when an
+  // operator has 6 dashboard tabs open. Election: each new tab
+  // claim-queries; the existing leader responds; if no response in
+  // 250ms the new tab becomes leader. Beforeunload-triggered
+  // handoff yields cleanly so the next tab takes over without a
+  // gap.
+  var TAB_ID = Date.now() + '-' + Math.random().toString(36).slice(2);
+  var bc = null;
+  var leader = false;
+  var leaderKnown = false;
+  try { bc = new BroadcastChannel('ck-events'); } catch (e) { bc = null; }
 
   function emit(type, ev) {
     var bucket = listeners[type] || [];
@@ -56,35 +74,89 @@ window.ck.events = (function () {
     }
   }
 
-  function connect() {
+  function connectSSE() {
     if (stopped) return;
     var url = '/api/v1/events?since=' + lastID;
-    try { es = new EventSource(url); } catch (e) { schedule(); return; }
-    es.onopen = function () { connected = true; api.connected = true; };
+    try { es = new EventSource(url); } catch (e) { scheduleReconnect(); return; }
+    es.onopen = function () { api.connected = true; };
     es.onerror = function () {
-      connected = false; api.connected = false;
+      api.connected = false;
       try { es.close(); } catch (_) {}
-      schedule();
+      scheduleReconnect();
     };
-    // SSE uses named events; we have one listener per type so add each.
-    var types = ['scan.queued','scan.started','scan.progress',
-                 'scan.completed','scan.failed','finding.created',
-                 'finding.resolved','webhook.received','auth.session.created'];
-    types.forEach(function (t) {
+    eventTypes.forEach(function (t) {
       es.addEventListener(t, function (e) {
         try {
           var payload = JSON.parse(e.data);
           lastID = payload.id || lastID;
+          // Leader fans out to follower tabs first, then local emit.
+          if (leader && bc) {
+            bc.postMessage({ kind: 'event', type: t, payload: payload });
+          }
           emit(t, payload);
         } catch (err) { console.error('ck.events parse', t, err); }
       });
     });
   }
 
-  function schedule() {
+  function scheduleReconnect() {
     if (stopped) return;
-    setTimeout(connect, 2000); // simple 2s backoff; phase 7 layers jitter
+    setTimeout(function () { if (leader) connectSSE(); }, 2000);
   }
+
+  // BroadcastChannel message handler. Receives leader election +
+  // event fan-out from the current leader.
+  if (bc) {
+    bc.onmessage = function (msg) {
+      var d = msg.data || {};
+      if (d.kind === 'event') {
+        // Follower path — never opens EventSource locally.
+        if (d.payload && d.payload.id) lastID = d.payload.id;
+        emit(d.type, d.payload);
+        api.connected = true; // mirror leader's status
+        return;
+      }
+      if (d.kind === 'claim_query') {
+        if (leader) bc.postMessage({ kind: 'i_am_leader', tabId: TAB_ID });
+        return;
+      }
+      if (d.kind === 'i_am_leader') {
+        leaderKnown = true;
+        api.connected = true;
+        return;
+      }
+      if (d.kind === 'leader_leaving') {
+        // Run election again — first tab to claim wins.
+        leaderKnown = false;
+        leader = false;
+        attemptLeadership();
+      }
+    };
+  }
+
+  function attemptLeadership() {
+    if (stopped) return;
+    if (!bc) { // no BroadcastChannel — every tab is its own leader
+      leader = true;
+      connectSSE();
+      return;
+    }
+    leaderKnown = false;
+    bc.postMessage({ kind: 'claim_query', tabId: TAB_ID });
+    setTimeout(function () {
+      if (!leaderKnown) {
+        leader = true;
+        bc.postMessage({ kind: 'i_am_leader', tabId: TAB_ID });
+        connectSSE();
+      }
+    }, 250);
+  }
+
+  // Yield leadership cleanly on tab close so the next tab can claim
+  // without a gap.
+  window.addEventListener('beforeunload', function () {
+    if (leader && bc) bc.postMessage({ kind: 'leader_leaving', tabId: TAB_ID });
+  });
 
   var api = {
     connected: false,
@@ -92,7 +164,13 @@ window.ck.events = (function () {
       if (type === '*') { allListeners.push(callback); return; }
       (listeners[type] = listeners[type] || []).push(callback);
     },
-    stop: function () { stopped = true; if (es) es.close(); },
+    stop: function () {
+      stopped = true;
+      if (es) es.close();
+      if (bc) bc.close();
+    },
+    // Test/debug: expose whether this tab is the leader.
+    isLeader: function () { return leader; },
   };
 
   // Boot on DOMContentLoaded so the EventSource doesn't race the
@@ -100,10 +178,10 @@ window.ck.events = (function () {
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function () {
       if (!document.body || document.body.dataset.loginPage === '1') return;
-      connect();
+      attemptLeadership();
     });
   } else {
-    if (document.body && document.body.dataset.loginPage !== '1') connect();
+    if (document.body && document.body.dataset.loginPage !== '1') attemptLeadership();
   }
 
   return api;
