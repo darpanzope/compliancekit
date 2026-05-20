@@ -1,0 +1,122 @@
+{{ define "content" }}
+<div class="max-w-3xl mx-auto">
+  <a href="/rules" class="text-xs text-primary hover:underline">← all rules</a>
+  <h1 class="text-xl font-semibold mt-2 mb-4">
+    {{ if .Editing }}Edit rule{{ else }}New rule{{ end }}
+  </h1>
+
+  <form method="post" action="{{ if .Editing }}/rules/{{ .Rule.ID }}{{ else }}/rules{{ end }}"
+        x-data="ruleEditor()"
+        data-condition-json='{{ .ConditionJSON }}'
+        data-actions-json='{{ .ActionsJSON }}'
+        data-condition-kinds='{{ joinCSV .ConditionKinds }}'
+        data-action-kinds='{{ joinCSV .ActionKinds }}'
+        data-trigger="{{ .Rule.Trigger }}"
+        class="space-y-5">
+    <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
+
+    <div class="ck-card p-5 space-y-3">
+      <div class="grid grid-cols-2 gap-3">
+        <div class="col-span-2">
+          <label class="text-[11px] uppercase tracking-wider text-muted-foreground">Name</label>
+          <input name="name" required value="{{ .Rule.Name }}" {{ if not .CanEdit }}disabled{{ end }}
+                 class="ck-input text-sm w-full">
+        </div>
+        <div class="col-span-2">
+          <label class="text-[11px] uppercase tracking-wider text-muted-foreground">Description</label>
+          <input name="description" value="{{ .Rule.Description }}" {{ if not .CanEdit }}disabled{{ end }}
+                 class="ck-input text-sm w-full">
+        </div>
+        <div>
+          <label class="text-[11px] uppercase tracking-wider text-muted-foreground">Trigger</label>
+          <select name="trigger" x-model="trigger" {{ if not .CanEdit }}disabled{{ end }}
+                  class="ck-input text-sm w-full">
+            {{ $current := .Rule.Trigger }}
+            {{ range .Triggers }}
+            <option value="{{ . }}" {{ if eq . (printf "%s" $current) }}selected{{ end }}>{{ . }}</option>
+            {{ end }}
+          </select>
+        </div>
+        <div>
+          <label class="text-[11px] uppercase tracking-wider text-muted-foreground">Priority</label>
+          <input type="number" name="priority" value="{{ .Rule.Priority }}" min="0" max="9999" {{ if not .CanEdit }}disabled{{ end }}
+                 class="ck-input text-sm w-full">
+        </div>
+        <div x-show="trigger === 'cron'" x-cloak class="col-span-2 grid grid-cols-3 gap-3">
+          <div class="col-span-2">
+            <label class="text-[11px] uppercase tracking-wider text-muted-foreground">Cron expression</label>
+            <input name="cron_expr" value="{{ .Rule.CronExpr }}" placeholder="0 9 * * MON" {{ if not .CanEdit }}disabled{{ end }}
+                   class="ck-input text-sm w-full font-mono">
+          </div>
+          <div>
+            <label class="text-[11px] uppercase tracking-wider text-muted-foreground">Timezone</label>
+            <input name="timezone" value="{{ .Rule.Timezone }}" placeholder="UTC" {{ if not .CanEdit }}disabled{{ end }}
+                   class="ck-input text-sm w-full">
+          </div>
+        </div>
+        <div class="col-span-2">
+          <label class="inline-flex items-center gap-2 text-sm">
+            <input type="checkbox" name="enabled" {{ if .Rule.Enabled }}checked{{ end }} {{ if not .CanEdit }}disabled{{ end }}>
+            Enabled
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="ck-card p-5 space-y-3">
+      <div class="flex items-center justify-between">
+        <h2 class="font-medium text-sm">When (conditions)</h2>
+        <span class="text-[11px] text-muted-foreground">AND across all rows.</span>
+      </div>
+      <template x-for="(t, idx) in terms" :key="idx">
+        <div class="flex items-center gap-2">
+          <select x-model="t.kind" class="ck-input text-xs flex-shrink-0">
+            <template x-for="k in conditionKinds" :key="k"><option :value="k" x-text="k"></option></template>
+          </select>
+          <input x-model="t.paramKey" placeholder="key (e.g. min, id, eq)"
+                 class="ck-input text-xs flex-shrink-0 w-32">
+          <input x-model="t.paramVal" placeholder="value"
+                 class="ck-input text-xs flex-1">
+          <label class="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+            <input type="checkbox" x-model="t.negate"> NOT
+          </label>
+          <button type="button" @click="removeTerm(idx)" class="text-[11px] text-destructive">×</button>
+        </div>
+      </template>
+      <button type="button" @click="addTerm()" class="text-xs text-primary hover:underline">+ add condition</button>
+      <p class="text-[10px] text-muted-foreground">Leave empty to fire on every trigger event (action-only rule).</p>
+      <textarea name="condition_json" x-model="conditionJSON" hidden></textarea>
+    </div>
+
+    <div class="ck-card p-5 space-y-3">
+      <div class="flex items-center justify-between">
+        <h2 class="font-medium text-sm">Then (actions)</h2>
+        <span class="text-[11px] text-muted-foreground">Dispatched in order.</span>
+      </div>
+      <template x-for="(a, idx) in actionsList" :key="idx">
+        <div class="flex items-center gap-2">
+          <select x-model="a.kind" class="ck-input text-xs flex-shrink-0">
+            <template x-for="k in actionKinds" :key="k"><option :value="k" x-text="k"></option></template>
+          </select>
+          <input x-model="a.params" placeholder='{"key":"value"} JSON params'
+                 class="ck-input text-xs flex-1 font-mono">
+          <button type="button" @click="removeAction(idx)" class="text-[11px] text-destructive">×</button>
+        </div>
+      </template>
+      <button type="button" @click="addAction()" class="text-xs text-primary hover:underline">+ add action</button>
+      <textarea name="actions_json" x-model="actionsJSON" hidden></textarea>
+    </div>
+
+    <div class="flex items-center justify-end gap-2">
+      {{ if .Editing }}
+      <a href="/rules" class="text-xs text-muted-foreground hover:text-foreground">Cancel</a>
+      {{ end }}
+      <button type="submit" {{ if not .CanEdit }}disabled{{ end }}
+              class="inline-flex h-9 items-center rounded-md bg-primary text-primary-foreground px-4 text-sm font-medium hover:opacity-90 transition disabled:opacity-50">
+        {{ if .Editing }}Save changes{{ else }}Create rule{{ end }}
+      </button>
+    </div>
+  </form>
+
+</div>
+{{ end }}

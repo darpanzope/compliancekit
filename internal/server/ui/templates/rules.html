@@ -1,0 +1,61 @@
+{{ define "content" }}
+<div class="space-y-6">
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="text-xl font-semibold">Rules</h1>
+      <p class="text-sm text-muted-foreground mt-1">
+        Declarative if-this-then-that automation. Triggered by the v1.6 event bus +
+        cron. Rules dispatch every action on every match;
+        <a href="/rules/export.yaml" class="text-primary hover:underline">export.yaml</a>
+        for git versioning.
+      </p>
+    </div>
+    {{ if .CanEdit }}
+    <a href="/rules/new" class="inline-flex h-9 items-center rounded-md bg-primary text-primary-foreground px-3 text-sm font-medium hover:opacity-90 transition">
+      New rule
+    </a>
+    {{ end }}
+  </div>
+
+  {{ if .Rules }}
+  <ul class="space-y-2">
+    {{ range .Rules }}
+    <li class="ck-card p-4">
+      <div class="flex items-start justify-between gap-3">
+        <div class="min-w-0 flex-1">
+          <div class="flex items-center gap-2">
+            <a href="/rules/{{ .ID }}" class="font-medium hover:underline">{{ .Name }}</a>
+            {{ if not .Enabled }}<span class="text-[10px] uppercase tracking-wider text-muted-foreground bg-muted px-1.5 py-0.5 rounded">paused</span>{{ end }}
+            <span class="text-[10px] uppercase tracking-wider text-muted-foreground bg-muted/40 px-1.5 py-0.5 rounded">{{ .Trigger }}</span>
+            <span class="text-[10px] text-muted-foreground tabular-nums">priority {{ .Priority }}</span>
+          </div>
+          {{ if .Description }}<p class="text-xs text-muted-foreground mt-1">{{ .Description }}</p>{{ end }}
+          <div class="mt-2 text-xs font-mono text-muted-foreground">
+            <div>IF {{ .CondSummary }}</div>
+            <div>THEN {{ .ActSummary }}</div>
+          </div>
+        </div>
+        {{ if $.CanEdit }}
+        <div class="flex items-center gap-1.5 shrink-0">
+          <form method="post" action="/rules/{{ .ID }}/toggle">
+            <input type="hidden" name="csrf_token" value="{{ $.CSRFToken }}">
+            <button type="submit" class="text-[11px] text-muted-foreground hover:text-foreground">{{ if .Enabled }}pause{{ else }}enable{{ end }}</button>
+          </form>
+          <span class="text-muted-foreground/40">·</span>
+          <form method="post" action="/rules/{{ .ID }}/delete" onsubmit="return confirm('Delete this rule?')">
+            <input type="hidden" name="csrf_token" value="{{ $.CSRFToken }}">
+            <button type="submit" class="text-[11px] text-destructive hover:opacity-80">delete</button>
+          </form>
+        </div>
+        {{ end }}
+      </div>
+    </li>
+    {{ end }}
+  </ul>
+  {{ else }}
+  <div class="ck-card p-8 text-center text-sm text-muted-foreground">
+    No rules yet. {{ if .CanEdit }}<a href="/rules/new" class="text-primary hover:underline">Create the first one</a> to automate your compliance ops.{{ end }}
+  </div>
+  {{ end }}
+</div>
+{{ end }}

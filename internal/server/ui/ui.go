@@ -29,6 +29,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/darpanzope/compliancekit/internal/rules"
 	"github.com/darpanzope/compliancekit/internal/server/assets"
 	"github.com/darpanzope/compliancekit/internal/server/auth"
 	"github.com/darpanzope/compliancekit/internal/server/collab"
@@ -65,6 +66,8 @@ var defaultNav = []navItem{
 		Icon: template.HTML(`<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`)},
 	{Href: "/checks", Key: "checks", Label: "Checks",
 		Icon: template.HTML(`<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`)},
+	{Href: "/rules", Key: "rules", Label: "Rules",
+		Icon: template.HTML(`<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>`)},
 	{Href: "/settings/providers", Key: "settings", Label: "Settings",
 		Icon: template.HTML(`<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`)},
 }
@@ -117,6 +120,10 @@ var templateFuncs = template.FuncMap{
 	// to emit goldmark-rendered body_html that was sanitized at
 	// write time by bluemonday.
 	"safeHTML": func(s string) template.HTML { return template.HTML(s) }, //nolint:gosec // sanitized at write time
+	// joinCSV concatenates a []string with commas. v1.9 phase 3 —
+	// used by the rule editor template to pass a kind list into a
+	// data-attribute the Alpine factory parses.
+	"joinCSV": func(s []string) string { return strings.Join(s, ",") },
 }
 
 // chipGroup is the partial-args struct filter_chip_group renders
@@ -220,6 +227,7 @@ type UI struct {
 	activitiesRepo  *collab.Activities  // v1.8 phase 3 — chronological per-finding activity log
 	teams           *collab.Teams       // v1.8 phase 8 — teams CRUD
 	followersRepo   *collab.Followers   // v1.8 phase 8 — resource follower opt-in
+	rulesRepo       *rules.Repo         // v1.9 phase 0 — rules engine persistence
 }
 
 // New constructs the UI handle.
@@ -309,6 +317,7 @@ func (u *UI) Mount(r chi.Router) {
 		u.mountCollabRoutes(r)
 		u.mountTeamsRoutes(r)
 		u.mountInboxV2Routes(r)
+		u.mountRulesRoutes(r)
 		u.mountRemediationRoutes(r)
 		u.mountResourceMapRoutes(r)
 		u.mountResourcesRoutes(r)

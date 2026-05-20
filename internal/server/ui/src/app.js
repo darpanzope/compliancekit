@@ -493,6 +493,84 @@ function cmdk() {
   };
 }
 
+// ruleEditor is the v1.9 phase 3 rule-builder Alpine factory.
+// Reads initial state from data-* attributes on the form element so
+// the strict CSP (no inline <script>) stays intact. The hidden
+// condition_json + actions_json textareas mirror the live state on
+// every keystroke so form submit carries the canonical JSON encoding.
+function ruleEditor() {
+  return {
+    trigger: 'finding.created',
+    conditionKinds: [],
+    actionKinds: [],
+    terms: [],
+    actionsList: [{ kind: 'notify', params: '{}' }],
+    init() {
+      var el = this.$root;
+      this.trigger = el.dataset.trigger || 'finding.created';
+      this.conditionKinds = (el.dataset.conditionKinds || '').split(',').filter(Boolean);
+      this.actionKinds = (el.dataset.actionKinds || '').split(',').filter(Boolean);
+      try {
+        var cond = JSON.parse(el.dataset.conditionJson || '{}');
+        var found = [];
+        var walk = function (node) {
+          if (!node) return;
+          if (node.term) {
+            var p = node.term.params || {};
+            var key = Object.keys(p)[0] || '';
+            found.push({
+              kind: node.term.kind || 'severity',
+              paramKey: key,
+              paramVal: key ? (Array.isArray(p[key]) ? p[key].join(',') : String(p[key])) : '',
+              negate: !!node.term.negate,
+            });
+            return;
+          }
+          (node.children || []).forEach(walk);
+        };
+        walk(cond);
+        this.terms = found;
+      } catch (e) {}
+      try {
+        var acts = JSON.parse(el.dataset.actionsJson || '[]');
+        if (acts.length > 0) {
+          this.actionsList = acts.map(function (a) {
+            return { kind: a.kind || 'notify', params: JSON.stringify(a.params || {}) };
+          });
+        }
+      } catch (e) {}
+    },
+    get conditionJSON() {
+      if (!this.terms.length) return '{}';
+      var children = this.terms.map(function (t) {
+        var params = {};
+        if (t.paramKey) {
+          var v = t.paramVal;
+          if (v.indexOf(',') >= 0) v = v.split(',').map(function (x) { return x.trim(); });
+          else if (!isNaN(Number(v)) && v !== '') v = Number(v);
+          params[t.paramKey] = v;
+        }
+        return { term: { kind: t.kind, params: params, negate: t.negate } };
+      });
+      if (children.length === 1) return JSON.stringify(children[0]);
+      return JSON.stringify({ op: 'and', children: children });
+    },
+    get actionsJSON() {
+      return JSON.stringify(this.actionsList.map(function (a) {
+        var p = {};
+        try { p = JSON.parse(a.params || '{}'); } catch (e) {}
+        return { kind: a.kind, params: p };
+      }));
+    },
+    addTerm: function () {
+      this.terms.push({ kind: 'severity', paramKey: 'min', paramVal: 'high', negate: false });
+    },
+    removeTerm: function (i) { this.terms.splice(i, 1); },
+    addAction: function () { this.actionsList.push({ kind: 'notify', params: '{}' }); },
+    removeAction: function (i) { this.actionsList.splice(i, 1); },
+  };
+}
+
 // commentComposer is the v1.8 phase 4 @mention autocomplete. Wired
 // to the comments_panel <textarea> via x-data; tracks the caret +
 // query, fetches /api/v1/users/search, and replaces the in-flight
