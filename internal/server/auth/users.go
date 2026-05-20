@@ -96,6 +96,35 @@ func (u *Users) ByID(ctx context.Context, id string) (*User, error) {
 		 FROM users WHERE id = %s`, u.ph(1)), id)
 }
 
+// All returns every user in the directory, ordered by display_name
+// then email. v1.8 phase 2 — drives the assignee dropdown + the
+// resource-owner picker. Cap at 500 rows; daemon admin uses a more
+// targeted query if the directory ever grows past that.
+func (u *Users) All(ctx context.Context) ([]*User, error) {
+	rows, err := u.store.DB().QueryContext(ctx,
+		`SELECT id, email, COALESCE(display_name,''), is_admin
+		 FROM users
+		 ORDER BY COALESCE(NULLIF(display_name,''), email)
+		 LIMIT 500`)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+	var out []*User
+	for rows.Next() {
+		var (
+			us      User
+			isAdmin int
+		)
+		if err := rows.Scan(&us.ID, &us.Email, &us.DisplayName, &isAdmin); err != nil {
+			return nil, err
+		}
+		us.IsAdmin = isAdmin != 0
+		out = append(out, &us)
+	}
+	return out, rows.Err()
+}
+
 // TouchLastLogin updates last_login_at for the user. Best-effort —
 // callers ignore the error; a missed update doesn't break login.
 func (u *Users) TouchLastLogin(ctx context.Context, id string) error {

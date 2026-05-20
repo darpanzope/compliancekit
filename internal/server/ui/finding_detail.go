@@ -16,6 +16,8 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/darpanzope/compliancekit/internal/server/auth"
+	"github.com/darpanzope/compliancekit/internal/server/collab"
 	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
@@ -29,6 +31,28 @@ type findingDetail struct {
 	CheckRefs    []string
 	WaiverCount  int
 	WaiverActive bool
+	// v1.8 phase 2 — pre-rendered widgets for the assignee chip and
+	// resource-owner chip on the overview tab.
+	AssigneeWidget assigneeWidgetData
+	OwnerWidget    ownerWidgetData
+}
+
+// assigneeWidgetData mirrors the partial's expected shape; populated
+// by the detail handler so the first render carries the current
+// state without a second roundtrip.
+type assigneeWidgetData struct {
+	FindingID string
+	Current   collab.Assignment
+	Options   []pickerOption
+	CSRFToken string
+}
+
+// ownerWidgetData mirrors the owner partial's expected shape.
+type ownerWidgetData struct {
+	ResourceID string
+	Current    collab.ResourceOwner
+	Options    []pickerOption
+	CSRFToken  string
 }
 
 // mountFindingDetailRoutes registers the Phase 3 endpoint.
@@ -52,6 +76,14 @@ func (u *UI) findingDetailPartial(w http.ResponseWriter, r *http.Request) {
 	checkTitle, checkDesc, checkRemed, checkRefs := lookupCheckMeta(row.CheckID)
 	waiverCount, anyActive := u.countWaiversForResource(r.Context(), row.CheckID, row.ResourceID)
 
+	assignment, _ := u.assignments().Get(r.Context(), row.Fingerprint)
+	owner, _ := u.owners().Get(r.Context(), row.ResourceID)
+	options := u.pickerOptions(r.Context())
+	csrf := ""
+	if sess := auth.FromContext(r.Context()); sess != nil {
+		csrf = sess.CSRFToken
+	}
+
 	detail := findingDetail{
 		View:         u.viewFor(r, "", "findings", View{}),
 		Row:          row,
@@ -61,6 +93,18 @@ func (u *UI) findingDetailPartial(w http.ResponseWriter, r *http.Request) {
 		CheckRefs:    checkRefs,
 		WaiverCount:  waiverCount,
 		WaiverActive: anyActive,
+		AssigneeWidget: assigneeWidgetData{
+			FindingID: row.ID,
+			Current:   assignment,
+			Options:   options,
+			CSRFToken: csrf,
+		},
+		OwnerWidget: ownerWidgetData{
+			ResourceID: row.ResourceID,
+			Current:    owner,
+			Options:    options,
+			CSRFToken:  csrf,
+		},
 	}
 
 	// Render just the partial — no daemon chrome, htmx target is the

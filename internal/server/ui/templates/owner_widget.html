@@ -1,0 +1,37 @@
+{{ define "owner_widget" }}
+<div id="owner-widget-{{ .ResourceID }}" class="ck-card p-3 text-xs" x-data="{ editing: false }">
+  <div class="flex items-center justify-between gap-2">
+    <div class="text-[11px] uppercase tracking-wider text-muted-foreground">Resource owner</div>
+    <button type="button" @click="editing = !editing"
+            class="text-[11px] text-primary hover:underline">
+      <span x-show="!editing">{{ if .Current.OwnerID }}change{{ else }}assign{{ end }}</span>
+      <span x-show="editing" x-cloak>cancel</span>
+    </button>
+  </div>
+  <div class="mt-1.5">
+    {{ if .Current.OwnerID }}
+      <span class="font-medium">{{ if .Current.OwnerName }}{{ .Current.OwnerName }}{{ else }}{{ .Current.OwnerEmail }}{{ end }}</span>
+    {{ else }}
+      <span class="text-muted-foreground">No owner</span>
+    {{ end }}
+  </div>
+  <form x-show="editing" x-cloak class="mt-2 space-y-2"
+        hx-post="/resources/{{ .ResourceID }}/owner"
+        hx-target="#owner-widget-{{ .ResourceID }}"
+        hx-swap="outerHTML">
+    <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
+    <select name="user_id" class="ck-input text-xs w-full">
+      <option value="">— no owner —</option>
+      {{ range .Options }}
+      <option value="{{ .ID }}" {{ if eq .ID $.Current.OwnerID }}selected{{ end }}>{{ .Label }}</option>
+      {{ end }}
+    </select>
+    <div class="flex items-center justify-end">
+      <button type="submit"
+              class="inline-flex h-7 items-center rounded-md bg-primary text-primary-foreground px-2.5 text-[11px] font-medium hover:opacity-90 transition">
+        Save
+      </button>
+    </div>
+  </form>
+</div>
+{{ end }}

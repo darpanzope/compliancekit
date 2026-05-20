@@ -29,6 +29,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/darpanzope/compliancekit/internal/server/auth"
 	"github.com/darpanzope/compliancekit/internal/server/store"
 )
 
@@ -83,6 +84,10 @@ type findingFilters struct {
 	SinceDays     int
 	Cursor        string
 	PerPage       int
+	// Assignee v1.8 phase 2 — empty string = no filter; the literal
+	// "me" resolves at query time against the session user; any other
+	// value is taken as a literal user id.
+	Assignee string
 }
 
 // findingsView is the explorer-page payload.
@@ -138,6 +143,13 @@ func (u *UI) buildFindingsWhere(f findingFilters) (clauses []string, params []an
 		cutoff := time.Now().Add(-time.Duration(f.SinceDays) * 24 * time.Hour).UTC().Format(time.RFC3339)
 		add("last_seen_at >= "+ph(u.store, len(params)+1), cutoff)
 	}
+	if f.Assignee != "" {
+		// "me" is rewritten to the session user id by the caller via
+		// resolveAssignee; an unresolved "me" matches no rows so the
+		// page renders empty.
+		add("fingerprint IN (SELECT finding_fingerprint FROM finding_assignment WHERE assignee_user_id = "+
+			ph(u.store, len(params)+1)+")", f.Assignee)
+	}
 	if c := decodeCursor(f.Cursor); c.valid {
 		// (created_at, id) lexicographic — newest first means
 		// "rows BEFORE this cursor."
@@ -157,6 +169,7 @@ func (u *UI) mountFindingsRoutes(r chi.Router) {
 // scaffold + initial 50 rows + the htmx infinite-scroll sentinel).
 func (u *UI) findingsList(w http.ResponseWriter, r *http.Request) {
 	filters := parseFindingFilters(r.URL.Query())
+	filters.Assignee = u.resolveAssignee(r, filters.Assignee)
 	items, next, err := u.queryFindings(r.Context(), filters)
 	if err != nil {
 		u.fail(w, "query findings: "+err.Error())
@@ -183,6 +196,7 @@ func (u *UI) findingsList(w http.ResponseWriter, r *http.Request) {
 // the operator scrolls near the bottom.
 func (u *UI) findingsRowsPartial(w http.ResponseWriter, r *http.Request) {
 	filters := parseFindingFilters(r.URL.Query())
+	filters.Assignee = u.resolveAssignee(r, filters.Assignee)
 	items, next, err := u.queryFindings(r.Context(), filters)
 	if err != nil {
 		http.Error(w, "query findings: "+err.Error(), http.StatusInternalServerError)
@@ -236,7 +250,22 @@ func parseFindingFilters(v map[string][]string) findingFilters {
 		SinceDays:     since,
 		Cursor:        first("cursor"),
 		PerPage:       perPage,
+		Assignee:      first("assignee"),
 	}
+}
+
+// resolveAssignee rewrites "me" to the session user id; passes other
+// values through unchanged. Used by handlers before invoking
+// queryFindings + countFindingsBySeverity so the dispatch happens
+// once per request.
+func (u *UI) resolveAssignee(r *http.Request, raw string) string {
+	if raw != "me" {
+		return raw
+	}
+	if sess := auth.FromContext(r.Context()); sess != nil {
+		return sess.UserID
+	}
+	return raw
 }
 
 // queryFindings runs the SQL with the filter set applied, returns up
@@ -246,7 +275,7 @@ func (u *UI) queryFindings(ctx context.Context, f findingFilters) ([]findingRow,
 	q := `SELECT id, scan_id, check_id, severity, status, provider,
 	             resource_id, resource_name, resource_type, COALESCE(message,''),
 	             COALESCE(framework_ids,'[]'),
-	             first_seen_at, last_seen_at
+	             first_seen_at, last_seen_at, fingerprint
 	      FROM findings`
 	if len(where) > 0 {
 		q += " WHERE " + strings.Join(where, " AND ")
@@ -265,7 +294,7 @@ func (u *UI) queryFindings(ctx context.Context, f findingFilters) ([]findingRow,
 		var fwJSON string
 		if err := rows.Scan(&r.ID, &r.ScanID, &r.CheckID, &r.Severity, &r.Status, &r.Provider,
 			&r.ResourceID, &r.ResourceName, &r.ResourceType, &r.Message,
-			&fwJSON, &r.FirstSeen, &r.LastSeen); err != nil {
+			&fwJSON, &r.FirstSeen, &r.LastSeen, &r.Fingerprint); err != nil {
 			return out, "", err
 		}
 		_ = json.Unmarshal([]byte(fwJSON), &r.Frameworks)

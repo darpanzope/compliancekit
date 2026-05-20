@@ -31,6 +31,7 @@ import (
 
 	"github.com/darpanzope/compliancekit/internal/server/assets"
 	"github.com/darpanzope/compliancekit/internal/server/auth"
+	"github.com/darpanzope/compliancekit/internal/server/collab"
 	"github.com/darpanzope/compliancekit/internal/server/comments"
 	"github.com/darpanzope/compliancekit/internal/server/logs"
 	"github.com/darpanzope/compliancekit/internal/server/store"
@@ -208,12 +209,14 @@ var tmpl = template.Must(template.New("ui").Funcs(templateFuncs).ParseFS(tmplFS,
 // UI is the handler bundle. Constructed with the same store + auth
 // dependencies the API layer uses.
 type UI struct {
-	store         *store.Store
-	users         *auth.Users
-	sessions      *auth.Sessions
-	oidcProviders []auth.OIDCProviderButton
-	logBuf        *logs.Buffer   // v1.6 phase 6 — nil-safe; route absent when nil
-	comments      *comments.Repo // v1.8 phase 1 — markdown comments on findings
+	store           *store.Store
+	users           *auth.Users
+	sessions        *auth.Sessions
+	oidcProviders   []auth.OIDCProviderButton
+	logBuf          *logs.Buffer        // v1.6 phase 6 — nil-safe; route absent when nil
+	comments        *comments.Repo      // v1.8 phase 1 — markdown comments on findings
+	assignmentsRepo *collab.Assignments // v1.8 phase 2 — per-finding assignees
+	ownersRepo      *collab.Owners      // v1.8 phase 2 — per-resource owners
 }
 
 // New constructs the UI handle.
@@ -300,6 +303,7 @@ func (u *UI) Mount(r chi.Router) {
 		u.mountSavedViewRoutes(r)
 		u.mountFindingDetailRoutes(r)
 		u.mountCommentsRoutes(r)
+		u.mountCollabRoutes(r)
 		u.mountRemediationRoutes(r)
 		u.mountResourceMapRoutes(r)
 		u.mountResourcesRoutes(r)
