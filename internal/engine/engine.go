@@ -14,6 +14,20 @@ import (
 	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
+// Progress is the optional observer the engine calls on every
+// collector / check boundary. v1.6 phase 2 — the daemon's
+// RealRunner implements this to fan-out scan.progress events to
+// /api/v1/events subscribers; the CLI scan path passes nil + sees
+// no behavior change. Callers must not block in callbacks; the
+// engine fires them inline.
+type Progress interface {
+	OnCollectorStart(name string)
+	OnCollectorDone(name string, resources int, err error)
+	OnEvaluationStart(checkCount int)
+	OnCheckDone(id string, findings int, err error)
+	OnEvaluationDone(totalFindings int)
+}
+
 // Engine runs a scan end-to-end. It is constructed via New and invoked
 // once per scan via Run.
 //
@@ -22,6 +36,7 @@ import (
 type Engine struct {
 	collectors []compliancekit.Collector
 	registry   *compliancekit.Registry
+	progress   Progress
 }
 
 // New returns an Engine configured with the given collectors and check
@@ -32,6 +47,15 @@ func New(collectors []compliancekit.Collector, registry *compliancekit.Registry)
 		collectors: collectors,
 		registry:   registry,
 	}
+}
+
+// WithProgress installs an observer the engine calls on every
+// collector/check boundary. Pass nil (or never call WithProgress) to
+// run silently — the CLI scan path does. Returns the receiver for
+// chaining.
+func (e *Engine) WithProgress(p Progress) *Engine {
+	e.progress = p
+	return e
 }
 
 // Result is the output of one scan.
@@ -68,19 +92,24 @@ func (e *Engine) Run(ctx context.Context) (Result, error) {
 		if err := ctx.Err(); err != nil {
 			return Result{Graph: graph}, err
 		}
+		e.notifyCollectorStart(c.Name())
 		resources, err := c.Collect(ctx)
 		if err != nil {
+			e.notifyCollectorDone(c.Name(), 0, err)
 			return Result{Graph: graph}, fmt.Errorf("collector %s: %w", c.Name(), err)
 		}
 		for _, r := range resources {
 			graph.Add(r)
 		}
+		e.notifyCollectorDone(c.Name(), len(resources), nil)
 	}
 
 	var findings []compliancekit.Finding
 	timestamp := time.Now().UTC()
+	ids := e.registry.IDs()
+	e.notifyEvaluationStart(len(ids))
 
-	for _, id := range e.registry.IDs() {
+	for _, id := range ids {
 		if err := ctx.Err(); err != nil {
 			return Result{Findings: findings, Graph: graph}, err
 		}
@@ -97,6 +126,7 @@ func (e *Engine) Run(ctx context.Context) (Result, error) {
 				Message:   fmt.Sprintf("check failed: %v", err),
 				Timestamp: timestamp,
 			})
+			e.notifyCheckDone(id, 0, err)
 			continue
 		}
 		for i := range produced {
@@ -105,7 +135,38 @@ func (e *Engine) Run(ctx context.Context) (Result, error) {
 			}
 		}
 		findings = append(findings, produced...)
+		e.notifyCheckDone(id, len(produced), nil)
 	}
 
+	e.notifyEvaluationDone(len(findings))
 	return Result{Findings: findings, Graph: graph}, nil
+}
+
+// notify* helpers fan out to the optional Progress observer. nil-safe
+// so the CLI scan path (no observer) gets the same hot path it has
+// always had — zero allocation, single nil compare per event.
+func (e *Engine) notifyCollectorStart(name string) {
+	if e.progress != nil {
+		e.progress.OnCollectorStart(name)
+	}
+}
+func (e *Engine) notifyCollectorDone(name string, n int, err error) {
+	if e.progress != nil {
+		e.progress.OnCollectorDone(name, n, err)
+	}
+}
+func (e *Engine) notifyEvaluationStart(checkCount int) {
+	if e.progress != nil {
+		e.progress.OnEvaluationStart(checkCount)
+	}
+}
+func (e *Engine) notifyCheckDone(id string, n int, err error) {
+	if e.progress != nil {
+		e.progress.OnCheckDone(id, n, err)
+	}
+}
+func (e *Engine) notifyEvaluationDone(totalFindings int) {
+	if e.progress != nil {
+		e.progress.OnEvaluationDone(totalFindings)
+	}
 }

@@ -92,7 +92,16 @@ func (r *RealRunner) Run(ctx context.Context, j Job) error {
 		return fmt.Errorf("build registry: %w", err)
 	}
 
-	eng := engine.New(collectors, registry)
+	// v1.6 phase 2: wire the engine's Progress observer so per-
+	// collector + per-check boundaries fan out to /api/v1/events
+	// subscribers as scan.progress events. nil-safe — if the
+	// daemon was started without an event bus, the engine sees a
+	// nil observer + skips the notification path entirely.
+	var prog engine.Progress
+	if r.events != nil {
+		prog = &progressFanout{scanID: j.ScanID, events: r.events, checkTotal: 0}
+	}
+	eng := engine.New(collectors, registry).WithProgress(prog)
 	result, err := eng.Run(ctx)
 	if err != nil {
 		return fmt.Errorf("engine run: %w", err)
@@ -515,6 +524,68 @@ func frameworkIDsJSON(f compliancekit.Finding) []byte {
 	}
 	out, _ := json.Marshal(ids)
 	return out
+}
+
+// progressFanout adapts engine.Progress into scan.progress events
+// on the shared bus. v1.6 phase 2. Per-check granularity is high-
+// volume (~574 events/scan with the full registry); the bus's
+// drop-oldest per-subscriber buffer keeps slow clients from
+// blocking the worker. UI consumers throttle their own re-render
+// frequency rather than asking the bus to.
+type progressFanout struct {
+	scanID     string
+	events     *events.Producer
+	checkTotal int
+	checkDone  int
+}
+
+func (p *progressFanout) OnCollectorStart(name string) {
+	p.events.Publish(events.TypeScanProgress, p.scanID, map[string]any{
+		"phase": "collect_start", "collector": name,
+	})
+}
+
+func (p *progressFanout) OnCollectorDone(name string, n int, err error) {
+	data := map[string]any{
+		"phase": "collect_done", "collector": name, "resources": n,
+	}
+	if err != nil {
+		data["error"] = err.Error()
+	}
+	p.events.Publish(events.TypeScanProgress, p.scanID, data)
+}
+
+func (p *progressFanout) OnEvaluationStart(checkCount int) {
+	p.checkTotal = checkCount
+	p.events.Publish(events.TypeScanProgress, p.scanID, map[string]any{
+		"phase": "evaluate_start", "check_count": checkCount,
+	})
+}
+
+func (p *progressFanout) OnCheckDone(id string, findings int, err error) {
+	p.checkDone++
+	// Avoid event storm: only emit on first/last check + every 25th in
+	// between. 574 checks → ~25 events (was 574 if we emitted on each).
+	if p.checkDone != 1 && p.checkDone != p.checkTotal && p.checkDone%25 != 0 {
+		return
+	}
+	data := map[string]any{
+		"phase":    "check_done",
+		"check_id": id,
+		"findings": findings,
+		"done":     p.checkDone,
+		"total":    p.checkTotal,
+	}
+	if err != nil {
+		data["error"] = err.Error()
+	}
+	p.events.Publish(events.TypeScanProgress, p.scanID, data)
+}
+
+func (p *progressFanout) OnEvaluationDone(totalFindings int) {
+	p.events.Publish(events.TypeScanProgress, p.scanID, map[string]any{
+		"phase": "evaluate_done", "findings": totalFindings,
+	})
 }
 
 // ph / phList — dialect-aware placeholders.
