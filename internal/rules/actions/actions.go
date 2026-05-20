@@ -43,6 +43,35 @@ type Hooks struct {
 	Activities  *collab.Activities
 	Store       *store.Store
 	NotifyInbox func(ctx context.Context, userID, severity, title, body, href string)
+
+	// Notifiers maps v0.17 sink names (slack/discord/teams/email/
+	// webhook/github-pr/jira/linear/pagerduty) to their Notifier
+	// instance. v1.9 phase 7 — populating this enables conditional
+	// notification routing: the "notify" action's `sink` param
+	// selects which sink fires. Nil map = inbox-only path.
+	Notifiers map[string]Notifier
+}
+
+// Notifier is the minimal slice of internal/notify.Notifier the
+// rules engine needs. Kept local to avoid importing internal/notify
+// here (which would create a circular dep via the v0.17 helpers).
+// The daemon wires its compliancekit-side Notifier implementations
+// through Hooks.Notifiers as values satisfying this interface.
+type Notifier interface {
+	Name() string
+	Configured() bool
+	Send(ctx context.Context, n []Notification) error
+}
+
+// Notification mirrors internal/notify.Notification slimly. Daemon
+// wiring converts between the two at the Hooks boundary.
+type Notification struct {
+	Title       string
+	Body        string
+	URL         string
+	Tags        []string
+	Severity    string
+	Fingerprint string
 }
 
 // Register installs every built-in action into reg using the
@@ -56,9 +85,18 @@ func Register(reg *rules.Registry, h Hooks) {
 	reg.RegisterAction("audit_only", dispatchAuditOnly)
 }
 
-// dispatchNotify drops one inbox row per matched finding + records
-// the data envelope in the ActionResult so the simulator can replay.
-// Params: {"severity": "warning", "title": "...", "body": "..."}.
+// dispatchNotify drops one inbox row per matched finding + (when a
+// sink param is provided) fans out to a v0.17 Notifier.
+// Params:
+//
+//	{"severity": "warning", "title": "...", "body": "..."}        — inbox-only
+//	{"sink": "slack", "title": "...", "body": "..."}             — Slack only
+//	{"sink": "pagerduty", "severity": "critical", ...}           — PD only
+//
+// When sink is "inbox" or empty the inbox path runs; any other value
+// looks up Hooks.Notifiers[sink] + calls Send. Sink-not-configured =
+// Outcome="skip" with a descriptive Error so rule_runs surfaces the
+// misconfig.
 func (h Hooks) dispatchNotify(ctx context.Context, rl *rules.Rule, params map[string]any, ec *rules.EvalContext) rules.ActionResult {
 	severity := getString(params, "severity", "info")
 	title := getString(params, "title", "Rule fired: "+rl.Name)
@@ -70,6 +108,10 @@ func (h Hooks) dispatchNotify(ctx context.Context, rl *rules.Rule, params map[st
 	if href == "" && ec.Finding.Fingerprint != "" {
 		href = "/findings?focus=" + ec.Finding.Fingerprint
 	}
+	sink := getString(params, "sink", "inbox")
+	if sink != "inbox" {
+		return h.dispatchSinkNotify(ctx, sink, severity, title, body, href, ec)
+	}
 	if h.NotifyInbox == nil {
 		return rules.ActionResult{Outcome: "skip", Error: "NotifyInbox hook unset"}
 	}
@@ -78,9 +120,41 @@ func (h Hooks) dispatchNotify(ctx context.Context, rl *rules.Rule, params map[st
 	return rules.ActionResult{
 		Outcome: "ok",
 		Data: map[string]any{
+			"sink":     "inbox",
 			"title":    title,
 			"severity": severity,
 			"user_id":  user,
+		},
+	}
+}
+
+// dispatchSinkNotify looks up the named v0.17 sink + fires Send.
+func (h Hooks) dispatchSinkNotify(ctx context.Context, sink, severity, title, body, href string, ec *rules.EvalContext) rules.ActionResult {
+	if h.Notifiers == nil {
+		return rules.ActionResult{Outcome: "skip", Error: "Notifiers map unset"}
+	}
+	n, ok := h.Notifiers[sink]
+	if !ok {
+		return rules.ActionResult{Outcome: "skip", Error: "unknown sink: " + sink}
+	}
+	if !n.Configured() {
+		return rules.ActionResult{Outcome: "skip", Error: sink + " not configured"}
+	}
+	if err := n.Send(ctx, []Notification{{
+		Title:       title,
+		Body:        body,
+		URL:         href,
+		Severity:    severity,
+		Fingerprint: ec.Finding.Fingerprint + "|rule",
+	}}); err != nil {
+		return rules.ActionResult{Outcome: "error", Error: err.Error()}
+	}
+	return rules.ActionResult{
+		Outcome: "ok",
+		Data: map[string]any{
+			"sink":     sink,
+			"title":    title,
+			"severity": severity,
 		},
 	}
 }

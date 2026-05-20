@@ -148,6 +148,63 @@ func TestCommentAction(t *testing.T) {
 	}
 }
 
+// fakeNotifier implements actions.Notifier for tests.
+type fakeNotifier struct {
+	name       string
+	configured bool
+	sent       []Notification
+	err        error
+}
+
+func (f *fakeNotifier) Name() string     { return f.name }
+func (f *fakeNotifier) Configured() bool { return f.configured }
+func (f *fakeNotifier) Send(_ context.Context, n []Notification) error {
+	f.sent = append(f.sent, n...)
+	return f.err
+}
+
+// TestNotify_SinkRouting verifies the v1.9 phase 7 sink param
+// dispatches through the Notifiers map.
+func TestNotify_SinkRouting(t *testing.T) {
+	slackSink := &fakeNotifier{name: "slack", configured: true}
+	pdSink := &fakeNotifier{name: "pagerduty", configured: true}
+	hooks := Hooks{
+		Notifiers: map[string]Notifier{"slack": slackSink, "pagerduty": pdSink},
+	}
+	reg := rules.NewRegistry()
+	Register(reg, hooks)
+	fn, _ := reg.LookupAction("notify")
+
+	rl := &rules.Rule{Rule: rsdk.Rule{ID: "rule1", Name: "crit"}}
+	res := fn(context.Background(), rl, map[string]any{
+		"sink": "slack", "title": "Hello", "severity": "critical",
+	}, fixturesEC())
+	if res.Outcome != "ok" {
+		t.Fatalf("Outcome = %q: %s", res.Outcome, res.Error)
+	}
+	if len(slackSink.sent) != 1 {
+		t.Errorf("slack sent = %d, want 1", len(slackSink.sent))
+	}
+	if len(pdSink.sent) != 0 {
+		t.Errorf("pd sent = %d, want 0", len(pdSink.sent))
+	}
+
+	// Unknown sink → skip.
+	res = fn(context.Background(), rl, map[string]any{"sink": "ghost"}, fixturesEC())
+	if res.Outcome != "skip" || res.Error == "" {
+		t.Errorf("ghost sink should skip with error, got %+v", res)
+	}
+
+	// Unconfigured sink → skip.
+	hooks.Notifiers["slack"] = &fakeNotifier{name: "slack", configured: false}
+	Register(reg, hooks)
+	fn, _ = reg.LookupAction("notify")
+	res = fn(context.Background(), rl, map[string]any{"sink": "slack"}, fixturesEC())
+	if res.Outcome != "skip" {
+		t.Errorf("unconfigured slack should skip, got %+v", res)
+	}
+}
+
 // TestAuditOnlyAction returns "audit-only" without touching anything.
 func TestAuditOnlyAction(t *testing.T) {
 	reg := rules.NewRegistry()
