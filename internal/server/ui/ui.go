@@ -388,6 +388,7 @@ type scanItem struct {
 	CreatedAt          string
 	Status             string
 	Source             string
+	Trigger            string // v1.6 phase 9 — F21
 	ProvidersScanned   string
 	Score              int
 	TotalFindings      int
@@ -404,9 +405,9 @@ func (u *UI) listScans(w http.ResponseWriter, r *http.Request) {
 	offset := (pageN - 1) * per
 
 	rows, err := u.store.DB().QueryContext(r.Context(),
-		`SELECT id, created_at, status, source, providers_scanned,
-		        COALESCE(score, 0), total_findings, actionable_findings,
-		        COALESCE(duration_ms, 0)
+		`SELECT id, created_at, status, source, COALESCE(trigger,''),
+		        providers_scanned, COALESCE(score, 0), total_findings,
+		        actionable_findings, COALESCE(duration_ms, 0)
 		 FROM scans ORDER BY created_at DESC LIMIT `+strconv.Itoa(per)+` OFFSET `+strconv.Itoa(offset))
 	if err != nil {
 		u.fail(w, "list scans: "+err.Error())
@@ -416,8 +417,8 @@ func (u *UI) listScans(w http.ResponseWriter, r *http.Request) {
 	items := []scanItem{}
 	for rows.Next() {
 		var s scanItem
-		if err := rows.Scan(&s.ID, &s.CreatedAt, &s.Status, &s.Source, &s.ProvidersScanned,
-			&s.Score, &s.TotalFindings, &s.ActionableFindings, &s.DurationMS); err != nil {
+		if err := rows.Scan(&s.ID, &s.CreatedAt, &s.Status, &s.Source, &s.Trigger,
+			&s.ProvidersScanned, &s.Score, &s.TotalFindings, &s.ActionableFindings, &s.DurationMS); err != nil {
 			u.fail(w, "scan row: "+err.Error())
 			return
 		}

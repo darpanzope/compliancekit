@@ -265,15 +265,21 @@ func (rc *Receiver) touchHook(ctx context.Context, id string) {
 
 // enqueueScan inserts a row into scans with status='queued', source
 // from the caller, error_message blank. Returns the new scan_id so
-// the response body can echo it.
-func (rc *Receiver) enqueueScan(ctx context.Context, _, source string) (string, error) {
+// the response body can echo it. v1.6 phase 9 — F21: the trigger
+// string ("github.pull_request.opened" etc.) is now persisted in
+// the scans.trigger column instead of being computed + discarded.
+func (rc *Receiver) enqueueScan(ctx context.Context, trigger, source string) (string, error) {
 	id := uuid.NewString()
 	now := time.Now().UTC().Format(time.RFC3339)
+	var triggerArg any
+	if trigger != "" {
+		triggerArg = trigger
+	}
 	q := fmt.Sprintf( //nolint:gosec // placeholders only; no user input
-		`INSERT INTO scans (id, created_at, source, status, providers_scanned, frameworks_scanned)
-		 VALUES (%s, %s, %s, %s, %s, %s)`,
-		rc.ph(1), rc.ph(2), rc.ph(3), rc.ph(4), rc.ph(5), rc.ph(6))
-	_, err := rc.store.DB().ExecContext(ctx, q, id, now, source, "queued", "[]", "[]")
+		`INSERT INTO scans (id, created_at, source, status, providers_scanned, frameworks_scanned, trigger)
+		 VALUES (%s, %s, %s, %s, %s, %s, %s)`,
+		rc.ph(1), rc.ph(2), rc.ph(3), rc.ph(4), rc.ph(5), rc.ph(6), rc.ph(7))
+	_, err := rc.store.DB().ExecContext(ctx, q, id, now, source, "queued", "[]", "[]", triggerArg)
 	if err != nil {
 		return "", err
 	}
