@@ -43,6 +43,11 @@ const cronTickEvery = 30 * time.Second
 // startCronLoop kicks off the schedules-table polling goroutine.
 // Returns when ctx is canceled; appends to the pool's WaitGroup
 // so Stop() drains it cleanly.
+//
+// v1.5.1 phase 9 (F9) folds in a waiver-expiry sweep on the
+// same tick: a separate counter tracks "every Nth tick run the
+// expiry sweep" so the daily-resolution waiver-expiry alerts
+// don't churn the inbox.
 func (p *Pool) startCronLoop(ctx context.Context) {
 	p.wg.Add(1)
 	go func() {
@@ -53,15 +58,104 @@ func (p *Pool) startCronLoop(ctx context.Context) {
 		// fires any schedules whose next_run_at already passed
 		// during downtime.
 		p.fireDueSchedules(ctx)
+		p.sweepExpiringWaivers(ctx)
+		// Run the waiver sweep once per ~hour (3600/30 = 120 ticks).
+		var ticks int
 		for {
 			select {
 			case <-ctx.Done():
 				return
 			case <-t.C:
 				p.fireDueSchedules(ctx)
+				ticks++
+				if ticks%120 == 0 {
+					p.sweepExpiringWaivers(ctx)
+				}
 			}
 		}
 	}()
+}
+
+// sweepExpiringWaivers SELECTs waivers expiring within 14 days
+// or already expired in the last 24h and fires one inbox alert
+// per match (de-duped by waiver id stamped into the inbox
+// row's href). v1.5.1 F9 inbox-producer #3.
+func (p *Pool) sweepExpiringWaivers(ctx context.Context) {
+	now := time.Now().UTC()
+	soon := now.Add(14 * 24 * time.Hour).Format(time.RFC3339)
+	yesterday := now.Add(-24 * time.Hour).Format(time.RFC3339)
+	nowStr := now.Format(time.RFC3339)
+
+	q := fmt.Sprintf( //nolint:gosec // placeholders only; no user input
+		`SELECT id, check_id, resource_id, expires_at FROM waivers
+		 WHERE revoked_at IS NULL
+		   AND expires_at IS NOT NULL
+		   AND expires_at <= %s
+		   AND expires_at >= %s`,
+		p.ph(1), p.ph(2))
+	rows, err := p.store.DB().QueryContext(ctx, q, soon, yesterday)
+	if err != nil {
+		p.log.Debug("cron: waiver expiry sweep query failed", "err", err)
+		return
+	}
+	defer func() { _ = rows.Close() }()
+
+	type expRow struct {
+		id, checkID, resourceID, expiresAt string
+	}
+	var due []expRow
+	for rows.Next() {
+		var r expRow
+		if err := rows.Scan(&r.id, &r.checkID, &r.resourceID, &r.expiresAt); err != nil {
+			continue
+		}
+		due = append(due, r)
+	}
+	if err := rows.Close(); err != nil {
+		p.log.Debug("cron: waiver expiry sweep close failed", "err", err)
+	}
+
+	for _, w := range due {
+		// De-dup: skip if an inbox row already references this
+		// waiver's href (single alert per waiver per expiry).
+		var count int
+		_ = p.store.DB().QueryRowContext(ctx,
+			fmt.Sprintf(`SELECT COUNT(*) FROM inbox WHERE href = %s`, p.ph(1)),
+			"/waivers#"+w.id).Scan(&count)
+		if count > 0 {
+			continue
+		}
+		expT, _ := time.Parse(time.RFC3339, w.expiresAt)
+		title := fmt.Sprintf("Waiver expiring: %s", w.checkID)
+		body := fmt.Sprintf("Waiver for %s / %s expires %s. Renew or let lapse.", w.checkID, w.resourceID, expT.Format("2006-01-02"))
+		if expT.Before(now) {
+			title = fmt.Sprintf("Waiver expired: %s", w.checkID)
+			body = fmt.Sprintf("Waiver for %s / %s expired %s. Matching findings will refire on the next scan.", w.checkID, w.resourceID, expT.Format("2006-01-02"))
+		}
+		p.notifyInbox(ctx, "", inboxSevWarning, title, body, "/waivers#"+w.id, nowStr)
+	}
+}
+
+// notifyInbox is the Pool-side variant of RealRunner.notifyInbox
+// — duplicated here to avoid an import cycle (worker.Pool can't
+// import RealRunner the way RealRunner imports Pool fields).
+func (p *Pool) notifyInbox(ctx context.Context, userID, severity, title, body, href, nowStr string) {
+	if severity == "" {
+		severity = inboxSevInfo
+	}
+	id := uuid.NewString()
+	var userArg any
+	if userID != "" {
+		userArg = userID
+	}
+	q := fmt.Sprintf( //nolint:gosec // placeholders only; no user input
+		`INSERT INTO inbox (id, user_id, created_at, severity, title, body, href)
+		 VALUES (%s, %s, %s, %s, %s, %s, %s)`,
+		p.ph(1), p.ph(2), p.ph(3), p.ph(4), p.ph(5), p.ph(6), p.ph(7))
+	if _, err := p.store.DB().ExecContext(ctx, q,
+		id, userArg, nowStr, severity, title, body, href); err != nil {
+		p.log.Debug("cron: inbox insert failed", "err", err)
+	}
 }
 
 // fireDueSchedules selects every schedule whose next_run_at <= now

@@ -46,6 +46,12 @@ import (
 	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
+// Inbox severity labels used by the worker-side producers.
+const (
+	inboxSevInfo    = "info"
+	inboxSevWarning = "warning"
+)
+
 // RealRunner wires the daemon's queue to the real compliancekit
 // engine. Constructed via NewRealRunner; pass to worker.Default()
 // or worker.Config.Runner.
@@ -101,6 +107,9 @@ func (r *RealRunner) Run(ctx context.Context, j Job) error {
 	if err := r.persistFindings(ctx, j.ScanID, findings); err != nil {
 		return fmt.Errorf("persist findings: %w", err)
 	}
+	// v1.5.1 phase 9 (F9): inbox notifications.
+	r.notifyScanCompleted(ctx, j.ScanID, providerScope, findings, muted)
+	r.maybeNotifyScoreRegression(ctx, j.ScanID, findings)
 	r.log.Info("worker: real scan completed",
 		"scan_id", j.ScanID,
 		"providers", providerScope,
@@ -108,6 +117,72 @@ func (r *RealRunner) Run(ctx context.Context, j Job) error {
 		"muted", muted,
 	)
 	return nil
+}
+
+// notifyScanCompleted posts a "scan finished" entry to /inbox so
+// operators see daemon-driven activity even without watching
+// /scans. Score deltas land in maybeNotifyScoreRegression below.
+func (r *RealRunner) notifyScanCompleted(ctx context.Context, scanID string, providers []string, findings []compliancekit.Finding, muted int) {
+	actionable := 0
+	for _, f := range findings {
+		if isActionable(f) {
+			actionable++
+		}
+	}
+	sev := inboxSevInfo
+	if actionable > 0 {
+		sev = inboxSevWarning
+	}
+	title := fmt.Sprintf("Scan completed — %d findings", len(findings))
+	body := fmt.Sprintf("Providers: %s. Actionable: %d. Muted: %d.", strings.Join(providers, ", "), actionable, muted)
+	r.notifyInbox(ctx, "", sev, title, body, "/scans/"+scanID)
+}
+
+// maybeNotifyScoreRegression looks at the prior completed scan
+// and fires an inbox alert if this scan's score dropped by more
+// than 5 points (the threshold ADR-008 uses for the v1.2 HTML
+// report's "drift" callout). Silent on improvement / same / no-
+// prior-scan.
+func (r *RealRunner) maybeNotifyScoreRegression(ctx context.Context, scanID string, findings []compliancekit.Finding) {
+	thisScore := hardeningScore(findings)
+	var prevScore int
+	err := r.store.DB().QueryRowContext(ctx,
+		`SELECT score FROM scans WHERE status = 'completed' AND id != `+r.ph(1)+
+			` ORDER BY created_at DESC LIMIT 1`, scanID).Scan(&prevScore)
+	if err != nil {
+		return // no prior scan or query failed — silent
+	}
+	delta := prevScore - thisScore
+	if delta <= 5 {
+		return
+	}
+	title := fmt.Sprintf("Score dropped from %d to %d", prevScore, thisScore)
+	body := fmt.Sprintf("Hardening score regressed by %d points. Investigate via /scans/diff.", delta)
+	r.notifyInbox(ctx, "", inboxSevWarning, title, body, "/scans/diff")
+}
+
+// notifyInbox INSERTs one row into the inbox table. user_id NULL
+// means "broadcast to every user" — the ui/audit.go::inboxList
+// query surfaces both per-user and broadcast rows. Errors are
+// logged + swallowed (inbox is decoration, not load-bearing).
+func (r *RealRunner) notifyInbox(ctx context.Context, userID, severity, title, body, href string) {
+	if severity == "" {
+		severity = inboxSevInfo
+	}
+	id := uuid.NewString()
+	now := time.Now().UTC().Format(time.RFC3339)
+	var userArg any
+	if userID != "" {
+		userArg = userID
+	}
+	q := fmt.Sprintf( //nolint:gosec // placeholders only; no user input
+		`INSERT INTO inbox (id, user_id, created_at, severity, title, body, href)
+		 VALUES (%s, %s, %s, %s, %s, %s, %s)`,
+		r.ph(1), r.ph(2), r.ph(3), r.ph(4), r.ph(5), r.ph(6), r.ph(7))
+	if _, err := r.store.DB().ExecContext(ctx, q,
+		id, userArg, now, severity, title, body, href); err != nil {
+		r.log.Debug("worker: inbox insert failed", "err", err)
+	}
 }
 
 // applyDBWaivers SELECTs every non-revoked waiver from the waivers
