@@ -41,6 +41,16 @@ type providerBucket struct {
 	total int
 }
 
+// editorMode tracks whether the TUI is in normal, `/search`, or
+// `:command` input mode. Affects keystroke routing.
+type editorMode int
+
+const (
+	modeNormal editorMode = iota
+	modeSearch
+	modeCommand
+)
+
 type listModel struct {
 	all       []compliancekit.Finding
 	filtered  []compliancekit.Finding
@@ -52,6 +62,12 @@ type listModel struct {
 	providerSel string // "" = all
 	height      int
 	width       int
+
+	// v1.7 phase 2 — editor + filter state.
+	mode   editorMode
+	input  string         // /search query or :command buffer
+	flash  string         // transient status message (under footer)
+	filter filterCriteria // applied AND'd with provider selection
 }
 
 func newListModel(findings []compliancekit.Finding) listModel {
@@ -96,20 +112,17 @@ func providerFromType(t string) string {
 }
 
 // applyFilter re-derives m.filtered from m.all + the current
-// provider selection. Idempotent; called whenever filter state
-// changes or the underlying data refreshes.
+// provider selection + the :command criteria. Idempotent.
 func (m *listModel) applyFilter() {
-	if m.providerSel == "" {
-		m.filtered = m.all
-		return
+	merged := m.filter
+	if m.providerSel != "" {
+		// Tree-selected provider always wins over any :provider=
+		// criterion (operator intent is explicit).
+		merged.provider = m.providerSel
 	}
 	out := make([]compliancekit.Finding, 0, len(m.all))
 	for _, f := range m.all {
-		p := f.Resource.Provider
-		if p == "" {
-			p = providerFromType(f.Resource.Type)
-		}
-		if p == m.providerSel {
+		if merged.apply(f) {
 			out = append(out, f)
 		}
 	}
@@ -133,13 +146,51 @@ func (m listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m listModel) handleKey(key string) (tea.Model, tea.Cmd) {
+	// In search / command mode, every key (except esc + enter)
+	// edits the input buffer.
+	if m.mode == modeSearch || m.mode == modeCommand {
+		return m.handleEditKey(key)
+	}
+	return m.handleNormalKey(key)
+}
+
+// handleNormalKey dispatches keys in normal mode. Vim-ish:
+// q quit, j/k scroll, g/G top/bottom, Tab focus, / search,
+// : command, n / N step search results.
+func (m listModel) handleNormalKey(key string) (tea.Model, tea.Cmd) {
+	if cmd, handled := m.handleNormalChrome(key); handled {
+		return m, cmd
+	}
+	if m.handleNormalNav(key) {
+		return m, nil
+	}
+	m.handleNormalEditor(key)
+	return m, nil
+}
+
+// handleNormalChrome handles quit / focus / esc keys; returns true
+// when the key is consumed.
+func (m *listModel) handleNormalChrome(key string) (tea.Cmd, bool) {
 	switch key {
-	case "q", "ctrl+c", "esc":
-		return m, tea.Quit
+	case "q", "ctrl+c":
+		return tea.Quit, true
+	case "esc":
+		m.flash = ""
+		return nil, true
 	case "tab":
 		m.focused = (m.focused + 1) % 3
+		return nil, true
 	case "shift+tab":
 		m.focused = (m.focused + 2) % 3
+		return nil, true
+	}
+	return nil, false
+}
+
+// handleNormalNav handles j/k/g/G/Enter/Backspace/n/N; returns
+// true when consumed.
+func (m *listModel) handleNormalNav(key string) bool {
+	switch key {
 	case "j", "down":
 		m.cursorDown()
 	case "k", "up":
@@ -151,13 +202,84 @@ func (m listModel) handleKey(key string) (tea.Model, tea.Cmd) {
 	case "enter":
 		m.activate()
 	case "backspace":
-		// Clear provider filter — back to "all".
 		if m.focused == paneTree || m.providerSel != "" {
 			m.providerSel = ""
 			m.applyFilter()
 		}
+	case "n":
+		m.stepSearch(+1)
+	case "N":
+		m.stepSearch(-1)
+	default:
+		return false
+	}
+	return true
+}
+
+// handleNormalEditor handles `/` and `:` — enters edit mode.
+func (m *listModel) handleNormalEditor(key string) {
+	switch key {
+	case "/":
+		m.mode = modeSearch
+		m.input = ""
+	case ":":
+		m.mode = modeCommand
+		m.input = ""
+	}
+}
+
+// handleEditKey routes printable keys into m.input, Enter to
+// commit, Esc to abort.
+func (m listModel) handleEditKey(key string) (tea.Model, tea.Cmd) {
+	switch key {
+	case "esc":
+		m.mode = modeNormal
+		m.input = ""
+		return m, nil
+	case "enter":
+		m.commitEditor()
+		m.mode = modeNormal
+		return m, nil
+	case "backspace":
+		if m.input != "" {
+			r := []rune(m.input)
+			m.input = string(r[:len(r)-1])
+		}
+		return m, nil
+	}
+	// Bubble Tea delivers most printables as their literal character.
+	if len(key) == 1 {
+		m.input += key
+	} else if key == "space" {
+		m.input += " "
 	}
 	return m, nil
+}
+
+// commitEditor applies the pending /search or :command buffer to
+// the filter state + refreshes m.filtered.
+func (m *listModel) commitEditor() {
+	switch m.mode {
+	case modeSearch:
+		m.filter.search = m.input
+		m.flash = "search: " + m.input
+	case modeCommand:
+		m.filter = parseCommandLine(m.input)
+		m.flash = "filter: " + m.input
+	}
+	m.input = ""
+	m.applyFilter()
+	m.listCursor = 0
+}
+
+// stepSearch advances the cursor to the next (dir=+1) or previous
+// (dir=-1) row in m.filtered. Wraps. Used by `n` / `N` in normal
+// mode.
+func (m *listModel) stepSearch(dir int) {
+	if len(m.filtered) == 0 {
+		return
+	}
+	m.listCursor = (m.listCursor + dir + len(m.filtered)) % len(m.filtered)
 }
 
 func (m *listModel) activate() {
@@ -243,9 +365,24 @@ func (m listModel) View() string {
 
 	row := lipgloss.JoinHorizontal(lipgloss.Top, tree, vsep(innerH), list, vsep(innerH), detail)
 	header := lipgloss.NewStyle().Bold(true).Render(fmt.Sprintf("compliancekit tui — %d findings (filter: %s)", len(m.filtered), m.filterLabel()))
-	footer := lipgloss.NewStyle().Faint(true).Render(
-		"tab cycle  j/k scroll  g/G top/bottom  enter select  backspace clear  q quit")
+	footer := m.footerLine()
 	return header + "\n\n" + row + "\n" + footer + "\n"
+}
+
+// footerLine renders either the command-mode input prompt or the
+// hint line, depending on m.mode. Phase 2.
+func (m listModel) footerLine() string {
+	switch m.mode {
+	case modeSearch:
+		return lipgloss.NewStyle().Bold(true).Render("/" + m.input + "_")
+	case modeCommand:
+		return lipgloss.NewStyle().Bold(true).Render(":" + m.input + "_")
+	}
+	hint := "tab cycle  j/k scroll  g/G top/bottom  enter select  backspace clear  / search  : command  q quit"
+	if m.flash != "" {
+		hint = m.flash + "    " + lipgloss.NewStyle().Faint(true).Render(hint)
+	}
+	return lipgloss.NewStyle().Faint(true).Render(hint)
 }
 
 func (m listModel) filterLabel() string {
