@@ -62,6 +62,9 @@ func (u *UI) findingAssign(w http.ResponseWriter, r *http.Request) {
 		u.AuditLog(r.Context(), "finding.unassign", "finding", row.ID, map[string]any{
 			"fingerprint": row.Fingerprint,
 		})
+		_, _ = u.activities().Record(r.Context(), row.Fingerprint, collab.ActivityUnassigned, collab.RecordOptions{
+			ActorID: sess.UserID, ActorSource: collab.ActorUI,
+		})
 		u.renderAssigneeWidget(w, r, row)
 		return
 	}
@@ -72,6 +75,10 @@ func (u *UI) findingAssign(w http.ResponseWriter, r *http.Request) {
 	u.AuditLog(r.Context(), "finding.assign", "finding", row.ID, map[string]any{
 		"fingerprint": row.Fingerprint,
 		"assignee_id": assigneeID,
+	})
+	_, _ = u.activities().Record(r.Context(), row.Fingerprint, collab.ActivityAssigned, collab.RecordOptions{
+		ActorID: sess.UserID, ActorSource: collab.ActorUI,
+		Metadata: map[string]any{"assignee_user_id": assigneeID},
 	})
 	u.renderAssigneeWidget(w, r, row)
 }
@@ -92,6 +99,11 @@ func (u *UI) findingUnassign(w http.ResponseWriter, r *http.Request) {
 	u.AuditLog(r.Context(), "finding.unassign", "finding", row.ID, map[string]any{
 		"fingerprint": row.Fingerprint,
 	})
+	if sess := auth.FromContext(r.Context()); sess != nil {
+		_, _ = u.activities().Record(r.Context(), row.Fingerprint, collab.ActivityUnassigned, collab.RecordOptions{
+			ActorID: sess.UserID, ActorSource: collab.ActorUI,
+		})
+	}
 	u.renderAssigneeWidget(w, r, row)
 }
 
@@ -145,7 +157,38 @@ func (u *UI) resourceOwnerSet(w http.ResponseWriter, r *http.Request) {
 			"owner_id": ownerID,
 		})
 	}
+	// Owner changes attach to every fingerprint currently flagged
+	// against this resource — operators visiting any of those
+	// findings see the ownership event in their timeline. Cap the
+	// fan-out at 50 to keep the activity table sane on resources
+	// with hundreds of findings.
+	u.recordOwnerActivityForResource(r.Context(), resID, sess.UserID, ownerID)
 	u.renderOwnerWidget(w, r, resID)
+}
+
+// recordOwnerActivityForResource lifts every distinct fingerprint
+// currently associated with the resource and records an
+// owner_changed activity row against each. Cap at 50 to bound write
+// amplification; resources with more findings simply lose tail
+// fingerprints — the audit_log entry is the durable record.
+func (u *UI) recordOwnerActivityForResource(ctx context.Context, resourceID, actorID, ownerID string) {
+	rows, err := u.store.DB().QueryContext(ctx,
+		`SELECT DISTINCT fingerprint FROM findings WHERE resource_id = `+ph(u.store, 1)+` LIMIT 50`,
+		resourceID)
+	if err != nil {
+		return
+	}
+	defer func() { _ = rows.Close() }()
+	for rows.Next() {
+		var fp string
+		if err := rows.Scan(&fp); err != nil {
+			continue
+		}
+		_, _ = u.activities().Record(ctx, fp, collab.ActivityOwnerChanged, collab.RecordOptions{
+			ActorID: actorID, ActorSource: collab.ActorUI,
+			Metadata: map[string]any{"resource_id": resourceID, "owner_user_id": ownerID},
+		})
+	}
 }
 
 // resourceOwnerClear is the dedicated clear-owner route.
@@ -211,4 +254,12 @@ func (u *UI) owners() *collab.Owners {
 		u.ownersRepo = collab.NewOwners(u.store)
 	}
 	return u.ownersRepo
+}
+
+// activities returns the Activities handle, lazily constructed.
+func (u *UI) activities() *collab.Activities {
+	if u.activitiesRepo == nil {
+		u.activitiesRepo = collab.NewActivities(u.store)
+	}
+	return u.activitiesRepo
 }

@@ -16,6 +16,8 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+
+	"github.com/darpanzope/compliancekit/internal/server/collab"
 )
 
 // driftEvent is one row in the timeline.
@@ -34,6 +36,22 @@ type driftView struct {
 	Fingerprint string
 	First       driftEvent
 	Last        driftEvent
+	// v1.8 phase 3 — chronological collaboration events alongside the
+	// scan-driven lifecycle. Rendered as a second timeline below the
+	// scan history.
+	Activity []activityEvent
+}
+
+// activityEvent is the template-friendly projection of a
+// collab.Activity row.
+type activityEvent struct {
+	ID        string
+	When      string // humanized
+	Kind      string
+	KindLabel string
+	Actor     string
+	Source    string
+	Detail    string
 }
 
 func (u *UI) mountDriftRoutes(r chi.Router) {
@@ -103,6 +121,87 @@ func (u *UI) driftTimelinePartial(w http.ResponseWriter, r *http.Request) {
 		v.Last = events[len(events)-1]
 	}
 
+	// Layer collaboration activity onto the same view; the template
+	// renders both timelines side-by-side. Failures here are
+	// non-fatal — the scan-history list is still useful.
+	if acts, err := u.activities().List(r.Context(), fingerprint); err == nil {
+		v.Activity = make([]activityEvent, 0, len(acts))
+		for _, a := range acts {
+			v.Activity = append(v.Activity, projectActivity(a, now))
+		}
+	}
+
 	_ = row // suppress unused — kept for symmetry with sibling handlers
 	u.renderPartial(w, "drift_timeline", v)
+}
+
+// projectActivity turns a collab.Activity row into the template-
+// friendly activityEvent shape.
+func projectActivity(a collabActivityRow, now time.Time) activityEvent {
+	actor := a.ActorName
+	if actor == "" {
+		actor = a.ActorEmail
+	}
+	if actor == "" {
+		actor = "system"
+	}
+	return activityEvent{
+		ID:        a.ID,
+		When:      humanizeAgoFrom(a.CreatedAt, now),
+		Kind:      a.Kind,
+		KindLabel: activityKindLabel(a.Kind),
+		Actor:     actor,
+		Source:    a.ActorSource,
+		Detail:    activityDetail(a),
+	}
+}
+
+// collabActivityRow is a tiny alias so this file doesn't have to
+// import the collab package twice (Activity is already used via
+// u.activities()).
+type collabActivityRow = collab.Activity
+
+// activityKindLabel maps the kind constant to operator-readable
+// text. Keep the strings tight; the timeline UI is dense.
+func activityKindLabel(kind string) string {
+	switch kind {
+	case collab.ActivityStateChanged:
+		return "status changed"
+	case collab.ActivityCommentAdded:
+		return "commented"
+	case collab.ActivityCommentEdited:
+		return "edited comment"
+	case collab.ActivityWaiverApplied:
+		return "waiver applied"
+	case collab.ActivityWaiverRevoked:
+		return "waiver revoked"
+	case collab.ActivityScanRan:
+		return "scan ran"
+	case collab.ActivityWebhookEvent:
+		return "webhook event"
+	case collab.ActivityAssigned:
+		return "assigned"
+	case collab.ActivityUnassigned:
+		return "unassigned"
+	case collab.ActivityOwnerChanged:
+		return "owner changed"
+	case collab.ActivityFollowerAdded:
+		return "follower added"
+	case collab.ActivityFollowerRemoved:
+		return "follower removed"
+	}
+	return kind
+}
+
+// activityDetail picks the most useful slice of metadata for the
+// row. Returns "" when nothing extra is useful.
+func activityDetail(a collabActivityRow) string {
+	if a.Kind == collab.ActivityStateChanged {
+		from, _ := a.Metadata["from"].(string)
+		to, _ := a.Metadata["to"].(string)
+		if from != "" && to != "" {
+			return from + " → " + to
+		}
+	}
+	return ""
 }

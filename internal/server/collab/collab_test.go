@@ -104,6 +104,48 @@ func TestOwners_SetGet(t *testing.T) {
 	}
 }
 
+// TestActivities_RoundTrip records a mix of events + reads them
+// back in chronological order; metadata round-trips through JSON.
+func TestActivities_RoundTrip(t *testing.T) {
+	s := openTestStore(t)
+	seedUser(t, s, "u-actor", "actor@example.com")
+	a := NewActivities(s)
+	ctx := context.Background()
+	fp := "fp-act"
+
+	t0 := time.Date(2026, 5, 20, 12, 0, 0, 0, time.UTC)
+	for i, kind := range []string{ActivityAssigned, ActivityCommentAdded, ActivityStateChanged} {
+		stamp := t0.Add(time.Duration(i) * time.Second)
+		if _, err := a.Record(ctx, fp, kind, RecordOptions{
+			ActorID:   "u-actor",
+			Metadata:  map[string]any{"idx": i},
+			CreatedAt: &stamp,
+		}); err != nil {
+			t.Fatalf("Record(%s): %v", kind, err)
+		}
+	}
+	got, err := a.List(ctx, fp)
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	if len(got) != 3 {
+		t.Fatalf("len = %d, want 3", len(got))
+	}
+	if got[0].Kind != ActivityAssigned || got[2].Kind != ActivityStateChanged {
+		t.Errorf("order broken: %v / %v", got[0].Kind, got[2].Kind)
+	}
+	if got[0].ActorEmail != "actor@example.com" {
+		t.Errorf("actor email = %q", got[0].ActorEmail)
+	}
+	if got[1].Metadata["idx"] == nil {
+		t.Errorf("metadata lost: %+v", got[1].Metadata)
+	}
+	n, _ := a.Count(ctx, fp)
+	if n != 3 {
+		t.Errorf("Count = %d, want 3", n)
+	}
+}
+
 // TestFollowers_AddIdempotent verifies the ON CONFLICT DO NOTHING
 // path on the composite key.
 func TestFollowers_AddIdempotent(t *testing.T) {

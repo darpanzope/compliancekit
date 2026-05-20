@@ -25,6 +25,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/darpanzope/compliancekit/internal/server/auth"
+	"github.com/darpanzope/compliancekit/internal/server/collab"
 	"github.com/darpanzope/compliancekit/internal/server/comments"
 )
 
@@ -101,7 +102,8 @@ func (u *UI) commentsAdd(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	flash := ""
-	if _, err := u.comments.Add(r.Context(), row.Fingerprint, sess.UserID, body, comments.AddOptions{}); err != nil {
+	cid, err := u.comments.Add(r.Context(), row.Fingerprint, sess.UserID, body, comments.AddOptions{})
+	if err != nil {
 		if errors.Is(err, comments.ErrEmptyBody) {
 			flash = "Comment body cannot be empty."
 		} else {
@@ -111,6 +113,10 @@ func (u *UI) commentsAdd(w http.ResponseWriter, r *http.Request) {
 	} else {
 		u.AuditLog(r.Context(), "comment.add", "finding", row.ID, map[string]any{
 			"fingerprint": row.Fingerprint,
+		})
+		_, _ = u.activities().Record(r.Context(), row.Fingerprint, collab.ActivityCommentAdded, collab.RecordOptions{
+			ActorID: sess.UserID, ActorSource: collab.ActorUI,
+			Metadata: map[string]any{"comment_id": cid},
 		})
 	}
 	panel, err := u.buildCommentsPanel(r, row.ID, row.Fingerprint, flash)
@@ -156,6 +162,10 @@ func (u *UI) commentsEdit(w http.ResponseWriter, r *http.Request) {
 		u.AuditLog(r.Context(), "comment.edit", "finding", "", map[string]any{
 			"comment_id": cid, "fingerprint": c.FindingFingerprint,
 		})
+		_, _ = u.activities().Record(r.Context(), c.FindingFingerprint, collab.ActivityCommentEdited, collab.RecordOptions{
+			ActorID: sess.UserID, ActorSource: collab.ActorUI,
+			Metadata: map[string]any{"comment_id": cid},
+		})
 	}
 	// Resolve a finding-id for the partial render so the form's
 	// hx-post target stays correct after the swap.
@@ -191,6 +201,10 @@ func (u *UI) commentsDelete(w http.ResponseWriter, r *http.Request) {
 	}
 	u.AuditLog(r.Context(), "comment.delete", "finding", "", map[string]any{
 		"comment_id": cid, "fingerprint": c.FindingFingerprint,
+	})
+	_, _ = u.activities().Record(r.Context(), c.FindingFingerprint, collab.ActivityCommentEdited, collab.RecordOptions{
+		ActorID: sess.UserID, ActorSource: collab.ActorUI,
+		Metadata: map[string]any{"comment_id": cid, "deleted": true},
 	})
 	findingID := r.URL.Query().Get("finding_id")
 	panel, err := u.buildCommentsPanel(r, findingID, c.FindingFingerprint, "")

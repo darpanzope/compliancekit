@@ -217,6 +217,7 @@ type UI struct {
 	comments        *comments.Repo      // v1.8 phase 1 — markdown comments on findings
 	assignmentsRepo *collab.Assignments // v1.8 phase 2 — per-finding assignees
 	ownersRepo      *collab.Owners      // v1.8 phase 2 — per-resource owners
+	activitiesRepo  *collab.Activities  // v1.8 phase 3 — chronological per-finding activity log
 }
 
 // New constructs the UI handle.
