@@ -42,6 +42,7 @@ import (
 	docol "github.com/darpanzope/compliancekit/internal/collectors/digitalocean"
 	"github.com/darpanzope/compliancekit/internal/engine"
 	"github.com/darpanzope/compliancekit/internal/server/store"
+	"github.com/darpanzope/compliancekit/internal/waivers"
 	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
@@ -81,15 +82,84 @@ func (r *RealRunner) Run(ctx context.Context, j Job) error {
 		return fmt.Errorf("engine run: %w", err)
 	}
 
-	if err := r.persistFindings(ctx, j.ScanID, result.Findings); err != nil {
+	// v1.5.1 phase 7 (F5): apply DB-backed waivers before persist.
+	// /waivers writes to the waivers table; without this hook the
+	// scan engine never sees the waivers and findings keep firing.
+	muted, expired, err := r.applyDBWaivers(ctx, result.Findings, time.Now().UTC())
+	if err != nil {
+		// Soft-fail: a waivers-load error logs but does not abort the
+		// scan — operators still want the findings list, just without
+		// muting. (Mirrors how the CLI scan path treats waivers.)
+		r.log.Warn("worker: load DB waivers failed", "err", err)
+	} else if muted > 0 || len(expired) > 0 {
+		r.log.Info("worker: applied DB waivers",
+			"scan_id", j.ScanID, "muted", muted, "expired_synthesized", len(expired))
+	}
+	findings := result.Findings
+	findings = append(findings, expired...)
+
+	if err := r.persistFindings(ctx, j.ScanID, findings); err != nil {
 		return fmt.Errorf("persist findings: %w", err)
 	}
 	r.log.Info("worker: real scan completed",
 		"scan_id", j.ScanID,
 		"providers", providerScope,
-		"findings", len(result.Findings),
+		"findings", len(findings),
+		"muted", muted,
 	)
 	return nil
+}
+
+// applyDBWaivers SELECTs every non-revoked waiver from the waivers
+// table, mutates `findings` in place to mark matching ones muted,
+// and returns the count + any synthesized expired-waiver findings.
+// Returns 0/nil/nil silently if the table is empty (no waivers
+// configured = no muting).
+func (r *RealRunner) applyDBWaivers(ctx context.Context, findings []compliancekit.Finding, now time.Time) (int, []compliancekit.Finding, error) {
+	rows, err := r.store.DB().QueryContext(ctx,
+		`SELECT check_id, resource_id, reason, approver, COALESCE(expires_at, '')
+		 FROM waivers WHERE revoked_at IS NULL`)
+	if err != nil {
+		return 0, nil, err
+	}
+	defer func() { _ = rows.Close() }()
+
+	var entries []waivers.Waiver
+	for rows.Next() {
+		var checkID, resourceID, reason, approver, expiresStr string
+		if err := rows.Scan(&checkID, &resourceID, &reason, &approver, &expiresStr); err != nil {
+			return 0, nil, err
+		}
+		w := waivers.Waiver{
+			CheckID:    checkID,
+			ResourceID: resourceID,
+			Reason:     reason,
+			Approver:   approver,
+			Source:     "daemon-db",
+			SourcePath: "store:waivers",
+		}
+		if expiresStr != "" {
+			if t, err := time.Parse(time.RFC3339, expiresStr); err == nil {
+				w.Expires = t
+			} else if t, err := time.Parse("2006-01-02", expiresStr); err == nil {
+				w.Expires = t
+			}
+		}
+		entries = append(entries, w)
+	}
+	if err := rows.Err(); err != nil {
+		return 0, nil, err
+	}
+	if len(entries) == 0 {
+		return 0, nil, nil
+	}
+
+	list, errs := waivers.NewWaiverList(entries, now)
+	if len(errs) > 0 {
+		return 0, nil, fmt.Errorf("build waiver list: %v", errs[0])
+	}
+	muted, expired := list.Apply(findings, now)
+	return muted, expired, nil
 }
 
 // daemonProviderRow is the trimmed view of one providers table row.
