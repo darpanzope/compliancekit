@@ -11,6 +11,21 @@
     </a>
   </div>
 
+  <!-- v1.6 phase 1 — live event banner. Subscribes to scan events
+       via the global window.ck.events bus; flashes "N updates"
+       when any scan transitions while this page is open. Click
+       refresh to pull the new state. Per-row in-place updates
+       layer on at phase 2 once the per-resource progress shape
+       is wired through the engine. -->
+  <div x-data="scansLive()"
+       x-init="bind()"
+       x-show="banner > 0"
+       x-cloak
+       class="mb-3 flex items-center justify-between rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-sm">
+    <span><strong x-text="banner"></strong> scan update(s) since you opened this page.</span>
+    <a href="/scans" class="text-primary hover:underline text-xs font-medium">Refresh</a>
+  </div>
+
   <div class="ck-card overflow-hidden">
     <div class="overflow-x-auto">
       <table class="w-full text-sm">
@@ -28,14 +43,14 @@
         </thead>
         <tbody class="divide-y divide-border">
           {{ range .Items }}
-          <tr onclick="window.location='/scans/{{.ID}}'" class="hover:bg-muted/30 cursor-pointer transition-colors">
+          <tr onclick="window.location='/scans/{{.ID}}'" data-scan-id="{{.ID}}" class="hover:bg-muted/30 cursor-pointer transition-colors">
             <td class="px-4 py-3 font-mono text-xs">{{ .CreatedAt }}</td>
             <td class="px-4 py-3">
-              {{ if eq .Status "completed" }}<span class="inline-flex items-center gap-1.5 text-xs text-success"><span class="h-2 w-2 rounded-full bg-success"></span>completed</span>
-              {{ else if eq .Status "running" }}<span class="inline-flex items-center gap-1.5 text-xs"><span class="h-2 w-2 rounded-full bg-warning animate-pulse"></span>running</span>
-              {{ else if eq .Status "queued" }}<span class="inline-flex items-center gap-1.5 text-xs text-muted-foreground"><span class="h-2 w-2 rounded-full bg-muted-foreground"></span>queued</span>
-              {{ else if eq .Status "failed" }}<span class="inline-flex items-center gap-1.5 text-xs text-destructive"><span class="h-2 w-2 rounded-full bg-destructive"></span>failed</span>
-              {{ else }}<span class="text-xs text-muted-foreground">{{ .Status }}</span>{{ end }}
+              {{ if eq .Status "completed" }}<span data-status-pill class="inline-flex items-center gap-1.5 text-xs text-success"><span class="h-2 w-2 rounded-full bg-success"></span>completed</span>
+              {{ else if eq .Status "running" }}<span data-status-pill class="inline-flex items-center gap-1.5 text-xs"><span class="h-2 w-2 rounded-full bg-warning animate-pulse"></span>running</span>
+              {{ else if eq .Status "queued" }}<span data-status-pill class="inline-flex items-center gap-1.5 text-xs text-muted-foreground"><span class="h-2 w-2 rounded-full bg-muted-foreground"></span>queued</span>
+              {{ else if eq .Status "failed" }}<span data-status-pill class="inline-flex items-center gap-1.5 text-xs text-destructive"><span class="h-2 w-2 rounded-full bg-destructive"></span>failed</span>
+              {{ else }}<span data-status-pill class="text-xs text-muted-foreground">{{ .Status }}</span>{{ end }}
             </td>
             <td class="px-4 py-3 text-xs">
               {{ if eq .Source "cli" }}<span class="inline-flex items-center gap-1 rounded bg-primary/10 text-primary px-1.5 py-0.5 text-[10px] uppercase tracking-wider">CLI push</span>

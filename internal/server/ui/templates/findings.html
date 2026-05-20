@@ -20,6 +20,15 @@
     </aside>
   </div>
 
+  <!-- v1.6 phase 1 — live new-findings banner. Bumps on every
+       finding.created from the SSE bus while this page is open;
+       click refresh to pull the new state into the filter view. -->
+  <div x-data="findingsLive()" x-init="bind()" x-show="banner > 0" x-cloak
+       class="mb-3 flex items-center justify-between rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-sm">
+    <span><strong x-text="banner"></strong> new finding event(s) since you opened this page.</span>
+    <a href="/findings" class="text-primary hover:underline text-xs font-medium">Refresh</a>
+  </div>
+
   <div class="flex items-end justify-between gap-4 mb-6">
     <div>
       <h1 class="text-2xl font-semibold tracking-tight">Findings</h1>
