@@ -1,0 +1,88 @@
+{{ define "content" }}
+<div class="max-w-2xl mx-auto space-y-6">
+  <div class="flex items-center justify-between">
+    <h1 class="text-xl font-semibold">Inbox preferences</h1>
+    <a href="/inbox" class="text-xs text-primary hover:underline">← back to inbox</a>
+  </div>
+
+  {{ if eq .Flash "saved" }}<div class="rounded-md border border-success/30 bg-success/10 px-3 py-2 text-xs text-success">Preferences saved.</div>{{ end }}
+
+  <form method="post" action="/inbox/prefs" class="space-y-6 ck-card p-5">
+    <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
+
+    <fieldset class="space-y-2">
+      <legend class="text-sm font-medium">Timezone</legend>
+      <input name="timezone" value="{{ .Prefs.Timezone }}" class="ck-input text-sm w-full"
+             placeholder="UTC / America/New_York / Europe/London">
+      <p class="text-[10px] text-muted-foreground">IANA name. Affects when DND windows + digest delivery fire.</p>
+    </fieldset>
+
+    <fieldset class="space-y-3">
+      <legend class="text-sm font-medium">Do not disturb</legend>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="text-[11px] uppercase tracking-wider text-muted-foreground">From</label>
+          <input type="time" name="dnd_start" value="{{ .Prefs.DNDStart }}" class="ck-input text-sm w-full">
+        </div>
+        <div>
+          <label class="text-[11px] uppercase tracking-wider text-muted-foreground">To</label>
+          <input type="time" name="dnd_end" value="{{ .Prefs.DNDEnd }}" class="ck-input text-sm w-full">
+        </div>
+      </div>
+      <p class="text-[10px] text-muted-foreground">Notifications queue silently during this window; the digest still goes out.</p>
+    </fieldset>
+
+    <fieldset class="space-y-3">
+      <legend class="text-sm font-medium">Digest</legend>
+      <label class="flex items-center gap-2 text-sm">
+        <input type="checkbox" name="digest_daily" {{ if .Prefs.DigestDaily }}checked{{ end }}>
+        Daily summary
+      </label>
+      <label class="flex items-center gap-2 text-sm">
+        <input type="checkbox" name="digest_weekly" {{ if .Prefs.DigestWeekly }}checked{{ end }}>
+        Weekly summary
+      </label>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="text-[11px] uppercase tracking-wider text-muted-foreground">Delivery hour</label>
+          <input type="number" name="digest_hour" value="{{ .Prefs.DigestHour }}" min="0" max="23" class="ck-input text-sm w-full">
+        </div>
+        <div>
+          <label class="text-[11px] uppercase tracking-wider text-muted-foreground">Weekly weekday</label>
+          <select name="digest_weekday" class="ck-input text-sm w-full">
+            <option value="0" {{ if eq .Prefs.DigestWeekday 0 }}selected{{ end }}>Sunday</option>
+            <option value="1" {{ if eq .Prefs.DigestWeekday 1 }}selected{{ end }}>Monday</option>
+            <option value="2" {{ if eq .Prefs.DigestWeekday 2 }}selected{{ end }}>Tuesday</option>
+            <option value="3" {{ if eq .Prefs.DigestWeekday 3 }}selected{{ end }}>Wednesday</option>
+            <option value="4" {{ if eq .Prefs.DigestWeekday 4 }}selected{{ end }}>Thursday</option>
+            <option value="5" {{ if eq .Prefs.DigestWeekday 5 }}selected{{ end }}>Friday</option>
+            <option value="6" {{ if eq .Prefs.DigestWeekday 6 }}selected{{ end }}>Saturday</option>
+          </select>
+        </div>
+      </div>
+      <a href="/inbox/digest/preview" target="_blank" class="text-xs text-primary hover:underline">Preview digest →</a>
+    </fieldset>
+
+    <fieldset class="space-y-3">
+      <legend class="text-sm font-medium">Routing</legend>
+      <p class="text-[11px] text-muted-foreground">Where each notification class is delivered. "silent" drops it entirely.</p>
+      {{ range $kind := list "alert" "comment" "mention" "digest" }}
+      <div class="grid grid-cols-3 items-center gap-2">
+        <label class="text-sm capitalize">{{ $kind }}</label>
+        <select name="route_{{ $kind }}" class="ck-input text-sm col-span-2">
+          {{ $current := index $.Prefs.Routing $kind }}
+          <option value="inbox" {{ if eq $current "inbox" }}selected{{ end }}>Inbox only</option>
+          <option value="email" {{ if eq $current "email" }}selected{{ end }}>Inbox + email</option>
+          <option value="silent" {{ if eq $current "silent" }}selected{{ end }}>Silent</option>
+        </select>
+      </div>
+      {{ end }}
+    </fieldset>
+
+    <div class="flex items-center justify-end">
+      <button type="submit"
+              class="inline-flex h-9 items-center rounded-md bg-primary text-primary-foreground px-4 text-sm font-medium hover:opacity-90 transition">Save preferences</button>
+    </div>
+  </form>
+</div>
+{{ end }}

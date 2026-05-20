@@ -308,6 +308,7 @@ func (u *UI) Mount(r chi.Router) {
 		u.mountCommentsRoutes(r)
 		u.mountCollabRoutes(r)
 		u.mountTeamsRoutes(r)
+		u.mountInboxV2Routes(r)
 		u.mountRemediationRoutes(r)
 		u.mountResourceMapRoutes(r)
 		u.mountResourcesRoutes(r)
