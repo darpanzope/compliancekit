@@ -272,8 +272,8 @@ func (m *listModel) handleNormalChrome(key string) (tea.Cmd, bool) {
 	return nil, false
 }
 
-// handleNormalNav handles j/k/g/G/Enter/Backspace/n/N; returns
-// true when consumed.
+// handleNormalNav handles j/k/g/G/Enter/Backspace/n/N + the v1.7
+// phase-5 in-place actions w/a/c/r. Returns true when consumed.
 func (m *listModel) handleNormalNav(key string) bool {
 	switch key {
 	case "j", "down":
@@ -295,6 +295,16 @@ func (m *listModel) handleNormalNav(key string) bool {
 		m.stepSearch(+1)
 	case "N":
 		m.stepSearch(-1)
+	case "w":
+		m.startWaive()
+	case "a":
+		// v1.8 collaboration adds the real ack persistence; phase 5
+		// flashes so the keybinding is muscle-memorable.
+		m.flash = "ack — TODO comment-thread persistence ships at v1.8"
+	case "c":
+		m.flash = "comment — TODO opens $EDITOR at v1.8 collaboration"
+	case "r":
+		m.previewRemediation()
 	default:
 		return false
 	}
@@ -357,11 +367,14 @@ func (m *listModel) commitEditor() tea.Cmd {
 		m.filter.search = m.input
 		m.flash = "search: " + m.input
 	case modeCommand:
-		switch strings.TrimSpace(m.input) {
-		case "tail":
+		trimmed := strings.TrimSpace(m.input)
+		switch {
+		case trimmed == "tail":
 			cmd = m.startTail()
-		case "untail":
+		case trimmed == "untail":
 			m.stopTail()
+		case strings.HasPrefix(m.input, "waive: "):
+			m.doWaive(strings.TrimSpace(strings.TrimPrefix(m.input, "waive: ")))
 		default:
 			m.filter = parseCommandLine(m.input)
 			m.flash = "filter: " + m.input
