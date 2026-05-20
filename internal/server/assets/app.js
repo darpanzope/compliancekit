@@ -492,3 +492,60 @@ function cmdk() {
     },
   };
 }
+
+// commentComposer is the v1.8 phase 4 @mention autocomplete. Wired
+// to the comments_panel <textarea> via x-data; tracks the caret +
+// query, fetches /api/v1/users/search, and replaces the in-flight
+// "@partial" with the picked label on click.
+function commentComposer() {
+  return {
+    suggestions: [],
+    query: '',
+    triggerStart: -1,
+    onInput: function (ev) {
+      var ta = ev.target;
+      var pos = ta.selectionStart;
+      var before = ta.value.slice(0, pos);
+      var at = before.lastIndexOf('@');
+      if (at < 0) { this.suggestions = []; this.triggerStart = -1; return; }
+      // The character before '@' must be start-of-input or whitespace
+      // / common punctuation so 'user@host' typing doesn't trigger.
+      var prev = at === 0 ? '' : before[at - 1];
+      if (prev && !/[\s\(\[\{,;:!?]/.test(prev)) {
+        this.suggestions = []; this.triggerStart = -1;
+        return;
+      }
+      var token = before.slice(at + 1);
+      // Token must not contain whitespace — once the user types a
+      // space the @mention is complete.
+      if (/\s/.test(token)) { this.suggestions = []; this.triggerStart = -1; return; }
+      this.query = token;
+      this.triggerStart = at;
+      this.refresh();
+    },
+    onAt: function () { /* placeholder for explicit '@' keyup binding */ },
+    refresh: async function () {
+      try {
+        var r = await fetch('/api/v1/users/search?q=' + encodeURIComponent(this.query),
+          { headers: { 'Accept': 'application/json' } });
+        if (!r.ok) { this.suggestions = []; return; }
+        var data = await r.json();
+        this.suggestions = (data.items || []).slice(0, 8);
+      } catch (e) { this.suggestions = []; }
+    },
+    pick: function (s) {
+      var ta = this.$refs.ta;
+      var pos = ta.selectionStart;
+      var before = ta.value.slice(0, this.triggerStart);
+      var after = ta.value.slice(pos);
+      var localPart = (s.email || '').split('@')[0] || s.label;
+      var replacement = '@' + localPart + ' ';
+      ta.value = before + replacement + after;
+      var newPos = before.length + replacement.length;
+      ta.setSelectionRange(newPos, newPos);
+      this.suggestions = [];
+      this.triggerStart = -1;
+      ta.focus();
+    },
+  };
+}

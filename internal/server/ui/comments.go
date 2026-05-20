@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -118,6 +119,10 @@ func (u *UI) commentsAdd(w http.ResponseWriter, r *http.Request) {
 			ActorID: sess.UserID, ActorSource: collab.ActorUI,
 			Metadata: map[string]any{"comment_id": cid},
 		})
+		// v1.8 phase 4 — fan @mentions out as inbox notifications.
+		// The mention extractor pulls handles from the markdown source;
+		// the resolver matches against email or local-part.
+		u.deliverMentions(r.Context(), row, sess.UserID, body)
 	}
 	panel, err := u.buildCommentsPanel(r, row.ID, row.Fingerprint, flash)
 	if err != nil {
@@ -269,6 +274,55 @@ func (u *UI) buildCommentsPanel(r *http.Request, findingID, fingerprint, flash s
 		Flash:       flash,
 		CSRFToken:   csrf,
 	}, nil
+}
+
+// deliverMentions resolves @handles in the comment body, posts an
+// inbox row to each mentioned user, and records a follower opt-in
+// signal so future events on the same resource keep notifying. Best-
+// effort — DB failures here are swallowed; the inbox is a notification
+// layer, not a system of record.
+func (u *UI) deliverMentions(ctx context.Context, row findingRow, authorID, body string) {
+	handles := comments.ExtractMentions(body)
+	if len(handles) == 0 {
+		return
+	}
+	users, err := u.users.All(ctx)
+	if err != nil {
+		return
+	}
+	href := "/findings?focus=" + row.ID
+	title := "You were mentioned in a finding comment"
+	bodyText := row.CheckID + " — " + row.ResourceName
+	for _, handle := range handles {
+		uid := matchUserHandle(users, handle)
+		if uid == "" || uid == authorID {
+			continue
+		}
+		u.NotifyInbox(ctx, uid, "info", title, bodyText, href)
+	}
+}
+
+// matchUserHandle resolves a mention handle to a userID using the
+// same matching rules as the autocomplete endpoint (case-insensitive
+// substring on email + display_name).
+func matchUserHandle(users []*auth.User, handle string) string {
+	needle := strings.ToLower(handle)
+	for _, u := range users {
+		local := u.Email
+		if at := strings.IndexByte(u.Email, '@'); at > 0 {
+			local = u.Email[:at]
+		}
+		if strings.EqualFold(local, handle) || strings.EqualFold(u.DisplayName, handle) {
+			return u.ID
+		}
+	}
+	// Fall back to substring on email if no exact match found.
+	for _, u := range users {
+		if strings.Contains(strings.ToLower(u.Email), needle) {
+			return u.ID
+		}
+	}
+	return ""
 }
 
 // authorDisplayLabel mirrors compliancekit.User.Label() for the

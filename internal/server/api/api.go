@@ -85,6 +85,8 @@ func (a *API) Mount(r chi.Router) {
 		r.Put("/providers/{id}", a.scopeGate(auth.ScopeSettingsWrite, a.updateProvider))
 
 		r.Get("/checks", a.scopeGate(auth.ScopeSettingsRead, a.listChecks))
+		// v1.8 phase 4 — @mention autocomplete in the comments composer.
+		r.Get("/users/search", a.scopeGate(auth.ScopeSettingsRead, a.searchUsers))
 		r.Post("/checks/{id}/toggle", a.scopeGate(auth.ScopeSettingsWrite, a.toggleCheck))
 
 		r.Get("/waivers", a.scopeGate(auth.ScopeWaiversRead, a.listWaivers))

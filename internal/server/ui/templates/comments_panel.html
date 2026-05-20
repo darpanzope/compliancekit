@@ -11,14 +11,28 @@
         hx-target="#comments-panel"
         hx-swap="innerHTML"
         x-show="editing === null"
-        class="space-y-2">
+        x-data="commentComposer()"
+        @keyup.@.window="onAt($event)"
+        class="space-y-2 relative">
     <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
     <label class="text-[11px] uppercase tracking-wider text-muted-foreground">Add a comment</label>
-    <textarea name="body" rows="3"
+    <textarea name="body" rows="3" x-ref="ta"
               class="ck-input font-mono text-xs leading-relaxed w-full"
-              placeholder="Markdown supported — **bold**, *italic*, `code`, links, lists"></textarea>
+              @input="onInput($event)"
+              @keydown.escape="suggestions = []"
+              placeholder="Markdown supported — **bold**, *italic*, `code`, @mention, links, lists"></textarea>
+    <div x-show="suggestions.length > 0" x-cloak
+         class="absolute z-10 left-0 right-0 ck-card border border-border bg-popover shadow-lg max-h-48 overflow-y-auto">
+      <template x-for="(s, idx) in suggestions" :key="s.id">
+        <button type="button" @click="pick(s)"
+                class="w-full flex items-center justify-between px-3 py-2 text-xs hover:bg-muted transition text-left">
+          <span class="font-medium" x-text="s.label"></span>
+          <span class="text-muted-foreground text-[10px]" x-text="s.email"></span>
+        </button>
+      </template>
+    </div>
     <div class="flex items-center justify-between gap-2">
-      <span class="text-[10px] text-muted-foreground">Comments thread by fingerprint — they persist across scans.</span>
+      <span class="text-[10px] text-muted-foreground">Comments thread by fingerprint — they persist across scans. <kbd class="ck-kbd">@</kbd> to mention.</span>
       <button type="submit"
               class="inline-flex h-8 items-center rounded-md bg-primary text-primary-foreground px-3 text-xs font-medium hover:opacity-90 transition">
         Post comment
