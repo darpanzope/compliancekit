@@ -55,16 +55,23 @@ type Receiver struct {
 	// (reply-in-thread + slash commands). Empty disables both routes.
 	slackSigningSecret string
 
+	// jiraSecret / linearSecret enable the v1.8 phase 7 two-way
+	// receivers. Empty disables the respective route.
+	jiraSecret   string
+	linearSecret string
+
 	// events is the optional v1.6 SSE producer. When set, every
 	// accepted webhook fires a webhook.received event so dashboards
 	// + toasts + the activity timeline see the request live.
 	events *events.Producer
 
-	// v1.8 phase 5 — lazily-constructed collaboration handles used
-	// by the Slack reply-in-thread + slash-command paths.
-	cmt *comments.Repo
-	asg *collab.Assignments
-	act *collab.Activities
+	// v1.8 phase 5/7 — lazily-constructed collaboration handles used
+	// by the Slack reply-in-thread + slash-command paths and the
+	// Jira/Linear inbound flows.
+	cmt       *comments.Repo
+	asg       *collab.Assignments
+	act       *collab.Activities
+	extIssues *collab.ExternalIssues
 }
 
 // Config carries the operator-controlled inbound-secrets. v1.4
@@ -73,6 +80,8 @@ type Receiver struct {
 type Config struct {
 	GitHubSecret       string
 	SlackSigningSecret string
+	JiraSecret         string
+	LinearSecret       string
 }
 
 // New constructs the receiver. nil cfg is fine — both inbound paths
@@ -82,6 +91,8 @@ func New(st *store.Store, cfg Config) *Receiver {
 		store:              st,
 		githubSecret:       cfg.GitHubSecret,
 		slackSigningSecret: cfg.SlackSigningSecret,
+		jiraSecret:         cfg.JiraSecret,
+		linearSecret:       cfg.LinearSecret,
 	}
 }
 
@@ -137,6 +148,12 @@ func (rc *Receiver) Mount(r chi.Router) {
 		if rc.slackSigningSecret != "" {
 			r.Post("/slack/events", rc.handleSlackEvents)
 			r.Post("/slack/commands", rc.handleSlackCommands)
+		}
+		if rc.jiraSecret != "" {
+			r.Post("/jira", rc.handleJiraWebhook)
+		}
+		if rc.linearSecret != "" {
+			r.Post("/linear", rc.handleLinearWebhook)
 		}
 		r.Post("/{id}", rc.handleGeneric)
 	})

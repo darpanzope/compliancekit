@@ -146,6 +146,48 @@ func TestActivities_RoundTrip(t *testing.T) {
 	}
 }
 
+// TestExternalIssues_LinkClose round-trips the Jira/Linear mapping
+// + verifies the close path marks every linked fingerprint.
+func TestExternalIssues_LinkClose(t *testing.T) {
+	s := openTestStore(t)
+	seedUser(t, s, "u-creator", "creator@example.com")
+	e := NewExternalIssues(s)
+	ctx := context.Background()
+
+	row1, err := e.Link(ctx, "fp-1", SystemJira, "PROJ-1", LinkOptions{
+		ExternalURL: "https://acme.atlassian.net/browse/PROJ-1",
+		CreatedByID: "u-creator",
+	})
+	if err != nil {
+		t.Fatalf("Link 1: %v", err)
+	}
+	if _, err := e.Link(ctx, "fp-2", SystemJira, "PROJ-1", LinkOptions{}); err != nil {
+		t.Fatalf("Link 2: %v", err)
+	}
+
+	all, err := e.ListByExternal(ctx, SystemJira, "PROJ-1")
+	if err != nil {
+		t.Fatalf("ListByExternal: %v", err)
+	}
+	if len(all) != 2 {
+		t.Errorf("listed %d, want 2", len(all))
+	}
+
+	if err := e.MarkClosed(ctx, row1.ID); err != nil {
+		t.Fatalf("MarkClosed: %v", err)
+	}
+	got, err := e.Find(ctx, SystemJira, "PROJ-1", "fp-1")
+	if err != nil {
+		t.Fatalf("Find: %v", err)
+	}
+	if got.Status != ExternalIssueClosed {
+		t.Errorf("status = %q, want closed", got.Status)
+	}
+	if got.ClosedAt == nil {
+		t.Error("ClosedAt nil after close")
+	}
+}
+
 // TestFollowers_AddIdempotent verifies the ON CONFLICT DO NOTHING
 // path on the composite key.
 func TestFollowers_AddIdempotent(t *testing.T) {
