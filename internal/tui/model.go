@@ -76,6 +76,13 @@ type listModel struct {
 	ctx     context.Context //nolint:containedctx // bubbletea program scope
 	tailing bool
 	tailCh  chan compliancekit.Finding
+
+	// v1.7 phase 4 — resource-graph mode. Toggled by `R` in normal
+	// mode. Owns a parallel cursor + rebuilds rows from m.all so live
+	// tail (phase 3) keeps the graph fresh.
+	graphMode   bool
+	graphRows   []graphNode
+	graphCursor int
 }
 
 func newListModel(findings []compliancekit.Finding) listModel {
@@ -89,7 +96,18 @@ func newListModel(findings []compliancekit.Finding) listModel {
 	return m
 }
 
-const defaultListHeight = 24
+const (
+	defaultListHeight = 24
+
+	// Key + glyph string literals extracted to constants so goconst
+	// stops flagging them + the TUI's vocabulary stays auditable in
+	// one place.
+	keyEnter     = "enter"
+	keyEsc       = "esc"
+	keyBackspace = "backspace"
+	cursorMarker = "▸ "
+	unknownLabel = "(unknown)"
+)
 
 // buildProviderBuckets walks findings + tallies per-provider counts.
 func buildProviderBuckets(findings []compliancekit.Finding) []providerBucket {
@@ -100,7 +118,7 @@ func buildProviderBuckets(findings []compliancekit.Finding) []providerBucket {
 			p = providerFromType(f.Resource.Type)
 		}
 		if p == "" {
-			p = "(unknown)"
+			p = unknownLabel
 		}
 		counts[p]++
 	}
@@ -169,12 +187,56 @@ func (m listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m listModel) handleKey(key string) (tea.Model, tea.Cmd) {
+	// In graph mode, route every key through the graph handler.
+	if m.graphMode {
+		return m.handleGraphKey(key)
+	}
 	// In search / command mode, every key (except esc + enter)
 	// edits the input buffer.
 	if m.mode == modeSearch || m.mode == modeCommand {
 		return m.handleEditKey(key)
 	}
 	return m.handleNormalKey(key)
+}
+
+// handleGraphKey routes keys while the resource-graph navigator is
+// open. j/k navigates; Enter applies the selected resource as a
+// :provider= filter + closes the graph; Esc / R closes without
+// applying.
+func (m listModel) handleGraphKey(key string) (tea.Model, tea.Cmd) {
+	switch key {
+	case "q", "ctrl+c":
+		return m, tea.Quit
+	case keyEsc, "R":
+		m.graphMode = false
+	case "j", "down":
+		if m.graphCursor < len(m.graphRows)-1 {
+			m.graphCursor++
+		}
+	case "k", "up":
+		if m.graphCursor > 0 {
+			m.graphCursor--
+		}
+	case "g":
+		m.graphCursor = 0
+	case "G":
+		m.graphCursor = len(m.graphRows) - 1
+	case keyEnter:
+		if m.graphCursor < len(m.graphRows) {
+			n := m.graphRows[m.graphCursor]
+			m.providerSel = n.providerKey
+			if n.resourceKey != "" {
+				m.filter.search = n.resourceKey
+				m.flash = "filter: provider=" + n.providerKey + " resource=" + n.resourceKey
+			} else {
+				m.filter.search = ""
+				m.flash = "filter: provider=" + n.providerKey
+			}
+			m.applyFilter()
+			m.graphMode = false
+		}
+	}
+	return m, nil
 }
 
 // handleNormalKey dispatches keys in normal mode. Vim-ish:
@@ -197,7 +259,7 @@ func (m *listModel) handleNormalChrome(key string) (tea.Cmd, bool) {
 	switch key {
 	case "q", "ctrl+c":
 		return tea.Quit, true
-	case "esc":
+	case keyEsc:
 		m.flash = ""
 		return nil, true
 	case "tab":
@@ -222,9 +284,9 @@ func (m *listModel) handleNormalNav(key string) bool {
 		m.cursorTop()
 	case "G":
 		m.cursorBottom()
-	case "enter":
+	case keyEnter:
 		m.activate()
-	case "backspace":
+	case keyBackspace:
 		if m.focused == paneTree || m.providerSel != "" {
 			m.providerSel = ""
 			m.applyFilter()
@@ -240,6 +302,7 @@ func (m *listModel) handleNormalNav(key string) bool {
 }
 
 // handleNormalEditor handles `/` and `:` — enters edit mode.
+// Also handles `R` (resource graph) and `?` (help, phase 7).
 func (m *listModel) handleNormalEditor(key string) {
 	switch key {
 	case "/":
@@ -248,6 +311,10 @@ func (m *listModel) handleNormalEditor(key string) {
 	case ":":
 		m.mode = modeCommand
 		m.input = ""
+	case "R":
+		m.graphRows = buildGraphRows(m.all)
+		m.graphCursor = 0
+		m.graphMode = true
 	}
 }
 
@@ -255,15 +322,15 @@ func (m *listModel) handleNormalEditor(key string) {
 // commit, Esc to abort.
 func (m listModel) handleEditKey(key string) (tea.Model, tea.Cmd) {
 	switch key {
-	case "esc":
+	case keyEsc:
 		m.mode = modeNormal
 		m.input = ""
 		return m, nil
-	case "enter":
+	case keyEnter:
 		cmd := m.commitEditor()
 		m.mode = modeNormal
 		return m, cmd
-	case "backspace":
+	case keyBackspace:
 		if m.input != "" {
 			r := []rune(m.input)
 			m.input = string(r[:len(r)-1])
@@ -414,6 +481,9 @@ func (m listModel) View() string {
 	if h == 0 {
 		h = defaultListHeight
 	}
+	if m.graphMode {
+		return renderGraph(m.graphRows, m.graphCursor, w, h)
+	}
 	// 20% tree / 50% list / 30% detail; ensure each gets ≥10 cols.
 	tw := imax(10, w*20/100)
 	dw := imax(10, w*30/100)
@@ -466,7 +536,7 @@ func (m listModel) renderTree(width, height int) string {
 		p := m.providers[i]
 		marker := "  "
 		if m.focused == paneTree && i == m.treeCursor {
-			marker = "▸ "
+			marker = cursorMarker
 		}
 		line := fmt.Sprintf("%s%-12s %d", marker, truncate(p.name, 12), p.total)
 		body = append(body, padRight(line, width))
@@ -507,7 +577,7 @@ func (m listModel) renderList(width, height int) string {
 		f := m.filtered[i]
 		marker := "  "
 		if m.focused == paneList && i == m.listCursor {
-			marker = "▸ "
+			marker = cursorMarker
 		}
 		line := fmt.Sprintf("%s%-8s %-6s %-30s %s",
 			marker, severityShort(f.Severity), string(f.Status),
