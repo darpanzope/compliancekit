@@ -22,6 +22,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/darpanzope/compliancekit/internal/server/auth"
+	"github.com/darpanzope/compliancekit/internal/server/events"
 	"github.com/darpanzope/compliancekit/internal/server/store"
 )
 
@@ -33,12 +34,21 @@ type API struct {
 	users    *auth.Users
 	tokens   *auth.Tokens
 	sessions *auth.Sessions
+	events   *events.Producer // v1.6: SSE event bus (nil OK — handler returns 503)
 }
 
 // New constructs the API handle. The Mount() method wires every
 // route on r under the /api/v1 prefix.
 func New(st *store.Store, users *auth.Users, tokens *auth.Tokens, sessions *auth.Sessions) *API {
 	return &API{store: st, users: users, tokens: tokens, sessions: sessions}
+}
+
+// WithEvents installs the v1.6 SSE Producer. Returns the receiver for
+// chaining. When set, the /api/v1/events route is mounted; otherwise
+// it 404s and the daemon's polling paths still work.
+func (a *API) WithEvents(p *events.Producer) *API {
+	a.events = p
+	return a
 }
 
 // Mount installs the v1 routes on r. Phase 6 ships the read surface;
@@ -81,6 +91,14 @@ func (a *API) Mount(r chi.Router) {
 		r.Post("/waivers", a.scopeGate(auth.ScopeWaiversWrite, a.createWaiver))
 		r.Put("/waivers/{id}", a.scopeGate(auth.ScopeWaiversWrite, a.updateWaiver))
 		r.Delete("/waivers/{id}", a.scopeGate(auth.ScopeWaiversWrite, a.revokeWaiver))
+
+		// v1.6 phase 0: SSE event bus. Mounted only when WithEvents
+		// installed a Producer; otherwise the route is absent +
+		// clients fall back to polling. Auth-gated by eitherAuth +
+		// scopeGate(ScopeScansRead) like the rest of /api/v1.
+		if a.events != nil {
+			r.Get("/events", a.scopeGate(auth.ScopeScansRead, a.events.Handler()))
+		}
 	})
 }
 

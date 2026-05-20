@@ -41,6 +41,7 @@ import (
 
 	docol "github.com/darpanzope/compliancekit/internal/collectors/digitalocean"
 	"github.com/darpanzope/compliancekit/internal/engine"
+	"github.com/darpanzope/compliancekit/internal/server/events"
 	"github.com/darpanzope/compliancekit/internal/server/store"
 	"github.com/darpanzope/compliancekit/internal/waivers"
 	"github.com/darpanzope/compliancekit/pkg/compliancekit"
@@ -56,8 +57,9 @@ const (
 // engine. Constructed via NewRealRunner; pass to worker.Default()
 // or worker.Config.Runner.
 type RealRunner struct {
-	store *store.Store
-	log   *slog.Logger
+	store  *store.Store
+	log    *slog.Logger
+	events *events.Producer // v1.6: nil-safe
 }
 
 // NewRealRunner returns a Runner that builds collectors from the
@@ -65,6 +67,14 @@ type RealRunner struct {
 // invokes engine.Run + persists findings.
 func NewRealRunner(st *store.Store) *RealRunner {
 	return &RealRunner{store: st, log: slog.Default()}
+}
+
+// WithEvents installs the v1.6 SSE Producer so per-finding +
+// per-scan progress events fan out to /api/v1/events subscribers.
+// Returns the receiver for chaining.
+func (r *RealRunner) WithEvents(p *events.Producer) *RealRunner {
+	r.events = p
+	return r
 }
 
 // Run satisfies worker.Runner.
@@ -405,6 +415,18 @@ func (r *RealRunner) persistFindings(ctx context.Context, scanID string, finding
 			resID, f.Resource.Name, f.Resource.Type, f.Message,
 			string(frameworkIDs), now, now, now); err != nil {
 			return err
+		}
+		// v1.6 phase 0: fan-out per finding. Toasts (phase 4) +
+		// dashboard counters (phase 1) subscribe to this stream.
+		if r.events != nil {
+			r.events.Publish(events.TypeFindingCreated, findingID, map[string]any{
+				"scan_id":  scanID,
+				"check_id": f.CheckID,
+				"severity": f.Severity.String(),
+				"status":   string(f.Status),
+				"provider": provider,
+				"resource": resID,
+			})
 		}
 		if resID != "" {
 			if _, err := tx.ExecContext(ctx, resUpsert,

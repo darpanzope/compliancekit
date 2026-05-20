@@ -27,6 +27,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/darpanzope/compliancekit/internal/server/events"
 	"github.com/darpanzope/compliancekit/internal/server/store"
 )
 
@@ -39,6 +40,7 @@ type Pool struct {
 	concurrency int
 	pollEvery   time.Duration
 	log         *slog.Logger
+	events      *events.Producer // v1.6: nil-safe; nil means no fan-out
 	wg          sync.WaitGroup
 }
 
@@ -95,6 +97,11 @@ type Config struct {
 
 	// Log destination. Defaults to slog.Default().
 	Log *slog.Logger
+
+	// Events is the v1.6 SSE event-bus producer. nil-safe: when nil
+	// the worker still runs but no events fan out to the daemon's
+	// /api/v1/events subscribers.
+	Events *events.Producer
 }
 
 // Default returns the recommended baseline Config.
@@ -127,7 +134,18 @@ func New(st *store.Store, cfg Config) *Pool {
 		concurrency: cfg.Concurrency,
 		pollEvery:   cfg.PollEvery,
 		log:         cfg.Log,
+		events:      cfg.Events,
 	}
+}
+
+// publishEvent forwards an event to the configured Producer when one
+// is wired; no-op otherwise. The intermediate keeps the call sites
+// terse + nil-safe.
+func (p *Pool) publishEvent(typ events.Type, entityID string, data any) {
+	if p.events == nil {
+		return
+	}
+	p.events.Publish(typ, entityID, data)
 }
 
 // Start spawns the worker goroutines. Returns immediately. Workers
@@ -243,6 +261,12 @@ func (p *Pool) claimOne(ctx context.Context) (Job, bool) {
 	var providers, frameworks []string
 	_ = json.Unmarshal([]byte(providersJSON), &providers)
 	_ = json.Unmarshal([]byte(frameworksJSON), &frameworks)
+	// v1.6 phase 0: fan out to /api/v1/events subscribers so
+	// dashboards see the scan flip from queued → running live.
+	p.publishEvent(events.TypeScanStarted, id, map[string]any{
+		"providers":  providers,
+		"frameworks": frameworks,
+	})
 	return Job{
 		ScanID:            id,
 		ProvidersScanned:  providers,
@@ -283,6 +307,7 @@ func (p *Pool) updateScanCompleted(ctx context.Context, id, finishedAt string, d
 	if _, err := p.store.DB().ExecContext(ctx, q, finishedAt, durationMS, id); err != nil {
 		p.log.Warn("worker: mark completed failed", "scan_id", id, "err", err)
 	}
+	p.publishEvent(events.TypeScanCompleted, id, map[string]any{"duration_ms": durationMS})
 }
 
 func (p *Pool) updateScanFailed(ctx context.Context, id, finishedAt, message string, durationMS int) {
@@ -292,6 +317,10 @@ func (p *Pool) updateScanFailed(ctx context.Context, id, finishedAt, message str
 	if _, err := p.store.DB().ExecContext(ctx, q, finishedAt, durationMS, message, id); err != nil {
 		p.log.Warn("worker: mark failed failed", "scan_id", id, "err", err)
 	}
+	p.publishEvent(events.TypeScanFailed, id, map[string]any{
+		"duration_ms": durationMS,
+		"error":       message,
+	})
 }
 
 func (p *Pool) ph(n int) string {

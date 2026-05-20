@@ -14,6 +14,7 @@ import (
 	"github.com/darpanzope/compliancekit/internal/server"
 	"github.com/darpanzope/compliancekit/internal/server/api"
 	"github.com/darpanzope/compliancekit/internal/server/auth"
+	"github.com/darpanzope/compliancekit/internal/server/events"
 	"github.com/darpanzope/compliancekit/internal/server/store"
 	"github.com/darpanzope/compliancekit/internal/server/ui"
 	"github.com/darpanzope/compliancekit/internal/server/webhook"
@@ -115,9 +116,15 @@ func runServe(ctx context.Context, stdout interface {
 	sessions.SecureCookies = !insecureCookies
 	tokens := auth.NewTokens(st)
 
+	// v1.6 phase 0: construct the shared SSE event bus + thread it
+	// through every publisher (worker pool + RealRunner) and the
+	// API mount (which exposes /api/v1/events). Nil-safe everywhere;
+	// the daemon still boots without it, the route just 404s.
+	eventBus := events.NewProducer()
+
 	srv := server.New(cfg)
 	// Mount the v1.3 REST API on the daemon's chi router.
-	apiH := api.New(st, users, tokens, sessions)
+	apiH := api.New(st, users, tokens, sessions).WithEvents(eventBus)
 	apiH.Mount(srv.Router())
 	// Mount /api/auth/{login,logout,me} so the UI login form has a
 	// real POST target. Missing in v1.3.0; fixed in v1.3.1.
@@ -153,7 +160,8 @@ func runServe(ctx context.Context, stdout interface {
 	// real findings. The control-plane gap that made /scans/new
 	// feel like it worked but insert nothing (F1) is closed here.
 	workerCfg := worker.Default()
-	workerCfg.Runner = worker.NewRealRunner(st)
+	workerCfg.Runner = worker.NewRealRunner(st).WithEvents(eventBus)
+	workerCfg.Events = eventBus
 	pool := worker.New(st, workerCfg)
 
 	// Install signal handlers on the parent context. When the user
