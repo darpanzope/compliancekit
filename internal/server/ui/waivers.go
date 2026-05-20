@@ -135,6 +135,9 @@ func (u *UI) waiversCreate(w http.ResponseWriter, r *http.Request) {
 		u.fail(w, "create waiver: "+err.Error())
 		return
 	}
+	u.AuditLog(r.Context(), "waiver.create", "waiver", id, map[string]any{
+		"check_id": check, "resource_id": resource, "approver": approver, "expires": expiresStored,
+	})
 	http.Redirect(w, r, "/waivers?flash=created", http.StatusSeeOther)
 }
 
@@ -160,6 +163,7 @@ func (u *UI) waiversRevoke(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/waivers?err=not-found", http.StatusSeeOther)
 		return
 	}
+	u.AuditLog(r.Context(), "waiver.revoke", "waiver", id, nil)
 	http.Redirect(w, r, "/waivers?flash=revoked", http.StatusSeeOther)
 }
 

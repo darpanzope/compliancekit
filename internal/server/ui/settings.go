@@ -224,6 +224,7 @@ func (u *UI) settingsRotateCredentials(w http.ResponseWriter, r *http.Request) {
 		u.fail(w, "persist credentials: "+err.Error())
 		return
 	}
+	u.AuditLog(r.Context(), "provider.credentials_rotate", "provider", id, nil)
 	http.Redirect(w, r, "/settings/providers/"+id+"?flash=rotated", http.StatusSeeOther)
 }
 
@@ -248,6 +249,9 @@ func (u *UI) settingsUpdateConfig(w http.ResponseWriter, r *http.Request) {
 		u.fail(w, "persist config: "+err.Error())
 		return
 	}
+	u.AuditLog(r.Context(), "provider.config_update", "provider", id, map[string]any{
+		"region": cfg.Region, "exclusions": cfg.Exclusions,
+	})
 	http.Redirect(w, r, "/settings/providers/"+id+"?flash=saved", http.StatusSeeOther)
 }
 
@@ -292,6 +296,9 @@ func (u *UI) settingsUpdateServices(w http.ResponseWriter, r *http.Request) {
 		u.fail(w, "persist services: "+err.Error())
 		return
 	}
+	u.AuditLog(r.Context(), "provider.services_update", "provider", id, map[string]any{
+		"services": picked,
+	})
 	http.Redirect(w, r, "/settings/providers/"+id+"?flash=services-saved", http.StatusSeeOther)
 }
 
@@ -335,6 +342,7 @@ func (u *UI) settingsToggleEnabled(w http.ResponseWriter, r *http.Request) {
 	if !want {
 		flash = "disabled"
 	}
+	u.AuditLog(r.Context(), "provider.toggle", "provider", id, map[string]any{"enabled": want})
 	http.Redirect(w, r, "/settings/providers/"+id+"?flash="+flash, http.StatusSeeOther)
 }
 

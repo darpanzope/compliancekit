@@ -153,6 +153,9 @@ func (u *UI) schedulesCreate(w http.ResponseWriter, r *http.Request) {
 		u.fail(w, "create schedule: "+err.Error())
 		return
 	}
+	u.AuditLog(r.Context(), "schedule.create", "schedule", id, map[string]any{
+		"name": name, "cron_expr": expr, "timezone": tz, "providers": providers,
+	})
 	http.Redirect(w, r, "/schedules?flash=created", http.StatusSeeOther)
 }
 
@@ -164,6 +167,7 @@ func (u *UI) schedulesDelete(w http.ResponseWriter, r *http.Request) {
 		u.fail(w, "delete: "+err.Error())
 		return
 	}
+	u.AuditLog(r.Context(), "schedule.delete", "schedule", id, nil)
 	http.Redirect(w, r, "/schedules?flash=deleted", http.StatusSeeOther)
 }
 

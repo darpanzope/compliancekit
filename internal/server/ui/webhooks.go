@@ -125,6 +125,9 @@ func (u *UI) webhooksCreate(w http.ResponseWriter, r *http.Request) {
 		u.fail(w, "insert webhook: "+err.Error())
 		return
 	}
+	u.AuditLog(r.Context(), "webhook.create", "webhook", id, map[string]any{
+		"name": name, "url_path": urlPath, "event_types": events,
+	})
 	http.Redirect(w, r, "/settings/webhooks?flash=created&secret="+secret, http.StatusSeeOther)
 }
 
@@ -135,6 +138,7 @@ func (u *UI) webhooksDelete(w http.ResponseWriter, r *http.Request) {
 		u.fail(w, "delete webhook: "+err.Error())
 		return
 	}
+	u.AuditLog(r.Context(), "webhook.delete", "webhook", id, nil)
 	http.Redirect(w, r, "/settings/webhooks?flash=deleted", http.StatusSeeOther)
 }
 
@@ -146,6 +150,7 @@ func (u *UI) webhooksToggle(w http.ResponseWriter, r *http.Request) {
 		u.fail(w, "toggle webhook: "+err.Error())
 		return
 	}
+	u.AuditLog(r.Context(), "webhook.toggle", "webhook", id, nil)
 	http.Redirect(w, r, "/settings/webhooks?flash=toggled", http.StatusSeeOther)
 }
 

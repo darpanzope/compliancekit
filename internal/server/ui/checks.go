@@ -169,6 +169,9 @@ func (u *UI) checksToggle(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "toggle: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
+	u.AuditLog(r.Context(), "check.toggle", "check", id, map[string]any{
+		"enabled": next, "title": ck.Title, "provider": ck.Provider,
+	})
 
 	// Preserve the operator's search/filter state by echoing the
 	// referer's query string back. Falls back to the bare /checks.

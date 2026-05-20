@@ -205,6 +205,7 @@ func (u *UI) frameworkControlUpdate(w http.ResponseWriter, r *http.Request) {
 			u.fail(w, "drop tailoring: "+err.Error())
 			return
 		}
+		u.AuditLog(r.Context(), "framework.tailor_restore", "framework_control", id+"/"+control, nil)
 		http.Redirect(w, r, "/settings/frameworks/"+id+"?flash=control-restored", http.StatusSeeOther)
 		return
 	}
@@ -229,6 +230,9 @@ func (u *UI) frameworkControlUpdate(w http.ResponseWriter, r *http.Request) {
 	if included {
 		flash = "control-tailored"
 	}
+	u.AuditLog(r.Context(), "framework.tailor", "framework_control", id+"/"+control, map[string]any{
+		"included": included, "justification": justification,
+	})
 	http.Redirect(w, r, "/settings/frameworks/"+id+"?flash="+flash, http.StatusSeeOther)
 }
 

@@ -121,6 +121,9 @@ func (u *UI) scanNewSubmit(w http.ResponseWriter, r *http.Request) {
 		u.fail(w, "enqueue: "+err.Error())
 		return
 	}
+	u.AuditLog(r.Context(), "scan.trigger", "scan", scanID, map[string]any{
+		"providers": allowed, "source": "ui",
+	})
 	http.Redirect(w, r, "/scans/"+scanID+"?welcome=0&new=1", http.StatusSeeOther)
 }
 

@@ -115,6 +115,9 @@ func (u *UI) savedViewsCreate(w http.ResponseWriter, r *http.Request) {
 		u.fail(w, "create view: "+err.Error())
 		return
 	}
+	u.AuditLog(r.Context(), "saved_view.create", "saved_view", id, map[string]any{
+		"name": name, "pinned": pinned,
+	})
 	http.Redirect(w, r, "/findings/views?flash=created", http.StatusSeeOther)
 }
 
@@ -128,6 +131,7 @@ func (u *UI) savedViewsPin(w http.ResponseWriter, r *http.Request) {
 		u.fail(w, "pin: "+err.Error())
 		return
 	}
+	u.AuditLog(r.Context(), "saved_view.pin_toggle", "saved_view", id, nil)
 	http.Redirect(w, r, "/findings/views?flash=pinned", http.StatusSeeOther)
 }
 
@@ -139,6 +143,7 @@ func (u *UI) savedViewsDelete(w http.ResponseWriter, r *http.Request) {
 		u.fail(w, "delete: "+err.Error())
 		return
 	}
+	u.AuditLog(r.Context(), "saved_view.delete", "saved_view", id, nil)
 	http.Redirect(w, r, "/findings/views?flash=deleted", http.StatusSeeOther)
 }
 
