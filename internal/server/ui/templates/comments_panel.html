@@ -1,0 +1,82 @@
+{{ define "comments_panel" }}
+<div class="space-y-5" x-data="{ editing: null, body: '' }">
+  {{ if .Flash }}
+  <div class="ck-card border-warning/40 bg-warning/5 p-3 text-xs">
+    {{ .Flash }}
+  </div>
+  {{ end }}
+
+  <!-- Compose -->
+  <form hx-post="/findings/{{ .FindingID }}/comments"
+        hx-target="#comments-panel"
+        hx-swap="innerHTML"
+        x-show="editing === null"
+        class="space-y-2">
+    <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
+    <label class="text-[11px] uppercase tracking-wider text-muted-foreground">Add a comment</label>
+    <textarea name="body" rows="3"
+              class="ck-input font-mono text-xs leading-relaxed w-full"
+              placeholder="Markdown supported — **bold**, *italic*, `code`, links, lists"></textarea>
+    <div class="flex items-center justify-between gap-2">
+      <span class="text-[10px] text-muted-foreground">Comments thread by fingerprint — they persist across scans.</span>
+      <button type="submit"
+              class="inline-flex h-8 items-center rounded-md bg-primary text-primary-foreground px-3 text-xs font-medium hover:opacity-90 transition">
+        Post comment
+      </button>
+    </div>
+  </form>
+
+  {{ if .Comments }}
+  <ul class="space-y-3">
+    {{ range .Comments }}
+    <li class="ck-card p-3 space-y-2" x-show="editing !== '{{ .ID }}'">
+      <div class="flex items-center justify-between gap-2">
+        <div class="flex items-center gap-2 text-xs">
+          <span class="font-medium">{{ .AuthorName }}</span>
+          <span class="text-[10px] text-muted-foreground">{{ .CreatedIn }}</span>
+          {{ if .Edited }}<span class="text-[10px] text-muted-foreground">· edited {{ .EditedIn }}</span>{{ end }}
+          {{ if ne .Source "ui" }}<span class="text-[10px] uppercase tracking-wider text-muted-foreground bg-muted px-1.5 py-0.5 rounded">via {{ .Source }}</span>{{ end }}
+        </div>
+        {{ if .Mine }}
+        <div class="flex items-center gap-1">
+          <button type="button" @click="editing = '{{ .ID }}'; body = $refs.raw_{{ .ID }}.value"
+                  class="text-[11px] text-muted-foreground hover:text-foreground transition">edit</button>
+          <span class="text-muted-foreground">·</span>
+          <button type="button"
+                  hx-delete="/findings/comments/{{ .ID }}?finding_id={{ $.FindingID }}"
+                  hx-target="#comments-panel" hx-swap="innerHTML"
+                  hx-confirm="Delete this comment?"
+                  hx-headers='{"X-CSRF-Token":"{{ $.CSRFToken }}"}'
+                  class="text-[11px] text-destructive hover:opacity-80 transition">delete</button>
+        </div>
+        {{ end }}
+      </div>
+      <textarea x-ref="raw_{{ .ID }}" class="hidden">{{ .BodyRaw }}</textarea>
+      <div class="ck-prose text-sm leading-relaxed">{{ .BodyHTML | safeHTML }}</div>
+    </li>
+
+    {{ if .Mine }}
+    <li class="ck-card p-3 space-y-2" x-show="editing === '{{ .ID }}'" x-cloak>
+      <form hx-put="/findings/comments/{{ .ID }}?finding_id={{ $.FindingID }}"
+            hx-target="#comments-panel" hx-swap="innerHTML"
+            hx-headers='{"X-CSRF-Token":"{{ $.CSRFToken }}"}'
+            class="space-y-2">
+        <textarea name="body" rows="3"
+                  class="ck-input font-mono text-xs leading-relaxed w-full"
+                  x-model="body"></textarea>
+        <div class="flex items-center justify-end gap-2">
+          <button type="button" @click="editing = null"
+                  class="inline-flex h-8 items-center rounded-md border border-border bg-background px-3 text-xs hover:bg-muted transition">Cancel</button>
+          <button type="submit"
+                  class="inline-flex h-8 items-center rounded-md bg-primary text-primary-foreground px-3 text-xs font-medium hover:opacity-90 transition">Save</button>
+        </div>
+      </form>
+    </li>
+    {{ end }}
+    {{ end }}
+  </ul>
+  {{ else }}
+  <p class="text-xs text-muted-foreground">No comments yet. Start the thread.</p>
+  {{ end }}
+</div>
+{{ end }}

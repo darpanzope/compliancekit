@@ -31,6 +31,7 @@ import (
 
 	"github.com/darpanzope/compliancekit/internal/server/assets"
 	"github.com/darpanzope/compliancekit/internal/server/auth"
+	"github.com/darpanzope/compliancekit/internal/server/comments"
 	"github.com/darpanzope/compliancekit/internal/server/logs"
 	"github.com/darpanzope/compliancekit/internal/server/store"
 	"github.com/darpanzope/compliancekit/pkg/compliancekit"
@@ -110,6 +111,11 @@ var templateFuncs = template.FuncMap{
 	// activeFilterCount sums every non-empty filter dimension for the
 	// "N active filters" hint in the findings page footer.
 	"activeFilterCount": activeFilterCount,
+	// safeHTML promotes a string to template.HTML so it renders as
+	// raw markup. v1.8 phase 1 — used by the comments_panel template
+	// to emit goldmark-rendered body_html that was sanitized at
+	// write time by bluemonday.
+	"safeHTML": func(s string) template.HTML { return template.HTML(s) }, //nolint:gosec // sanitized at write time
 }
 
 // chipGroup is the partial-args struct filter_chip_group renders
@@ -206,12 +212,13 @@ type UI struct {
 	users         *auth.Users
 	sessions      *auth.Sessions
 	oidcProviders []auth.OIDCProviderButton
-	logBuf        *logs.Buffer // v1.6 phase 6 — nil-safe; route absent when nil
+	logBuf        *logs.Buffer   // v1.6 phase 6 — nil-safe; route absent when nil
+	comments      *comments.Repo // v1.8 phase 1 — markdown comments on findings
 }
 
 // New constructs the UI handle.
 func New(st *store.Store, users *auth.Users, sessions *auth.Sessions) *UI {
-	return &UI{store: st, users: users, sessions: sessions}
+	return &UI{store: st, users: users, sessions: sessions, comments: comments.NewRepo(st)}
 }
 
 // SetOIDCProviders installs the list of upstream identity providers
@@ -292,6 +299,7 @@ func (u *UI) Mount(r chi.Router) {
 		u.mountFindingsRoutes(r)
 		u.mountSavedViewRoutes(r)
 		u.mountFindingDetailRoutes(r)
+		u.mountCommentsRoutes(r)
 		u.mountRemediationRoutes(r)
 		u.mountResourceMapRoutes(r)
 		u.mountResourcesRoutes(r)

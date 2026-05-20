@@ -76,11 +76,11 @@ func (u *UI) loadFindingByID(ctx context.Context, id string) (findingRow, error)
 		`SELECT id, scan_id, check_id, severity, status, provider,
 		        resource_id, resource_name, resource_type, COALESCE(message,''),
 		        COALESCE(framework_ids,'[]'),
-		        first_seen_at, last_seen_at
+		        first_seen_at, last_seen_at, fingerprint
 		 FROM findings WHERE id = `+ph(u.store, 1),
 		id).Scan(&r.ID, &r.ScanID, &r.CheckID, &r.Severity, &r.Status, &r.Provider,
 		&r.ResourceID, &r.ResourceName, &r.ResourceType, &r.Message,
-		&fwJSON, &r.FirstSeen, &r.LastSeen)
+		&fwJSON, &r.FirstSeen, &r.LastSeen, &r.Fingerprint)
 	if err != nil {
 		return r, err
 	}
@@ -91,6 +91,11 @@ func (u *UI) loadFindingByID(ctx context.Context, id string) (findingRow, error)
 	}
 	if t, e := time.Parse(time.RFC3339, r.LastSeen); e == nil {
 		r.LastSeenIn = humanizeAgoFrom(t, now)
+	}
+	if u.comments != nil {
+		if n, err := u.comments.CountByFingerprint(ctx, r.Fingerprint); err == nil {
+			r.CommentCount = n
+		}
 	}
 	return r, nil
 }

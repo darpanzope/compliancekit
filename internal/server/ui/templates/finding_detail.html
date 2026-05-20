@@ -27,6 +27,7 @@
   <div class="border-b border-border px-5">
     <nav class="flex gap-1 -mb-px">
       <button type="button" @click="tab = 'overview'" :class="tab === 'overview' ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'" class="px-3 py-2 text-xs font-medium border-b-2 transition">Overview</button>
+      <button type="button" @click="tab = 'comments'" :class="tab === 'comments' ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'" class="px-3 py-2 text-xs font-medium border-b-2 transition">Comments{{ if gt .Row.CommentCount 0 }} <span class="tabular-nums text-muted-foreground">{{ .Row.CommentCount }}</span>{{ end }}</button>
       <button type="button" @click="tab = 'remediation'" :class="tab === 'remediation' ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'" class="px-3 py-2 text-xs font-medium border-b-2 transition">Remediation</button>
       <button type="button" @click="tab = 'timeline'" :class="tab === 'timeline' ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'" class="px-3 py-2 text-xs font-medium border-b-2 transition">Timeline</button>
       <button type="button" @click="tab = 'context'" :class="tab === 'context' ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'" class="px-3 py-2 text-xs font-medium border-b-2 transition">Context</button>
@@ -91,6 +92,14 @@
         </div>
       </div>
       {{ end }}
+    </div>
+
+    <!-- Comments tab — lazy-loads /findings/{id}/comments -->
+    <div x-show="tab === 'comments'" x-cloak class="p-5" id="comments-panel"
+         hx-get="/findings/{{ .Row.ID }}/comments"
+         hx-trigger="intersect once"
+         hx-swap="innerHTML">
+      <div class="text-xs text-muted-foreground">Loading comments...</div>
     </div>
 
     <!-- Remediation tab -->

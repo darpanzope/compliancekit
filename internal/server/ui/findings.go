@@ -61,6 +61,12 @@ type findingRow struct {
 	FirstSeenIn  string
 	LastSeen     string
 	LastSeenIn   string
+	// v1.8 phase 1+. The stable (check_id, resource.id, status) hash
+	// the comments + activity tables join on. Required for the
+	// /findings/{id}/comments side-panel tab; loaded by both
+	// queryFindings and loadFindingByID.
+	Fingerprint  string
+	CommentCount int
 }
 
 // findingFilters mirrors the query-string shape. Zero values mean
