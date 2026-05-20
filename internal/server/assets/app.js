@@ -508,16 +508,12 @@ function commentComposer() {
       var before = ta.value.slice(0, pos);
       var at = before.lastIndexOf('@');
       if (at < 0) { this.suggestions = []; this.triggerStart = -1; return; }
-      // The character before '@' must be start-of-input or whitespace
-      // / common punctuation so 'user@host' typing doesn't trigger.
       var prev = at === 0 ? '' : before[at - 1];
       if (prev && !/[\s\(\[\{,;:!?]/.test(prev)) {
         this.suggestions = []; this.triggerStart = -1;
         return;
       }
       var token = before.slice(at + 1);
-      // Token must not contain whitespace — once the user types a
-      // space the @mention is complete.
       if (/\s/.test(token)) { this.suggestions = []; this.triggerStart = -1; return; }
       this.query = token;
       this.triggerStart = at;
