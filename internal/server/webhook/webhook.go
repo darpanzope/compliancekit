@@ -25,6 +25,8 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 
+	"github.com/darpanzope/compliancekit/internal/server/collab"
+	"github.com/darpanzope/compliancekit/internal/server/comments"
 	"github.com/darpanzope/compliancekit/internal/server/events"
 	"github.com/darpanzope/compliancekit/internal/server/store"
 )
@@ -49,23 +51,62 @@ type Receiver struct {
 	// /webhooks/github endpoint. Empty disables the route.
 	githubSecret string
 
+	// slackSigningSecret enables the v1.8 phase 5 Slack receiver
+	// (reply-in-thread + slash commands). Empty disables both routes.
+	slackSigningSecret string
+
 	// events is the optional v1.6 SSE producer. When set, every
 	// accepted webhook fires a webhook.received event so dashboards
 	// + toasts + the activity timeline see the request live.
 	events *events.Producer
+
+	// v1.8 phase 5 — lazily-constructed collaboration handles used
+	// by the Slack reply-in-thread + slash-command paths.
+	cmt *comments.Repo
+	asg *collab.Assignments
+	act *collab.Activities
 }
 
 // Config carries the operator-controlled inbound-secrets. v1.4
 // settings page wires this from the providers table; the CLI flag
 // path is the v1.3 fallback.
 type Config struct {
-	GitHubSecret string
+	GitHubSecret       string
+	SlackSigningSecret string
 }
 
 // New constructs the receiver. nil cfg is fine — both inbound paths
 // will then 403 every request (no secret = no verify = no trust).
 func New(st *store.Store, cfg Config) *Receiver {
-	return &Receiver{store: st, githubSecret: cfg.GitHubSecret}
+	return &Receiver{
+		store:              st,
+		githubSecret:       cfg.GitHubSecret,
+		slackSigningSecret: cfg.SlackSigningSecret,
+	}
+}
+
+// commentsRepo returns the comments handle, lazy-constructed.
+func (rc *Receiver) commentsRepo() *comments.Repo {
+	if rc.cmt == nil {
+		rc.cmt = comments.NewRepo(rc.store)
+	}
+	return rc.cmt
+}
+
+// assignmentsRepo returns the assignments handle, lazy-constructed.
+func (rc *Receiver) assignmentsRepo() *collab.Assignments {
+	if rc.asg == nil {
+		rc.asg = collab.NewAssignments(rc.store)
+	}
+	return rc.asg
+}
+
+// activitiesRepo returns the activities handle, lazy-constructed.
+func (rc *Receiver) activitiesRepo() *collab.Activities {
+	if rc.act == nil {
+		rc.act = collab.NewActivities(rc.store)
+	}
+	return rc.act
 }
 
 // WithEvents installs the v1.6 SSE producer so accepted webhooks
@@ -93,6 +134,10 @@ func (rc *Receiver) publishWebhookReceived(source, scanID string) {
 func (rc *Receiver) Mount(r chi.Router) {
 	r.Route("/webhooks", func(r chi.Router) {
 		r.Post("/github", rc.handleGitHub)
+		if rc.slackSigningSecret != "" {
+			r.Post("/slack/events", rc.handleSlackEvents)
+			r.Post("/slack/commands", rc.handleSlackCommands)
+		}
 		r.Post("/{id}", rc.handleGeneric)
 	})
 }
