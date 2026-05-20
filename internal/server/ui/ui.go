@@ -218,6 +218,8 @@ type UI struct {
 	assignmentsRepo *collab.Assignments // v1.8 phase 2 — per-finding assignees
 	ownersRepo      *collab.Owners      // v1.8 phase 2 — per-resource owners
 	activitiesRepo  *collab.Activities  // v1.8 phase 3 — chronological per-finding activity log
+	teams           *collab.Teams       // v1.8 phase 8 — teams CRUD
+	followersRepo   *collab.Followers   // v1.8 phase 8 — resource follower opt-in
 }
 
 // New constructs the UI handle.
@@ -305,6 +307,7 @@ func (u *UI) Mount(r chi.Router) {
 		u.mountFindingDetailRoutes(r)
 		u.mountCommentsRoutes(r)
 		u.mountCollabRoutes(r)
+		u.mountTeamsRoutes(r)
 		u.mountRemediationRoutes(r)
 		u.mountResourceMapRoutes(r)
 		u.mountResourcesRoutes(r)

@@ -1,0 +1,27 @@
+{{ define "follower_widget" }}
+<div id="follower-widget-{{ .ResourceID }}" class="ck-card p-3 text-xs">
+  <div class="flex items-center justify-between gap-2">
+    <div class="text-[11px] uppercase tracking-wider text-muted-foreground">Followers</div>
+    <span class="text-[11px] text-muted-foreground tabular-nums">{{ .CountStr }}</span>
+  </div>
+  <div class="mt-1.5 flex items-center justify-between gap-2">
+    {{ if .Following }}
+      <span class="text-foreground">You are following this resource.</span>
+      <form hx-post="/resources/{{ .ResourceID }}/unfollow"
+            hx-target="#follower-widget-{{ .ResourceID }}"
+            hx-swap="outerHTML"
+            hx-headers='{"X-CSRF-Token":"{{ .CSRFToken }}"}'>
+        <button type="submit" class="text-[11px] text-destructive hover:opacity-80">unfollow</button>
+      </form>
+    {{ else }}
+      <span class="text-muted-foreground">Be notified about new findings on this resource.</span>
+      <form hx-post="/resources/{{ .ResourceID }}/follow"
+            hx-target="#follower-widget-{{ .ResourceID }}"
+            hx-swap="outerHTML"
+            hx-headers='{"X-CSRF-Token":"{{ .CSRFToken }}"}'>
+        <button type="submit" class="inline-flex h-7 items-center rounded-md bg-primary text-primary-foreground px-2.5 text-[11px] font-medium hover:opacity-90">Follow</button>
+      </form>
+    {{ end }}
+  </div>
+</div>
+{{ end }}
