@@ -274,6 +274,7 @@ func (u *UI) Mount(r chi.Router) {
 		u.mountYAMLRoutes(r)
 		u.mountCIRoutes(r)
 		u.mountWaiversRoutes(r)
+		u.mountWebhooksRoutes(r)
 		u.mountScanNewRoutes(r)
 		u.mountScheduleRoutes(r)
 		u.mountAuditRoutes(r)

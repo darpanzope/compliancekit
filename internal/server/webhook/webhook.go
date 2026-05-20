@@ -211,7 +211,7 @@ type genericHook struct {
 
 func (rc *Receiver) lookupHook(ctx context.Context, urlPath string) (*genericHook, error) {
 	q := fmt.Sprintf( //nolint:gosec // placeholders only; no user input
-		`SELECT id, secret_hash, enabled FROM webhooks WHERE url_path = %s`,
+		`SELECT id, secret, enabled FROM webhooks WHERE url_path = %s`,
 		rc.ph(1))
 	var (
 		h       genericHook

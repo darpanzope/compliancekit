@@ -189,8 +189,9 @@ CREATE TABLE schedules (
 CREATE INDEX idx_schedules_next_run_at ON schedules (next_run_at) WHERE enabled = 1;
 
 -- ─── webhooks ───────────────────────────────────────────────────
--- Inbound webhook receivers; secret_hash is the bcrypt of the HMAC
--- signing secret the sender presents.
+-- Inbound webhook receivers. v1.5.1 migration 0006 renames the
+-- `secret_hash` column to `secret` (the v1.3 bcrypt-of-HMAC
+-- design was unusable for HMAC verification — see 0006 comment).
 CREATE TABLE webhooks (
     id                      TEXT PRIMARY KEY,
     name                    TEXT NOT NULL,

@@ -139,7 +139,7 @@ func TestReceiver_GenericEndToEnd(t *testing.T) {
 	secret := "generic-secret"
 	now := time.Now().UTC().Format(time.RFC3339)
 	_, err := st.DB().ExecContext(context.Background(),
-		`INSERT INTO webhooks (id, name, url_path, secret_hash, event_types, created_at, enabled)
+		`INSERT INTO webhooks (id, name, url_path, secret, event_types, created_at, enabled)
 		 VALUES (?, ?, ?, ?, ?, ?, 1)`,
 		id, "ci-prod", urlPath, secret, "[]", now)
 	if err != nil {

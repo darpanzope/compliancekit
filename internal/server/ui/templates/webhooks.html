@@ -1,0 +1,105 @@
+{{define "content"}}
+<div class="max-w-6xl mx-auto">
+  <div class="flex items-end justify-between gap-4 mb-6">
+    <div>
+      <h1 class="text-2xl font-semibold tracking-tight">Webhooks</h1>
+      <p class="text-sm text-muted-foreground mt-1">Inbound HTTP receivers that trigger a scan when an upstream system fires an event. Senders sign every request with HMAC-SHA256 using the secret below; the receiver verifies the signature before queueing the scan.</p>
+    </div>
+  </div>
+
+  {{ if eq .Flash "created" }}<div class="mb-4 rounded-md border border-success/30 bg-success/10 px-3 py-2 text-sm text-success">Webhook created. The signing secret is shown below — save it now (it won't be shown again).</div>{{ end }}
+  {{ if eq .Flash "deleted" }}<div class="mb-4 rounded-md border border-warning/30 bg-warning/10 px-3 py-2 text-sm text-warning">Webhook deleted.</div>{{ end }}
+  {{ if eq .Flash "toggled" }}<div class="mb-4 rounded-md border border-success/30 bg-success/10 px-3 py-2 text-sm text-success">Webhook state updated.</div>{{ end }}
+  {{ if eq .Error "missing-fields" }}<div class="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">Name and URL path are required.</div>{{ end }}
+  {{ if eq .Error "bad-path" }}<div class="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">URL path can't be empty after stripping the <code class="text-[11px] px-1 py-0.5 rounded bg-muted">/webhooks/</code> prefix.</div>{{ end }}
+  {{ if eq .Error "duplicate-path" }}<div class="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">A webhook with that URL path already exists.</div>{{ end }}
+
+  {{ if .NewSecret }}
+    <div class="ck-card p-5 mb-6 border-primary/40 bg-primary/5">
+      <h2 class="text-base font-semibold mb-2">Signing secret — save now</h2>
+      <p class="text-xs text-muted-foreground mb-3">The sender computes <code class="text-[11px] px-1 py-0.5 rounded bg-muted">HMAC-SHA256(body, secret)</code> and sends the result in the <code class="text-[11px] px-1 py-0.5 rounded bg-muted">X-CK-Signature: sha256=&lt;hex&gt;</code> header. The receiver verifies in constant time. This value won't be shown again — store it in your secrets manager now.</p>
+      <code class="block w-full text-xs font-mono p-3 rounded bg-background border border-border break-all select-all">{{ .NewSecret }}</code>
+    </div>
+  {{ end }}
+
+  <!-- Create form -->
+  <div class="ck-card p-5 mb-6">
+    <h2 class="text-base font-semibold mb-1">Add webhook</h2>
+    <p class="text-xs text-muted-foreground mb-4">URL path is the suffix under <code class="text-[11px] px-1 py-0.5 rounded bg-muted">{{ .BaseURL }}/webhooks/</code> — e.g. <code class="text-[11px] px-1 py-0.5 rounded bg-muted">ci-prod</code> becomes <code class="text-[11px] px-1 py-0.5 rounded bg-muted">{{ .BaseURL }}/webhooks/ci-prod</code>.</p>
+
+    <form action="/settings/webhooks" method="post" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
+      <div class="space-y-1">
+        <label for="name" class="block text-xs font-medium text-foreground">Display name</label>
+        <input type="text" id="name" name="name" required placeholder="CI on push to main"
+               class="w-full h-10 rounded-md border border-input bg-background px-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring transition">
+      </div>
+      <div class="space-y-1">
+        <label for="url_path" class="block text-xs font-medium text-foreground">URL path</label>
+        <input type="text" id="url_path" name="url_path" required placeholder="ci-prod"
+               class="w-full h-10 rounded-md border border-input bg-background px-3 text-sm font-mono placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring transition">
+      </div>
+      <div class="md:col-span-2 space-y-1">
+        <label for="secret" class="block text-xs font-medium text-foreground">Signing secret (blank = auto-generate)</label>
+        <input type="text" id="secret" name="secret" placeholder="leave blank for a 32-byte random hex string"
+               class="w-full h-10 rounded-md border border-input bg-background px-3 text-sm font-mono placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring transition">
+      </div>
+      <div class="md:col-span-2 space-y-1">
+        <label for="event_types" class="block text-xs font-medium text-foreground">Event types (JSON array; blank = all)</label>
+        <input type="text" id="event_types" name="event_types" placeholder='["push","release"]'
+               class="w-full h-10 rounded-md border border-input bg-background px-3 text-sm font-mono placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring transition">
+      </div>
+      <div class="md:col-span-2 flex justify-end mt-2">
+        <button type="submit" class="h-10 px-4 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-ring transition shadow-soft">Create webhook</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- List -->
+  <div class="ck-card overflow-hidden">
+    <div class="px-5 py-4 border-b border-border">
+      <h2 class="text-base font-semibold">Configured webhooks</h2>
+    </div>
+    {{ if not .Items }}
+      <div class="p-8 text-center text-sm text-muted-foreground">No webhooks yet. Add one above.</div>
+    {{ else }}
+      <table class="w-full text-sm">
+        <thead class="text-[11px] uppercase tracking-wider text-muted-foreground">
+          <tr class="border-b border-border">
+            <th class="text-left px-5 py-2 font-medium">Name</th>
+            <th class="text-left px-5 py-2 font-medium">URL</th>
+            <th class="text-left px-5 py-2 font-medium">Events</th>
+            <th class="text-right px-5 py-2 font-medium">Received</th>
+            <th class="text-left px-5 py-2 font-medium">Last seen</th>
+            <th class="text-right px-5 py-2 font-medium"></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-border">
+          {{ range .Items }}
+            <tr>
+              <td class="px-5 py-3">
+                <div class="font-medium {{ if not .Enabled }}text-muted-foreground line-through{{ end }}">{{ .Name }}</div>
+                <div class="text-xs text-muted-foreground">created {{ .CreatedAt }}</div>
+              </td>
+              <td class="px-5 py-3 font-mono text-xs">{{ $.BaseURL }}/webhooks/{{ .URLPath }}</td>
+              <td class="px-5 py-3 font-mono text-xs text-muted-foreground">{{ .EventTypes }}</td>
+              <td class="px-5 py-3 text-right tabular-nums">{{ .ReceivedCount }}</td>
+              <td class="px-5 py-3 text-xs text-muted-foreground">{{ if .LastReceivedAt }}{{ .LastReceivedAt }}{{ else }}—{{ end }}</td>
+              <td class="px-5 py-3 text-right">
+                <form action="/settings/webhooks/{{ .ID }}/toggle" method="post" class="inline">
+                  <input type="hidden" name="csrf_token" value="{{ $.CSRFToken }}">
+                  <button type="submit" class="text-xs text-muted-foreground hover:text-foreground transition">{{ if .Enabled }}Disable{{ else }}Enable{{ end }}</button>
+                </form>
+                <form action="/settings/webhooks/{{ .ID }}/delete" method="post" class="inline ml-3" onsubmit="return confirm('Delete this webhook? Senders using its signing secret will start failing.')">
+                  <input type="hidden" name="csrf_token" value="{{ $.CSRFToken }}">
+                  <button type="submit" class="text-xs text-destructive hover:opacity-80 transition">Delete</button>
+                </form>
+              </td>
+            </tr>
+          {{ end }}
+        </tbody>
+      </table>
+    {{ end }}
+  </div>
+</div>
+{{end}}
