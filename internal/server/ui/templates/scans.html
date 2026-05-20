@@ -26,6 +26,36 @@
     <a href="/scans" class="text-primary hover:underline text-xs font-medium">Refresh</a>
   </div>
 
+  <!-- v1.6 phase 8 — live activity timeline. Wildcard-subscribes
+       to every bus event; renders the last 50 as a compact
+       vertical feed. Filter dropdown narrows by event type. -->
+  <div x-data="activityTimeline()" x-init="bind()" x-show="entries.length > 0" x-cloak
+       class="ck-card mb-6 overflow-hidden">
+    <div class="px-4 py-3 border-b border-border flex items-center justify-between">
+      <span class="text-xs uppercase tracking-wider text-muted-foreground font-medium">Live activity</span>
+      <select x-model="filter" class="h-7 rounded-md border border-input bg-background px-2 text-xs">
+        <option value="all">All events</option>
+        <option value="scan.queued">scan.queued</option>
+        <option value="scan.started">scan.started</option>
+        <option value="scan.progress">scan.progress</option>
+        <option value="scan.completed">scan.completed</option>
+        <option value="scan.failed">scan.failed</option>
+        <option value="finding.created">finding.created</option>
+        <option value="finding.resolved">finding.resolved</option>
+        <option value="webhook.received">webhook.received</option>
+      </select>
+    </div>
+    <ul class="divide-y divide-border max-h-72 overflow-y-auto">
+      <template x-for="e in visible()" :key="e.id">
+        <li class="px-4 py-1.5 text-xs hover:bg-muted/30 flex items-center gap-3">
+          <span class="text-[10px] text-muted-foreground tabular-nums shrink-0 w-16" x-text="formatTime(e.at)"></span>
+          <span class="font-mono shrink-0 w-40" :class="typeClass(e.type)" x-text="e.type"></span>
+          <a :href="e.href" class="flex-1 truncate hover:underline" x-text="e.entity"></a>
+        </li>
+      </template>
+    </ul>
+  </div>
+
   <div class="ck-card overflow-hidden">
     <div class="overflow-x-auto">
       <table class="w-full text-sm">

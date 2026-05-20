@@ -348,6 +348,55 @@ function toastSystem() {
   };
 }
 
+// v1.6 phase 8 — activity timeline. Wildcard-subscribes to every
+// event on the bus + maintains a 50-line ring of "what just
+// happened" entries. Each entry renders as one row in a vertical
+// timeline; clicking opens the related entity. Per-type filter
+// dropdown narrows the list client-side.
+function activityTimeline() {
+  return {
+    entries: [],
+    filter: 'all',
+    bind: function () {
+      var self = this;
+      window.ck.events.on('*', function (ev) {
+        var entry = {
+          id: ev.id || Date.now(),
+          type: ev.type || '',
+          at: ev.at,
+          entity: ev.entity_id || '',
+          href: self.hrefFor(ev),
+        };
+        self.entries.unshift(entry); // newest on top
+        while (self.entries.length > 50) self.entries.pop();
+      });
+    },
+    visible: function () {
+      var self = this;
+      if (self.filter === 'all') return self.entries;
+      return self.entries.filter(function (e) { return e.type === self.filter; });
+    },
+    hrefFor: function (ev) {
+      var t = ev.type || '';
+      if (t.indexOf('scan.') === 0) return '/scans/' + ev.entity_id;
+      if (t.indexOf('finding.') === 0) return '/findings/' + ev.entity_id + '/detail';
+      if (t === 'webhook.received') return '/audit';
+      return '/audit';
+    },
+    typeClass: function (t) {
+      if (t === 'finding.created') return 'text-destructive';
+      if (t === 'scan.completed' || t === 'finding.resolved') return 'text-success';
+      if (t === 'scan.failed') return 'text-destructive';
+      if (t === 'scan.started' || t === 'scan.progress') return 'text-warning';
+      if (t === 'webhook.received') return 'text-primary';
+      return 'text-muted-foreground';
+    },
+    formatTime: function (iso) {
+      try { return new Date(iso).toLocaleTimeString(); } catch (_) { return ''; }
+    },
+  };
+}
+
 // findingsLive — bumps a `banner` counter on every finding.created
 // event. The /findings page's filter context can't safely auto-
 // inject a row without disrupting the cursor-paginated scroll;
