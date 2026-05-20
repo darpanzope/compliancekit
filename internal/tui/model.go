@@ -83,6 +83,15 @@ type listModel struct {
 	graphMode   bool
 	graphRows   []graphNode
 	graphCursor int
+
+	// v1.7 phase 6 — diff-vs-baseline state. Populated by `:diff
+	// <path>`; gutter glyph in the list pane shows new / resolved /
+	// changed vs. the loaded baseline. Resolved findings are
+	// appended to m.filtered as synthetic rows so operators can
+	// scroll through "what went away."
+	diffPerFP    map[string]diffKind
+	diffResolved []compliancekit.Finding
+	diffActive   bool
 }
 
 func newListModel(findings []compliancekit.Finding) listModel {
@@ -375,6 +384,13 @@ func (m *listModel) commitEditor() tea.Cmd {
 			m.stopTail()
 		case strings.HasPrefix(m.input, "waive: "):
 			m.doWaive(strings.TrimSpace(strings.TrimPrefix(m.input, "waive: ")))
+		case strings.HasPrefix(trimmed, "diff "):
+			m.applyDiff(strings.TrimSpace(strings.TrimPrefix(trimmed, "diff ")))
+		case trimmed == "undiff":
+			m.diffActive = false
+			m.diffPerFP = nil
+			m.diffResolved = nil
+			m.flash = "diff: cleared"
 		default:
 			m.filter = parseCommandLine(m.input)
 			m.flash = "filter: " + m.input
@@ -411,6 +427,33 @@ func (m *listModel) startTail() tea.Cmd {
 func (m *listModel) stopTail() {
 	m.tailing = false
 	m.flash = "tail: stopped"
+}
+
+// applyDiff loads a baseline findings.json + computes the diff
+// against m.all. Subsequent list renders show a gutter glyph per
+// row reflecting the kind. Resolved findings are stashed; phase 6
+// minimum-viable surfaces a count + the operator can scroll the
+// existing filtered list to see new/changed rows.
+func (m *listModel) applyDiff(path string) {
+	baseline, err := loadBaseline(path)
+	if err != nil {
+		m.flash = "diff: " + err.Error()
+		return
+	}
+	perFP, resolved := computeDiff(m.all, baseline)
+	m.diffPerFP = perFP
+	m.diffResolved = resolved
+	m.diffActive = true
+	newCount, changedCount := 0, 0
+	for _, k := range perFP {
+		switch k {
+		case diffNew:
+			newCount++
+		case diffChanged:
+			changedCount++
+		}
+	}
+	m.flash = fmt.Sprintf("diff: +%d new  ~%d changed  -%d resolved", newCount, changedCount, len(resolved))
 }
 
 // stepSearch advances the cursor to the next (dir=+1) or previous
@@ -592,9 +635,15 @@ func (m listModel) renderList(width, height int) string {
 		if m.focused == paneList && i == m.listCursor {
 			marker = cursorMarker
 		}
-		line := fmt.Sprintf("%s%-8s %-6s %-30s %s",
-			marker, severityShort(f.Severity), string(f.Status),
-			truncate(f.CheckID, 30), truncate(displayResource(f), width-50))
+		gutter := " "
+		if m.diffActive {
+			if k, ok := m.diffPerFP[f.Fingerprint()]; ok {
+				gutter = k.glyph()
+			}
+		}
+		line := fmt.Sprintf("%s%s %-8s %-6s %-30s %s",
+			marker, gutter, severityShort(f.Severity), string(f.Status),
+			truncate(f.CheckID, 30), truncate(displayResource(f), width-52))
 		body = append(body, padRight(line, width))
 	}
 	for len(body) < height {
