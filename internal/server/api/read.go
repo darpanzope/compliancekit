@@ -44,11 +44,66 @@ type page[T any] struct {
 }
 
 // listScans returns the paginated scan history.
+//
+// v1.11 phase 0 — Cursor mode is the new default; legacy ?page= still
+// works for one minor release. Cursor encodes `(created_at, id)` of
+// the last row of the previous page + the next query selects rows
+// strictly after that pair via the idx_scans_created_at index.
 func (a *API) listScans(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Query().Get("page") != "" {
+		a.listScansLegacy(w, r)
+		return
+	}
+	cursor, per, _ := parseCursorMode(r)
+	ctx := r.Context()
+	args := []any{}
+	where := ""
+	if !cursor.IsZero() {
+		// DESC order: next page = rows with (created_at, id) strictly
+		// less than the cursor's tuple.
+		where = " WHERE (created_at, id) < (" + a.ph(1) + ", " + a.ph(2) + ")"
+		args = []any{cursor.SortKey, cursor.ID}
+	}
+	args = append(args, per+1) // +1 to detect "more"
+	q := fmt.Sprintf(          //nolint:gosec // placeholders only; no user input
+		`SELECT id, created_at, COALESCE(started_at,''), COALESCE(finished_at,''), source, status,
+		        providers_scanned, frameworks_scanned, COALESCE(score, 0), COALESCE(coverage, 0),
+		        total_findings, actionable_findings, COALESCE(duration_ms, 0), COALESCE(error_message,'')
+		 FROM scans%s ORDER BY created_at DESC, id DESC LIMIT %s`,
+		where, a.ph(len(args)))
+	rows, err := a.store.DB().QueryContext(ctx, q, args...)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "list scans: "+err.Error())
+		return
+	}
+	defer func() { _ = rows.Close() }()
+	items := make([]scanRow, 0, per)
+	for rows.Next() {
+		var s scanRow
+		if err := rows.Scan(&s.ID, &s.CreatedAt, &s.StartedAt, &s.FinishedAt, &s.Source, &s.Status,
+			&s.ProvidersScanned, &s.FrameworksScanned, &s.Score, &s.Coverage,
+			&s.TotalFindings, &s.ActionableFindings, &s.DurationMS, &s.ErrorMessage); err != nil {
+			respondError(w, http.StatusInternalServerError, "scan row: "+err.Error())
+			return
+		}
+		items = append(items, s)
+	}
+	var next string
+	if len(items) > per {
+		items = items[:per]
+		last := items[len(items)-1]
+		next = Cursor{SortKey: last.CreatedAt, ID: last.ID}.Encode()
+	}
+	respondJSON(w, r, http.StatusOK, pageCursor[scanRow]{Items: items, NextCursor: next, PerPage: per})
+}
+
+// listScansLegacy is the v1.0-v1.10 OFFSET-based listScans path.
+// Kept for one minor release so existing clients that send
+// ?page=N&per_page=M don't break unexpectedly. Removed at v1.12.
+func (a *API) listScansLegacy(w http.ResponseWriter, r *http.Request) {
 	pageN, per := parsePage(r)
 	offset := (pageN - 1) * per
 	ctx := r.Context()
-
 	q := fmt.Sprintf( //nolint:gosec // placeholders only; no user input
 		`SELECT id, created_at, COALESCE(started_at,''), COALESCE(finished_at,''), source, status,
 		        providers_scanned, frameworks_scanned, COALESCE(score, 0), COALESCE(coverage, 0),
@@ -61,7 +116,6 @@ func (a *API) listScans(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer func() { _ = rows.Close() }()
-
 	items := make([]scanRow, 0, per)
 	for rows.Next() {
 		var s scanRow
@@ -149,11 +203,88 @@ func (f *findingRow) enrichFromRegistry() {
 // listFindings returns the paginated global findings list with
 // optional filter knobs that v1.5's explorer will rely on more
 // heavily.
+//
+// v1.11 phase 0 — Cursor mode default; legacy ?page= still works.
+// Cursor encodes `(created_at, id)`. Filters compose with the
+// cursor predicate via a WHERE-AND chain.
 func (a *API) listFindings(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Query().Get("page") != "" {
+		a.listFindingsLegacy(w, r)
+		return
+	}
+	cursor, per, _ := parseCursorMode(r)
+
+	// Filter parser: each of these maps to a column.
+	type filterDef struct{ key, col string }
+	filters := []filterDef{
+		{"severity", "severity"},
+		{"status", "status"},
+		{"provider", "provider"},
+		{"resource_type", "resource_type"},
+		{"check_id", "check_id"},
+		{"scan_id", "scan_id"},
+	}
+	var (
+		where []string
+		args  []any
+		i     = 1
+	)
+	for _, f := range filters {
+		if v := r.URL.Query().Get(f.key); v != "" {
+			where = append(where, f.col+" = "+a.ph(i))
+			args = append(args, v)
+			i++
+		}
+	}
+	if !cursor.IsZero() {
+		where = append(where, "(created_at, id) < ("+a.ph(i)+", "+a.ph(i+1)+")")
+		args = append(args, cursor.SortKey, cursor.ID)
+		i += 2
+	}
+	whereSQL := ""
+	if len(where) > 0 {
+		whereSQL = " WHERE " + strings.Join(where, " AND ")
+	}
+	args = append(args, per+1)
+	q := fmt.Sprintf( //nolint:gosec // dialect-aware placeholders; column names are this package's constants
+		`SELECT id, scan_id, fingerprint, check_id, severity, status, provider,
+		        resource_id, resource_name, resource_type, COALESCE(message,''),
+		        framework_ids, first_seen_at, last_seen_at, created_at
+		 FROM findings%s ORDER BY created_at DESC, id DESC LIMIT %s`,
+		whereSQL, a.ph(i))
+
+	rows, err := a.store.DB().QueryContext(r.Context(), q, args...)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "list findings: "+err.Error())
+		return
+	}
+	defer func() { _ = rows.Close() }()
+	items := make([]findingRow, 0, per)
+	for rows.Next() {
+		var f findingRow
+		if err := rows.Scan(&f.ID, &f.ScanID, &f.Fingerprint, &f.CheckID, &f.Severity, &f.Status, &f.Provider,
+			&f.ResourceID, &f.ResourceName, &f.ResourceType, &f.Message,
+			&f.FrameworkIDs, &f.FirstSeenAt, &f.LastSeenAt, &f.CreatedAt); err != nil {
+			respondError(w, http.StatusInternalServerError, "finding row: "+err.Error())
+			return
+		}
+		f.enrichFromRegistry()
+		items = append(items, f)
+	}
+	var next string
+	if len(items) > per {
+		items = items[:per]
+		last := items[len(items)-1]
+		next = Cursor{SortKey: last.CreatedAt, ID: last.ID}.Encode()
+	}
+	respondJSON(w, r, http.StatusOK, pageCursor[findingRow]{Items: items, NextCursor: next, PerPage: per})
+}
+
+// listFindingsLegacy is the v1.0-v1.10 OFFSET path. Removed at v1.12.
+func (a *API) listFindingsLegacy(w http.ResponseWriter, r *http.Request) {
 	pageN, per := parsePage(r)
 	offset := (pageN - 1) * per
 
-	// Filter parser: each of these maps to a column.
 	type filterDef struct{ key, col string }
 	filters := []filterDef{
 		{"severity", "severity"},
@@ -193,7 +324,6 @@ func (a *API) listFindings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer func() { _ = rows.Close() }()
-
 	items := make([]findingRow, 0, per)
 	for rows.Next() {
 		var f findingRow
@@ -257,7 +387,52 @@ type resourceRow struct {
 }
 
 // listResources returns the paginated resource inventory.
+//
+// v1.11 phase 0 — Cursor mode default; legacy ?page= still works.
+// Cursor encodes `(last_seen_at, id)`.
 func (a *API) listResources(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Query().Get("page") != "" {
+		a.listResourcesLegacy(w, r)
+		return
+	}
+	cursor, per, _ := parseCursorMode(r)
+	args := []any{}
+	where := ""
+	if !cursor.IsZero() {
+		where = " WHERE (last_seen_at, id) < (" + a.ph(1) + ", " + a.ph(2) + ")"
+		args = []any{cursor.SortKey, cursor.ID}
+	}
+	args = append(args, per+1)
+	q := fmt.Sprintf( //nolint:gosec // placeholders only; no user input
+		`SELECT id, name, type, provider, first_seen_at, last_seen_at
+		 FROM resources%s ORDER BY last_seen_at DESC, id DESC LIMIT %s`,
+		where, a.ph(len(args)))
+	rows, err := a.store.DB().QueryContext(r.Context(), q, args...)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "list resources: "+err.Error())
+		return
+	}
+	defer func() { _ = rows.Close() }()
+	items := make([]resourceRow, 0, per)
+	for rows.Next() {
+		var res resourceRow
+		if err := rows.Scan(&res.ID, &res.Name, &res.Type, &res.Provider, &res.FirstSeenAt, &res.LastSeenAt); err != nil {
+			respondError(w, http.StatusInternalServerError, "resource row: "+err.Error())
+			return
+		}
+		items = append(items, res)
+	}
+	var next string
+	if len(items) > per {
+		items = items[:per]
+		last := items[len(items)-1]
+		next = Cursor{SortKey: last.LastSeenAt, ID: last.ID}.Encode()
+	}
+	respondJSON(w, r, http.StatusOK, pageCursor[resourceRow]{Items: items, NextCursor: next, PerPage: per})
+}
+
+// listResourcesLegacy is the v1.0-v1.10 OFFSET path. Removed at v1.12.
+func (a *API) listResourcesLegacy(w http.ResponseWriter, r *http.Request) {
 	pageN, per := parsePage(r)
 	offset := (pageN - 1) * per
 	q := fmt.Sprintf( //nolint:gosec // placeholders only; no user input
