@@ -5,7 +5,7 @@
   <div class="ck-card p-8 mt-8">
     <div class="flex items-start gap-4">
       <span class="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-primary text-white shrink-0" aria-hidden="true">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+        <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
       </span>
       <div class="flex-1 min-w-0">
         <h1 class="text-xl font-semibold tracking-tight">Ready to run your first scan</h1>
@@ -32,13 +32,13 @@
       <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
       <input type="hidden" name="provider"   value="{{ .Provider.ID }}">
       <a href="/setup/doctor?provider={{ .Provider.ID }}&ok=1" class="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5">
-        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+        <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
         Back
       </a>
       <button type="submit"
               class="inline-flex h-10 items-center gap-2 rounded-md bg-primary text-primary-foreground px-4 text-sm font-medium hover:opacity-90 transition shadow-soft">
         Run first scan
-        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
       </button>
     </form>
   </div>

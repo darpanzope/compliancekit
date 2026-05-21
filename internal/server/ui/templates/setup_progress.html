@@ -14,7 +14,7 @@
                  {{ else if eq $n $cur }}bg-primary text-primary-foreground ring-4 ring-primary/15
                  {{ else }}bg-muted text-muted-foreground
                  {{ end }}">
-      {{ if lt $n $cur }}<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>{{ else }}{{ $n }}{{ end }}
+      {{ if lt $n $cur }}<svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>{{ else }}{{ $n }}{{ end }}
     </span>
     <span class="text-xs font-medium {{ if le $n $cur }}text-foreground{{ else }}text-muted-foreground{{ end }} hidden sm:inline">{{ $label }}</span>
     {{ if lt $n 5 }}<span class="h-px flex-1 {{ if lt $n $cur }}bg-primary{{ else }}bg-border{{ end }}"></span>{{ end }}

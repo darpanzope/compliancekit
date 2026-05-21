@@ -122,8 +122,8 @@ table.list tbody tr:hover { background: var(--legacy-panel-2); }
                 class="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition"
                 :class="!sidebarOpen && 'mx-auto'"
                 aria-label="Toggle sidebar">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" x-show="sidebarOpen"><polyline points="15 18 9 12 15 6"/></svg>
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" x-show="!sidebarOpen" x-cloak><polyline points="9 18 15 12 9 6"/></svg>
+          <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" x-show="sidebarOpen"><polyline points="15 18 9 12 15 6"/></svg>
+          <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" x-show="!sidebarOpen" x-cloak><polyline points="9 18 15 12 9 6"/></svg>
         </button>
       </div>
 
@@ -134,10 +134,11 @@ table.list tbody tr:hover { background: var(--legacy-panel-2); }
         <a href="{{ $nav.Href }}"
            class="group flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors"
            :class="sidebarOpen ? 'justify-start' : 'justify-center px-0'"
-           {{ if eq $active $nav.Key }}data-active="true"{{ end }}
+           {{ if eq $active $nav.Key }}data-active="true" aria-current="page"{{ end }}
            {{ if eq $active $nav.Key }}style="background-color: hsl(var(--sidebar-accent)); color: hsl(var(--sidebar-foreground));"{{ else }}style="color: hsl(var(--muted-foreground));"{{ end }}>
           <span class="inline-flex h-5 w-5 shrink-0 items-center justify-center" aria-hidden="true">{{ $nav.Icon }}</span>
           <span x-show="sidebarOpen" class="truncate">{{ $nav.Label }}</span>
+          <span x-show="!sidebarOpen" class="sr-only">{{ $nav.Label }}</span>
         </a>
         {{ end }}
       </nav>
@@ -154,7 +155,7 @@ table.list tbody tr:hover { background: var(--legacy-panel-2); }
               <span class="font-semibold text-sm">compliancekit</span>
             </a>
             <button type="button" @click="mobileMenuOpen = false" class="text-muted-foreground hover:text-foreground" aria-label="Close menu">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
           </div>
           <nav class="p-3 space-y-1">
@@ -163,6 +164,7 @@ table.list tbody tr:hover { background: var(--legacy-panel-2); }
             <a href="{{ $nav.Href }}"
                @click="mobileMenuOpen = false"
                class="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium"
+               {{ if eq $active $nav.Key }}aria-current="page"{{ end }}
                {{ if eq $active $nav.Key }}style="background-color: hsl(var(--sidebar-accent)); color: hsl(var(--sidebar-foreground));"{{ else }}style="color: hsl(var(--muted-foreground));"{{ end }}>
               <span class="inline-flex h-5 w-5 shrink-0 items-center justify-center" aria-hidden="true">{{ $nav.Icon }}</span>
               <span>{{ $nav.Label }}</span>
@@ -182,7 +184,7 @@ table.list tbody tr:hover { background: var(--legacy-panel-2); }
                 class="lg:hidden inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted"
                 @click="mobileMenuOpen = true"
                 aria-label="Open menu">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+          <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
         </button>
 
         <div class="flex-1"></div>
@@ -211,13 +213,13 @@ table.list tbody tr:hover { background: var(--legacy-panel-2); }
           <div x-show="open" x-cloak
                class="absolute right-0 top-full mt-2 w-40 rounded-md border border-border bg-popover text-popover-foreground shadow-elevated z-50">
             <button type="button" @click="setTheme('light');  open = false" class="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted text-left">
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/></svg> Light
+              <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/></svg> Light
             </button>
             <button type="button" @click="setTheme('dark');   open = false" class="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted text-left">
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg> Dark
+              <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg> Dark
             </button>
             <button type="button" @click="setTheme('system'); open = false" class="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted text-left">
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg> System
+              <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg> System
             </button>
           </div>
         </div>
@@ -296,7 +298,7 @@ table.list tbody tr:hover { background: var(--legacy-panel-2); }
     <div class="absolute inset-0 bg-foreground/30 backdrop-blur-sm" @click="visible = false"></div>
     <div class="relative w-[640px] max-w-[90vw] ck-card-elevated overflow-hidden">
       <div class="border-b border-border p-3 flex items-center gap-2">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-muted-foreground"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-muted-foreground"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         <input type="text" x-model="query" @input.debounce.150ms="run()" placeholder="Search resources, findings, checks, providers..."
                x-ref="input" class="flex-1 bg-transparent text-sm focus:outline-none placeholder:text-muted-foreground">
         <kbd class="px-1.5 py-0.5 text-[10px] rounded bg-muted border border-border text-muted-foreground font-mono">esc</kbd>
