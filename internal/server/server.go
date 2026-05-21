@@ -115,6 +115,17 @@ func New(cfg Config) *Server {
 // stack. Callers should attach routes before Run().
 func (s *Server) Router() chi.Router { return s.router }
 
+// QueueDepthObserver returns the daemon's worker.DepthObserver
+// implementation so cmd/serve can wire it into the worker pool's
+// autoscale sampler. nil-safe — if the metrics registry isn't yet
+// constructed (zero-value Server), the worker pool silently no-ops.
+//
+// The interface signature lives in internal/server/worker; we
+// satisfy it without importing the package to avoid a circular dep.
+func (s *Server) QueueDepthObserver() interface{ ObserveQueueDepth(int) } {
+	return s.metrics
+}
+
 // Addr returns the bound listen address; useful for tests that need
 // the concrete port when cfg.Port == 0 (ephemeral) is requested.
 func (s *Server) Addr() string { return s.httpSrv.Addr }
@@ -149,9 +160,19 @@ func (s *Server) Run(ctx context.Context) error {
 // updates per request. Kept on its own type so future-phase handlers
 // can register their own counters without touching server.go.
 type metricsRegistry struct {
-	registry *prometheus.Registry
-	reqs     *prometheus.CounterVec
-	dur      *prometheus.HistogramVec
+	registry   *prometheus.Registry
+	reqs       *prometheus.CounterVec
+	dur        *prometheus.HistogramVec
+	queueDepth prometheus.Gauge // v1.11 phase 8 — worker queue depth
+}
+
+// ObserveQueueDepth implements worker.DepthObserver so the worker
+// pool's autoscale sampler updates the daemon's Prometheus gauge.
+func (m *metricsRegistry) ObserveQueueDepth(d int) {
+	if m == nil || m.queueDepth == nil {
+		return
+	}
+	m.queueDepth.Set(float64(d))
 }
 
 func newMetrics() *metricsRegistry {
@@ -169,12 +190,18 @@ func newMetrics() *metricsRegistry {
 		Help:      "Wall-clock duration of HTTP requests, labeled by method + path template.",
 		Buckets:   prometheus.DefBuckets,
 	}, []string{"method", "path"})
+	queueDepth := prometheus.NewGauge(prometheus.GaugeOpts{
+		Namespace: "compliancekit",
+		Subsystem: "worker",
+		Name:      "queue_depth",
+		Help:      "Current count of scans in queued+running state. Drives the v1.11 phase 8 autoscale.",
+	})
 	// Standard Go process + runtime collectors so an operator gets
 	// goroutine count, GC pause, FD count, etc. out of the box.
 	reg.MustRegister(collectors.NewGoCollector())
 	reg.MustRegister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
-	reg.MustRegister(reqs, dur)
-	return &metricsRegistry{registry: reg, reqs: reqs, dur: dur}
+	reg.MustRegister(reqs, dur, queueDepth)
+	return &metricsRegistry{registry: reg, reqs: reqs, dur: dur, queueDepth: queueDepth}
 }
 
 // middleware observes each request — counts + latency histogram. Path

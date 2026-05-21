@@ -35,13 +35,16 @@ import (
 // start with Start (returns immediately after spawning goroutines);
 // stop via the parent context's cancellation.
 type Pool struct {
-	store       *store.Store
-	runner      Runner
-	concurrency int
-	pollEvery   time.Duration
-	log         *slog.Logger
-	events      *events.Producer // v1.6: nil-safe; nil means no fan-out
-	wg          sync.WaitGroup
+	store          *store.Store
+	runner         Runner
+	concurrency    int // baseline worker count
+	maxConcurrency int // upper bound for autoscale (v1.11 phase 8)
+	pollEvery      time.Duration
+	log            *slog.Logger
+	events         *events.Producer // v1.6: nil-safe; nil means no fan-out
+	observer       DepthObserver    // v1.11 phase 8: queue-depth metric sink
+	burstJobs      chan Job         // v1.11 phase 8: extra-worker job channel
+	wg             sync.WaitGroup
 }
 
 // Job is one row picked off the queue. The pool hands it to the
@@ -87,6 +90,11 @@ type Config struct {
 	// Concurrency caps how many jobs run in parallel. 0 → 2.
 	Concurrency int
 
+	// MaxConcurrency is the upper bound the v1.11 phase 8 autoscale
+	// loop can grow to when queue depth sustains above the threshold.
+	// 0 → Concurrency + 4 (room for one burst of 4 extra workers).
+	MaxConcurrency int
+
 	// PollEvery is how often the SQLite path scans the scans table
 	// for new queued rows. Ignored on Postgres (LISTEN/NOTIFY is
 	// event-driven). 0 → 500ms.
@@ -102,6 +110,11 @@ type Config struct {
 	// the worker still runs but no events fan out to the daemon's
 	// /api/v1/events subscribers.
 	Events *events.Producer
+
+	// DepthObserver is the v1.11 phase 8 queue-depth metric sink.
+	// nil-safe: when unset, the autoscale loop still runs but the
+	// gauge isn't exported.
+	DepthObserver DepthObserver
 }
 
 // Default returns the recommended baseline Config.
@@ -128,13 +141,21 @@ func New(st *store.Store, cfg Config) *Pool {
 	if cfg.Log == nil {
 		cfg.Log = slog.Default()
 	}
+	if cfg.MaxConcurrency <= 0 {
+		cfg.MaxConcurrency = cfg.Concurrency + defaultMaxBurst
+	}
+	if cfg.MaxConcurrency < cfg.Concurrency {
+		cfg.MaxConcurrency = cfg.Concurrency
+	}
 	return &Pool{
-		store:       st,
-		runner:      cfg.Runner,
-		concurrency: cfg.Concurrency,
-		pollEvery:   cfg.PollEvery,
-		log:         cfg.Log,
-		events:      cfg.Events,
+		store:          st,
+		runner:         cfg.Runner,
+		concurrency:    cfg.Concurrency,
+		maxConcurrency: cfg.MaxConcurrency,
+		pollEvery:      cfg.PollEvery,
+		log:            cfg.Log,
+		events:         cfg.Events,
+		observer:       cfg.DepthObserver,
 	}
 }
 
@@ -153,6 +174,14 @@ func (p *Pool) publishEvent(typ events.Type, entityID string, data any) {
 // WaitGroup (use Stop()).
 func (p *Pool) Start(ctx context.Context) {
 	jobs := make(chan Job, p.concurrency*2)
+	// v1.11 phase 8 — burst workers share a separate channel so the
+	// baseline pool doesn't block waiting for an autoscaled worker.
+	// The producer fans newly-claimed jobs across both channels (jobs
+	// first, then burstJobs if jobs is full).
+	if p.maxConcurrency > p.concurrency {
+		p.burstJobs = make(chan Job, (p.maxConcurrency-p.concurrency)*2)
+	}
+	p.startDepthSampler(ctx)
 
 	// Producer: SQLite path uses a poll loop; Postgres uses
 	// LISTEN/NOTIFY when phase-2 wiring is fully exercised. For
@@ -167,6 +196,9 @@ func (p *Pool) Start(ctx context.Context) {
 			select {
 			case <-ctx.Done():
 				close(jobs)
+				if p.burstJobs != nil {
+					close(p.burstJobs)
+				}
 				return
 			case <-ticker.C:
 				p.drainQueue(ctx, jobs)
@@ -209,10 +241,30 @@ func (p *Pool) drainQueue(ctx context.Context, jobs chan<- Job) {
 		if !ok {
 			return
 		}
+		// v1.11 phase 8 — prefer the baseline channel; spill to the
+		// burst channel only when the baseline workers are saturated.
+		// Non-blocking select so a saturated baseline + no autoscaled
+		// burst doesn't deadlock (the next tick retries).
 		select {
 		case <-ctx.Done():
 			return
 		case jobs <- j:
+		default:
+			if p.burstJobs != nil {
+				select {
+				case <-ctx.Done():
+					return
+				case p.burstJobs <- j:
+				case jobs <- j: // baseline freed up while we were deciding
+				}
+				continue
+			}
+			// No burst pool — block on the baseline.
+			select {
+			case <-ctx.Done():
+				return
+			case jobs <- j:
+			}
 		}
 	}
 }
