@@ -1,0 +1,106 @@
+{{define "content"}}
+<div class="max-w-5xl mx-auto">
+  <div class="mb-6">
+    <a href="/settings/roles" class="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5">
+      <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      Roles
+    </a>
+    <div class="mt-2 flex items-baseline gap-3">
+      <h1 class="text-2xl font-semibold tracking-tight">{{ .Role.Name }}</h1>
+      {{ if .Role.IsBuiltin }}<span class="text-[10px] uppercase tracking-wider text-muted-foreground bg-muted px-1.5 py-0.5 rounded">built-in</span>{{ end }}
+    </div>
+    {{ if .Role.Description }}<p class="text-sm text-muted-foreground mt-1">{{ .Role.Description }}</p>{{ end }}
+  </div>
+
+  {{ if eq .Flash "saved" }}<div class="mb-4 rounded-md border border-success/30 bg-success/10 px-3 py-2 text-sm text-success">Permissions updated.</div>{{ end }}
+  {{ if eq .Flash "assigned" }}<div class="mb-4 rounded-md border border-success/30 bg-success/10 px-3 py-2 text-sm text-success">User assigned.</div>{{ end }}
+  {{ if eq .Flash "revoked" }}<div class="mb-4 rounded-md border border-warning/30 bg-warning/10 px-3 py-2 text-sm text-warning">User removed.</div>{{ end }}
+  {{ if eq .Error "builtin-immutable" }}<div class="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">Built-in roles cannot be modified.</div>{{ end }}
+  {{ if eq .Error "missing-user" }}<div class="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">Pick a user to assign.</div>{{ end }}
+
+  <h2 class="text-sm font-medium text-foreground mb-2">Permission matrix</h2>
+  <p class="text-xs text-muted-foreground mb-3">Each row is a resource; each column is an action. Check the boxes the role should grant.</p>
+
+  <form action="/settings/roles/{{ .Role.ID }}" method="post" class="ck-card overflow-hidden mb-6">
+    <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
+    <table class="w-full text-sm">
+      <thead class="bg-muted/50">
+        <tr class="text-left">
+          <th class="px-4 py-3 text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Resource</th>
+          {{ range .Actions }}
+          <th class="px-4 py-3 text-[11px] uppercase tracking-wider text-muted-foreground font-medium text-center">{{ . }}</th>
+          {{ end }}
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-border">
+        {{ $grants := .GrantLookup }}
+        {{ $builtin := .Role.IsBuiltin }}
+        {{ $actions := .Actions }}
+        {{ range $res := .Resources }}
+        <tr class="hover:bg-muted/30 transition-colors">
+          <td class="px-4 py-3 font-mono text-xs">{{ $res }}</td>
+          {{ range $act := $actions }}
+          <td class="px-4 py-3 text-center">
+            <input type="checkbox" name="perm[{{ $res }}:{{ $act }}]" value="1"
+                   {{ if index $grants (printf "%s:%s" $res $act) }}checked{{ end }}
+                   {{ if $builtin }}disabled{{ end }}
+                   class="h-4 w-4 rounded border-input text-primary focus:ring-ring">
+          </td>
+          {{ end }}
+        </tr>
+        {{ end }}
+      </tbody>
+    </table>
+    {{ if not .Role.IsBuiltin }}
+    <div class="flex justify-end p-4 bg-muted/30 border-t border-border">
+      <button type="submit" class="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary text-primary-foreground px-4 text-sm font-medium hover:opacity-90 transition">Save matrix</button>
+    </div>
+    {{ end }}
+  </form>
+
+  <!-- Assignments panel -->
+  <h2 class="text-sm font-medium text-foreground mb-2">Assigned users ({{ len .Members }})</h2>
+  <div class="ck-card overflow-hidden">
+    <table class="w-full text-sm">
+      <thead class="bg-muted/50">
+        <tr class="text-left">
+          <th class="px-4 py-3 text-[11px] uppercase tracking-wider text-muted-foreground font-medium">User</th>
+          <th class="px-4 py-3 text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Email</th>
+          <th class="px-4 py-3"></th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-border">
+        {{ range .Members }}
+        <tr class="hover:bg-muted/30 transition-colors">
+          <td class="px-4 py-3">{{ if .Name }}{{ .Name }}{{ else }}<span class="text-muted-foreground">{{ .Email }}</span>{{ end }}</td>
+          <td class="px-4 py-3 font-mono text-xs text-muted-foreground">{{ .Email }}</td>
+          <td class="px-4 py-3 text-right">
+            <form action="/settings/roles/{{ $.Role.ID }}/users/{{ .ID }}/remove" method="post" class="inline-flex">
+              <input type="hidden" name="csrf_token" value="{{ $.CSRFToken }}">
+              <button type="submit" class="text-xs text-destructive hover:underline">Revoke</button>
+            </form>
+          </td>
+        </tr>
+        {{ else }}
+        <tr><td colspan="3" class="p-6 text-center text-sm text-muted-foreground">No users assigned yet.</td></tr>
+        {{ end }}
+      </tbody>
+    </table>
+  </div>
+
+  {{ if .AllUsers }}
+  <form action="/settings/roles/{{ .Role.ID }}/users" method="post" class="ck-card p-4 mt-6 flex items-end gap-3">
+    <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
+    <div class="flex-1">
+      <label for="user_id" class="block text-xs font-medium text-foreground mb-1">Assign user</label>
+      <select id="user_id" name="user_id" required
+              class="w-full h-10 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring transition">
+        <option value="">— pick a user —</option>
+        {{ range .AllUsers }}<option value="{{ .ID }}">{{ .Label }}</option>{{ end }}
+      </select>
+    </div>
+    <button type="submit" class="inline-flex h-10 items-center gap-1.5 rounded-md bg-primary text-primary-foreground px-4 text-sm font-medium hover:opacity-90 transition">Assign</button>
+  </form>
+  {{ end }}
+</div>
+{{end}}

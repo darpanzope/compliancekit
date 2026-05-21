@@ -35,6 +35,7 @@ import (
 	"github.com/darpanzope/compliancekit/internal/server/collab"
 	"github.com/darpanzope/compliancekit/internal/server/comments"
 	"github.com/darpanzope/compliancekit/internal/server/logs"
+	srvrbac "github.com/darpanzope/compliancekit/internal/server/rbac"
 	"github.com/darpanzope/compliancekit/internal/server/store"
 	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
@@ -228,6 +229,7 @@ type UI struct {
 	teams           *collab.Teams       // v1.8 phase 8 — teams CRUD
 	followersRepo   *collab.Followers   // v1.8 phase 8 — resource follower opt-in
 	rulesRepo       *rules.Repo         // v1.9 phase 0 — rules engine persistence
+	roles           *srvrbac.Store      // v1.12 phase 0 — role + permission grid
 }
 
 // New constructs the UI handle.
@@ -316,6 +318,7 @@ func (u *UI) Mount(r chi.Router) {
 		u.mountCommentsRoutes(r)
 		u.mountCollabRoutes(r)
 		u.mountTeamsRoutes(r)
+		u.mountRolesRoutes(r)
 		u.mountInboxV2Routes(r)
 		u.mountRulesRoutes(r)
 		u.mountRemediationRoutes(r)

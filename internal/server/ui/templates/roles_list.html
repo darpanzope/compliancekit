@@ -1,0 +1,74 @@
+{{define "content"}}
+<div class="max-w-5xl mx-auto">
+  <div class="mb-6">
+    <a href="/settings/providers" class="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5">
+      <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      Settings
+    </a>
+    <h1 class="mt-2 text-2xl font-semibold tracking-tight">Roles &amp; permissions</h1>
+    <p class="text-sm text-muted-foreground mt-1">Built-in roles cover the common cases; custom roles compose any combination of (resource, action) tuples.</p>
+  </div>
+
+  {{ if eq .Flash "created" }}<div class="mb-4 rounded-md border border-success/30 bg-success/10 px-3 py-2 text-sm text-success">Role created. Edit the permission matrix below.</div>{{ end }}
+  {{ if eq .Flash "deleted" }}<div class="mb-4 rounded-md border border-warning/30 bg-warning/10 px-3 py-2 text-sm text-warning">Role deleted.</div>{{ end }}
+  {{ if eq .Error "missing-name" }}<div class="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">Name is required.</div>{{ end }}
+  {{ if eq .Error "name-taken" }}<div class="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">That role name is already taken.</div>{{ end }}
+  {{ if eq .Error "builtin-immutable" }}<div class="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">Built-in roles cannot be modified or deleted.</div>{{ end }}
+
+  <!-- Create form -->
+  <form action="/settings/roles" method="post" class="ck-card p-5 mb-6 space-y-3">
+    <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
+    <div>
+      <label for="name" class="block text-xs font-medium text-foreground mb-1">Role name</label>
+      <input type="text" id="name" name="name" required placeholder="auditor-eu"
+             class="w-full h-10 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring transition">
+    </div>
+    <div>
+      <label for="description" class="block text-xs font-medium text-foreground mb-1">Description (optional)</label>
+      <input type="text" id="description" name="description" placeholder="Read-only access for the EU-region auditors"
+             class="w-full h-10 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring transition">
+    </div>
+    <div class="flex items-center justify-end pt-1">
+      <button type="submit" class="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary text-primary-foreground px-4 text-sm font-medium hover:opacity-90 transition">Create role</button>
+    </div>
+  </form>
+
+  <!-- Existing roles -->
+  <div class="ck-card overflow-hidden">
+    <table class="w-full text-sm">
+      <thead class="bg-muted/50">
+        <tr class="text-left">
+          <th class="px-4 py-3 text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Name</th>
+          <th class="px-4 py-3 text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Description</th>
+          <th class="px-4 py-3 text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Permissions</th>
+          <th class="px-4 py-3 text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Users</th>
+          <th class="px-4 py-3"></th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-border">
+        {{ range .Roles }}
+        <tr class="hover:bg-muted/30 transition-colors">
+          <td class="px-4 py-3">
+            <a href="/settings/roles/{{ .ID }}" class="font-medium text-primary hover:underline">{{ .Name }}</a>
+            {{ if .IsBuiltin }}<span class="ml-2 text-[10px] uppercase tracking-wider text-muted-foreground bg-muted px-1.5 py-0.5 rounded">built-in</span>{{ end }}
+          </td>
+          <td class="px-4 py-3 text-muted-foreground">{{ .Description }}</td>
+          <td class="px-4 py-3 tabular-nums">{{ .PermCount }}</td>
+          <td class="px-4 py-3 tabular-nums">{{ .UserCount }}</td>
+          <td class="px-4 py-3 text-right">
+            {{ if not .IsBuiltin }}
+            <form action="/settings/roles/{{ .ID }}/delete" method="post" class="inline-flex" onsubmit="return confirm('Delete this role? Users assigned to it will lose its permissions.');">
+              <input type="hidden" name="csrf_token" value="{{ $.CSRFToken }}">
+              <button type="submit" class="text-xs text-destructive hover:underline">Delete</button>
+            </form>
+            {{ end }}
+          </td>
+        </tr>
+        {{ else }}
+        <tr><td colspan="5" class="p-8 text-center text-sm text-muted-foreground">No roles defined yet.</td></tr>
+        {{ end }}
+      </tbody>
+    </table>
+  </div>
+</div>
+{{end}}
