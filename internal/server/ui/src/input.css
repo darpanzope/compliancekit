@@ -235,6 +235,25 @@ html.contrast-more.dark {
   --destructive: 0 100% 65%;
 }
 
+/*
+  v1.10 phase 5 — Reduced motion.
+  Honors prefers-reduced-motion: reduce by zeroing every CSS
+  animation + transition. Operators with vestibular disorders see
+  instant state changes instead of slide-in/fade animations.
+  The !important is load-bearing — Tailwind's transition utilities
+  would otherwise win the cascade.
+*/
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 @layer components {
   /* Card surface used across the daemon UI. Composes the card token +
      soft shadow. Add new variants here (flat/raised/floating/glass at
