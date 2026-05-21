@@ -35,10 +35,13 @@ run: ## run via go run; pass args via ARGS=
 	go run ./cmd/compliancekit $(ARGS)
 
 test: ## unit tests with race detector
-	go test -race -timeout=60s ./...
+	go test -race -short -timeout=60s ./...
 
 test-external: ## v1.0 contract test under the perspective of an external embedder
 	go test -tags=external -timeout=60s ./pkg/compliancekit/...
+
+bench-server: ## v1.11 phase 9 — perf benchmarks (100k findings / 10k resources / 1k scans)
+	go test -bench=. -benchmem -benchtime=3s -run=^$ -timeout=15m ./internal/server/api/
 
 test-integration: ## bring up docker harness, run integration tests, tear down
 	docker compose -f test/compose.yaml up -d

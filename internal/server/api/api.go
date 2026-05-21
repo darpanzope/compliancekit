@@ -87,6 +87,10 @@ func (a *API) Mount(r chi.Router) {
 		r.Post("/scans/ingest", a.scopeGate(auth.ScopeScansWrite, a.ingestScan))
 
 		r.Get("/findings", a.scopeGate(auth.ScopeFindingsRead, a.listFindings))
+		// v1.11 phase 9 — streaming NDJSON export for warehouse
+		// loaders + large client-side analytics. Same filter shape as
+		// /findings but no pagination — every matching row streams.
+		r.Get("/findings.ndjson", a.scopeGate(auth.ScopeFindingsRead, a.streamFindings))
 		r.Get("/findings/{id}", a.scopeGate(auth.ScopeFindingsRead, a.getFinding))
 
 		r.Get("/resources", a.scopeGate(auth.ScopeScansRead, a.listResources))
