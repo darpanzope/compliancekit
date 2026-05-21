@@ -44,6 +44,7 @@ const pkgDir = "pkg/compliancekit"
 // "# subpackage: <path>" header so additions to a subpackage are
 // just as visible at review time as additions to the root.
 var subpkgDirs = []string{
+	"pkg/compliancekit/rbac",  // v1.12+
 	"pkg/compliancekit/rules", // v1.9+
 }
 

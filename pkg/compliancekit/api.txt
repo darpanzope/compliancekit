@@ -90,6 +90,57 @@ type User struct
 type Vulnerability struct
 type WaiverRef struct
 
+# subpackage: pkg/compliancekit/rbac
+const ActionAdmin Action
+const ActionDelete Action
+const ActionRead Action
+const ActionWrite Action
+const BuiltinAdmin = "admin"
+const BuiltinAuditor = "auditor"
+const BuiltinEditor = "editor"
+const BuiltinViewer = "viewer"
+const ResourceAPITokens Resource
+const ResourceAuditLog Resource
+const ResourceComments Resource
+const ResourceFindings Resource
+const ResourceFrameworks Resource
+const ResourcePlugins Resource
+const ResourceRules Resource
+const ResourceScans Resource
+const ResourceSettings Resource
+const ResourceUsers Resource
+const ResourceWaivers Resource
+func NewSet(userID string) *Set
+method (*Role) Has(res Resource, act Action) bool
+method (*Set) Add(res Resource, act Action)
+method (*Set) Has(res Resource, act Action) bool
+method (*Set) HasAny(res Resource) bool
+type Action string
+type Assignment struct
+type Permission struct
+type Resource string
+type Role struct
+type Set struct
+var AllActions = []Action{
+	ActionRead,
+	ActionWrite,
+	ActionDelete,
+	ActionAdmin,
+}
+var AllResources = []Resource{
+	ResourceScans,
+	ResourceFindings,
+	ResourceSettings,
+	ResourceUsers,
+	ResourceAPITokens,
+	ResourcePlugins,
+	ResourceAuditLog,
+	ResourceRules,
+	ResourceWaivers,
+	ResourceFrameworks,
+	ResourceComments,
+}
+
 # subpackage: pkg/compliancekit/rules
 const OpAnd Op
 const OpNone Op
