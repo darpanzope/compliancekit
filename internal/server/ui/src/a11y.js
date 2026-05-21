@@ -105,4 +105,73 @@
   window.ck = window.ck || {};
   window.ck.installFocusTrap = installFocusTrap;
   window.ck.focusMain = focusMain;
+
+  // ─── v1.10 phase 9 — Inline help panel (`?` key) ────────────────
+  //
+  // Pressing "?" anywhere except inside an editable surface opens
+  // a right-docked help panel. The panel reads its content from
+  // <template id="ck-help-content"> in the current page — pages
+  // that haven't defined help fall back to a generic "no help"
+  // notice. Esc closes.
+  //
+  // Operators can also click the topbar help button (mounted by
+  // base.html) to open the panel.
+  function isEditing(el) {
+    if (!el) return false;
+    if (el.isContentEditable) return true;
+    var tag = (el.tagName || '').toLowerCase();
+    return tag === 'input' || tag === 'textarea' || tag === 'select';
+  }
+
+  function ensureHelpPanel() {
+    var panel = document.getElementById('ck-help-panel');
+    if (panel) return panel;
+    panel = document.createElement('aside');
+    panel.id = 'ck-help-panel';
+    panel.setAttribute('role', 'dialog');
+    panel.setAttribute('aria-label', 'Help panel');
+    panel.setAttribute('aria-modal', 'false');
+    panel.hidden = true;
+    panel.tabIndex = -1;
+    panel.className = 'fixed top-0 right-0 bottom-0 z-50 w-full sm:w-96 bg-card border-l border-border shadow-floating overflow-y-auto';
+    panel.innerHTML =
+      '<div class="p-5 border-b border-border flex items-center justify-between">' +
+        '<h2 class="font-semibold text-sm">Help</h2>' +
+        '<button type="button" id="ck-help-close" class="text-muted-foreground hover:text-foreground" aria-label="Close help panel">✕</button>' +
+      '</div>' +
+      '<div id="ck-help-body" class="p-5 text-sm space-y-3 prose-sm"></div>';
+    document.body.appendChild(panel);
+    document.getElementById('ck-help-close').addEventListener('click', closeHelpPanel);
+    return panel;
+  }
+
+  function openHelpPanel() {
+    var panel = ensureHelpPanel();
+    var body = document.getElementById('ck-help-body');
+    var tpl = document.getElementById('ck-help-content');
+    if (tpl) {
+      body.innerHTML = tpl.innerHTML;
+    } else {
+      body.innerHTML = '<p class="text-muted-foreground">No help registered for this page yet.</p>' +
+        '<p class="text-xs text-muted-foreground mt-2">Press <kbd class="ck-kbd">Esc</kbd> to close.</p>';
+    }
+    panel.hidden = false;
+    panel.focus();
+  }
+
+  function closeHelpPanel() {
+    var panel = document.getElementById('ck-help-panel');
+    if (panel) panel.hidden = true;
+  }
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key === '?' && !isEditing(document.activeElement)) {
+      e.preventDefault();
+      openHelpPanel();
+    }
+    if (e.key === 'Escape') closeHelpPanel();
+  });
+
+  window.ck.openHelp = openHelpPanel;
+  window.ck.closeHelp = closeHelpPanel;
 })();
