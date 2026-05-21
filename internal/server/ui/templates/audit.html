@@ -18,7 +18,7 @@
       </thead>
       <tbody class="divide-y divide-border">
         {{ range .Items }}
-        <tr class="hover:bg-muted/30 transition-colors">
+        <tr class="ck-vrow-sm hover:bg-muted/30 transition-colors">
           <td class="px-4 py-3 text-xs text-muted-foreground tabular-nums whitespace-nowrap">{{ .CreatedIn }}</td>
           <td class="px-4 py-3 text-xs">{{ if .ActorEmail }}{{ .ActorEmail }}{{ else }}<span class="text-muted-foreground">system</span>{{ end }}</td>
           <td class="px-4 py-3 font-mono text-xs">{{ .Action }}</td>

@@ -28,7 +28,7 @@ values as repeated name=value pairs natively. v1.5 Phase 1.
 
 {{ define "findings_row_body" }}
 {{ range .Items }}
-<tr class="hover:bg-muted/30 cursor-pointer transition-colors"
+<tr class="ck-vrow hover:bg-muted/30 cursor-pointer transition-colors"
     hx-get="/findings/{{ .ID }}/detail"
     hx-target="#finding-detail-panel"
     hx-swap="innerHTML"

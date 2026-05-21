@@ -73,7 +73,7 @@
         </thead>
         <tbody class="divide-y divide-border">
           {{ range .Items }}
-          <tr onclick="window.location='/scans/{{.ID}}'" data-scan-id="{{.ID}}" class="hover:bg-muted/30 cursor-pointer transition-colors">
+          <tr onclick="window.location='/scans/{{.ID}}'" data-scan-id="{{.ID}}" class="ck-vrow hover:bg-muted/30 cursor-pointer transition-colors">
             <td class="px-4 py-3 font-mono text-xs">{{ .CreatedAt }}</td>
             <td class="px-4 py-3">
               {{ if eq .Status "completed" }}<span data-status-pill class="inline-flex items-center gap-1.5 text-xs text-success"><span class="h-2 w-2 rounded-full bg-success"></span>completed</span>

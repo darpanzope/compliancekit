@@ -275,6 +275,32 @@ html.contrast-more.dark {
   .ck-pill-low      { @apply px-2 py-0.5 rounded-full text-xs font-medium text-white; background-color: hsl(var(--severity-low)); }
   .ck-pill-info     { @apply px-2 py-0.5 rounded-full text-xs font-medium text-white; background-color: hsl(var(--severity-info)); }
 
+  /*
+    v1.11 phase 1 — Virtualised scroll via content-visibility.
+    Mark a long table row (or list <li>) with `ck-vrow` and the
+    browser skips its layout + paint when scrolled offscreen.
+    contain-intrinsic-size reserves vertical space so the scroll
+    height stays stable while content is virtual. This is the
+    "windowing (visible rows + buffer)" pattern from the v1.11
+    ROADMAP — browser-native, no JS framework needed.
+
+    Browser support: Chrome/Edge 85+, Firefox 125+, Safari 18+.
+    On older browsers the rule is a no-op (rows render normally)
+    so the UI degrades gracefully.
+  */
+  .ck-vrow {
+    content-visibility: auto;
+    contain-intrinsic-size: 0 56px; /* approx row height for the explorer table */
+  }
+  .ck-vrow-sm {
+    content-visibility: auto;
+    contain-intrinsic-size: 0 36px; /* compact rows (audit log / inbox) */
+  }
+  .ck-vrow-lg {
+    content-visibility: auto;
+    contain-intrinsic-size: 0 96px; /* card-style rows (rules, teams) */
+  }
+
   /* v1.10 phase 0/1 — Skip-link. Visually hidden until it receives
      keyboard focus, then docks to the top-left. Operators tabbing
      into the page hit it first; Enter jumps focus into <main>. */
