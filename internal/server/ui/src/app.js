@@ -38,6 +38,28 @@
 // so the chrome's nav bar can render a "reconnecting…" badge when the
 // stream drops. Phase 7 fleshes out the UX; phase 1 lays the wire.
 window.ck = window.ck || {};
+
+// v1.10 phase 0/3 — ARIA live-region helper. Pushes a string into
+// the polite (or assertive) announcer mounted in base.html. The v1.6
+// SSE handlers + Cmd-K palette + form-success flashes all funnel
+// here so screen-reader users hear the same updates sighted users
+// see.
+//
+// Polite = wait for the user's current speech to finish (the default
+// for everything except "scan failed" / "critical finding" alerts).
+// Assertive = interrupt — reserved for must-hear events.
+window.ck.announce = function (msg, opts) {
+  if (!msg) return;
+  var id = (opts && opts.assertive) ? 'ck-announcer-assertive' : 'ck-announcer';
+  var el = document.getElementById(id);
+  if (!el) return;
+  // Toggling the textContent on a single node sometimes fails to fire
+  // a re-announce when the message is identical. Clear first, then
+  // set on the next tick — well-known a11y pattern.
+  el.textContent = '';
+  setTimeout(function () { el.textContent = msg; }, 50);
+};
+
 window.ck.events = (function () {
   var listeners = {};      // {type: [callback, ...]}
   var allListeners = [];   // wildcard handlers (receive every event)

@@ -170,4 +170,34 @@
   .ck-pill-medium   { @apply px-2 py-0.5 rounded-full text-xs font-medium text-white; background-color: hsl(var(--severity-medium)); }
   .ck-pill-low      { @apply px-2 py-0.5 rounded-full text-xs font-medium text-white; background-color: hsl(var(--severity-low)); }
   .ck-pill-info     { @apply px-2 py-0.5 rounded-full text-xs font-medium text-white; background-color: hsl(var(--severity-info)); }
+
+  /* v1.10 phase 0/1 — Skip-link. Visually hidden until it receives
+     keyboard focus, then docks to the top-left. Operators tabbing
+     into the page hit it first; Enter jumps focus into <main>. */
+  .ck-skip-link {
+    @apply sr-only;
+  }
+  .ck-skip-link:focus {
+    @apply not-sr-only fixed top-2 left-2 z-50 px-3 py-2 rounded-md bg-primary text-primary-foreground text-sm font-medium shadow-lg;
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+
+  /* v1.10 phase 0 — sharper, visible focus ring matching the brand
+     ring token. Replaces the browser default + ensures contrast
+     against every surface (card/sidebar/destructive). The :focus-
+     visible variant means mouse clicks don't show the halo — only
+     keyboard navigation does, which is what operators expect. */
+  .ck-focus-ring:focus-visible,
+  a:focus-visible,
+  button:focus-visible,
+  [role="button"]:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible,
+  summary:focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
 }
