@@ -409,7 +409,13 @@ func (r *RealRunner) persistFindings(ctx context.Context, scanID string, finding
 		   last_seen_at = excluded.last_seen_at, last_seen_scan_id = excluded.last_seen_scan_id`,
 		r.phList(7))
 
+	// v1.11 phase 3 — materialize per-scan rollups so the dashboards
+	// don't recompute on every render. resourceSet uses ID-keyed
+	// deduplication so multiple findings on the same resource only
+	// count it once.
 	actionable := 0
+	resourceSet := map[string]struct{}{}
+	sevBreakdown := map[string]int{"critical": 0, "high": 0, "medium": 0, "low": 0, "info": 0}
 	for _, f := range findings {
 		fp := f.Fingerprint()
 		findingID := uuid.NewString()
@@ -425,6 +431,10 @@ func (r *RealRunner) persistFindings(ctx context.Context, scanID string, finding
 			string(frameworkIDs), now, now, now); err != nil {
 			return err
 		}
+		if resID != "" {
+			resourceSet[resID] = struct{}{}
+		}
+		sevBreakdown[f.Severity.String()]++
 		// v1.6 phase 0: fan-out per finding. Toasts (phase 4) +
 		// dashboard counters (phase 1) subscribe to this stream.
 		if r.events != nil {
@@ -449,13 +459,17 @@ func (r *RealRunner) persistFindings(ctx context.Context, scanID string, finding
 	}
 
 	// Rollup onto the scan row. Pool.handleJob owns status +
-	// finished_at + duration_ms; we fill in score + counts.
+	// finished_at + duration_ms; we fill in score + counts +
+	// (v1.11 phase 3) resource_count + severity_breakdown_json.
 	score := hardeningScore(findings)
+	sevJSON, _ := json.Marshal(sevBreakdown)
 	updateQ := fmt.Sprintf( //nolint:gosec // placeholders only; no user input
-		`UPDATE scans SET total_findings = %s, actionable_findings = %s, score = %s WHERE id = %s`,
-		r.ph(1), r.ph(2), r.ph(3), r.ph(4))
+		`UPDATE scans SET total_findings = %s, actionable_findings = %s, score = %s,
+		                  resource_count = %s, severity_breakdown_json = %s
+		 WHERE id = %s`,
+		r.ph(1), r.ph(2), r.ph(3), r.ph(4), r.ph(5), r.ph(6))
 	if _, err := tx.ExecContext(ctx, updateQ,
-		len(findings), actionable, score, scanID); err != nil {
+		len(findings), actionable, score, len(resourceSet), string(sevJSON), scanID); err != nil {
 		return err
 	}
 
