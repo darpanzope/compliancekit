@@ -27,6 +27,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/darpanzope/compliancekit/internal/server/compress"
+	"github.com/darpanzope/compliancekit/internal/server/etag"
 )
 
 // Config carries every knob the daemon takes at startup. Loaded by
@@ -83,6 +84,7 @@ func New(cfg Config) *Server {
 	r.Use(middleware.Recoverer) // panics → 500 + stack in the log
 	r.Use(middleware.Timeout(60 * time.Second))
 	r.Use(securityHeaders)     // CSP, HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy
+	r.Use(etag.Middleware)     // v1.11 phase 5 — weak ETag + If-None-Match 304 short-circuit
 	r.Use(compress.Middleware) // v1.11 phase 4 — brotli + gzip + Vary, SSE-passthrough
 	r.Use(m.middleware)        // count requests + observe latency
 
