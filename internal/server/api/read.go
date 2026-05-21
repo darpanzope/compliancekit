@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -10,6 +11,8 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/darpanzope/compliancekit/internal/server/auth"
+	"github.com/darpanzope/compliancekit/internal/server/respcache"
 	"github.com/darpanzope/compliancekit/internal/server/store"
 	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
@@ -214,6 +217,25 @@ func (a *API) listFindings(w http.ResponseWriter, r *http.Request) {
 	}
 	cursor, per, _ := parseCursorMode(r)
 
+	// v1.11 phase 6 — LRU cache lookup. Per-user scope so admin
+	// + non-admin queries don't collide. Skipped when the cache
+	// isn't wired into the API.
+	cacheKey := ""
+	if a.cache != nil {
+		userID := ""
+		if sess := auth.FromContext(r.Context()); sess != nil {
+			userID = sess.UserID
+		}
+		cacheKey = respcache.KeyFor("findings:", r.URL.RawQuery, cursor.Encode(), userID)
+		if entry, hit := a.cache.Get(cacheKey); hit {
+			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set("ETag", entry.ETag)
+			w.Header().Set("X-Cache", "hit")
+			_, _ = w.Write(entry.Body)
+			return
+		}
+	}
+
 	// Filter parser: each of these maps to a column.
 	type filterDef struct{ key, col string }
 	filters := []filterDef{
@@ -277,7 +299,16 @@ func (a *API) listFindings(w http.ResponseWriter, r *http.Request) {
 		last := items[len(items)-1]
 		next = Cursor{SortKey: last.CreatedAt, ID: last.ID}.Encode()
 	}
-	respondJSON(w, r, http.StatusOK, pageCursor[findingRow]{Items: items, NextCursor: next, PerPage: per})
+	payload := pageCursor[findingRow]{Items: items, NextCursor: next, PerPage: per}
+	// v1.11 phase 6 — populate the cache. Cached body is the
+	// canonical JSON serialization the response writes anyway;
+	// the cache hit path mirrors the same Content-Type + ETag.
+	if cacheKey != "" {
+		if body, err := json.Marshal(payload); err == nil {
+			a.cache.Set(cacheKey, body, "")
+		}
+	}
+	respondJSON(w, r, http.StatusOK, payload)
 }
 
 // listFindingsLegacy is the v1.0-v1.10 OFFSET path. Removed at v1.12.

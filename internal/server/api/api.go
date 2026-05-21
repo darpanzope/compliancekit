@@ -23,6 +23,7 @@ import (
 
 	"github.com/darpanzope/compliancekit/internal/server/auth"
 	"github.com/darpanzope/compliancekit/internal/server/events"
+	"github.com/darpanzope/compliancekit/internal/server/respcache"
 	"github.com/darpanzope/compliancekit/internal/server/store"
 )
 
@@ -35,6 +36,7 @@ type API struct {
 	tokens   *auth.Tokens
 	sessions *auth.Sessions
 	events   *events.Producer // v1.6: SSE event bus (nil OK — handler returns 503)
+	cache    *respcache.Cache // v1.11: LRU; nil OK — cache lookup short-circuits
 }
 
 // New constructs the API handle. The Mount() method wires every
@@ -48,6 +50,15 @@ func New(st *store.Store, users *auth.Users, tokens *auth.Tokens, sessions *auth
 // it 404s and the daemon's polling paths still work.
 func (a *API) WithEvents(p *events.Producer) *API {
 	a.events = p
+	return a
+}
+
+// WithCache installs the v1.11 phase 6 LRU response cache. Returns
+// the receiver for chaining. When set, hot list responses are
+// served from cache (60s TTL, busted on SSE mutation events).
+// Nil/unset means every request hits the DB — the v1.10 default.
+func (a *API) WithCache(c *respcache.Cache) *API {
+	a.cache = c
 	return a
 }
 
