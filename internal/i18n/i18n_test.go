@@ -93,6 +93,30 @@ func TestLocaleFromRequest_BadCookieFallsBack(t *testing.T) {
 	}
 }
 
+// TestLocaleCoverage verifies every non-English catalog covers the
+// load-bearing nav + common + severity keys with a non-empty value
+// (i.e. not falling back to the messageID). Stub catalogs would fail
+// this gate, which is what we want — phase 8's job is to populate
+// every locale before v1.10.0 ships.
+func TestLocaleCoverage(t *testing.T) {
+	b := Default()
+	mustHave := []string{
+		"nav.scans", "nav.findings", "nav.rules", "nav.settings",
+		"common.save", "common.cancel", "common.delete",
+		"severity.critical", "severity.high", "severity.low",
+		"status.pass", "status.fail",
+		"a11y.skip_to_main",
+	}
+	for _, tag := range b.Languages() {
+		for _, key := range mustHave {
+			got := b.Localize(tag, key)
+			if got == key {
+				t.Errorf("locale %s: key %q falls back (catalog gap)", tag, key)
+			}
+		}
+	}
+}
+
 // TestT_ContextRoundtrip exercises the context helpers + canonical
 // T() entry point.
 func TestT_ContextRoundtrip(t *testing.T) {
