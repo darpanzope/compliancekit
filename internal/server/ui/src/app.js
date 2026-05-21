@@ -129,6 +129,9 @@ window.ck.events = (function () {
     if (reconnectBacklogTimer) clearTimeout(reconnectBacklogTimer);
     reconnectBacklogTimer = setTimeout(function () {
       if (reconnectBacklogCount > 0 && window.ck.toastQueue) {
+        if (window.ck.announce) {
+          window.ck.announce('Replayed ' + reconnectBacklogCount + ' missed events; daemon connection restored.');
+        }
         window.ck.toastQueue({
           variant: 'primary',
           title: 'Replayed ' + reconnectBacklogCount + ' missed event(s)',
@@ -329,6 +332,10 @@ function toastSystem() {
           body: (ev.data.check_id || '') + ' on ' + (ev.data.resource || '—'),
           href: '/findings?severity=critical',
         });
+        // v1.10 phase 3 — assertive announcement for must-hear events.
+        window.ck.announce(
+          'New critical finding: ' + (ev.data.check_id || '') + ' on ' + (ev.data.resource || 'unknown resource'),
+          { assertive: true });
       });
       window.ck.events.on('scan.completed', function (ev) {
         var dur = ev.data && ev.data.duration_ms ? ' in ' + ev.data.duration_ms + 'ms' : '';
@@ -338,6 +345,7 @@ function toastSystem() {
           body: ev.entity_id ? 'Scan ' + ev.entity_id.slice(0, 8) : '',
           href: ev.entity_id ? '/scans/' + ev.entity_id : '/scans',
         });
+        window.ck.announce('Scan completed' + dur + '.');
       });
       window.ck.events.on('scan.failed', function (ev) {
         self.push({
@@ -346,6 +354,8 @@ function toastSystem() {
           body: (ev.data && ev.data.error) || 'See /scans for detail',
           href: ev.entity_id ? '/scans/' + ev.entity_id : '/scans',
         });
+        window.ck.announce('Scan failed. ' + ((ev.data && ev.data.error) || ''),
+          { assertive: true });
       });
       window.ck.events.on('webhook.received', function (ev) {
         self.push({
@@ -354,6 +364,7 @@ function toastSystem() {
           body: (ev.data && ev.data.source) || ev.entity_id || '',
           href: '/audit',
         });
+        window.ck.announce('Webhook received from ' + ((ev.data && ev.data.source) || 'unknown'));
       });
     },
     push: function (t) {
