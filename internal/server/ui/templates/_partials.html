@@ -81,10 +81,30 @@ values as repeated name=value pairs natively. v1.5 Phase 1.
 {{ end }}
 
 {{ define "severity_pill" }}
-{{ if eq . "critical" }}<span class="ck-pill-critical">{{.}}</span>
-{{ else if eq . "high" }}<span class="ck-pill-high">{{.}}</span>
-{{ else if eq . "medium" }}<span class="ck-pill-medium">{{.}}</span>
-{{ else if eq . "low" }}<span class="ck-pill-low">{{.}}</span>
-{{ else }}<span class="ck-pill-info">{{.}}</span>
+{{/*
+  v1.10 phase 6 — colour-blind safe severity pill. Glyph prefix
+  ensures the pill is distinguishable even when colour is lost
+  (deuteranopia / protanopia / tritanopia + high-contrast mode).
+  ‼ = critical, ▲ = high, ◆ = medium, ▼ = low, • = info. Glyphs
+  match the v1.1 CLI palette for parity.
+*/}}
+{{ if eq . "critical" }}<span class="ck-pill-critical" aria-label="critical severity"><span aria-hidden="true" class="mr-0.5">‼</span>{{.}}</span>
+{{ else if eq . "high" }}<span class="ck-pill-high" aria-label="high severity"><span aria-hidden="true" class="mr-0.5">▲</span>{{.}}</span>
+{{ else if eq . "medium" }}<span class="ck-pill-medium" aria-label="medium severity"><span aria-hidden="true" class="mr-0.5">◆</span>{{.}}</span>
+{{ else if eq . "low" }}<span class="ck-pill-low" aria-label="low severity"><span aria-hidden="true" class="mr-0.5">▼</span>{{.}}</span>
+{{ else }}<span class="ck-pill-info" aria-label="info severity"><span aria-hidden="true" class="mr-0.5">·</span>{{.}}</span>
+{{ end }}
+{{ end }}
+
+{{/*
+  v1.10 phase 6 — status pill mirrors the severity-pill pattern.
+  Used by scans list + findings explorer + comments source badge.
+*/}}
+{{ define "status_pill" }}
+{{ if eq . "pass" }}<span class="inline-flex items-center gap-1 text-success" aria-label="pass"><span aria-hidden="true">✓</span> pass</span>
+{{ else if eq . "fail" }}<span class="inline-flex items-center gap-1 text-destructive" aria-label="fail"><span aria-hidden="true">✗</span> fail</span>
+{{ else if eq . "error" }}<span class="inline-flex items-center gap-1 text-warning" aria-label="error"><span aria-hidden="true">⚠</span> error</span>
+{{ else if eq . "skip" }}<span class="inline-flex items-center gap-1 text-muted-foreground" aria-label="skipped"><span aria-hidden="true">–</span> skip</span>
+{{ else }}<span class="inline-flex items-center gap-1 text-muted-foreground"><span aria-hidden="true">·</span> {{.}}</span>
 {{ end }}
 {{ end }}
