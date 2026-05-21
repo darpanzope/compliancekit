@@ -25,6 +25,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+
+	"github.com/darpanzope/compliancekit/internal/server/compress"
 )
 
 // Config carries every knob the daemon takes at startup. Loaded by
@@ -80,8 +82,9 @@ func New(cfg Config) *Server {
 	r.Use(middleware.RealIP)    // honor X-Forwarded-For when behind a reverse proxy
 	r.Use(middleware.Recoverer) // panics → 500 + stack in the log
 	r.Use(middleware.Timeout(60 * time.Second))
-	r.Use(securityHeaders) // CSP, HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy
-	r.Use(m.middleware)    // count requests + observe latency
+	r.Use(securityHeaders)     // CSP, HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy
+	r.Use(compress.Middleware) // v1.11 phase 4 — brotli + gzip + Vary, SSE-passthrough
+	r.Use(m.middleware)        // count requests + observe latency
 
 	// Observability — both endpoints are intentionally unauthenticated.
 	// /health is for Kubernetes liveness/readiness probes + uptime
