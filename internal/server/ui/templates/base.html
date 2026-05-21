@@ -15,6 +15,14 @@
 -->
 <script src="/assets/app.js"></script>
 
+<!--
+  v1.10 phase 1 — Keyboard nav + focus management helpers.
+  Loads same-origin so CSP stays strict. Owns skip-link wiring,
+  global Escape dismiss, modal focus traps. See
+  internal/server/ui/src/a11y.js for the contract.
+-->
+<script src="/assets/a11y.js"></script>
+
 <!-- v1.4 Phase 0: compiled Tailwind bundle (tokens + utilities). -->
 <link rel="stylesheet" href="/assets/app.css">
 

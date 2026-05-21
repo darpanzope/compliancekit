@@ -37,10 +37,10 @@
   {{ end }}
 
   {{ if .CanEdit }}
-  <dialog x-ref="newteam" class="ck-card p-5 max-w-md w-full">
+  <dialog x-ref="newteam" data-ck-focus-trap="true" aria-labelledby="newteam-title" class="ck-card p-5 max-w-md w-full">
     <form method="post" action="/settings/teams" class="space-y-3">
       <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
-      <h2 class="font-semibold">New team</h2>
+      <h2 id="newteam-title" class="font-semibold">New team</h2>
       <div>
         <label class="text-[11px] uppercase tracking-wider text-muted-foreground">Slug</label>
         <input name="slug" required pattern="[a-z0-9-]{2,}"
