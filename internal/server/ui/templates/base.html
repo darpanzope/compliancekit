@@ -101,7 +101,8 @@ table.list tbody tr:hover { background: var(--legacy-panel-2); }
     vanilla htmx + Alpine + Tailwind utilities.
   -->
   <div class="min-h-screen flex w-full"
-       x-data="{ sidebarOpen: true, mobileMenuOpen: false, theme: (document.documentElement.dataset.theme || 'system'), setTheme(t){ this.theme = t; localStorage.setItem('ck-theme', t); var dark = t === 'dark' || (t === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches); document.documentElement.classList.toggle('dark', dark); document.documentElement.dataset.theme = t; } }">
+       x-data="ckChrome()"
+       x-init="initChrome()">
 
     <!-- Sidebar (desktop) -->
     <aside class="hidden lg:flex flex-col border-r border-sidebar-border bg-sidebar transition-all duration-300"

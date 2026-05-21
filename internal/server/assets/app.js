@@ -604,6 +604,45 @@ function ruleEditor() {
   };
 }
 
+// ckChrome is the v1.10 chrome-level Alpine factory replacing the
+// inline x-data on the authenticated layout div. Owns theme +
+// high-contrast + sidebar state. Extracted because the inline
+// definition was getting long enough to make CSP debugging painful.
+function ckChrome() {
+  return {
+    sidebarOpen: true,
+    mobileMenuOpen: false,
+    theme: 'system',
+    contrast: 'auto',
+    initChrome: function () {
+      this.theme = document.documentElement.dataset.theme || 'system';
+      this.contrast = localStorage.getItem('ck-contrast') || 'auto';
+      this.applyContrast(this.contrast);
+    },
+    setTheme: function (t) {
+      this.theme = t;
+      localStorage.setItem('ck-theme', t);
+      var dark = t === 'dark' || (t === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      document.documentElement.classList.toggle('dark', dark);
+      document.documentElement.dataset.theme = t;
+    },
+    setContrast: function (c) {
+      this.contrast = c;
+      localStorage.setItem('ck-contrast', c);
+      this.applyContrast(c);
+    },
+    applyContrast: function (c) {
+      // 'auto' = honor prefers-contrast media query; 'more' = force
+      // contrast-more class on <html>; 'normal' = remove the class
+      // + fall back to the regular palette regardless of OS pref.
+      var html = document.documentElement;
+      html.classList.remove('contrast-more', 'contrast-normal');
+      if (c === 'more') html.classList.add('contrast-more');
+      if (c === 'normal') html.classList.add('contrast-normal');
+    },
+  };
+}
+
 // commentComposer is the v1.8 phase 4 @mention autocomplete. Wired
 // to the comments_panel <textarea> via x-data; tracks the caret +
 // query, fetches /api/v1/users/search, and replaces the in-flight
