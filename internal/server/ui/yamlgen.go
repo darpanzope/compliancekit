@@ -17,6 +17,7 @@ import (
 	"net/http"
 	"sort"
 	"strings"
+	"time"
 
 	yaml "go.yaml.in/yaml/v3"
 )
@@ -179,13 +180,16 @@ func (u *UI) renderGeneratedYAML(ctx context.Context) (string, error) {
 	return b.String(), nil
 }
 
-// mountYAMLRoutes registers the Phase 6 endpoints.
+// mountYAMLRoutes registers the Phase 6 endpoints + the v1.12
+// phase 7 import endpoint.
 func (u *UI) mountYAMLRoutes(r interface {
 	Get(pattern string, h http.HandlerFunc)
+	Post(pattern string, h http.HandlerFunc)
 }) {
 	r.Get("/settings/yaml", u.settingsYAMLView)
 	r.Get("/settings/yaml/raw", u.settingsYAMLRaw)
 	r.Get("/settings/yaml/download", u.settingsYAMLDownload)
+	r.Post("/settings/yaml/import", u.settingsYAMLImport)
 }
 
 // settingsYAMLView renders the YAML inside the daemon chrome with a
@@ -218,6 +222,146 @@ func (u *UI) settingsYAMLRaw(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	fmt.Fprint(w, body)
+}
+
+// settingsYAMLImport accepts the YAML emitted by the export endpoints
+// + applies it to the DB. Admin-only. Round-trip stable: export →
+// import → re-export produces the same bytes.
+//
+// Body sources tried in order:
+//   - multipart "file" upload
+//   - form field "yaml"
+//   - raw request body (Content-Type: application/x-yaml, text/yaml)
+func (u *UI) settingsYAMLImport(w http.ResponseWriter, r *http.Request) {
+	if !u.isAdmin(r.Context()) {
+		http.Error(w, "admin required", http.StatusForbidden)
+		return
+	}
+	body, err := readYAMLImportBody(r)
+	if err != nil {
+		http.Redirect(w, r, "/settings/yaml?error="+err.Error(), http.StatusSeeOther)
+		return
+	}
+	cfg, err := parseGeneratedConfig(body)
+	if err != nil {
+		http.Redirect(w, r, "/settings/yaml?error=parse-yaml", http.StatusSeeOther)
+		return
+	}
+	if err := u.applyGeneratedConfig(r.Context(), cfg); err != nil {
+		http.Redirect(w, r, "/settings/yaml?error=apply:"+err.Error(), http.StatusSeeOther)
+		return
+	}
+	u.AuditLog(r.Context(), "settings.yaml_import", "settings", "", map[string]any{
+		"providers":  len(cfg.Providers),
+		"frameworks": len(cfg.Frameworks),
+		"disabled":   disabledCount(cfg),
+	})
+	http.Redirect(w, r, "/settings/yaml?flash=imported", http.StatusSeeOther)
+}
+
+func disabledCount(cfg generatedConfig) int {
+	if cfg.Checks == nil {
+		return 0
+	}
+	return len(cfg.Checks.Disabled)
+}
+
+func readYAMLImportBody(r *http.Request) (string, error) {
+	if err := r.ParseMultipartForm(1 << 20); err == nil && r.MultipartForm != nil {
+		if files := r.MultipartForm.File["file"]; len(files) > 0 {
+			f, err := files[0].Open()
+			if err != nil {
+				return "", fmt.Errorf("read upload: %w", err)
+			}
+			defer func() { _ = f.Close() }()
+			buf := make([]byte, files[0].Size)
+			if _, err := f.Read(buf); err != nil && err.Error() != "EOF" {
+				return "", fmt.Errorf("read upload: %w", err)
+			}
+			return string(buf), nil
+		}
+		if v := r.FormValue("yaml"); v != "" {
+			return v, nil
+		}
+	}
+	if v := r.FormValue("yaml"); v != "" {
+		return v, nil
+	}
+	buf := make([]byte, 1<<20)
+	n, _ := r.Body.Read(buf)
+	if n == 0 {
+		return "", fmt.Errorf("empty-body")
+	}
+	return string(buf[:n]), nil
+}
+
+func parseGeneratedConfig(body string) (generatedConfig, error) {
+	var cfg generatedConfig
+	if err := yaml.Unmarshal([]byte(body), &cfg); err != nil {
+		return cfg, err
+	}
+	return cfg, nil
+}
+
+// applyGeneratedConfig writes cfg back into the DB. Transactional so
+// a partial parse failure doesn't leave half the providers patched.
+func (u *UI) applyGeneratedConfig(ctx context.Context, cfg generatedConfig) error {
+	tx, err := u.store.DB().BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	for id, py := range cfg.Providers {
+		pc := providerConfig{
+			Region:     py.Region,
+			Services:   py.Services,
+			Exclusions: py.Exclusions,
+		}
+		raw, _ := json.Marshal(pc)
+		enabled := 0
+		if py.Enabled {
+			enabled = 1
+		}
+		q := `UPDATE providers SET enabled = ` + ph(u.store, 1) + `, config_json = ` + ph(u.store, 2) + ` WHERE id = ` + ph(u.store, 3) //nolint:gosec // placeholders only; no user input
+		if _, err := tx.ExecContext(ctx, q, enabled, string(raw), id); err != nil {
+			return fmt.Errorf("update provider %s: %w", id, err)
+		}
+	}
+
+	// Checks — overwrite the override set: every name in disabled becomes
+	// enabled=0; every other row drops out so the registry default applies.
+	if _, err := tx.ExecContext(ctx, `DELETE FROM checks_state`); err != nil {
+		return fmt.Errorf("clear checks_state: %w", err)
+	}
+	if cfg.Checks != nil {
+		now := time.Now().UTC().Format(time.RFC3339)
+		for _, id := range cfg.Checks.Disabled {
+			q := `INSERT INTO checks_state (check_id, enabled, updated_at) VALUES (` + phList(u.store, 3) + `)` //nolint:gosec // placeholders only; no user input
+			if _, err := tx.ExecContext(ctx, q, id, 0, now); err != nil {
+				return fmt.Errorf("insert checks_state %s: %w", id, err)
+			}
+		}
+	}
+
+	// Framework tailoring — same overwrite shape.
+	if _, err := tx.ExecContext(ctx, `DELETE FROM framework_tailoring`); err != nil {
+		return fmt.Errorf("clear framework_tailoring: %w", err)
+	}
+	now := time.Now().UTC().Format(time.RFC3339)
+	for fwID, fw := range cfg.Frameworks {
+		for _, item := range fw.Tailoring {
+			included := 0
+			if item.Included {
+				included = 1
+			}
+			q := `INSERT INTO framework_tailoring (framework_id, control_id, included, justification, updated_at) VALUES (` + phList(u.store, 5) + `)` //nolint:gosec // placeholders only; no user input
+			if _, err := tx.ExecContext(ctx, q, fwID, item.Control, included, item.Justification, now); err != nil {
+				return fmt.Errorf("insert framework_tailoring %s/%s: %w", fwID, item.Control, err)
+			}
+		}
+	}
+	return tx.Commit()
 }
 
 // settingsYAMLDownload returns the YAML with a Content-Disposition

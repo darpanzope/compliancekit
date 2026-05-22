@@ -34,5 +34,29 @@
     <a href="/settings/frameworks" class="text-primary hover:underline">Frameworks</a>.
     Phase 7 generates the matching <code class="text-[11px] px-1 py-0.5 rounded bg-muted">.github/workflows/compliance.yaml</code> from the same state.
   </p>
+
+  {{ if .User.IsAdmin }}
+  <h2 class="mt-8 text-sm font-medium text-foreground">Import</h2>
+  <p class="text-xs text-muted-foreground mt-1 mb-3">Paste or upload a previously-exported compliancekit.yaml. Provider config, disabled checks, and framework tailoring are overwritten transactionally.</p>
+  <form action="/settings/yaml/import" method="post" enctype="multipart/form-data" class="ck-card p-4 space-y-3">
+    <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
+    <div>
+      <label class="block text-[11px] uppercase tracking-wider text-muted-foreground font-medium mb-1">Upload YAML file</label>
+      <input type="file" name="file" accept=".yaml,.yml,application/x-yaml,text/yaml"
+             class="block text-sm">
+    </div>
+    <div class="text-xs text-muted-foreground">— or —</div>
+    <div>
+      <label class="block text-[11px] uppercase tracking-wider text-muted-foreground font-medium mb-1">Paste YAML</label>
+      <textarea name="yaml" rows="8" placeholder="providers:&#10;  aws:&#10;    enabled: true"
+                class="w-full font-mono text-xs rounded-md border border-input bg-background p-3 focus:outline-none focus:ring-2 focus:ring-ring transition"></textarea>
+    </div>
+    <div class="flex items-center justify-end">
+      <button type="submit"
+              onclick="return confirm('Overwrite current provider config, disabled checks, and framework tailoring with this YAML?');"
+              class="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary text-primary-foreground px-4 text-sm font-medium hover:opacity-90 transition">Apply</button>
+    </div>
+  </form>
+  {{ end }}
 </div>
 {{end}}
