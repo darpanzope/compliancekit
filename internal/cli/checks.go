@@ -41,10 +41,12 @@ func newChecksCmd() *cobra.Command {
 		Long: `Read-only queries over the check catalog compiled into this binary.
 
   checks list           list every registered check (filterable)
-  checks show <id>      show full metadata for one check`,
+  checks show <id>      show full metadata for one check
+  checks new <id>       scaffold a new plugin directory (v1.13)`,
 	}
 	cmd.AddCommand(newChecksListCmd())
 	cmd.AddCommand(newChecksShowCmd())
+	cmd.AddCommand(newChecksNewCmd())
 	return cmd
 }
 
