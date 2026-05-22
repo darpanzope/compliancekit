@@ -232,6 +232,7 @@ type UI struct {
 	followersRepo   *collab.Followers         // v1.8 phase 8 — resource follower opt-in
 	rulesRepo       *rules.Repo               // v1.9 phase 0 — rules engine persistence
 	roles           *srvrbac.Store            // v1.12 phase 0 — role + permission grid
+	tokensRepo      *auth.Tokens              // v1.12 phase 9 — API token UI
 	backups         *backups.Manager          // v1.12 phase 8 — backup/restore
 	backupDir       string
 	backupDSN       string
@@ -337,6 +338,7 @@ func (u *UI) Mount(r chi.Router) {
 		u.mountRolesRoutes(r)
 		u.mountSessionsRoutes(r)
 		u.mountBackupsRoutes(r)
+		u.mountTokensRoutes(r)
 		u.mountInboxV2Routes(r)
 		u.mountRulesRoutes(r)
 		u.mountRemediationRoutes(r)

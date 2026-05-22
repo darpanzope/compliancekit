@@ -1,0 +1,102 @@
+{{define "content"}}
+<div class="max-w-5xl mx-auto">
+  <div class="mb-6">
+    <a href="/settings/providers" class="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5">
+      <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      Settings
+    </a>
+    <h1 class="mt-2 text-2xl font-semibold tracking-tight">API tokens</h1>
+    <p class="text-sm text-muted-foreground mt-1">Machine credentials for the REST API. Each token carries an explicit scope set; the daemon stores only the SHA-256 hash, so the plaintext is shown once.</p>
+  </div>
+
+  {{ if eq .Flash "created" }}<div class="mb-4 rounded-md border border-success/30 bg-success/10 px-3 py-2 text-sm text-success">Token issued.</div>{{ end }}
+  {{ if eq .Flash "rotated" }}<div class="mb-4 rounded-md border border-warning/30 bg-warning/10 px-3 py-2 text-sm text-warning">Replacement token issued. The old token stays valid for 7 days — rotate your scripts then revoke it.</div>{{ end }}
+  {{ if eq .Flash "revoked" }}<div class="mb-4 rounded-md border border-warning/30 bg-warning/10 px-3 py-2 text-sm text-warning">Token revoked.</div>{{ end }}
+  {{ if eq .Flash "missing-name" }}<div class="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">Name is required.</div>{{ end }}
+  {{ if eq .Flash "missing-scope" }}<div class="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">Pick at least one scope.</div>{{ end }}
+  {{ if eq .Flash "issue-error" }}<div class="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">Could not issue token.</div>{{ end }}
+
+  {{ if .Plaintext }}
+  <div class="mb-6 ck-card p-4 border-2 border-success/50 bg-success/5">
+    <h3 class="text-sm font-medium text-foreground mb-2">Plaintext token — copy now</h3>
+    <p class="text-xs text-muted-foreground mb-2">This is the only time the full token will be displayed. Store it in your secrets manager or CI variable now — the daemon only keeps the SHA-256 hash.</p>
+    <pre class="font-mono text-xs p-3 rounded-md bg-background border border-border overflow-x-auto select-all">{{ .Plaintext }}</pre>
+  </div>
+  {{ end }}
+
+  <form action="/settings/tokens" method="post" class="ck-card p-5 mb-6 space-y-4">
+    <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
+    <div>
+      <label for="name" class="block text-xs font-medium text-foreground mb-1">Name</label>
+      <input type="text" id="name" name="name" required placeholder="ci-prod-scan"
+             class="w-full h-10 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring transition">
+    </div>
+    <div>
+      <label class="block text-xs font-medium text-foreground mb-1">Scopes</label>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+        {{ range .Scopes }}
+        <label class="inline-flex items-start gap-2 text-xs">
+          <input type="checkbox" name="scope:{{ .Value }}" value="1" class="mt-0.5 h-4 w-4 rounded border-input text-primary focus:ring-ring">
+          <span><code class="text-[11px] px-1 py-0.5 rounded bg-muted">{{ .Value }}</code> — {{ .Label }}</span>
+        </label>
+        {{ end }}
+      </div>
+    </div>
+    <div>
+      <label for="expires_days" class="block text-xs font-medium text-foreground mb-1">Expires in (days, 0 = never)</label>
+      <input type="number" id="expires_days" name="expires_days" min="0" value="0" placeholder="90"
+             class="w-32 h-10 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring transition">
+    </div>
+    <div class="flex justify-end pt-1">
+      <button type="submit" class="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary text-primary-foreground px-4 text-sm font-medium hover:opacity-90 transition">Issue token</button>
+    </div>
+  </form>
+
+  <div class="ck-card overflow-hidden">
+    <table class="w-full text-sm">
+      <thead class="bg-muted/50">
+        <tr class="text-left">
+          <th class="px-4 py-3 text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Name</th>
+          <th class="px-4 py-3 text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Prefix</th>
+          <th class="px-4 py-3 text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Scopes</th>
+          <th class="px-4 py-3 text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Created</th>
+          <th class="px-4 py-3 text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Last used</th>
+          <th class="px-4 py-3 text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Expires</th>
+          <th class="px-4 py-3"></th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-border">
+        {{ range .Tokens }}
+        <tr class="hover:bg-muted/30 transition-colors {{ if .Revoked }}opacity-50{{ end }}">
+          <td class="px-4 py-3">
+            {{ .Name }}
+            {{ if .Revoked }}<span class="ml-2 text-[10px] uppercase tracking-wider text-destructive bg-destructive/10 px-1.5 py-0.5 rounded">revoked</span>{{ end }}
+          </td>
+          <td class="px-4 py-3 font-mono text-xs text-muted-foreground">{{ .Prefix }}…</td>
+          <td class="px-4 py-3 text-xs">
+            {{ range .Scopes }}<code class="text-[11px] px-1 py-0.5 rounded bg-muted mr-1">{{ . }}</code>{{ end }}
+          </td>
+          <td class="px-4 py-3 text-xs text-muted-foreground tabular-nums">{{ .CreatedAgo }}</td>
+          <td class="px-4 py-3 text-xs text-muted-foreground tabular-nums">{{ .LastUsedAgo }}</td>
+          <td class="px-4 py-3 text-xs text-muted-foreground tabular-nums">{{ if .ExpiresAt }}{{ .ExpiresAt }}{{ else }}<span class="text-muted-foreground">—</span>{{ end }}</td>
+          <td class="px-4 py-3 text-right space-x-3">
+            {{ if not .Revoked }}
+            <form action="/settings/tokens/{{ .ID }}/rotate" method="post" class="inline-flex" onsubmit="return confirm('Issue a replacement token with the same scopes? You will get a 7-day grace window to roll it out.');">
+              <input type="hidden" name="csrf_token" value="{{ $.CSRFToken }}">
+              <button type="submit" class="text-xs text-primary hover:underline">Rotate</button>
+            </form>
+            <form action="/settings/tokens/{{ .ID }}/revoke" method="post" class="inline-flex" onsubmit="return confirm('Revoke this token? API clients using it will get 401 on next call.');">
+              <input type="hidden" name="csrf_token" value="{{ $.CSRFToken }}">
+              <button type="submit" class="text-xs text-destructive hover:underline">Revoke</button>
+            </form>
+            {{ end }}
+          </td>
+        </tr>
+        {{ else }}
+        <tr><td colspan="7" class="p-8 text-center text-sm text-muted-foreground">No tokens issued yet.</td></tr>
+        {{ end }}
+      </tbody>
+    </table>
+  </div>
+</div>
+{{end}}
