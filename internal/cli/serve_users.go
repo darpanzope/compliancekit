@@ -33,6 +33,7 @@ import (
 func addBootstrapSubcommands(serve *cobra.Command) {
 	serve.AddCommand(newServeUsersCmd())
 	serve.AddCommand(newServeTokensCmd())
+	serve.AddCommand(newServeAuditCmd())
 }
 
 // ─── users ──────────────────────────────────────────────────────

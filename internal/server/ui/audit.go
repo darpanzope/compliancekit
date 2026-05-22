@@ -19,7 +19,10 @@ package ui
 
 import (
 	"context"
+	"crypto/sha256"
+	"database/sql"
 	"encoding/csv"
+	"encoding/hex"
 	"encoding/json"
 	"net/http"
 	"strconv"
@@ -79,26 +82,136 @@ func (u *UI) mountAuditRoutes(r chi.Router) {
 // entity_id, metadata) shape. Failures are logged + swallowed — the
 // underlying operation already succeeded; we don't want a missing
 // audit row to bubble a 500 to the user.
+//
+// v1.12 phase 10: each inserted row is hash-chained. prev_hash is the
+// previous row's row_hash (or the all-zero hash for the first row);
+// row_hash = SHA-256(prev_hash || canonical-json(this row)).
+// compliancekit serve audit verify walks the chain to detect
+// tampering.
 func (u *UI) AuditLog(ctx context.Context, action, entityType, entityID string, metadata map[string]any) {
 	id := uuid.NewString()
-	now := time.Now().UTC().Format(time.RFC3339)
-	var userArg any
+	now := time.Now().UTC().Format(time.RFC3339Nano)
+	userID := ""
 	if sess := auth.FromContext(ctx); sess != nil && sess.UserID != "" {
-		userArg = sess.UserID
+		userID = sess.UserID
 	}
 	mdJSON, _ := json.Marshal(metadata)
 	if len(mdJSON) == 0 {
 		mdJSON = []byte("{}")
 	}
-	// actor_ip stays empty for now — Phase 11 ships the audit shape;
-	// future audit-hook middleware will populate it via RealIP.
-	// actor_user_id is NULL when no session is present (system-driven
-	// events) so the FK to users(id) is satisfied either way.
+	prev := u.latestRowHash(ctx)
+	rowHash := computeRowHash(prev, auditRowCanonical{
+		ID:         id,
+		CreatedAt:  now,
+		ActorUser:  userID,
+		Action:     action,
+		EntityType: entityType,
+		EntityID:   entityID,
+		Metadata:   string(mdJSON),
+	})
+	var userArg any
+	if userID != "" {
+		userArg = userID
+	}
 	q := `INSERT INTO audit_log (id, created_at, actor_user_id, actor_ip,
-	                              action, entity_type, entity_id, metadata_json)
-	      VALUES (` + phList(u.store, 8) + `)`
+	                              action, entity_type, entity_id, metadata_json,
+	                              prev_hash, row_hash)
+	      VALUES (` + phList(u.store, 10) + `)`
 	_, _ = u.store.DB().ExecContext(ctx, q,
-		id, now, userArg, "", action, entityType, entityID, string(mdJSON))
+		id, now, userArg, "", action, entityType, entityID, string(mdJSON),
+		prev, rowHash)
+}
+
+// auditRowCanonical is the canonical projection of an audit_log row
+// used as the hash input. Field order is fixed by the json.Marshal
+// alphabetic-key behavior of the struct field tags. Adding a new
+// field is a SemVer-significant change for the verify command.
+type auditRowCanonical struct {
+	ID         string `json:"id"`
+	CreatedAt  string `json:"created_at"`
+	ActorUser  string `json:"actor_user_id"`
+	Action     string `json:"action"`
+	EntityType string `json:"entity_type"`
+	EntityID   string `json:"entity_id"`
+	Metadata   string `json:"metadata_json"`
+}
+
+// computeRowHash returns the hex-encoded SHA-256 over prev || canonical-json(row).
+func computeRowHash(prev string, row auditRowCanonical) string {
+	body, _ := json.Marshal(row)
+	h := sha256.New()
+	h.Write([]byte(prev))
+	h.Write(body)
+	return hex.EncodeToString(h.Sum(nil))
+}
+
+// latestRowHash returns the most-recent row_hash. The all-zero
+// SHA-256 ("000…0", 64 zeros) is returned when no chained rows exist
+// — the genesis prev_hash.
+func (u *UI) latestRowHash(ctx context.Context) string {
+	const genesis = "0000000000000000000000000000000000000000000000000000000000000000"
+	var hash sql.NullString
+	_ = u.store.DB().QueryRowContext(ctx,
+		`SELECT row_hash FROM audit_log WHERE row_hash IS NOT NULL
+		 ORDER BY created_at DESC, id DESC LIMIT 1`).Scan(&hash)
+	if !hash.Valid || hash.String == "" {
+		return genesis
+	}
+	return hash.String
+}
+
+// AuditVerifyResult is the report shape VerifyAuditChain returns.
+type AuditVerifyResult struct {
+	Total     int
+	Chained   int
+	Unchained int // pre-v1.12 rows with NULL row_hash
+	Broken    []string
+}
+
+// VerifyAuditChain walks audit_log oldest-first and recomputes each
+// row's hash. Returns the rowIDs of any rows where prev_hash or
+// row_hash doesn't match the recomputed value. Unchained legacy rows
+// (NULL row_hash) are counted but not validated.
+func (u *UI) VerifyAuditChain(ctx context.Context) (AuditVerifyResult, error) {
+	rows, err := u.store.DB().QueryContext(ctx,
+		`SELECT id, created_at, COALESCE(actor_user_id,''), action,
+		        COALESCE(entity_type,''), COALESCE(entity_id,''),
+		        COALESCE(metadata_json,'{}'),
+		        COALESCE(prev_hash,''), COALESCE(row_hash,'')
+		 FROM audit_log
+		 ORDER BY created_at ASC, id ASC`)
+	if err != nil {
+		return AuditVerifyResult{}, err
+	}
+	defer func() { _ = rows.Close() }()
+	res := AuditVerifyResult{}
+	const genesis = "0000000000000000000000000000000000000000000000000000000000000000"
+	expectedPrev := genesis
+	for rows.Next() {
+		var (
+			c                 auditRowCanonical
+			prevHash, rowHash string
+		)
+		if err := rows.Scan(&c.ID, &c.CreatedAt, &c.ActorUser, &c.Action,
+			&c.EntityType, &c.EntityID, &c.Metadata, &prevHash, &rowHash); err != nil {
+			return res, err
+		}
+		res.Total++
+		if rowHash == "" {
+			res.Unchained++
+			continue
+		}
+		res.Chained++
+		if prevHash != expectedPrev {
+			res.Broken = append(res.Broken, c.ID)
+		}
+		expected := computeRowHash(prevHash, c)
+		if expected != rowHash {
+			res.Broken = append(res.Broken, c.ID)
+		}
+		expectedPrev = rowHash
+	}
+	return res, rows.Err()
 }
 
 // NotifyInbox writes one inbox alert. userID may be empty to broadcast
