@@ -17,6 +17,7 @@ import (
 	"github.com/darpanzope/compliancekit/internal/server/auth"
 	"github.com/darpanzope/compliancekit/internal/server/events"
 	"github.com/darpanzope/compliancekit/internal/server/logs"
+	"github.com/darpanzope/compliancekit/internal/server/scim"
 	"github.com/darpanzope/compliancekit/internal/server/store"
 	"github.com/darpanzope/compliancekit/internal/server/ui"
 	"github.com/darpanzope/compliancekit/internal/server/webhook"
@@ -164,6 +165,16 @@ func runServe(ctx context.Context, stdout interface {
 			ids = append(ids, b.ID)
 		}
 		fmt.Fprintf(stdout, "  oidc:    %s\n", strings.Join(ids, ", "))
+	}
+
+	// v1.12 phase 4: SCIM 2.0 user + group provisioning. Mounted
+	// when CK_SCIM_BEARER_TOKEN is set so the daemon never exposes
+	// the surface unauthenticated. SCIM Groups map 1:1 onto v1.12
+	// phase 0 RBAC roles — adding a user to a Group grants the role.
+	if bearer := os.Getenv("CK_SCIM_BEARER_TOKEN"); bearer != "" {
+		scimSrv := scim.New(st, users, sessions, bearer)
+		scimSrv.Mount(srv.Router())
+		fmt.Fprintf(stdout, "  scim:    /scim/v2/ (bearer auth)\n")
 	}
 
 	// v1.12 phase 3: discover SAML IdPs the same way + mount each
