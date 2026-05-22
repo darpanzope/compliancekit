@@ -331,6 +331,7 @@ func (u *UI) Mount(r chi.Router) {
 		u.mountCollabRoutes(r)
 		u.mountTeamsRoutes(r)
 		u.mountRolesRoutes(r)
+		u.mountSessionsRoutes(r)
 		u.mountInboxV2Routes(r)
 		u.mountRulesRoutes(r)
 		u.mountRemediationRoutes(r)

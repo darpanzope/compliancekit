@@ -1,0 +1,56 @@
+{{define "content"}}
+<div class="max-w-6xl mx-auto">
+  <div class="mb-6">
+    <a href="/settings/providers" class="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5">
+      <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      Settings
+    </a>
+    <h1 class="mt-2 text-2xl font-semibold tracking-tight">Active sessions</h1>
+    <p class="text-sm text-muted-foreground mt-1">Every signed-in browser across the directory. Revoke an entry to log the user out on their next request — useful after a stolen laptop.</p>
+  </div>
+
+  {{ if eq .Flash "revoked" }}<div class="mb-4 rounded-md border border-warning/30 bg-warning/10 px-3 py-2 text-sm text-warning">Session revoked.</div>{{ end }}
+  {{ if eq .Flash "self-revoke-blocked" }}<div class="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">You can't revoke your own active session here — sign out via the user menu instead.</div>{{ end }}
+
+  <div class="ck-card overflow-hidden">
+    <table class="w-full text-sm">
+      <thead class="bg-muted/50">
+        <tr class="text-left">
+          <th class="px-4 py-3 text-[11px] uppercase tracking-wider text-muted-foreground font-medium">User</th>
+          <th class="px-4 py-3 text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Browser</th>
+          <th class="px-4 py-3 text-[11px] uppercase tracking-wider text-muted-foreground font-medium">IP</th>
+          <th class="px-4 py-3 text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Signed in</th>
+          <th class="px-4 py-3 text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Last seen</th>
+          <th class="px-4 py-3 text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Expires</th>
+          <th class="px-4 py-3"></th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-border">
+        {{ range .Sessions }}
+        <tr class="hover:bg-muted/30 transition-colors {{ if .IsCurrent }}bg-primary/5{{ end }}">
+          <td class="px-4 py-3">
+            {{ .UserEmail }}
+            {{ if .IsCurrent }}<span class="ml-2 text-[10px] uppercase tracking-wider text-primary bg-primary/10 px-1.5 py-0.5 rounded">you</span>{{ end }}
+          </td>
+          <td class="px-4 py-3 text-muted-foreground">{{ if .BrowserGuess }}{{ .BrowserGuess }}{{ else }}<code class="text-[11px]">{{ .UserAgent }}</code>{{ end }}</td>
+          <td class="px-4 py-3 font-mono text-xs text-muted-foreground">{{ .IP }}</td>
+          <td class="px-4 py-3 text-xs text-muted-foreground tabular-nums">{{ .CreatedAgo }}</td>
+          <td class="px-4 py-3 text-xs text-muted-foreground tabular-nums">{{ .LastSeenAgo }}</td>
+          <td class="px-4 py-3 text-xs text-muted-foreground tabular-nums">{{ .ExpiresAt }}</td>
+          <td class="px-4 py-3 text-right">
+            {{ if not .IsCurrent }}
+            <form action="/settings/sessions/{{ .ID }}/revoke" method="post" class="inline-flex" onsubmit="return confirm('Revoke this session? The user will be logged out on next request.');">
+              <input type="hidden" name="csrf_token" value="{{ $.CSRFToken }}">
+              <button type="submit" class="text-xs text-destructive hover:underline">Revoke</button>
+            </form>
+            {{ end }}
+          </td>
+        </tr>
+        {{ else }}
+        <tr><td colspan="7" class="p-8 text-center text-sm text-muted-foreground">No active sessions.</td></tr>
+        {{ end }}
+      </tbody>
+    </table>
+  </div>
+</div>
+{{end}}

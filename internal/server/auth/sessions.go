@@ -184,6 +184,75 @@ func (s *Sessions) Destroy(ctx context.Context, sid string) error {
 	return s.delete(ctx, sid)
 }
 
+// ListActiveForUser returns every non-expired session owned by userID
+// ordered by most-recent first. Powers the v1.12 phase 5 admin
+// surface ("active sessions for X").
+func (s *Sessions) ListActiveForUser(ctx context.Context, userID string) ([]*Session, error) {
+	now := time.Now().UTC().Format(time.RFC3339)
+	q := fmt.Sprintf( //nolint:gosec // placeholders only; no user input
+		`SELECT id, user_id, csrf_token, created_at, last_seen_at, expires_at, user_agent, ip
+		 FROM sessions WHERE user_id = %s AND expires_at > %s
+		 ORDER BY last_seen_at DESC`,
+		s.ph(1), s.ph(2))
+	rows, err := s.store.DB().QueryContext(ctx, q, userID, now)
+	if err != nil {
+		return nil, fmt.Errorf("list sessions: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+	var out []*Session
+	for rows.Next() {
+		var (
+			se                         Session
+			created, lastSeen, expires string
+			ua, ip                     sql.NullString
+		)
+		if err := rows.Scan(&se.ID, &se.UserID, &se.CSRFToken, &created, &lastSeen, &expires, &ua, &ip); err != nil {
+			return nil, err
+		}
+		se.CreatedAt = parseTime(created)
+		se.LastSeenAt = parseTime(lastSeen)
+		se.ExpiresAt = parseTime(expires)
+		se.UserAgent = ua.String
+		se.IP = ip.String
+		out = append(out, &se)
+	}
+	return out, rows.Err()
+}
+
+// ListAllActive returns every non-expired session across every user.
+// Powers the org-wide "all signed-in users" view. Bounded at 500 rows
+// so a runaway loop can't OOM the daemon.
+func (s *Sessions) ListAllActive(ctx context.Context) ([]*Session, error) {
+	now := time.Now().UTC().Format(time.RFC3339)
+	q := fmt.Sprintf( //nolint:gosec // placeholders only; no user input
+		`SELECT id, user_id, csrf_token, created_at, last_seen_at, expires_at, user_agent, ip
+		 FROM sessions WHERE expires_at > %s ORDER BY last_seen_at DESC LIMIT 500`,
+		s.ph(1))
+	rows, err := s.store.DB().QueryContext(ctx, q, now)
+	if err != nil {
+		return nil, fmt.Errorf("list sessions: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+	var out []*Session
+	for rows.Next() {
+		var (
+			se                         Session
+			created, lastSeen, expires string
+			ua, ip                     sql.NullString
+		)
+		if err := rows.Scan(&se.ID, &se.UserID, &se.CSRFToken, &created, &lastSeen, &expires, &ua, &ip); err != nil {
+			return nil, err
+		}
+		se.CreatedAt = parseTime(created)
+		se.LastSeenAt = parseTime(lastSeen)
+		se.ExpiresAt = parseTime(expires)
+		se.UserAgent = ua.String
+		se.IP = ip.String
+		out = append(out, &se)
+	}
+	return out, rows.Err()
+}
+
 // DestroyForUser deletes every session for userID — used by password
 // change + the "log me out everywhere" affordance the v1.4 settings
 // page will eventually expose.
