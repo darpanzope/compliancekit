@@ -1,0 +1,71 @@
+{{define "content"}}
+<div class="max-w-5xl mx-auto">
+  <div class="mb-6">
+    <a href="/settings/providers" class="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5">
+      <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      Settings
+    </a>
+    <h1 class="mt-2 text-2xl font-semibold tracking-tight">Backups</h1>
+    <p class="text-sm text-muted-foreground mt-1">Snapshots of the daemon database. SQLite uses <code class="text-[11px] px-1 py-0.5 rounded bg-muted">VACUUM INTO</code>; Postgres uses <code class="text-[11px] px-1 py-0.5 rounded bg-muted">pg_dump --format=custom</code>. Dumps land in <code class="text-[11px] px-1 py-0.5 rounded bg-muted">{{ .Dir }}</code>.</p>
+  </div>
+
+  {{ if eq .Flash "created" }}<div class="mb-4 rounded-md border border-success/30 bg-success/10 px-3 py-2 text-sm text-success">Backup created.</div>{{ end }}
+  {{ if eq .Flash "deleted" }}<div class="mb-4 rounded-md border border-warning/30 bg-warning/10 px-3 py-2 text-sm text-warning">Backup deleted.</div>{{ end }}
+  {{ if eq .Flash "error" }}<div class="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">Backup operation failed. Check daemon logs.</div>{{ end }}
+
+  <form action="/settings/backups" method="post" class="ck-card p-4 mb-6 flex items-end gap-3">
+    <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
+    <div class="flex-1">
+      <label for="note" class="block text-xs font-medium text-foreground mb-1">Note (optional)</label>
+      <input type="text" id="note" name="note" placeholder="pre-v1.12-upgrade"
+             class="w-full h-10 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring transition">
+    </div>
+    <button type="submit" class="inline-flex h-10 items-center gap-1.5 rounded-md bg-primary text-primary-foreground px-4 text-sm font-medium hover:opacity-90 transition">Create backup now</button>
+  </form>
+
+  <div class="ck-card overflow-hidden">
+    <table class="w-full text-sm">
+      <thead class="bg-muted/50">
+        <tr class="text-left">
+          <th class="px-4 py-3 text-[11px] uppercase tracking-wider text-muted-foreground font-medium">When</th>
+          <th class="px-4 py-3 text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Kind</th>
+          <th class="px-4 py-3 text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Path</th>
+          <th class="px-4 py-3 text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Size (MB)</th>
+          <th class="px-4 py-3 text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Status</th>
+          <th class="px-4 py-3 text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Note</th>
+          <th class="px-4 py-3"></th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-border">
+        {{ range .Backups }}
+        <tr class="hover:bg-muted/30 transition-colors">
+          <td class="px-4 py-3 text-xs text-muted-foreground tabular-nums">{{ .CreatedAgo }}</td>
+          <td class="px-4 py-3 font-mono text-xs">{{ .Kind }}</td>
+          <td class="px-4 py-3 font-mono text-[11px] text-muted-foreground truncate max-w-xs">{{ .Path }}</td>
+          <td class="px-4 py-3 tabular-nums text-xs">{{ .SizeMB }}</td>
+          <td class="px-4 py-3 text-xs">
+            {{ if eq .Status "ok" }}<span class="text-success">ok</span>{{ else if eq .Status "failed" }}<span class="text-destructive">failed</span>{{ else }}<span class="text-muted-foreground">{{ .Status }}</span>{{ end }}
+          </td>
+          <td class="px-4 py-3 text-xs text-muted-foreground">{{ .Note }}</td>
+          <td class="px-4 py-3 text-right space-x-3">
+            {{ if eq .Status "ok" }}
+            <a href="/settings/backups/{{ .ID }}/download" class="text-xs text-primary hover:underline">Download</a>
+            {{ end }}
+            <form action="/settings/backups/{{ .ID }}/delete" method="post" class="inline-flex" onsubmit="return confirm('Delete this backup file?');">
+              <input type="hidden" name="csrf_token" value="{{ $.CSRFToken }}">
+              <button type="submit" class="text-xs text-destructive hover:underline">Delete</button>
+            </form>
+          </td>
+        </tr>
+        {{ else }}
+        <tr><td colspan="7" class="p-8 text-center text-sm text-muted-foreground">No backups yet.</td></tr>
+        {{ end }}
+      </tbody>
+    </table>
+  </div>
+
+  <p class="mt-6 text-xs text-muted-foreground">
+    <strong>Restore:</strong> stop the daemon, replace <code class="text-[11px] px-1 py-0.5 rounded bg-muted">compliancekit.db</code> with the downloaded SQLite file (or run <code class="text-[11px] px-1 py-0.5 rounded bg-muted">pg_restore</code> against your DSN for the Postgres dump), restart the daemon. Restore is intentionally a manual step — too destructive for a one-click UI.
+  </p>
+</div>
+{{end}}

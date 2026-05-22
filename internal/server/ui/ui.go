@@ -32,6 +32,7 @@ import (
 	"github.com/darpanzope/compliancekit/internal/rules"
 	"github.com/darpanzope/compliancekit/internal/server/assets"
 	"github.com/darpanzope/compliancekit/internal/server/auth"
+	"github.com/darpanzope/compliancekit/internal/server/backups"
 	"github.com/darpanzope/compliancekit/internal/server/collab"
 	"github.com/darpanzope/compliancekit/internal/server/comments"
 	"github.com/darpanzope/compliancekit/internal/server/logs"
@@ -231,6 +232,9 @@ type UI struct {
 	followersRepo   *collab.Followers         // v1.8 phase 8 — resource follower opt-in
 	rulesRepo       *rules.Repo               // v1.9 phase 0 — rules engine persistence
 	roles           *srvrbac.Store            // v1.12 phase 0 — role + permission grid
+	backups         *backups.Manager          // v1.12 phase 8 — backup/restore
+	backupDir       string
+	backupDSN       string
 }
 
 // New constructs the UI handle.
@@ -332,6 +336,7 @@ func (u *UI) Mount(r chi.Router) {
 		u.mountTeamsRoutes(r)
 		u.mountRolesRoutes(r)
 		u.mountSessionsRoutes(r)
+		u.mountBackupsRoutes(r)
 		u.mountInboxV2Routes(r)
 		u.mountRulesRoutes(r)
 		u.mountRemediationRoutes(r)

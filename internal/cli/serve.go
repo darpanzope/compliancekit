@@ -149,6 +149,8 @@ func runServe(ctx context.Context, stdout interface {
 
 	// Mount the v1.3 minimal UI shell (login + scans + providers + checks).
 	uiH := ui.New(st, users, sessions).WithLogBuffer(logBuf)
+	// v1.12 phase 8 — backup directory + Postgres DSN for pg_dump.
+	uiH.SetBackupConfig(os.Getenv("CK_BACKUP_DIR"), backupDSN(dbPath))
 	uiH.Mount(srv.Router())
 
 	// v1.5.1 F15: discover OIDC providers via env vars + mount each
@@ -233,6 +235,16 @@ func openStore(ctx context.Context, dbPath string) (*store.Store, error) {
 		return nil, err
 	}
 	return store.OpenSQLite(ctx, dbPath)
+}
+
+// backupDSN returns the DSN for pg_dump when the daemon's store is
+// Postgres-backed; empty for SQLite (the backup manager uses VACUUM
+// INTO directly in that case).
+func backupDSN(dbPath string) string {
+	if isPostgresDSN(dbPath) {
+		return dbPath
+	}
+	return ""
 }
 
 func isPostgresDSN(s string) bool {
