@@ -166,6 +166,19 @@ func runServe(ctx context.Context, stdout interface {
 		fmt.Fprintf(stdout, "  oidc:    %s\n", strings.Join(ids, ", "))
 	}
 
+	// v1.12 phase 3: discover SAML IdPs the same way + mount each
+	// /saml/{id}/{login,acs,metadata} route group.
+	if buttons, err := loadSAMLFromEnv(ctx, srv.Router(), users, sessions, st); err != nil {
+		fmt.Fprintf(stdout, "  saml:    warning — %v\n", err)
+	} else if len(buttons) > 0 {
+		uiH.SetSAMLProviders(buttons)
+		ids := make([]string, 0, len(buttons))
+		for _, b := range buttons {
+			ids = append(ids, b.ID)
+		}
+		fmt.Fprintf(stdout, "  saml:    %s\n", strings.Join(ids, ", "))
+	}
+
 	// Spawn the background worker pool. v1.5.1 phase 5 swaps the
 	// v1.3 StubRunner (50ms sleep + zero findings) for a RealRunner
 	// that builds collectors from the DB providers table, filters

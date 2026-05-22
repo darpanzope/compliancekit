@@ -38,7 +38,7 @@
     </button>
   </form>
 
-  {{ if .OIDCProviders }}
+  {{ if or .OIDCProviders .SAMLProviders }}
     <div class="mt-6 flex items-center gap-3">
       <span class="flex-1 h-px bg-border"></span>
       <span class="text-[10px] uppercase tracking-wider text-muted-foreground">or</span>
@@ -51,10 +51,16 @@
           {{ .Label }}
         </a>
       {{ end }}
+      {{ range .SAMLProviders }}
+        <a href="/saml/{{ .ID }}/login"
+           class="flex items-center justify-center w-full h-10 rounded-md border border-input bg-background text-sm font-medium text-foreground hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring transition">
+          {{ .Label }}
+        </a>
+      {{ end }}
     </div>
   {{ else }}
     <p class="mt-6 text-center text-xs text-muted-foreground">
-      Configure OIDC (Google / Okta / GitHub / custom) via <code class="text-xs px-1 py-0.5 rounded bg-muted">CK_OIDC_*</code> env vars to add an upstream identity provider here.
+      Configure OIDC (<code class="text-xs px-1 py-0.5 rounded bg-muted">CK_OIDC_*</code>) or SAML (<code class="text-xs px-1 py-0.5 rounded bg-muted">CK_SAML_*</code>) env vars to add an upstream identity provider here.
     </p>
   {{ end }}
 </div>

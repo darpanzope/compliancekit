@@ -221,15 +221,16 @@ type UI struct {
 	users           *auth.Users
 	sessions        *auth.Sessions
 	oidcProviders   []auth.OIDCProviderButton
-	logBuf          *logs.Buffer        // v1.6 phase 6 — nil-safe; route absent when nil
-	comments        *comments.Repo      // v1.8 phase 1 — markdown comments on findings
-	assignmentsRepo *collab.Assignments // v1.8 phase 2 — per-finding assignees
-	ownersRepo      *collab.Owners      // v1.8 phase 2 — per-resource owners
-	activitiesRepo  *collab.Activities  // v1.8 phase 3 — chronological per-finding activity log
-	teams           *collab.Teams       // v1.8 phase 8 — teams CRUD
-	followersRepo   *collab.Followers   // v1.8 phase 8 — resource follower opt-in
-	rulesRepo       *rules.Repo         // v1.9 phase 0 — rules engine persistence
-	roles           *srvrbac.Store      // v1.12 phase 0 — role + permission grid
+	samlProviders   []auth.SAMLProviderButton // v1.12 phase 3
+	logBuf          *logs.Buffer              // v1.6 phase 6 — nil-safe; route absent when nil
+	comments        *comments.Repo            // v1.8 phase 1 — markdown comments on findings
+	assignmentsRepo *collab.Assignments       // v1.8 phase 2 — per-finding assignees
+	ownersRepo      *collab.Owners            // v1.8 phase 2 — per-resource owners
+	activitiesRepo  *collab.Activities        // v1.8 phase 3 — chronological per-finding activity log
+	teams           *collab.Teams             // v1.8 phase 8 — teams CRUD
+	followersRepo   *collab.Followers         // v1.8 phase 8 — resource follower opt-in
+	rulesRepo       *rules.Repo               // v1.9 phase 0 — rules engine persistence
+	roles           *srvrbac.Store            // v1.12 phase 0 — role + permission grid
 }
 
 // New constructs the UI handle.
@@ -243,6 +244,13 @@ func New(st *store.Store, users *auth.Users, sessions *auth.Sessions) *UI {
 // render the right button set. Empty list → password-only login.
 func (u *UI) SetOIDCProviders(providers []auth.OIDCProviderButton) {
 	u.oidcProviders = providers
+}
+
+// SetSAMLProviders installs the v1.12 phase 3 SAML connection buttons.
+// Same shape as SetOIDCProviders — the login template renders both
+// alongside the local password form.
+func (u *UI) SetSAMLProviders(providers []auth.SAMLProviderButton) {
+	u.samlProviders = providers
 }
 
 // WithLogBuffer installs the v1.6 phase 6 log-tail buffer so the
@@ -269,6 +277,10 @@ type View struct {
 	// daemon is configured for. The login template renders one button
 	// per entry; empty slice → password-only login. v1.5.1 F15.
 	OIDCProviders []auth.OIDCProviderButton
+
+	// SAMLProviders enumerates the v1.12 phase 3 SAML connections. The
+	// login template renders one "Sign in with X" button per entry.
+	SAMLProviders []auth.SAMLProviderButton
 
 	// Page-specific
 	Items any
@@ -403,6 +415,7 @@ func (u *UI) login(w http.ResponseWriter, r *http.Request) {
 		Next:          r.URL.Query().Get("next"),
 		Flash:         r.URL.Query().Get("flash"),
 		OIDCProviders: u.oidcProviders,
+		SAMLProviders: u.samlProviders,
 	}
 	u.render(w, "login.html", view)
 }
