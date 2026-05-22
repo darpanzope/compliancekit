@@ -90,6 +90,33 @@ type User struct
 type Vulnerability struct
 type WaiverRef struct
 
+# subpackage: pkg/compliancekit/plugin
+const APIVersion = "compliancekit.io/v1"
+const KindCheck Kind
+const KindNotifier Kind
+const KindProvider Kind
+const KindReporter Kind
+method (*ErrUnknownKind) Error() string
+method (*ErrUnsupportedAPIVersion) Error() string
+method (*Manifest) Validate() error
+type Catalog interface
+type ErrUnknownKind struct
+type ErrUnsupportedAPIVersion struct
+type Kind string
+type Manifest struct
+type Plugin struct
+var AllKinds = []Kind{
+	KindCheck,
+	KindProvider,
+	KindNotifier,
+	KindReporter,
+}
+var ErrManifestEmpty = errors.New("plugin: manifest must declare entrypoint or rego_packs")
+var ErrManifestMissingKinds = errors.New("plugin: manifest.kinds must list at least one kind")
+var ErrManifestMissingName = errors.New("plugin: manifest.name is required")
+var ErrManifestMissingVersion = errors.New("plugin: manifest.version is required")
+var ErrManifestNil = errors.New("plugin: manifest is nil")
+
 # subpackage: pkg/compliancekit/rbac
 const ActionAdmin Action
 const ActionDelete Action

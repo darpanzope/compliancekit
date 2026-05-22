@@ -44,8 +44,9 @@ const pkgDir = "pkg/compliancekit"
 // "# subpackage: <path>" header so additions to a subpackage are
 // just as visible at review time as additions to the root.
 var subpkgDirs = []string{
-	"pkg/compliancekit/rbac",  // v1.12+
-	"pkg/compliancekit/rules", // v1.9+
+	"pkg/compliancekit/plugin", // v1.13+
+	"pkg/compliancekit/rbac",   // v1.12+
+	"pkg/compliancekit/rules",  // v1.9+
 }
 
 // defaultOut is where the canonical snapshot lives. -check reads from
