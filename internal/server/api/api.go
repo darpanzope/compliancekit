@@ -23,8 +23,10 @@ import (
 
 	"github.com/darpanzope/compliancekit/internal/server/auth"
 	"github.com/darpanzope/compliancekit/internal/server/events"
+	srvrbac "github.com/darpanzope/compliancekit/internal/server/rbac"
 	"github.com/darpanzope/compliancekit/internal/server/respcache"
 	"github.com/darpanzope/compliancekit/internal/server/store"
+	pubrbac "github.com/darpanzope/compliancekit/pkg/compliancekit/rbac"
 )
 
 // API is the surface the daemon mounts onto its chi router. Holds
@@ -37,12 +39,13 @@ type API struct {
 	sessions *auth.Sessions
 	events   *events.Producer // v1.6: SSE event bus (nil OK — handler returns 503)
 	cache    *respcache.Cache // v1.11: LRU; nil OK — cache lookup short-circuits
+	rbac     *srvrbac.Store   // v1.12 phase 2: role-derived session scope check
 }
 
 // New constructs the API handle. The Mount() method wires every
 // route on r under the /api/v1 prefix.
 func New(st *store.Store, users *auth.Users, tokens *auth.Tokens, sessions *auth.Sessions) *API {
-	return &API{store: st, users: users, tokens: tokens, sessions: sessions}
+	return &API{store: st, users: users, tokens: tokens, sessions: sessions, rbac: srvrbac.New(st)}
 }
 
 // WithEvents installs the v1.6 SSE Producer. Returns the receiver for
@@ -137,14 +140,18 @@ func (a *API) eitherAuth(next http.Handler) http.Handler {
 	})
 }
 
-// scopeGate enforces the needed scope for both auth flows. For token
-// auth (Authorization: Bearer ck_…) it consults tok.HasScope. For
-// session auth (cookie) it loads the session's user and treats admin
-// users as having every scope (parity with token's `*` scope); non-
-// admin session users get every `:read` scope but are forbidden from
-// any `:write` action. F18 fix for v1.5.1 — the v1.3 implementation
-// silently fell through for session callers, letting any logged-in
-// local user trigger scans, mutate providers, and revoke waivers.
+// scopeGate enforces the needed scope for both auth flows.
+//
+// Token auth (Authorization: Bearer ck_…): the token's explicit
+// scopes are authoritative — tok.HasScope decides outright.
+//
+// Session auth (cookie), v1.12 phase 2: the user's role-derived
+// permission set (from the v1.12 RBAC tables) is consulted first.
+// If the user holds at least one role and that set grants the
+// scope's (resource, action) tuple, allow. Bootstrap legacy: when
+// the user holds no role assignments, fall back to the v1.5.1
+// behavior — IsAdmin = full grant; non-admin = read-only — so a
+// fresh deployment that hasn't authored custom roles keeps working.
 func (a *API) scopeGate(needed auth.Scope, next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if tok := auth.TokenFromContext(r.Context()); tok != nil {
@@ -155,7 +162,6 @@ func (a *API) scopeGate(needed auth.Scope, next http.HandlerFunc) http.HandlerFu
 			next(w, r)
 			return
 		}
-		// Session-auth path: load the user, check IsAdmin.
 		sess := auth.FromContext(r.Context())
 		if sess == nil {
 			respondError(w, http.StatusUnauthorized, "auth required")
@@ -166,6 +172,20 @@ func (a *API) scopeGate(needed auth.Scope, next http.HandlerFunc) http.HandlerFu
 			respondError(w, http.StatusUnauthorized, "session user lookup failed")
 			return
 		}
+		// v1.12 phase 2: prefer RBAC if the user has any role.
+		if a.rbac != nil {
+			set, err := a.rbac.PermissionSetForUser(r.Context(), user.ID)
+			if err == nil && set != nil && len(set.Grants) > 0 {
+				res, act, ok := needed.ScopeRBAC()
+				if ok && set.Has(pubrbac.Resource(res), pubrbac.Action(act)) {
+					next(w, r)
+					return
+				}
+				respondError(w, http.StatusForbidden, "missing scope: "+string(needed))
+				return
+			}
+		}
+		// Legacy bootstrap (no roles assigned to this user yet).
 		if !user.IsAdmin && isWriteScope(needed) {
 			respondError(w, http.StatusForbidden, "admin required for scope: "+string(needed))
 			return

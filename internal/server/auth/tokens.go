@@ -60,6 +60,38 @@ const (
 	ScopeAdmin Scope = "*"
 )
 
+// ScopeRBAC is the (resource, action) tuple a Scope corresponds to in
+// the v1.12 RBAC grid. Returns ok=false for ScopeAdmin (it's the
+// universal wildcard and doesn't map to a single tuple) and for any
+// unknown scope so callers can fall back to the legacy check.
+//
+// Strings are deliberate over pubrbac.Resource / pubrbac.Action so the
+// auth package stays import-free of pkg/compliancekit/rbac (avoiding a
+// dependency cycle through internal/server/rbac → auth).
+func (s Scope) ScopeRBAC() (resource, action string, ok bool) {
+	const (
+		read  = "read"
+		write = "write"
+	)
+	switch s {
+	case ScopeScansRead:
+		return "scans", read, true
+	case ScopeScansWrite:
+		return "scans", write, true
+	case ScopeFindingsRead:
+		return "findings", read, true
+	case ScopeWaiversRead:
+		return "waivers", read, true
+	case ScopeWaiversWrite:
+		return "waivers", write, true
+	case ScopeSettingsRead:
+		return "settings", read, true
+	case ScopeSettingsWrite:
+		return "settings", write, true
+	}
+	return "", "", false
+}
+
 // Token is the in-memory shape returned by Tokens.Verify (the row
 // minus token_hash, which never leaves the package). Scopes are
 // already parsed.

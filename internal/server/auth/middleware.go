@@ -29,6 +29,14 @@ func withSession(ctx context.Context, sess *Session) context.Context {
 	return context.WithValue(ctx, sessionContextKey, sess)
 }
 
+// InjectTestSession returns a context carrying a minimal Session for
+// userID. Exported as a test helper so package-external tests (e.g.
+// the scopeGate RBAC tests) can simulate a logged-in user without
+// reaching for the cookie + Load round-trip.
+func InjectTestSession(ctx context.Context, userID string) context.Context {
+	return withSession(ctx, &Session{ID: "test-session", UserID: userID})
+}
+
 // RequireAuth is the chi middleware factory that gates a route on a
 // valid session cookie. On missing / expired session the cookies are
 // cleared and the response is 401 (for /api routes) or a 303 redirect
