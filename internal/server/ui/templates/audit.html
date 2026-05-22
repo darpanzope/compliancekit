@@ -1,9 +1,44 @@
 {{define "content"}}
 <div class="max-w-6xl mx-auto">
-  <div class="mb-6">
-    <h1 class="text-2xl font-semibold tracking-tight">Audit log</h1>
-    <p class="text-sm text-muted-foreground mt-1">Append-only record of every config change, scan trigger, waiver addition, and credential rotation. Newest first.</p>
+  <div class="flex items-center justify-between mb-6 gap-4">
+    <div>
+      <h1 class="text-2xl font-semibold tracking-tight">Audit log</h1>
+      <p class="text-sm text-muted-foreground mt-1">Append-only record of every config change, scan trigger, waiver addition, and credential rotation. Newest first.</p>
+    </div>
+    {{ if .User.IsAdmin }}
+    <div class="flex items-center gap-2">
+      <a href="/audit/export.ndjson{{ if .Filters.Q }}?q={{ .Filters.Q }}{{ end }}" class="inline-flex h-9 items-center gap-1.5 rounded-md border border-border bg-background px-3 text-sm font-medium hover:bg-muted transition">NDJSON</a>
+      <a href="/audit/export.csv{{ if .Filters.Q }}?q={{ .Filters.Q }}{{ end }}" class="inline-flex h-9 items-center gap-1.5 rounded-md border border-border bg-background px-3 text-sm font-medium hover:bg-muted transition">CSV</a>
+    </div>
+    {{ end }}
   </div>
+
+  <!-- Filter bar -->
+  <form action="/audit" method="get" class="ck-card p-4 mb-4 grid grid-cols-1 md:grid-cols-6 gap-3 text-sm">
+    <div class="md:col-span-2">
+      <label class="block text-[11px] uppercase tracking-wider text-muted-foreground font-medium mb-1">Search</label>
+      <input type="text" name="q" value="{{ .Filters.Q }}" placeholder="action / entity / id / metadata"
+             class="w-full h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring transition">
+    </div>
+    <div>
+      <label class="block text-[11px] uppercase tracking-wider text-muted-foreground font-medium mb-1">Actor email</label>
+      <input type="text" name="actor" value="{{ .Filters.ActorEmail }}" placeholder="alice@…"
+             class="w-full h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring transition">
+    </div>
+    <div>
+      <label class="block text-[11px] uppercase tracking-wider text-muted-foreground font-medium mb-1">Entity</label>
+      <input type="text" name="entity" value="{{ .Filters.Entity }}" placeholder="scan / role / waiver / …"
+             class="w-full h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring transition">
+    </div>
+    <div>
+      <label class="block text-[11px] uppercase tracking-wider text-muted-foreground font-medium mb-1">Since (RFC3339)</label>
+      <input type="text" name="since" value="{{ .Filters.Since }}" placeholder="2026-05-22T00:00:00Z"
+             class="w-full h-9 rounded-md border border-input bg-background px-3 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-ring transition">
+    </div>
+    <div class="flex items-end">
+      <button type="submit" class="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary text-primary-foreground px-4 text-sm font-medium hover:opacity-90 transition w-full justify-center">Filter</button>
+    </div>
+  </form>
 
   <div class="ck-card overflow-hidden">
     <table class="w-full text-sm">
@@ -28,7 +63,7 @@
           <td class="px-4 py-3 font-mono text-[11px] text-muted-foreground max-w-xs truncate">{{ .Metadata }}</td>
         </tr>
         {{ else }}
-        <tr><td colspan="5" class="p-8 text-center text-sm text-muted-foreground">No audit events yet.</td></tr>
+        <tr><td colspan="5" class="p-8 text-center text-sm text-muted-foreground">No audit events match these filters.</td></tr>
         {{ end }}
       </tbody>
     </table>

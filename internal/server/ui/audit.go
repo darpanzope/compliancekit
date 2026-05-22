@@ -19,9 +19,11 @@ package ui
 
 import (
 	"context"
+	"encoding/csv"
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -41,13 +43,6 @@ type auditEntry struct {
 	EntityType string
 	EntityID   string
 	Metadata   string
-}
-
-type auditView struct {
-	View
-	Items   []auditEntry
-	Page    int
-	HasNext bool
 }
 
 // inboxItem is the per-row payload of /inbox.
@@ -72,6 +67,8 @@ type inboxView struct {
 // mountAuditRoutes registers the Phase 11 endpoints.
 func (u *UI) mountAuditRoutes(r chi.Router) {
 	r.Get("/audit", u.auditList)
+	r.Get("/audit/export.ndjson", u.auditExportNDJSON)
+	r.Get("/audit/export.csv", u.auditExportCSV)
 	r.Get("/inbox", u.inboxList)
 	r.Post("/inbox/{id}/read", u.inboxMarkRead)
 	r.Post("/inbox/read-all", u.inboxMarkAllRead)
@@ -124,6 +121,81 @@ func (u *UI) NotifyInbox(ctx context.Context, userID, severity, title, body, hre
 		id, userArg, now, severity, title, body, href)
 }
 
+// auditFilters captures the query-string knobs the v1.12 phase 6
+// audit search surface exposes. All fields optional.
+type auditFilters struct {
+	Q          string // full-text fragment: matches action, entity_id, entity_type, metadata_json substring
+	ActorEmail string
+	Action     string
+	Entity     string // matches entity_type
+	Since      string // RFC3339; rows with created_at >= since
+	Until      string // RFC3339; rows with created_at < until
+}
+
+// parseAuditFilters reads the filters out of r's query string.
+func parseAuditFilters(r *http.Request) auditFilters {
+	q := r.URL.Query()
+	return auditFilters{
+		Q:          q.Get("q"),
+		ActorEmail: q.Get("actor"),
+		Action:     q.Get("action"),
+		Entity:     q.Get("entity"),
+		Since:      q.Get("since"),
+		Until:      q.Get("until"),
+	}
+}
+
+// auditWhere builds the WHERE clause + bind args from f. Returns the
+// SQL fragment (sans leading WHERE) and the argument slice. Empty
+// fragment when no filters apply.
+func (u *UI) auditWhere(f auditFilters, nextPh func() string) (clause string, args []any) {
+	var conds []string
+	if f.Q != "" {
+		p := nextPh()
+		conds = append(conds, "(a.action LIKE "+p+" OR a.entity_id LIKE "+p+" OR a.entity_type LIKE "+p+" OR a.metadata_json LIKE "+p+")")
+		args = append(args, "%"+f.Q+"%")
+	}
+	if f.ActorEmail != "" {
+		p := nextPh()
+		conds = append(conds, "u.email LIKE "+p)
+		args = append(args, "%"+f.ActorEmail+"%")
+	}
+	if f.Action != "" {
+		p := nextPh()
+		conds = append(conds, "a.action = "+p)
+		args = append(args, f.Action)
+	}
+	if f.Entity != "" {
+		p := nextPh()
+		conds = append(conds, "a.entity_type = "+p)
+		args = append(args, f.Entity)
+	}
+	if f.Since != "" {
+		p := nextPh()
+		conds = append(conds, "a.created_at >= "+p)
+		args = append(args, f.Since)
+	}
+	if f.Until != "" {
+		p := nextPh()
+		conds = append(conds, "a.created_at < "+p)
+		args = append(args, f.Until)
+	}
+	if len(conds) == 0 {
+		return "", nil
+	}
+	return " WHERE " + strings.Join(conds, " AND "), args
+}
+
+// phCounter returns a fresh-per-call placeholder helper for the
+// current driver, used by auditWhere.
+func (u *UI) phCounter() func() string {
+	n := 0
+	return func() string {
+		n++
+		return ph(u.store, n)
+	}
+}
+
 func (u *UI) auditList(w http.ResponseWriter, r *http.Request) {
 	pageN, _ := strconv.Atoi(r.URL.Query().Get("page"))
 	if pageN < 1 {
@@ -131,12 +203,15 @@ func (u *UI) auditList(w http.ResponseWriter, r *http.Request) {
 	}
 	per := 50
 	offset := (pageN - 1) * per
-	rows, err := u.store.DB().QueryContext(r.Context(),
-		`SELECT a.id, a.created_at, COALESCE(u.email,''), COALESCE(a.actor_ip,''),
-		        a.action, COALESCE(a.entity_type,''), COALESCE(a.entity_id,''),
-		        COALESCE(a.metadata_json,'{}')
-		 FROM audit_log a LEFT JOIN users u ON u.id = a.actor_user_id
-		 ORDER BY a.created_at DESC LIMIT `+strconv.Itoa(per+1)+` OFFSET `+strconv.Itoa(offset))
+	filters := parseAuditFilters(r)
+	where, args := u.auditWhere(filters, u.phCounter())
+	q := `SELECT a.id, a.created_at, COALESCE(u.email,''), COALESCE(a.actor_ip,''),
+	             a.action, COALESCE(a.entity_type,''), COALESCE(a.entity_id,''),
+	             COALESCE(a.metadata_json,'{}')
+	      FROM audit_log a LEFT JOIN users u ON u.id = a.actor_user_id` +
+		where +
+		` ORDER BY a.created_at DESC LIMIT ` + strconv.Itoa(per+1) + ` OFFSET ` + strconv.Itoa(offset)
+	rows, err := u.store.DB().QueryContext(r.Context(), q, args...)
 	if err != nil {
 		u.fail(w, "list audit: "+err.Error())
 		return
@@ -157,13 +232,98 @@ func (u *UI) auditList(w http.ResponseWriter, r *http.Request) {
 	if hasNext {
 		items = items[:per]
 	}
-	view := auditView{
+	view := struct {
+		View
+		Items   []auditEntry
+		Page    int
+		HasNext bool
+		Filters auditFilters
+	}{
 		View:    u.viewFor(r, "Audit log · Settings", "settings", View{}),
 		Items:   items,
 		Page:    pageN,
 		HasNext: hasNext,
+		Filters: filters,
 	}
 	u.render(w, "audit.html", view)
+}
+
+// auditExportNDJSON streams every matching audit_log row as one JSON
+// object per line. Admin-only — the audit_log can contain sensitive
+// metadata + non-admins shouldn't be able to pull the full history.
+func (u *UI) auditExportNDJSON(w http.ResponseWriter, r *http.Request) {
+	if !u.isAdmin(r.Context()) {
+		http.Error(w, "admin required", http.StatusForbidden)
+		return
+	}
+	filters := parseAuditFilters(r)
+	where, args := u.auditWhere(filters, u.phCounter())
+	rows, err := u.store.DB().QueryContext(r.Context(),
+		`SELECT a.id, a.created_at, COALESCE(u.email,''), COALESCE(a.actor_ip,''),
+		        a.action, COALESCE(a.entity_type,''), COALESCE(a.entity_id,''),
+		        COALESCE(a.metadata_json,'{}')
+		 FROM audit_log a LEFT JOIN users u ON u.id = a.actor_user_id`+where+
+			` ORDER BY a.created_at DESC LIMIT 100000`, args...)
+	if err != nil {
+		http.Error(w, "list audit: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer func() { _ = rows.Close() }()
+	w.Header().Set("Content-Type", "application/x-ndjson")
+	w.Header().Set("Content-Disposition", `attachment; filename="audit.ndjson"`)
+	enc := json.NewEncoder(w)
+	for rows.Next() {
+		var e auditEntry
+		if err := rows.Scan(&e.ID, &e.CreatedAt, &e.ActorEmail, &e.ActorIP,
+			&e.Action, &e.EntityType, &e.EntityID, &e.Metadata); err != nil {
+			return
+		}
+		_ = enc.Encode(map[string]any{
+			"id":          e.ID,
+			"created_at":  e.CreatedAt,
+			"actor_email": e.ActorEmail,
+			"actor_ip":    e.ActorIP,
+			"action":      e.Action,
+			"entity_type": e.EntityType,
+			"entity_id":   e.EntityID,
+			"metadata":    json.RawMessage(e.Metadata),
+		})
+	}
+}
+
+// auditExportCSV streams every matching row as a CSV. Same admin gate
+// + same upper bound.
+func (u *UI) auditExportCSV(w http.ResponseWriter, r *http.Request) {
+	if !u.isAdmin(r.Context()) {
+		http.Error(w, "admin required", http.StatusForbidden)
+		return
+	}
+	filters := parseAuditFilters(r)
+	where, args := u.auditWhere(filters, u.phCounter())
+	rows, err := u.store.DB().QueryContext(r.Context(),
+		`SELECT a.id, a.created_at, COALESCE(u.email,''), COALESCE(a.actor_ip,''),
+		        a.action, COALESCE(a.entity_type,''), COALESCE(a.entity_id,''),
+		        COALESCE(a.metadata_json,'{}')
+		 FROM audit_log a LEFT JOIN users u ON u.id = a.actor_user_id`+where+
+			` ORDER BY a.created_at DESC LIMIT 100000`, args...)
+	if err != nil {
+		http.Error(w, "list audit: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer func() { _ = rows.Close() }()
+	w.Header().Set("Content-Type", "text/csv")
+	w.Header().Set("Content-Disposition", `attachment; filename="audit.csv"`)
+	cw := csv.NewWriter(w)
+	_ = cw.Write([]string{"id", "created_at", "actor_email", "actor_ip", "action", "entity_type", "entity_id", "metadata_json"})
+	for rows.Next() {
+		var e auditEntry
+		if err := rows.Scan(&e.ID, &e.CreatedAt, &e.ActorEmail, &e.ActorIP,
+			&e.Action, &e.EntityType, &e.EntityID, &e.Metadata); err != nil {
+			return
+		}
+		_ = cw.Write([]string{e.ID, e.CreatedAt, e.ActorEmail, e.ActorIP, e.Action, e.EntityType, e.EntityID, e.Metadata})
+	}
+	cw.Flush()
 }
 
 func (u *UI) inboxList(w http.ResponseWriter, r *http.Request) {
