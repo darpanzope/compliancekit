@@ -76,9 +76,14 @@ jobs:
           curl -fsS http://127.0.0.1:8080/health || { echo "daemon did not start"; cat /tmp/ck-a11y/*.log 2>/dev/null || true; exit 1; }
 
       - name: Run axe-core against /login
+        # --chrome-options disables the Chrome sandbox + the
+        # /dev/shm pressure heuristic. Both are needed on the
+        # GitHub-hosted runner where Chrome would otherwise SIGSEGV
+        # on launch under headless mode.
         run: |
           axe http://127.0.0.1:8080/login \
             --tags wcag2a,wcag2aa,best-practice \
+            --chrome-options="--no-sandbox,--disable-dev-shm-usage,--headless=new" \
             --exit \
             --save axe-login.json \
             || (cat axe-login.json && exit 1)
