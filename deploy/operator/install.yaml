@@ -1,0 +1,116 @@
+# v1.15 phase 3 — compliancekit-operator install bundle.
+#
+# Lays the Namespace + ServiceAccount + RBAC + Deployment that the
+# operator binary runs from. Apply alongside the two CRDs under
+# ./crds/. The Helm chart layer for the operator follows in v1.15.x;
+# this raw YAML is the simplest install path for now.
+#
+#   kubectl apply -f deploy/operator/crds/
+#   kubectl apply -f deploy/operator/install.yaml
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: compliancekit-operator
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: operator
+  namespace: compliancekit-operator
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: compliancekit-operator
+rules:
+  # CRD ownership.
+  - apiGroups: [compliancekit.io]
+    resources: [complianceschedules, scanjobs]
+    verbs: [get, list, watch, create, update, patch, delete]
+  - apiGroups: [compliancekit.io]
+    resources: [complianceschedules/status, scanjobs/status]
+    verbs: [get, update, patch]
+  # ScanJob spawns Pods.
+  - apiGroups: [""]
+    resources: [pods]
+    verbs: [get, list, watch, create, update, patch, delete]
+  # ScheduleReconciler reads Secrets to resolve bearer tokens.
+  - apiGroups: [""]
+    resources: [secrets]
+    verbs: [get, list, watch]
+  # Leader-election needs Lease objects.
+  - apiGroups: [coordination.k8s.io]
+    resources: [leases]
+    verbs: [get, list, watch, create, update, patch, delete]
+  # Status events.
+  - apiGroups: [""]
+    resources: [events]
+    verbs: [create, patch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: compliancekit-operator
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: compliancekit-operator
+subjects:
+  - kind: ServiceAccount
+    name: operator
+    namespace: compliancekit-operator
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: operator
+  namespace: compliancekit-operator
+  labels:
+    app.kubernetes.io/name: compliancekit-operator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: compliancekit-operator
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: compliancekit-operator
+    spec:
+      serviceAccountName: operator
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: operator
+          image: ghcr.io/darpanzope/compliancekit-operator:v1.15.0
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          args:
+            - --metrics-bind-address=:8080
+            - --health-probe-bind-address=:8081
+            - --leader-elect=true
+            - --default-image=ghcr.io/darpanzope/compliancekit:v1.15.0
+          ports:
+            - { name: metrics, containerPort: 8080 }
+            - { name: probes,  containerPort: 8081 }
+          livenessProbe:
+            httpGet: { path: /healthz, port: probes }
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet: { path: /readyz, port: probes }
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests: { cpu: 50m,  memory: 96Mi }
+            limits:   { cpu: 500m, memory: 256Mi }

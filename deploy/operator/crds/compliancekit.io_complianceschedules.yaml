@@ -1,0 +1,72 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: complianceschedules.compliancekit.io
+spec:
+  group: compliancekit.io
+  names:
+    kind: ComplianceSchedule
+    listKind: ComplianceScheduleList
+    singular: complianceschedule
+    plural: complianceschedules
+    shortNames: [csched]
+  scope: Namespaced
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+        - name: Cron
+          type: string
+          jsonPath: .spec.cronExpr
+        - name: Last
+          type: date
+          jsonPath: .status.lastRunTime
+        - name: Next
+          type: date
+          jsonPath: .status.nextRunTime
+        - name: Status
+          type: string
+          jsonPath: .status.lastStatus
+      schema:
+        openAPIV3Schema:
+          type: object
+          required: [spec]
+          properties:
+            spec:
+              type: object
+              required: [cronExpr, daemonRef]
+              properties:
+                cronExpr:
+                  type: string
+                  description: "Standard 5-field cron expression (UTC unless overridden)."
+                providers:
+                  type: array
+                  items:
+                    type: string
+                enabled:
+                  type: boolean
+                  default: true
+                daemonRef:
+                  type: object
+                  required: [url, bearerSecret]
+                  properties:
+                    url:
+                      type: string
+                    bearerSecret:
+                      type: object
+                      required: [name, key]
+                      properties:
+                        name: { type: string }
+                        key: { type: string }
+            status:
+              type: object
+              properties:
+                lastRunTime: { type: string, format: date-time }
+                lastStatus: { type: string }
+                nextRunTime: { type: string, format: date-time }
+                conditions:
+                  type: array
+                  items: { type: object, x-kubernetes-preserve-unknown-fields: true }
