@@ -203,7 +203,7 @@ to the v0.1-v0.5 audience that put compliancekit on the map.
 | ~~v1.12~~ ✅ | **Admin & RBAC** (v1.12.0 shipped 2026-05-22, #43) — 11 phase commits. Migration 0018 lays roles + role_permissions + user_roles with 4 built-in roles (admin/editor/viewer/auditor) seeded; pkg/compliancekit/rbac is the new public surface (Resource + Action enums, Role, Permission, Set). /settings/roles permission-matrix UI (admin-only) creates custom roles, edits the Resource × Action grid, assigns/revokes users; every mutation is audit-logged. scopeGate refactored: session-auth requests prefer the role-derived permission set; user with zero roles falls back to v1.5.1 IsAdmin behavior for bootstrap compatibility. SAML 2.0 SSO via crewjam/saml — operators configure IdPs (Okta / Azure AD / Google Workspace / OneLogin / Auth0) via CK_SAML_<TAG>_* env vars; SP-initiated + IdP-initiated flows both work; auto-provisions a local user on first sign-in. SCIM 2.0 server (/scim/v2/Users + /Groups) implemented hand-rolled vs elimity dep; SCIM Groups map 1:1 onto RBAC roles. /settings/sessions admin lists every active session across the directory with revoke (stolen-laptop response); self-revoke is blocked at handler. /audit gets filter bar (q + actor + entity + since/until) and admin-only NDJSON + CSV exports up to 100k rows. POST /settings/yaml/import round-trips compliancekit.yaml — export → wipe → import → re-export is byte-stable per TestYAMLRoundtrip. Migration 0019 + internal/server/backups owns SQLite VACUUM INTO + pg_dump wrappers + a catalog; /settings/backups admin UI; restore is documented as a manual step. /settings/tokens admin UI for API token CRUD + zero-downtime rotate (issue replacement with same scopes + 7-day grace logged) + scope picker + expiry picker; plaintext shown once. Migration 0020 adds prev_hash + row_hash on audit_log; every AuditLog call SHA-256(prev || canonical-json(row)) chains; compliancekit serve audit verify walks the chain and exits 1 + reports broken row IDs on tamper. Audit timestamps switched to RFC3339Nano so rapid-fire inserts chain deterministically. 3 new direct deps: github.com/crewjam/saml v0.4.14 + transitive (beevik/etree, mattermost/xml-roundtrip-validator, russellhaering/goxmldsig, golang-jwt/jwt). New pkg/compliancekit/rbac subpackage covered by api-check. Cmd+K settings search / settings auto-save / per-token rate limit / SAML+SCIM live IdP harnesses deferred to v1.12.x. | Admin a fleet, not a single instance |
 | ~~v1.13~~ ✅ | **Plugin SDK + marketplace prep** (v1.13.0 shipped 2026-05-25, #45) — 10 phase commits. New pkg/compliancekit/plugin subpackage (Manifest + Kind enum + Plugin + Catalog interface + Validate with typed sentinel errors); api-check covers it. compliancekit checks new <id> scaffolder generates a runnable plugin directory (Rego-default or --go subprocess) with manifest + README + sample check body; ID validated against ^[a-z0-9][a-z0-9.\-]{1,58}[a-z0-9]$ before any filesystem write. internal/server/plugins.Catalog walks $XDG_DATA_HOME/compliancekit/plugins/ (or --plugins-dir override); per-directory load errors split from hard errors so partial-failure surfaces without blocking healthy packs. CosignVerifier validates manifest.yaml against sibling signature.sig under operator-supplied PEM pubkey (ECDSA P-256 default + Ed25519); signature.sig may be base64 or raw; keyless Sigstore deferred to v1.13.x. Sandbox.HTTPClient returns a *http.Client whose net.Dialer.Control hook rejects any host outside the manifest's DeclaredEgress; rule shapes: exact / host:port / *.subdomain (single label). Watcher debounces fsnotify events (500ms default) into Catalog.Refresh calls + bumps Plugin.Generation so in-flight scans can cache the policy version they started with. Migration 0021 lays notify_templates(kind, name, body); /settings/notify-templates admin UI ships a Go text/template editor with htmx live preview against a canned finding payload (300ms debounce, upper/lower/title funcs). compliancekit plugins install/list/update/remove/verify CLI surface against the same XDG dir the daemon discovers from; install validates the freshly-copied pack via Catalog.Refresh + rolls back on failure. /settings/plugins UI shows installed plugins (signature status + hot-reload generation) + a static community-packs tab (hello/aws-iam-strict/slack-rich); v2.9 swaps that for a registry feed. examples/plugins/hello/ is the canonical starter pack referenced by the docs; TestReferencePlugin_HelloDiscoverable smoke-tests the install → refresh round-trip. Total schema migrations through v1.13: 21. 1 new direct dep: github.com/fsnotify/fsnotify v1.10.1 (promoted from indirect). OCI / registry plugin pull, WASM runtime, plugin payment all deferred to v2.9 per ADR-016. | Your checks. Your remediation. Your distribution. |
 | ~~v1.14~~ ✅ | **Reporting renaissance** (v1.14.0 shipped 2026-05-25, #46) — 10 phase commits. Migration 0022 lays dashboards + dashboard_widgets (12 widget kinds: score_gauge / severity_donut / framework_bar / framework_radar / finding_list / resource_table / sparkline / heatmap / treemap / sankey / markdown / executive_summary) + dashboard_layouts (per-user overrides). New internal/server/dashboards package: Store with full CRUD + grid clamping (1..12 cols, 1..24 rows) + SaveLayout validation + team-wide-vs-private visibility filter. /dashboards index + per-dashboard canvas (12-col CSS grid, ?edit=1 toggles palette + delete affordances); admin-or-owner edit gate. Four built-in templates (exec / aws / k8s / soc2) cloneable via Store.CloneTemplate with rollback on partial-failure. internal/report/chart.go ships hand-rolled vanilla-SVG heatmap (intensity ramp), treemap (squarified greedy worst-aspect), sankey (two-column with cubic-bezier links), radar (4 concentric gridlines + even-spaced spokes); every drawer pre-wires v1.18 hooks (data-ck-bucket + data-ck-tooltip + <title>). internal/report/summary.go renders the executive-summary markdown body (score / delta / top findings / wins / regressions / framework headline / timestamp footer) — pure templating, no LLM. /scans/compare 3-up multi-scan view reuses the v1.5 diff picker. Migration 0023 + ScheduledReport storage with cron-validated CreateScheduledReport + RunDueReports (Dispatcher interface; stamps last_status + advances next_run_at on every tick whether dispatch succeeded or failed). Migration 0024 + SharedLink with 256-bit token, TradeShare gated by revoked_at + expires_at (single ErrShareGone for all three failure modes so live tokens aren't fingerprintable), WatermarkText helper for per-recipient "for X — YYYY-MM-DD". Migration 0025 + AuditPackProfile records canonical-artifact picks (closed set: findings.csv / vulnerabilities.csv / secrets.csv / poam.oscal.json / waivers.json / scan.json / summary.md) + dashboard PDF IDs. PrintDocument + RenderPrintHTML with @page CSS (header / footer / page-numbers / TOC leader dots) + rotated watermark overlay; PDFRenderer interface with HTMLOnlyRenderer (no-Chrome fallback) + ChromedpRenderer (page.PrintToPDF). 1 new direct dep: github.com/chromedp/chromedp + transitive cdproto. Total schema migrations through v1.14: 25. No pkg/compliancekit surface change. Drag-handle persistence (HX-Request layout save), audit-pack assembly, scheduled-report admin UI, /settings/shared-links revoke UI, registry-side templates-as-code deferred to v1.14.x. | From findings.html to a board deck — without leaving the app |
-| v1.15 | **Deploy & operate** — Helm chart at `oci://ghcr.io/darpanzope/compliancekit-chart`, Kustomize overlay, K8s operator (basic CRDs: `ComplianceSchedule` reconciles cron, `ScanJob` for ad-hoc), Terraform modules for AWS / GCP / DO / Hetzner deployments, distroless multi-arch (`amd64` + `arm64`) image, HA Postgres docs (replicas + `pg_advisory_lock` leader election), systemd unit, NixOS module, deep healthchecks (DB writable / migrations current / queue alive), Grafana dashboard JSON bundle, one-line installer parity with brew. ~10 phases. | Production-ready from clone to systemd |
+| ~~v1.15~~ ✅ | **Deploy & operate** (v1.15.0 shipped 2026-05-25, #47) — 10 phase commits + doc sweep + cosign-pin CI fix. **Helm chart** at `oci://ghcr.io/darpanzope/compliancekit-chart` (every knob documented; `helm lint` clean; SQLite default + `ha.enabled` toggle). **Kustomize** base + dev/staging/prod overlays (prod swaps SQLite PVC → Postgres `Secret` via `$patch:delete`). **K8s operator** with `ComplianceSchedule` + `ScanJob` CRDs (hand-rolled DeepCopy, no `controller-gen` build-time dep); install bundle in `deploy/operator/`. **Terraform modules** for AWS / GCP / DO / Hetzner — compute + Postgres + LB+TLS + DNS per cloud. **Distroless multi-arch image** (`gcr.io/distroless/static-debian12:nonroot`, amd64 + arm64) + 30 MiB image-size budget via crane. **HA Postgres + leader election** via `pg_advisory_lock` (key `0x636B5F6C656164` "ck_lead", disjoint from migration lock); session-scoped via `*sql.Conn`; SQLite short-circuits leader=true; worker pool drain gated on `leader.IsLeader()`. **systemd unit + NixOS module** with full hardening (`NoNewPrivileges`, `ProtectKernel{Tunables,Modules,Logs,ControlGroups,Clock,Hostname}`, `RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX`, `SystemCallFilter=@system-service ~@privileged @resources`, empty `CapabilityBoundingSet` + `AmbientCapabilities`; `systemd-analyze security` < 2.0 target). **Deep `/health/ready`** with `ReadinessRegistry` + per-probe Timeout; JSON 200 all-pass / 503 any-fail; three checks wired (db, migrations, leader). **Grafana dashboard bundle** — `deploy/grafana/dashboards/{operations,findings,worker-pool}.json` (schemaVersion 39, `$instance` template var); README with Prometheus scrape config + starter alerts. **One-line installer** at `deploy/install.sh` (232-line POSIX-bash; resolves latest via GH API, verifies sha256 + cosign keyless via Fulcio cert + Rekor, installs to `/usr/local/bin`, optionally wires systemd; canonical URL `raw.githubusercontent.com/darpanzope/compliancekit/main/deploy/install.sh` — vanity `compliancekit.dev` shortcut deferred). **CI fix**: pinned `cosign-release` to v2.6.3 after the installer fell back to `@main` and sigstore bundle policy tightened mid-day. 1 new direct dep: `sigs.k8s.io/controller-runtime` v0.24.1 (operator only). Total schema migrations through v1.15: 25 (unchanged from v1.14). No `pkg/compliancekit` surface change. | Production-ready from clone to systemd |
 | v1.16 | **Mobile / PWA** — PWA manifest + service worker for offline caching, iOS / Android install prompts, mobile-first responsive sweep across every UI, push notifications via VAPID (no third-party push provider), mobile-optimized "quick scan" flow, 1-handed-friendly UX, swipe gestures, offline mode showing cached last-scan when daemon unreachable. ~8 phases. | Compliance you can check in line at the coffee shop |
 | v1.17 | **Data warehouse bridges** — Parquet export of findings + resources + history, `compliancekit warehouse load --to={bigquery,snowflake,redshift,duckdb}`, OpenLineage event emit (Marquez / DataHub compatible), point-in-time snapshot API (immutable read-only views), webhook fan-out polish, scheduled warehouse sync via daemon worker. ~8 phases. | Your warehouse already runs the reports — feed it |
 | v1.18 | **Design system & visual polish** — `internal/server/ui/design/` formalized (tokens.css for colors / spacing / radii / shadows / typography / motion + a `<component>.html` library + `/design` live docs route), loading skeletons everywhere (spinners eliminated for >200ms ops), page-top nprogress bar, 6 vendored Framer-style easing curves + 4 standard durations, toast queue with slide+fade+stack, optimistic UI on every form (assign/waive/comment/ack), ~30 vanilla-SVG empty-state illustrations theme-aware across light/dark/high-contrast, micro-interactions audit (every hover/focus/active/press), Linear-style initials-gradient avatars, status-pill system, card depth tokens (flat / raised / floating / glass), sprite expanded 22 → 100 symbols, chart interactivity (rich hover tooltips, click-to-drill, waiver/baseline annotations, brushing), magic moments (zero-critical-findings confetti, score-improved celebration card, weekly streak badges bronze/silver/gold), brand kit per org (logo + favicon + primary-color override with contrast validation). ~12 phases; new ADR-017 codifies the design-system contract. | Every pixel feels intentional — Linear-tier polish |
@@ -214,12 +214,21 @@ to the v0.1-v0.5 audience that put compliancekit on the map.
 | v2.3 | GRC layer — risk register, vendor register, CAIQ/SIG templates, training tracking (ADR-004 re-slotted from v1.8) | Risk + vendors + questionnaires in repo |
 | v2.4 | Auditor portal (auth-gated, time-boxed, watermarked exports) | Give your auditor read-only access |
 | v2.5 | macOS + Windows + BSD hardening | Hardening for every machine you own |
-| v2.6 | Tail clouds — Cloudflare, GitHub, Google Workspace, Vercel, Linode, Vultr | Every SaaS surface your SaaS touches |
+| v2.6 | **Tail clouds — deep coverage of every SaaS surface a modern company touches** (~26 phases) — shared `internal/collectors/saascommon` foundation (HTTP client + OAuth + rate-limit awareness + token-rotation hooks + per-vendor health probe + retry-with-backoff + secret-handling parity with v0.14 ADR-010). Per-vendor deep packs: **Cloudflare** (zones+DNS, R2, Workers + Workers AI, Tunnels, Access/Zero Trust, WAF + Bot Management, Pages, D1+KV+Queues, Stream + Images, Email Routing, Magic Transit; ~80 checks); **GitHub** (org settings, repo settings, branch protection, secrets + dependabot, code scanning, GitHub Advanced Security, actions runners + workflow security, audit log retention, packages + releases signing, environments + reviewers, OIDC trust policies, copilot org policy; ~100 checks); **Google Workspace** (Admin SDK posture, Drive sharing, Gmail security, Vault retention, Endpoint Management, OAuth apps inventory, Alert Center, Context-Aware Access; ~60 checks); **Microsoft 365 + Entra ID** (Defender for Office/Endpoint, Purview DLP + records management, Sentinel, Intune compliance policies, conditional access, audit log retention, app consent; ~80 checks); **Vercel** (project settings, env vars + sensitive flag, deployments hygiene, log drains, OIDC token issuance, team SSO + SAML, build env isolation, edge config, env-protection rules; ~30 checks); **Linode / Akamai Cloud** (compute, NodeBalancers, Object Storage, Cloud Firewalls, VLANs, LKE, DNS, longview agents; ~40 checks); **Vultr** (instances, block storage, VKE, firewall groups, object storage, DNS, reserved IPs, snapshot retention; ~30 checks); **Fastly** (services, ACLs, dictionaries, TLS subscriptions, log streaming endpoints, image optimizer, compute@edge; ~25 checks); **Slack workspace** (SCIM, app inventory + OAuth scopes, DLP, channel retention, IdP enforcement, audit log streaming; ~25 checks); **Atlassian Cloud** (Jira / Confluence org settings, app inventory, SSO + SCIM, audit log, OAuth grants, anonymous-access posture; ~30 checks); **Okta** (admin posture: sign-on policies, factor enrollment policy, app catalog hygiene, log streaming, behavior detection, system log retention; ~25 checks); **Zoom** (security policies, recording retention, SSO config, App Marketplace approvals, meeting defaults, webinar perms; ~15 checks); **Stripe** (restricted keys, webhook signing, IP allowlist on dashboard, Radar fraud rules, team perms + audit, sigma data retention; ~20 checks); **HubSpot + Salesforce** (data perms + sharing, OAuth connected apps, integration hygiene, IP restrictions, password policy, audit trail retention; ~25 checks); **Notion** (workspace admin, integrations inventory + scopes, sharing perms, page-share-with-link audits; ~15 checks); **1Password + Bitwarden** (vault sharing audit, SCIM, recovery policy, breach Watchtower posture, login policies; ~20 checks); **Tailscale** (ACL posture, MagicDNS hygiene, key expiry policy, device posture rules, SSO, tagged-server lifecycle; ~20 checks); **Observability vendor posture — Datadog / New Relic / PagerDuty** (API key hygiene + scopes, integration inventory, log retention, sensitive-string scrubbing rules, SSO + SCIM, audit log retention; ~25 checks); **Transactional email — Postmark / SendGrid / Mailgun** (DMARC + SPF + DKIM alignment per sending domain, webhook signing, suppression list hygiene, log retention, IP reputation surfacing, API key scopes; ~20 checks); **Modern PaaS — Render / Fly.io / Railway** (env vars + secrets, IP allowlist, build cache poisoning posture, audit log, custom-domain TLS posture, log drains; ~30 checks); **Discord** (server hardening — bot perms, audit log, member screening, AutoMod posture, channel perms hygiene; ~15 checks); **iPaaS — Zapier / n8n / Make** (connection inventory + OAuth scope sprawl, retention, IP allowlist, secret-handling per step; ~15 checks); **Legacy platform — Heroku** (app config, add-on security, dyno hardening, build pack pin posture; ~15 checks). Framework wiring: **CIS SaaS Benchmarks** for the big-3 (Google Workspace / M365 / GitHub) + custom **"SaaS-Hardening v1"** framework spanning the whole tail + ATT&CK-for-SaaS coverage. Tail-cloud aggregator dashboard + cross-vendor identity map (links OAuth app ↔ vendor + person ↔ vendor for sprawl auditing). Phase 0 lays primitives; phases 1–24 are per-vendor; phases 25 + 26 are framework + aggregator. | Every SaaS surface your SaaS touches — properly, not superficially |
 | v2.7 | OSCAL ecosystem (catalogs in, assessment results out) + SCAP DataStream import | FedRAMP-curious? OSCAL in, OSCAL out |
 | v2.8 | Risk score + executive risk PDF + time-series dashboard | One number for your board |
 | v2.9 | Plugin marketplace — federation layer on top of v1.13 SDK (registry, ratings, discovery), cosign-verified | Install a check pack with one command |
 | v2.10 | K8s operator — full reconciler (CRDs `ComplianceScan`, `ComplianceProfile`, `ComplianceWaiver`); extends v1.15 basic | Reconcile compliance from a CRD |
 | v2.11 | Auto-remediation (opt-in, dry-run default, full audit log) — ADR-006 unchanged | Fix it for me — if you really want |
+| v2.12 | **UI/UX 3.0 — Studio-grade interactions** — command palette everywhere (every page accepts Cmd-K, every list filters live), drag-drop everywhere (dashboards / saved views / column order / waiver bulk move / Kanban-style finding triage), real-time collab cursors + presence chips + selection broadcasting (built on the v1.6 SSE bus), chart library refresh (interactive Sankey + sunburst + risk heatmap + bullet + waffle with cross-filter brushing), motion language v2 (Framer-grade choreography — staggered list reveals, FLIP for layout transitions, shared-element across pages), illustration catalog (60+ vanilla-SVG empties tuned per theme), theme builder + brandable white-label (per-org logo + favicon + 3-color picker + dark-mode override + custom font), in-app changelog + spotlight tours (auto-triggered after every minor upgrade), Smart Empty States 2.0 (per-page coaching + 1-click "show me an example"), micro-animations on every CTA (button press depth, focus ring spring, optimistic state lift) | Linear / Vercel / Wiz-tier polish on every page |
+| v2.13 | **Documentation 2.0** — `docs.compliancekit.io` static-site (Hugo + a vendored theme) with multi-version selector (v1.x current / v0.x archived) + Algolia-quality client-side search (lunr or pagefind) + dark mode + mobile-first; full **handbook** (architecture deep-dives, threat model, ops runbooks, on-call playbook, post-mortem template); per-framework playbooks ("SOC 2 in 30 days with compliancekit", "PCI v4 in 60 days", "HIPAA in 45 days"); 20+ video walkthroughs (asciinema for CLI flows, Loom for UI flows, hosted on YouTube + linked from docs); cookbook 2.0 (50+ end-to-end recipes — from "monitor my homelab" to "ship a Trust Center"); interactive API explorer (Swagger UI for `/api/v1` + Try-It on the live demo daemon); embedded LLM doc-search (local Ollama-friendly + OpenAI-compatible, opt-in); changelog-as-blog (every minor gets a launch post with screenshots) | Docs that contributors fork from, not just read |
+| v2.14 | **Zero-trust deploy** — mTLS everywhere (daemon ↔ daemon, daemon ↔ Postgres, daemon ↔ webhook receivers; auto-renewing via cert-manager or built-in CSR loop), SPIFFE/SPIRE identity (workload attestation; SVIDs for every daemon replica), secrets via Vault / Infisical / SOPS / sealed-secrets / external-secrets-operator (no plaintext env vars in HA), NetworkPolicy + Cilium L7 templates shipped, seccomp + AppArmor profiles + landlock LSM on Linux, SLSA L4 build provenance + attestations published to Sigstore, hardware-attested boot docs (Secure Boot + TPM + measured boot), BYOK customer-managed encryption keys (envelope encryption for sensitive columns), IP allowlist + geo-fencing middleware, OWASP ASVS L3 self-audit + report committed quarterly | Defense-grade defaults out of the box |
+| v2.15 | **Code health pass** — full surface-area audit (`internal/` package boundaries reviewed, ~20% dead-code elimination expected via `unused` + `deadcode` analyzers in CI), dependency minimization (drop transitives where direct alt exists; bin-size budget reduced from 25 MB → 20 MB target), performance budgets in CI (`go test -bench` regression gate: p95 query / startup time / RSS / goroutines-at-rest), allocation regression tests (`-benchmem`), structured logging audit (every package uses `slog` with stable attribute names; structured-log schema documented), error-handling consistency pass (every external boundary returns typed sentinels via `errors.Is/As`; `fmt.Errorf` audited for `%w`), removal of `interface{}`/`any` where a concrete type fits (generics where helpful), doc comments to 100% public API + `golint`/`staticcheck` ST1020 gate, golangci-lint v2 enabled with `gocritic` + `revive` + `prealloc` + `errchkjson` | A codebase that reads like it was reviewed line-by-line |
+| v2.16 | **Test pyramid maturity** — fuzz testing on every parser (`go test -fuzz` corpus checked in for SARIF / OCSF / OSCAL / Trivy / Grype / Checkov / gitleaks / yaml / rego / API request bodies), property-based tests (`pgregory.net/rapid`) for ResourceGraph + Engine + Rules, mutation testing (`go-mutesting` baseline + CI gate at >80% mutation kill rate on core packages), chaos engineering (toxiproxy fault injection on Postgres + webhook receivers + SSE clients; expected DLQ + retry behavior asserted), snapshot tests covering every HTML route + every reporter format (gotest.tools golden), golden-file coverage 100% across `internal/report/` + `internal/checks/`, weekly integration-test fleet on every cloud (AWS / GCP / DO / Hetzner / K8s — burns ephemeral accounts, posts SLO report), e2e Playwright matrix (chromium + firefox + webkit; touches every primary user journey), perf regression gate blocks PRs above a budget | The bug you'd ship lands as a test you're proud of |
+| v2.17 | **Developer experience** — `.devcontainer/` (codespaces-ready Go + Node + cosign + grafana-cli + all CLI deps), `make bootstrap` + `make smoke` scripts for first-90-seconds, video onboarding ("zero to first PR" walkthrough), Plugin SDK 2.0 (richer scaffolder — Rego / Go-subprocess / WASM blueprints, codegen for boilerplate, runnable starter pack repo template), CI templates for plugin authors (`.github/workflows/check-pack.yaml` published as a re-usable action), opt-in anonymous telemetry (PostHog self-hosted; what version + which provider counts + which CLI commands, never finding bodies), ADR generator (`make adr` opens `$EDITOR` with the template + auto-increments), public RFC process (`/rfcs/` directory + `gh issue create` template + 14-day comment window), public roadmap board (GitHub Projects v2 mirroring milestones), contributor portal (`docs.compliancekit.io/contribute` with good-first-issue feed + maintainer-status criteria) | Make it 10× easier to ship a 1-line PR or a 1000-line plugin |
+| v2.18 | **GitOps compliance** — ArgoCD ApplicationSet + Flux Kustomization templates published in `deploy/gitops/`; daemon learns to **open a PR** instead of just notifying on drift (config-as-code waivers + remediations); weekly compliance digest auto-PRed against `compliance/` repo (snapshots + score-over-time committed); dashboards-as-code (`*.dashboard.yaml` declarative spec → DB hydration via `compliancekit dashboards apply`); scan-as-CRD (Kubernetes-native scan trigger via the v1.15 / v2.10 operator); profile-as-config (`compliance/profiles/<name>.yaml` source-of-truth; UI is a read+suggest layer for non-Git users); waiver-as-PR with required-reviewers rules (org-coded YAML config matches v2.9 marketplace's signing model); compliance posture surfaced inside ArgoCD UI via custom health check | The compliance source-of-truth is your git repo, not the daemon |
+| v2.19 | **i18n 2.0** — full translation coverage in 10 languages (en / es / fr / de / ja / zh-Hans / pt-BR / ko / it / ar) — every template, every email, every notification body, every CLI string, every framework name; RTL layout (Arabic + Hebrew foundations); locale-aware dates / numbers / currency / time-zones (CLDR via `golang.org/x/text/message` + `display`); translator workflow (Weblate-compatible PO files + Crowdin-compatible JSON; CI gate blocks untranslated key adds beyond a threshold); per-tenant + per-user locale + per-notification-channel override (Slack DM honors recipient's locale, not poster's); on-the-fly language switch (no reload); automated translation-completeness badge in README; community-contributed language packs as v1.13 plugins | A genuinely-global compliance dashboard |
+| v2.20 | **Enterprise polish** — SSO MFA enforcement policy (per-role + per-org + step-up auth on sensitive ops), audit immutability (WORM storage adapter: S3 Object Lock + Azure Immutable Blob + GCS Bucket Lock; per-row hash-chain extended to per-second Merkle root anchored to public ledger optionally), retention policies (per-data-type TTL: findings 7yr / audit 10yr / sessions 90d; customizable + GDPR delete-on-request workflow), data residency selector (per-tenant region pin; cross-region replication off by default), session intelligence (anomaly detection on geo / device / hour; risk-scored login w/ step-up MFA), IP allowlist + geo-fencing per-org, customer-managed encryption keys (KMS adapters: AWS / GCP / Azure / HashiCorp Vault Transit), contract-grade SLA documented (99.9 uptime target, 24h RPO, 4h RTO) + status page generator, paid support tier (incident response runbook + 24/7 escalation contract template — not a SaaS pivot, just doc + tooling so an org can buy support from a vendor) | Ready for the Fortune-500 procurement review |
 
 The full table is the high-level view; v0.6 through v1.0 are expanded
 below, in order. Versions past v1.0 stay in table form here because
@@ -2355,7 +2364,7 @@ See [ADR-016](DECISIONS.md#adr-016--v1x-is-fully-scoped-to-server--uiux--backend
 
 ---
 
-### v1.15 — Deploy & operate
+### v1.15 ✅ — Deploy & operate (shipped 2026-05-25)
 
 **Goal:** the daemon goes from "build from source" to "kubectl apply -f". Helm, Kustomize, operator, Terraform — every deployment pattern operators expect.
 
@@ -2527,6 +2536,376 @@ See [ADR-016](DECISIONS.md#adr-016--v1x-is-fully-scoped-to-server--uiux--backend
 - No new frontend deps — search index served from the daemon; client just renders.
 
 **API surface**: new `GET /api/v1/search?q=...&types=findings,resources,scans,...` endpoint with cursor pagination. Documented but not promised across minors. `pkg/compliancekit` unchanged.
+
+---
+
+## v2.x — depth, breadth, and the long tail (v2.0 – v2.20)
+
+Post-v1.x, the roadmap shifts from polish to expansion. The pre-existing 12 rows (v2.0–v2.11) cover platform expansion (multi-tenant, GRC, auditor portal, tail clouds, OS expansion, OSCAL, risk score, plugin marketplace, K8s operator, auto-remediation). The v2.12–v2.20 expansion adds a dedicated bar-raising arc: UI/UX 3.0, Documentation 2.0, zero-trust deploy, code health, test maturity, developer experience, GitOps, full i18n, and enterprise polish. Tail clouds (v2.6) gets deep-pack treatment with 26 phases.
+
+See [ADR-019](DECISIONS.md#adr-019--v2x-expansion--bar-raising-arc-v212v220--tail-cloud-deep-pack-v26) for the scoping rationale.
+
+The v2.6 (tail clouds deep) and v2.12–v2.20 sections below are pinned in detail because the user explicitly asked for depth at scoping time. Other v2.x rows (v2.0–v2.5, v2.7–v2.11) stay in table form per the "post-launch feedback is the right input" convention noted at the top of this document — they'll get detail sections as their kick-off approaches.
+
+---
+
+### v2.6 — Tail clouds (deep coverage of every SaaS surface)
+
+**Goal:** every SaaS your SaaS actually touches — not just the cloud providers — gets first-class, audit-grade compliance coverage. 26 phases, ~800 net-new checks, one shared collector foundation. The thesis: most compliance violations live in the long tail of SaaS apps (oversharing in Drive, scope-creeping OAuth in HubSpot, stale Slack apps, GitHub branch-protection drift), not in the IaaS layer the security team already monitors.
+
+**Phases**
+
+- **Phase 0 — Foundation**: `internal/collectors/saascommon` shared primitives — OAuth client (PKCE + refresh-token rotation), rate-limit-aware HTTP client (per-host buckets + retry with exponential backoff + jitter), token-rotation hooks (so daemon-mode handles expiry without restart), per-vendor health probe ("am I authenticated, and what's my quota left?"), secret-redaction parity with [ADR-010](DECISIONS.md#adr-010--secrets-in-ingest-are-redacted-not-stored), per-vendor `cloudcommon.Stamp` equivalent for resource provenance metadata. No new checks — just the runway.
+- **Phase 1 — Cloudflare deep**: 8 sub-services + ~80 checks. Zones + DNS (DNSSEC enforced, SPF/DKIM/DMARC alignment, no dangling CNAMEs to deactivated services), R2 (public-bucket detection + signed-URL TTL + lifecycle policy), Workers (secrets in env vars detection + tail logs + outbound destination allowlist + binding hygiene), Tunnels (cloudflared version drift + ingress policy), Access / Zero Trust (policy posture + identity provider config + service-token rotation), WAF + Bot Management (rule set enabled + custom-rules audit + bot challenge threshold), Pages (build-config + env-var sensitivity + preview-deploy gating), D1+KV+Queues (encryption-at-rest defaults + per-namespace ACL), Stream + Images (signed-URL TTL + token-restricted playback), Email Routing (catch-all detection + forwarding-address audit), Magic Transit (BGP session security + ACL policy).
+- **Phase 2 — GitHub deep**: 12 surfaces + ~100 checks. Org settings (2FA required, base perms, dependency insights enabled, security advisories on), repo settings (default-branch + visibility audit + force-push gate + delete-branch policy), branch protection (required reviewers count, required status checks, signed commits, linear history, conversation resolution), secrets (org + repo + env + dependabot secret inventory; rotation cadence; never logged), code scanning (CodeQL or third-party SAST enabled per default-branch repo), GitHub Advanced Security (push protection for secret scanning, dependency review on PRs), actions runners (self-hosted runner posture, group isolation, never-on-public-repos rule), workflow security (`permissions:` at workflow root, third-party-action SHA-pinning audit, OIDC trust policy least-privilege, reusable-workflow allowlist), audit log retention (streaming endpoint configured + integrity verification), packages + releases (signed releases via cosign or sigstore, package visibility), environments (required reviewers, wait timers, deployment branches policy), OIDC trust policies (sub-claim specificity audit, audience pinned), copilot org policy (data-retention opt-out + suggestion matching gates).
+- **Phase 3 — Google Workspace deep**: 8 surfaces + ~60 checks. Admin SDK posture (super-admin count, recovery info per admin, MFA enforcement), Drive sharing (external sharing per-OU policy, link-sharing audit, file lifecycle policy, DLP rules), Gmail security (S/MIME + IRM + content compliance + spam policy + attachment scanning), Vault retention (default + legal-hold posture per OU), Endpoint Management (managed-device enrollment % + screen-lock + encryption posture), OAuth apps inventory (third-party-app trust + scopes audit + impersonation grants), Alert Center (rules enabled + delivery destination + acknowledgement SLO), Context-Aware Access (rules enabled + risk-signal coverage + per-app conditional rules).
+- **Phase 4 — Microsoft 365 + Entra ID deep**: 7 surfaces + ~80 checks. Defender for Office (anti-phishing policy, Safe Links, Safe Attachments, ATP policy), Defender for Endpoint (device-onboarding %, EDR posture, AV exclusions audit), Purview (DLP policies, sensitivity-label adoption, records management, eDiscovery hold posture), Sentinel (data connectors enabled, scheduled rules count, automation playbooks wired), Intune (compliance policies per platform, conditional-access integration, app-protection policies), conditional access (block-legacy-auth, MFA-required, device-compliance-required, location-based rules, sign-in risk gating), audit log retention + app consent (admin consent workflow + per-app permission audit + risky-OAuth detection).
+- **Phase 5 — Vercel deep**: 9 surfaces + ~30 checks. Project settings (production-branch lock, deployment protection), env vars (sensitive flag set on secrets, scope split prod/preview/dev, unused-var detection), deployments hygiene (preview deploys gated on auth, no auto-deploy from forks), log drains (configured + retention SLA), OIDC token issuance (audience pinned, sub-claim specific), team SSO + SAML (enforced, no email/password fallback), build env isolation (no leaked secrets in build logs, build-cache scope), edge config (read-only at runtime, write keys rotated), env-protection rules (required reviewers for prod env edits).
+- **Phase 6 — Linode / Akamai Cloud deep**: 8 surfaces + ~40 checks. Compute (region + plan posture, backup enabled, watchdog on, image age), NodeBalancers (TLS-only, modern cipher suite, sticky-session SameSite, health-check policy), Object Storage (public-bucket detection, lifecycle, CORS policy), Cloud Firewalls (default-deny ingress, rule audit), VLANs (segmentation posture), LKE (control-plane version, audit log, network policy, RBAC posture), DNS (DNSSEC + SPF/DKIM/DMARC), longview agents (installed + reporting on production hosts).
+- **Phase 7 — Vultr deep**: 8 surfaces + ~30 checks. Instances (region + plan, backup, auto-snapshot, OS age), block storage (encryption at rest, attached-VM-only access), VKE (version, network policy, audit log), firewall groups (default-deny, rule audit, unused-group cleanup), object storage (public-bucket, lifecycle, signed-URL TTL), DNS (DNSSEC + SPF/DKIM/DMARC), reserved IPs (geo + ownership audit), snapshot retention (TTL + encryption).
+- **Phase 8 — Fastly deep**: 7 surfaces + ~25 checks. Services (TLS 1.3 + HSTS + modern cipher suite), ACLs (size + rotation + per-service scope), dictionaries (PII never stored, retention), TLS subscriptions (auto-renew, key-rotation cadence), log streaming endpoints (configured + integrity verification + retention), image optimizer (signed-token-restricted), compute@edge (binding hygiene + outbound allowlist + secret handling).
+- **Phase 9 — Slack workspace deep**: 6 surfaces + ~25 checks. SCIM provisioning (enforced, deprovisioning latency SLO), app inventory + OAuth scopes (over-broad scope detection, unused apps), DLP (content rules + DM scanning posture), channel retention (per-channel TTL audit, default retention), IdP enforcement (SSO required, no email/password fallback), audit log streaming (Enterprise Grid endpoint configured + retention).
+- **Phase 10 — Atlassian Cloud deep**: 7 surfaces + ~30 checks. Jira + Confluence org settings (sandbox vs prod posture), app inventory (Marketplace app scope audit + unused-app cleanup), SSO + SCIM (enforced, deprovisioning latency), audit log (retention + streaming), OAuth grants (org-level + user-level grant audit), anonymous-access posture (Confluence space anon-read detection), API token hygiene (admin API token inventory + rotation).
+- **Phase 11 — Okta deep**: 6 surfaces + ~25 checks. Sign-on policies (per-app MFA + risk-based + IP-zone), factor enrollment policy (modern factors required, SMS deprecated), app catalog hygiene (unused-app cleanup, scope audit, SCIM where supported), log streaming (configured to SIEM + retention), behavior detection (rules enabled + risk-based MFA wiring), system log retention (per-tenant SLA + integrity verification).
+- **Phase 12 — Zoom deep**: 6 surfaces + ~15 checks. Security policies (E2E meeting option per default, waiting-room default, passcode required), recording retention (TTL per OU, default-storage-location), SSO config (enforced + IdP allowlist), App Marketplace approvals (admin-approval flow + scope audit), meeting defaults (chat retention, attendee limits, screen-share host-only default), webinar perms (registration required, panelist promotion gating).
+- **Phase 13 — Stripe deep**: 6 surfaces + ~20 checks. Restricted API keys (least-privilege + per-integration key + rotation cadence), webhook signing (secret rotation + replay-window enforcement), IP allowlist on dashboard (configured per env), Radar fraud rules (default rules enabled + custom-rules audit + 3DS thresholds), team perms + audit (role-least-privilege + 2FA enforced + audit log retention), Sigma data retention (PII-scrubbing posture, query log retention).
+- **Phase 14 — HubSpot + Salesforce deep**: 7 surfaces + ~25 checks. Data perms + sharing (record-level sharing audit, profile + permission set hygiene), OAuth connected apps (scope audit + IP allowlist per app + admin-approval-required), integration hygiene (unused integration cleanup + API call quota), IP restrictions (per-user + per-profile + per-connected-app), password policy + MFA (enforcement per profile), audit trail retention (Salesforce field audit trail enabled on sensitive fields + retention SLA), event monitoring (Salesforce Shield posture if licensed).
+- **Phase 15 — Notion deep**: 5 surfaces + ~15 checks. Workspace admin (enterprise plan posture, recovery info), integrations inventory + scopes (third-party-integration audit, internal-integration scope hygiene), sharing perms (public-page detection, link-with-edit audit, guest-user inventory), page-share-with-link audits (TTL + watermark per page), SCIM provisioning (enforced + deprovisioning latency).
+- **Phase 16 — 1Password + Bitwarden deep**: 6 surfaces + ~20 checks. Vault sharing audit (per-vault membership + collection scope), SCIM (enforced + deprovisioning latency), recovery policy (org-wide recovery posture, recovery code rotation), Watchtower / breach posture (alerts enabled + remediation SLO), login policies (factor enforcement + master-password rotation cadence + session timeout), event log retention (export to SIEM + integrity verification).
+- **Phase 17 — Tailscale deep**: 7 surfaces + ~20 checks. ACL posture (default-deny, tag-based policy hygiene, no wildcard sources), MagicDNS hygiene (split-DNS + per-tag DNS isolation), key expiry policy (per-user + per-tag-server ephemeral key enforcement), device posture rules (OS + browser + EDR posture as access prereq), SSO (enforced, no email/auth fallback), tagged-server lifecycle (auto-removal of stale-tagged servers), audit log streaming (configured + retention).
+- **Phase 18 — Observability vendor posture (Datadog / New Relic / PagerDuty) deep**: 7 surfaces + ~25 checks per vendor (so ~75 total). API key hygiene + scopes (least-privilege, per-integration key, rotation cadence), integration inventory (unused-integration cleanup), log retention (per-data-type SLA + integrity), sensitive-string scrubbing rules (PII patterns enabled + custom regex audit), SSO + SCIM (enforced + deprovisioning), audit log retention (event-log streaming + retention), on-call rotation hygiene (PagerDuty-only — no single-point-of-failure schedules, escalation policy depth ≥2).
+- **Phase 19 — Transactional email vendor (Postmark / SendGrid / Mailgun) deep**: 6 surfaces + ~20 checks per vendor (so ~60 total). DMARC + SPF + DKIM alignment per sending domain (relaxed vs strict posture, sub-domain delegation), webhook signing (secret rotation, replay-window), suppression list hygiene (export + retention + cross-vendor sync if multiple), log retention (per-message log SLA, integrity verification), IP reputation surfacing (per-dedicated-IP reputation polling, warmup status), API key scopes (least-privilege per integration).
+- **Phase 20 — Modern PaaS (Render / Fly.io / Railway) deep**: 6 surfaces + ~30 checks per vendor (so ~90 total). Env vars + secrets (sensitive-flag, scope split prod/preview, never-in-build-log audit), IP allowlist (per-service + per-DB), build cache poisoning posture (cache scope + invalidation policy), audit log (admin event log + retention + streaming), custom-domain TLS posture (auto-renew, modern cipher suite, HSTS), log drains (configured + per-tenant scope + retention SLA).
+- **Phase 21 — Discord deep**: 6 surfaces + ~15 checks. Bot perms (per-bot scope audit, admin-bot detection), audit log (retention + integrity, per-mod-action streaming), member screening (verification level + screening-questions enabled), AutoMod posture (block-spam + harmful-content + custom-rules audit), channel perms hygiene (no @everyone-write on announcements, no @everyone-mention on sensitive channels), webhook inventory (per-channel webhook audit + scope).
+- **Phase 22 — iPaaS (Zapier / n8n / Make) deep**: 5 surfaces + ~15 checks per vendor (so ~45 total). Connection inventory + OAuth scope sprawl (per-connection scope audit, unused-connection cleanup, scope drift detection), retention (zap/scenario history retention, log retention), IP allowlist (per-account allowlist, webhook source verification), secret-handling per step (secret-flag set, no hard-coded credentials in step config), SSO + audit log (enforced + retention).
+- **Phase 23 — Legacy platform (Heroku) deep**: 5 surfaces + ~15 checks. App config (config-var sensitive-flag, retention, never-in-release-log audit), add-on security (per-add-on plan posture + credential rotation), dyno hardening (stack version pin + runtime version pin + buildpack pin), Pipelines + Review Apps posture (production-branch protection, review-app gating, env-var inheritance hygiene), audit log (Enterprise feature posture + retention).
+- **Phase 24 — Framework wiring**: Map every tail-cloud check to controls in: (a) **CIS SaaS Benchmarks** for the big-3 (Google Workspace v1.x + Microsoft 365 v3.x + GitHub v1.x) — formal CIS catalogs ingested as `frameworks/cis-saas-*.yaml` per the v0.12 framework schema; (b) custom **"SaaS-Hardening v1"** framework — net-new compliancekit framework spanning the entire tail with 10 control families (Identity / Access / Audit / Data / Network / Secrets / Supply Chain / Backup / Vendor Posture / Configuration Drift); (c) **ATT&CK-for-SaaS** coverage — every tail-cloud check tagged with applicable MITRE techniques (T1078.004 cloud accounts, T1098.001 additional cloud credentials, T1556 modify auth process, etc.).
+- **Phase 25 — Tail-cloud aggregator dashboard**: net-new `/tail-clouds` UI route — vendor-grid heatmap (rows = vendors, cols = control families, intensity = failing-check density); per-vendor drilldown; cross-vendor "find me every place where OAuth scope X is granted" + "find me every place where person@example.com has admin"; integrates with v1.18 chart library (heatmap + sankey vendor → identity → permission).
+- **Phase 26 — Cross-vendor identity map**: new `internal/identity` package — links OAuth app inventory across vendors (e.g. the same Notion integration that touches Slack, the same Datadog API key that's wired into GitHub Actions + Vercel) + cross-vendor person map (the same `darpan@example.com` is an Okta admin + GitHub org owner + Stripe admin + AWS root). Surfaces in `/identity-map` route. SaaS-sprawl-audit as a first-class artifact.
+
+**Out of scope at v2.6**
+
+- Vendor-side **remediation generators** beyond GitHub (branch-protection PR), Cloudflare (zone-config Terraform), and AWS-already-covered. Most tail vendors don't have stable IaC, so remediation stays "open a Jira ticket pointed at the runbook" via [v0.17 notifiers](#v017----notifications-shipped-2026-05-17).
+- **OAuth-flow self-service** for these vendors. Operators wire vendor API tokens via the existing v1.4 settings UI; per-vendor OAuth dance lives at v2.6.x.
+- **OS expansion beyond v2.5** (macOS / Windows / BSD hardening). Tail clouds is SaaS-only.
+
+**Dependencies added (~22 new direct deps)**
+
+Vendor SDKs vary in quality. Where the official Go SDK is well-maintained, we use it; otherwise we hand-roll a thin client on top of `saascommon`:
+
+- `github.com/cloudflare/cloudflare-go/v4` (Cloudflare)
+- `github.com/google/go-github/v68` (GitHub) — already vendored; deepened
+- `google.golang.org/api/admin/directory/v1` + `drive/v3` + `gmail/v1` + `vault/v1` (Google Workspace)
+- `github.com/microsoftgraph/msgraph-sdk-go` (Microsoft 365 + Entra ID)
+- `github.com/vercel/vercel-go` (Vercel)
+- `github.com/linode/linodego` (Linode)
+- `github.com/vultr/govultr/v3` (Vultr)
+- `github.com/fastly/go-fastly/v9` (Fastly)
+- `github.com/slack-go/slack` (Slack)
+- `github.com/ctreminiom/go-atlassian` (Atlassian Cloud)
+- `github.com/okta/okta-sdk-golang/v3` (Okta)
+- `github.com/himalayan-institute/zoom-lib-golang` (Zoom)
+- `github.com/stripe/stripe-go/v77` (Stripe)
+- `github.com/clarkmcc/go-hubspot` + `github.com/simpleforce/simpleforce` (HubSpot + Salesforce)
+- `github.com/jomei/notionapi` (Notion)
+- `github.com/1Password/connect-sdk-go` + `github.com/bitwarden/sdk-go` (1Password / Bitwarden)
+- `github.com/tailscale/tailscale-client-go` (Tailscale)
+- `github.com/DataDog/datadog-api-client-go/v2` + `github.com/newrelic/newrelic-client-go/v2` + `github.com/PagerDuty/go-pagerduty` (observability)
+- Postmark / SendGrid / Mailgun official Go clients (transactional email)
+- Render / Fly.io / Railway REST clients (hand-rolled on `saascommon`)
+- `github.com/bwmarrin/discordgo` (Discord)
+- Zapier / n8n / Make REST clients (hand-rolled on `saascommon`)
+- `github.com/heroku/heroku-go/v5` (Heroku)
+
+Net binary-size impact: ~25 MB → ~40 MB. Documented in the v2.15 code-health pass as the threshold to revisit (some vendor packs may move to v1.13 plugins to keep the core binary lean).
+
+**API surface additions to `pkg/compliancekit`**: `Vendor` enum (one per phase 1–23), `IdentityRef` (cross-vendor person/app pointer for phase 26), `OAuthGrant` shape (for phase 26 inventory). Stable, additive — no v2 break required.
+
+---
+
+### v2.12 — UI/UX 3.0 — Studio-grade interactions
+
+**Goal:** post-v1.18 design system + v1.19 onboarding, this is the milestone that takes us from "Linear-tier" to "every-interaction-feels-handcrafted." Every page accepts a command palette. Every list filters live. Every drag-target accepts drops. Every dashboard mutation animates. Real-time collab cursors make the daemon feel like a multiplayer product.
+
+**Deliverables**
+
+- **Command palette everywhere**: extend the v1.5/v1.19 Cmd-K from a global search to a per-page command surface (page-scoped commands like "filter by severity=critical" / "assign all selected to me" / "open in TUI" / "export view as PDF"). Backed by a `commands.Registry` per-page so plugins can register commands too.
+- **Drag-drop everywhere**: dashboards (widget reorder + resize), saved views (column reorder), finding triage Kanban (drag finding between New/In-progress/Waived columns), waiver bulk-move, table column reorder + pin-left/pin-right (lifts the v1.19 table 2.0 affordances into every list).
+- **Real-time collab cursors + presence**: WebSocket upgrade for ephemeral mouse-position broadcasting (separate channel from the SSE event bus so cursor traffic doesn't pollute durable events); per-finding presence chips ("3 people viewing"); per-text-field selection broadcasting (Linear / Notion style).
+- **Chart library refresh**: interactive Sankey (drag to re-aggregate), sunburst (click to drill), risk heatmap (brush to filter), bullet chart for KPI vs target, waffle chart for compliance posture per framework. Cross-filter brushing: select on one chart, every other chart on the page filters.
+- **Motion language v2**: Framer-grade choreography library (`internal/server/ui/src/motion.js`) with staggered list reveals, FLIP for layout transitions (smooth row-add/remove instead of jarring re-render), shared-element transitions across pages (clicking a finding card morphs into the detail panel).
+- **Illustration catalog**: 60+ vanilla-SVG empty-state illustrations tuned per theme (light / dark / high-contrast); per-page coaching art; "no findings yet — here's how to add a provider" illustrated walkthrough.
+- **Theme builder + brandable white-label**: per-org logo + favicon + 3-color picker (primary / accent / surface) + dark-mode override + custom font (Google Fonts allowlist + self-hosted toggle); WCAG AA contrast validator gates submit.
+- **In-app changelog + spotlight tours**: auto-triggered after every minor-version upgrade; deep-link to touched UI areas; "What's new" carousel with replay.
+- **Smart Empty States 2.0**: per-page coaching with "show me an example" 1-click that seeds the v1.4 demo data scoped to the empty page only.
+- **Micro-animations audit**: button-press depth, focus-ring spring, optimistic state lift, toast queue slide+fade+stack, page-top nprogress (lifts/extends from v1.18 — every interaction polished to Linear-tier).
+
+**Out of scope at v2.12**
+
+- AI-driven UI suggestions ("you should probably look at this"). v2.x AI-native milestone, separate.
+- Native iOS/Android app. PWA shipped at v1.16 is the maintainer surface.
+
+**Dependencies added**
+
+- No new server-side deps.
+- Frontend: hand-rolled motion library (no Framer Motion dep — too heavy for a daemon UI); cytoscape.js *finally* lands for the v1.5.x graph escape hatch + sunburst drilldown.
+
+**No API surface change**.
+
+---
+
+### v2.13 — Documentation 2.0
+
+**Goal:** the docs site contributors fork from, not just read. Multi-version, searchable, dark mode, mobile-first; full handbook + per-framework playbooks + cookbook 2.0 + interactive API explorer.
+
+**Deliverables**
+
+- **`docs.compliancekit.io` static site**: Hugo (or Mkdocs + Material — decision in ADR-020 at kickoff) + a vendored theme matching the v1.18 design system; multi-version selector (v1.x current / v0.x archived); client-side search via pagefind or lunr (no SaaS dep); dark mode + mobile-first responsive.
+- **Full handbook** (~50 pages of long-form):
+  - Architecture deep-dives: collector → engine → reporter → ingest → remediate → notify pipeline; SSE event bus + worker pool + leader election; per-cloud SDK conventions; framework yaml shape + tailoring flow.
+  - Threat model: STRIDE per component; data-flow diagram; supply-chain posture; tenant isolation (post-v2.1) story.
+  - Ops runbooks: 20+ runbooks for the most common operator situations (DB full, leader stuck, webhook receiver lagging, OIDC IdP down, scan timeout, audit-chain broken, etc.).
+  - On-call playbook + post-mortem template (Google SRE-style).
+- **Per-framework playbooks**: "SOC 2 in 30 days with compliancekit" / "PCI v4 in 60 days" / "HIPAA in 45 days" / "ISO 27001 in 90 days" / "NIST 800-53 r5 from scratch" / "FedRAMP Low pre-flight" — each ~10 pages with screenshots, command sequences, expected timelines, common pitfalls.
+- **20+ video walkthroughs**: asciinema casts for CLI flows (`scan` / `serve` / `remediate` / `policy validate` / `plugins install`); Loom recordings for UI flows (Studio onboarding / explorer / dashboard builder / audit pack); hosted on YouTube, linked from docs, transcripts committed for searchability.
+- **Cookbook 2.0**: 50+ end-to-end recipes (from "monitor my homelab" to "ship a Trust Center to my biggest customer" to "wire CI/CD compliance gates" to "respond to a SOC 2 audit"). Each recipe is a single page with prerequisites + step-by-step + expected output + troubleshooting.
+- **Interactive API explorer**: Swagger UI mounted at `docs.compliancekit.io/api/explorer` against the v1.x OpenAPI spec; "Try it" against the live `demo.compliancekit.io` daemon (the v1.4 demo mode in prod-hosted form); per-endpoint code samples in 6 languages (curl / go / python / typescript / ruby / php).
+- **Embedded LLM doc-search** (opt-in): local Ollama-friendly + OpenAI-compatible; users bring their own model; no phone-home; documented integration.
+- **Changelog-as-blog**: every minor gets a launch post on `docs.compliancekit.io/blog` with screenshots + diff + "what's new for operators" + "what's new for plugin authors" sections.
+- **Contributor docs**: dedicated `/contribute` section — codebase tour, dev environment, RFC process, ADR conventions, release checklist, maintainer status criteria.
+
+**Out of scope at v2.13**
+
+- Docs translation. That's v2.19 i18n 2.0 territory.
+- AI-generated docs. Operators write canonical text; LLM is search-only.
+
+**Dependencies added**
+
+- Hugo (or Mkdocs Material) build-time dep — not bundled in the binary.
+- pagefind WASM at docs-site build time.
+
+**No API surface change.**
+
+---
+
+### v2.14 — Zero-trust deploy
+
+**Goal:** the most secure default deployment of any open-source compliance tool. Every connection mTLS-authenticated, every secret rotated, every workload identity-attested, every artifact verified.
+
+**Deliverables**
+
+- **mTLS everywhere**: daemon ↔ daemon (HA cluster), daemon ↔ Postgres (libpq sslmode=verify-full + client cert), daemon ↔ webhook receivers (mutual auth), daemon ↔ outbound (notify sinks); auto-renewing via cert-manager integration or a built-in CSR loop with configurable issuer (Vault PKI / step-ca / smallstep).
+- **SPIFFE / SPIRE identity**: workload attestation; SVIDs for every daemon replica + every operator binary; `spiffe://compliancekit.example.com/daemon/<id>` identity URIs everywhere; SPIRE Agent helm chart + Kustomize overlay shipped.
+- **Secrets via Vault / Infisical / SOPS / sealed-secrets / external-secrets-operator**: no plaintext env vars in HA mode; per-secret-backend driver in `internal/secrets/`; `sops` for git-stored encrypted YAML (operator workflow); ESO for K8s-native; Infisical for self-hosted; Vault for enterprise.
+- **NetworkPolicy + Cilium L7 templates**: shipped in `deploy/networkpolicies/` — default-deny ingress, allowlist for Postgres + Prometheus + ingress; L7 templates restrict outbound to known notify-sink hosts.
+- **seccomp + AppArmor profiles + landlock**: shipped in `deploy/seccomp/` and `deploy/apparmor/`; daemon runs with the minimum syscall surface needed; landlock LSM enabled on Linux ≥5.13 for filesystem isolation.
+- **SLSA L4 build provenance**: GitHub Actions builds emit SLSA L4 attestations via slsa-framework/slsa-github-generator; attestations published to Sigstore; verifiable via `cosign verify-attestation`.
+- **Hardware-attested boot docs**: docs and Helm-values templates for Secure Boot + TPM 2.0 + measured boot (IMA + EVM) on Linux hosts; tied to v2.5 OS hardening for the OS-side configuration.
+- **BYOK customer-managed encryption keys**: envelope encryption for sensitive columns (PII, tokens, secrets-in-rest); per-tenant KMS reference; KMS adapters for AWS / GCP / Azure / HashiCorp Vault Transit (closes the loop with v2.20 enterprise polish).
+- **IP allowlist + geo-fencing middleware**: per-route IP allowlist, per-org geo-fence, GeoIP database update job shipped.
+- **OWASP ASVS L3 self-audit**: full audit committed quarterly; gap-tracker in `docs/security/asvs-l3-status.md`; ASVS L3 controls mapped to compliancekit's own checks where applicable (dogfooding).
+- **Supply-chain hardening**: every Go dep verified via cosign + Sigstore (where available); Dependabot + Renovate config tightened (auto-merge security-only; major bumps require ADR); SBOM published per release with VEX statements for known-but-not-exploitable CVEs.
+
+**Out of scope at v2.14**
+
+- FIPS 140-3 mode. v2.20+ enterprise polish if demand surfaces (Go's BoringCrypto path is the lever).
+- Confidential computing (SEV-SNP / TDX) workload attestation. v2.x+ if hardware penetration warrants.
+
+**Dependencies added**
+
+- `github.com/spiffe/go-spiffe/v2` for SPIFFE identity.
+- `github.com/hashicorp/vault/api` for Vault secrets adapter.
+- `github.com/getsops/sops/v3` for SOPS adapter.
+- `github.com/external-secrets/external-secrets` types for ESO integration.
+- KMS SDKs already vendored from v0.7/v0.8 (AWS KMS, GCP KMS).
+
+**API surface additions**: `secrets.Backend` interface in a new `pkg/compliancekit/secrets` subpackage so plugins can register secret resolvers.
+
+---
+
+### v2.15 — Code health pass
+
+**Goal:** a codebase that reads like it was reviewed line-by-line. Surface-area audit, dead-code elimination, dependency minimization, performance budgets, error-handling consistency, structured logging audit, doc-comment 100% coverage. No new features — pure quality work.
+
+**Deliverables**
+
+- **Surface-area audit**: every `internal/` package gets a 1-page README documenting its purpose + invariants + extension points; cross-package coupling reviewed (the goal: a contributor can change `internal/checks/aws/` without reading `internal/server/`); dependency graph snapshot in `docs/architecture/package-graph.svg`.
+- **Dead-code elimination**: enable `deadcode` + `unused` analyzers (both Dominik Honnef's `staticcheck` and `unconvert` family) in CI as hard gates; ~20% removal expected (~30k LoC) based on current heuristic sweep; every unexported symbol that's unused gets removed.
+- **Dependency minimization**: drop transitives where direct alt exists; consolidate logging libraries (only `log/slog`); consolidate CLI styling (only `internal/ui` + `charmbracelet/lipgloss`); audit `go mod why` on every direct dep; bin-size budget reduced from 25 MB → 20 MB target.
+- **Performance budgets in CI**: `go test -bench` regression gate via [benchstat](https://pkg.go.dev/golang.org/x/perf/cmd/benchstat) — fail PRs that regress p95 query / startup time / RSS / goroutines-at-rest beyond budget; per-package benchmark suite + per-handler request-budget; baseline committed to `bench/baseline.json`.
+- **Allocation regression tests**: `-benchmem` on hot paths; per-allocation budget per request (e.g. `/api/v1/findings` ≤ 50 allocs/req).
+- **Structured logging audit**: every package uses `log/slog` with stable attribute names; structured-log schema documented in `docs/architecture/log-schema.md`; CI gate (custom linter) rejects `fmt.Printf` / `log.Printf` outside `cmd/`.
+- **Error-handling consistency pass**: every external boundary returns typed sentinels via `errors.Is/As`; `fmt.Errorf` audited for `%w`; `internal/errs/` ships canonical sentinels per subsystem (`errs.ErrNotFound`, `errs.ErrUnauthorized`, etc.); all handler error responses go through one path that maps sentinel → HTTP status code.
+- **Remove `interface{}`/`any` where concrete fits**: type-set audit; generics where helpful (e.g. typed `lru.Cache[K,V]` over `interface{}`-based v1.11 cache).
+- **Doc-comment 100% public API**: `golint` ST1020 gate; every exported func + type + method has a complete doc comment; package-level docs include canonical usage example.
+- **golangci-lint v2 enabled**: full config with `gocritic` + `revive` + `prealloc` + `errchkjson` + `nilnesserr` + `protogetter` + `recvcheck`; existing v1.64 config retired; per-rule allowlist with justification comments.
+- **`internal/repocheck` extension**: file-size budget extended to per-function complexity (cyclomatic) + per-file max imports + per-package max files; gate enforces budgets that we're already meeting today (lock the bar).
+
+**Out of scope at v2.15**
+
+- Architectural rewrites. Refactor inside the existing shape, don't restructure.
+- API surface changes. Doc work only on `pkg/compliancekit`; no new types, no removals.
+
+**Dependencies added**
+
+- `golang.org/x/perf` for benchstat in CI.
+- golangci-lint v2 — toolchain dep, not a binary dep.
+
+**No API surface change** (the whole point).
+
+---
+
+### v2.16 — Test pyramid maturity
+
+**Goal:** the test suite that catches the bug you would have shipped. Fuzz everywhere a parser exists, property-based for the engine, mutation testing for the core, chaos for the daemon, snapshot for every output, golden 100% for reporters + checks, weekly integration runs on every cloud, Playwright e2e matrix, perf regression gates.
+
+**Deliverables**
+
+- **Fuzz testing on every parser**: SARIF / OCSF / OSCAL / Trivy / Grype / Checkov / gitleaks / yaml (config) / rego / HTTP API request bodies — each gets a `FuzzXxx` + corpus committed to `testdata/fuzz/`; CI runs fuzz for 5 minutes per parser on every PR + 1 hour nightly per parser on `main`.
+- **Property-based tests** (`pgregory.net/rapid`): ResourceGraph (round-trip invariants, query-equivalence), Engine (idempotency, ordering invariants), Rules (condition-evaluation determinism, action-dispatch effects), Waiver matching (glob expansion equivalence).
+- **Mutation testing** (`go-mutesting`): baseline `mutation-score.json` committed; CI gate at >80% mutation kill rate on `internal/engine/` + `internal/checks/` + `internal/rules/` + `internal/policy/`; quarterly review of survivors.
+- **Chaos engineering** (`toxiproxy`): fault injection on Postgres (50ms / 500ms / 5s latency, packet loss, connection reset), webhook receivers (slow client, partial body), SSE clients (slow consumer, mid-stream disconnect), notify sinks (slow / error / partial); expected DLQ + retry behavior asserted in tests under `tests/chaos/`.
+- **Snapshot tests for every HTML route + reporter format** (`gotest.tools/v3/golden`): every page rendered against canonical fixture state; reporters (JSON / HTML / SARIF / OCSF / OSCAL AR + Profile / poam / Markdown / PDF) golden-tested for byte-stable output.
+- **Golden-file coverage 100%** across `internal/report/` + `internal/checks/`: every check has a unit test against a recorded fixture (per-cloud SDK fixtures already vendored); every reporter has a per-format golden.
+- **Weekly integration-test fleet**: ephemeral burst accounts on AWS / GCP / DO / Hetzner / K8s spun up Sunday 00:00 UTC; full provider-coverage scan runs; SLO report posted to `tests/integration/SLO.md` + PagerDuty if regression; accounts torn down.
+- **e2e Playwright matrix**: chromium + firefox + webkit; touches login + onboarding wizard + finding explorer + dashboard builder + audit pack export + rule builder + plugin install; runs per PR (chromium-only on PR, full matrix nightly).
+- **Perf regression gate**: blocks PRs above benchmark budget (lifts/extends v2.15 budgets into a hard gate); benchstat-driven; per-package thresholds.
+- **Test-pyramid scorecard**: `docs/testing/scorecard.md` tracks unit / integration / e2e / fuzz / property / mutation / chaos coverage per package; updated quarterly.
+
+**Out of scope at v2.16**
+
+- Formal verification (TLA+ / Coq). Compelling for distributed systems work; out of scope for compliancekit's shape.
+- Production traffic replay. Hand-rolled if needed; no canonical pattern yet.
+
+**Dependencies added**
+
+- `pgregory.net/rapid` for property-based.
+- `github.com/zimmski/go-mutesting` for mutation (CI-side, not a binary dep).
+- `github.com/Shopify/toxiproxy/v2` for chaos (test-only).
+- `gotest.tools/v3` for golden assertions.
+- `@playwright/test` (npm) for e2e.
+
+**No API surface change**.
+
+---
+
+### v2.17 — Developer experience
+
+**Goal:** make it 10× easier to ship a 1-line PR or a 1000-line plugin. Devcontainer ready, video onboarding, plugin SDK 2.0 with codegen, public roadmap + RFC process, contributor portal.
+
+**Deliverables**
+
+- **`.devcontainer/`**: Codespaces-ready Go + Node + cosign + grafana-cli + helm + kubectl + terraform + golangci-lint + lefthook + every CLI dep pre-installed; opens to a working test environment in <90s.
+- **`make bootstrap` + `make smoke`**: first-90-seconds scripts — `bootstrap` installs all tooling, runs `make check`, seeds demo data; `smoke` runs a 30-second end-to-end happy-path against the demo daemon.
+- **Video onboarding**: "zero to first PR in 15 minutes" walkthrough — fork → clone → devcontainer → make smoke → edit a check → run tests → open PR. Hosted on YouTube; linked from CONTRIBUTING.md.
+- **Plugin SDK 2.0**: richer scaffolder (`compliancekit checks new --template=rego|go-subprocess|wasm` — three blueprints); codegen for boilerplate (`compliancekit codegen check <id>` emits manifest + tests + docs scaffold); runnable starter pack repo template at `darpanzope/compliancekit-plugin-template`; OCI registry push + cosign sign baked into the scaffold.
+- **CI templates for plugin authors**: `.github/workflows/check-pack.yaml` published as a re-usable action at `darpanzope/compliancekit-action-pack-ci` — validates manifest, runs tests, signs with cosign, publishes to GHCR.
+- **Opt-in anonymous telemetry**: PostHog self-hosted (we run the receiver, no third party); event payload: version + which providers configured + which CLI commands invoked (just the verb, never the args); never finding bodies, never tokens; opt-in only with `compliancekit telemetry enable`; documented in detail; aggregated stats published quarterly.
+- **ADR generator**: `make adr` opens `$EDITOR` with the canonical template + auto-increments to next ADR number; lints for required sections.
+- **Public RFC process**: `/rfcs/` directory + `gh issue create` template with RFC label; 14-day comment window; maintainer team triages; merged RFCs link out to tracking issues.
+- **Public roadmap board**: GitHub Projects v2 mirroring the milestones in this ROADMAP.md; auto-synced via a `make sync-roadmap-board` script.
+- **Contributor portal**: `docs.compliancekit.io/contribute` with good-first-issue feed (live from `gh issue list --label good-first-issue`); maintainer-status criteria explicit; mentorship pairing offered; per-area maintainers listed.
+- **`compliancekit dev`** subcommand suite: `dev seed` (seed demo data), `dev reset` (wipe and re-seed), `dev replay <fixture>` (replay a recorded scan against the current code for regression hunting).
+
+**Out of scope at v2.17**
+
+- Paid tier or SaaS pivot. compliancekit stays Apache-2.0, self-hostable; v2.20 adds support tier doc only.
+- Required telemetry. Opt-in forever per ADR-014 — no v2 break.
+
+**Dependencies added**
+
+- PostHog self-hosted receiver shipped as an optional Helm chart in `deploy/helm/telemetry/`.
+
+**No API surface change** to existing `pkg/compliancekit`; `pkg/compliancekit/plugin` gets the SDK 2.0 additions (additive).
+
+---
+
+### v2.18 — GitOps compliance
+
+**Goal:** the compliance source-of-truth lives in your git repo, not the daemon. ArgoCD / Flux native, drift opens a PR, weekly digest auto-committed, dashboards-as-code, waivers-as-PR.
+
+**Deliverables**
+
+- **ArgoCD + Flux templates**: `deploy/gitops/` ships ApplicationSet + Kustomization specs for both controllers; the daemon syncs `compliance/` directory from a designated git repo.
+- **Drift → PR**: daemon detects drift (new finding crosses severity threshold, baseline regression) and opens a PR against the `compliance/` repo with the proposed remediation (waiver add or remediate snippet); per-finding PR author = `compliancekit-bot`; required-reviewer rules per repo config.
+- **Weekly compliance digest auto-PRed**: every Monday 00:00 UTC, daemon opens a PR with snapshot under `compliance/snapshots/YYYY-WW.json` + a markdown summary; auditor reviews + merges.
+- **Dashboards-as-code**: `compliance/dashboards/*.dashboard.yaml` declarative spec → DB hydration via `compliancekit dashboards apply`; reverse direction via `compliancekit dashboards export`; CI gate validates schema.
+- **Scan-as-CRD**: Kubernetes-native scan trigger via the v1.15 / v2.10 operator (`ComplianceScan` CRD); operator reconciles scan results back into the cluster as ConfigMaps; ArgoCD shows compliance posture inline with app health.
+- **Profile-as-config**: `compliance/profiles/<name>.yaml` source-of-truth; UI is a read+suggest layer for non-Git users (proposes edits, lets the operator commit through PR or via the UI directly).
+- **Waiver-as-PR**: `compliance/waivers/<name>.yaml` source-of-truth; UI waiver creation opens a PR (or commits directly per per-org policy); required-reviewers config in `compliance/.compliancekit.yaml`.
+- **Compliance posture in ArgoCD UI**: custom health check definition shipped in `deploy/argocd/` that surfaces compliancekit's scan status against an Application as healthy / degraded / unhealthy.
+- **Drift triage queue**: `/drift` UI route — every open drift PR aggregated with status (open / mergeable / blocked); cross-link to git PR; per-drift severity badge.
+
+**Out of scope at v2.18**
+
+- Non-GitHub git providers' PR APIs. v2.18 ships GitHub + GitLab; Bitbucket + Gitea at v2.18.x if demand.
+
+**Dependencies added**
+
+- `github.com/google/go-github/v68` (already vendored, deepened).
+- `github.com/xanzy/go-gitlab` for GitLab.
+
+**API surface additions**: `gitops.Backend` interface in a new `pkg/compliancekit/gitops` subpackage.
+
+---
+
+### v2.19 — i18n 2.0
+
+**Goal:** a genuinely-global compliance dashboard. 10+ languages, RTL layout, locale-aware everything, translator workflow, per-tenant locale, on-the-fly switch.
+
+**Deliverables**
+
+- **10-language translation coverage**: en (canonical) / es / fr / de / ja / zh-Hans / pt-BR / ko / it / ar. Every template, every email, every notification body, every CLI string, every framework name, every check title + description + remediation text.
+- **RTL layout**: Arabic + Hebrew foundations; CSS logical properties throughout (`inline-start` / `inline-end` not `left` / `right`); UI rendering tested in both directions.
+- **Locale-aware dates / numbers / currency / time-zones**: CLDR via `golang.org/x/text/message` + `display`; per-locale formatting for findings.csv exports; per-tenant time-zone respected in scheduled-report send times.
+- **Translator workflow**: Weblate-compatible PO files + Crowdin-compatible JSON shipped in `internal/i18n/translations/`; CI gate blocks merge that adds untranslated key beyond a configurable threshold (default 5% per locale); translation-completeness badge in README.
+- **Per-tenant + per-user locale + per-notification-channel override**: Slack DM honors recipient's locale not poster's; webhook payloads include `locale` field; email respects user pref.
+- **On-the-fly language switch**: no reload; persists per-user; surfaces in topbar next to theme picker.
+- **Community-contributed language packs**: extend the v1.13 plugin SDK so a `kind: i18n-pack` plugin can register a new locale; community-maintained packs for tier-2 languages (sv / nl / pl / tr / id / vi / fa / th / he / hu / ro / cs / sk / fi / da / no / uk / el).
+- **Translation memory + auto-sync**: weekly job opens a PR with new keys added since last sync; per-locale stat updates; reviewer assigns translator.
+
+**Out of scope at v2.19**
+
+- Vendor-translated docs. Docs translation lives at v2.13.x if demand surfaces.
+- Auto-translation. Translator workflow only; no LLM-generated translations in main (community plugins can choose to use LLM).
+
+**Dependencies added**
+
+- `golang.org/x/text` already vendored from v1.10.
+- `github.com/nicksnyder/go-i18n/v2` already vendored from v1.10 — deepened.
+
+**No API surface change.**
+
+---
+
+### v2.20 — Enterprise polish
+
+**Goal:** Fortune-500 procurement-review ready. SSO MFA enforcement, audit immutability with WORM storage, retention policies, data residency, session intelligence, BYOK, contract-grade SLA documentation, paid support tier.
+
+**Deliverables**
+
+- **SSO MFA enforcement policy**: per-role + per-org + step-up auth on sensitive ops (waiver create over threshold, role assignment, settings export); WebAuthn / FIDO2 first-class; SMS deprecated with timeline.
+- **Audit immutability (WORM)**: storage adapters — `internal/server/store/worm/` — S3 Object Lock + Azure Immutable Blob + GCS Bucket Lock; the v1.12 per-row hash-chain extended to a per-second Merkle root anchored to a public ledger optionally (Sigstore Rekor as default ledger; Ethereum L2 as opt-in).
+- **Retention policies**: per-data-type TTL (findings 7yr / audit 10yr / sessions 90d / SSE replay ring 5min / inbox 1yr — every TTL customizable); GDPR delete-on-request workflow; right-to-be-forgotten audit log.
+- **Data residency selector**: per-tenant region pin; cross-region replication off by default; `regions.yaml` documents data flow per region.
+- **Session intelligence**: anomaly detection on geo / device / hour (per-user baseline established from history); risk-scored login with step-up MFA; impossible-travel detection.
+- **IP allowlist + geo-fencing per-org**: extends v2.14 server-side middleware to a per-org configurable policy via the v1.12 admin UI.
+- **Customer-managed encryption keys (BYOK)**: KMS adapters for AWS KMS / GCP KMS / Azure Key Vault / HashiCorp Vault Transit; envelope encryption for sensitive columns (tokens, secrets-in-rest, PII); per-tenant CMK rotation policy.
+- **Contract-grade SLA**: documented in `docs/operations/SLA-template.md` — 99.9% uptime target, 24h RPO, 4h RTO for a properly-deployed HA daemon; status-page generator under `compliancekit serve status` (lightweight built-in status page or export to Statuspage/Cachet/Atlassian).
+- **Paid support tier (documentation only — not a SaaS pivot)**: incident-response runbook template, 24/7 escalation contract template, professional-services-statement-of-work template; published so an org can buy support from a vendor (any vendor — compliancekit doesn't sell support, just provides the artifacts an integrator/consultancy can sell under).
+- **Compliance certifications self-attestation**: docs + evidence-pack templates for SOC 2 Type II, ISO 27001, PCI DSS, HIPAA — the artifacts an operator hands to *their* auditor to demonstrate compliancekit-managed deployment posture; not compliancekit-the-vendor SOC 2.
+
+**Out of scope at v2.20**
+
+- compliancekit as a hosted SaaS. No plan; the binary is the product.
+- Vendor-managed compliance certification (compliancekit-the-vendor pursuing SOC 2). If/when the project incorporates as a foundation or sponsor, separate effort.
+
+**Dependencies added**
+
+- Cloud KMS SDKs already vendored from v0.7/v0.8.
+- `github.com/hashicorp/vault/api` from v2.14.
+
+**No API surface change** (additive `internal/` packages only).
 
 ---
 

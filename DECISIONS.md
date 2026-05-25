@@ -656,7 +656,64 @@ The daemon's CSP carries **`script-src 'self' 'unsafe-eval'`**. `'unsafe-inline'
 
 ---
 
+## ADR-019 — v2.x expansion — bar-raising arc (v2.12–v2.20) + tail-cloud deep pack (v2.6)
+**Date:** 2026-05-25
+**Status:** Accepted
+
+### Question
+ADR-016 (2026-05-18) reserved v1.6–v1.19 for server / UI/UX / backend / CLI polish and re-slotted everything else to v2.x. That gave v2.x 12 rows (v2.0–v2.11): API surface, multi-tenant, Trust Center, GRC, auditor portal, OS expansion, tail clouds, OSCAL+SCAP, risk score, plugin marketplace, K8s operator full, auto-remediation.
+
+But v2.x as a thesis was only "platform expansion." Two gaps surfaced as v1.x neared completion:
+
+1. **No dedicated bar-raising arc.** v1.x ships polish; v2.x ships breadth. Nothing in v2.0–v2.11 is the "we hand-craft every interaction, every doc page, every test, every deploy default" milestone set that takes the product from "feature-complete" to "category-leading."
+2. **Tail clouds (v2.6) is one row but a vast surface.** Cloudflare alone is 8 product lines; GitHub is 12 settings surfaces; Google Workspace + Microsoft 365 between them are the auth root of most companies. Treating that as one row understates the work and the value.
+
+Do we cap v2.x at 12 rows and let the bar-raising live in unscoped v2.x.x patches, or do we add a dedicated arc + deepen the tail-cloud row?
+
+### Decision
+**Expand v2.x from 12 rows to 21 rows** by:
+
+1. **Adding 9 new milestones (v2.12–v2.20)** dedicated to the bar-raising arc:
+   - v2.12 UI/UX 3.0 — Studio-grade interactions
+   - v2.13 Documentation 2.0 — multi-version site + handbook + per-framework playbooks + cookbook + interactive API explorer
+   - v2.14 Zero-trust deploy — mTLS everywhere, SPIFFE/SPIRE, secrets backends, NetworkPolicy, seccomp/AppArmor/landlock, SLSA L4, BYOK, IP allowlist/geo
+   - v2.15 Code health pass — dead code, dep minimization, perf budgets, error-handling consistency, structured logging audit, doc-comment 100%
+   - v2.16 Test pyramid maturity — fuzz, property-based, mutation, chaos, snapshot 100%, weekly cloud fleet, Playwright e2e
+   - v2.17 Developer experience — devcontainer, plugin SDK 2.0, telemetry opt-in, ADR/RFC tooling, contributor portal
+   - v2.18 GitOps compliance — ArgoCD/Flux, drift→PR, dashboards-as-code, scan-as-CRD
+   - v2.19 i18n 2.0 — 10 languages, RTL, locale-aware everything, translator workflow
+   - v2.20 Enterprise polish — SSO MFA, WORM audit, retention, data residency, BYOK, contract-grade SLA docs
+
+2. **Deepening v2.6 tail clouds to a 26-phase mega-milestone** covering 23 vendors across the SaaS surface a modern company actually touches (Cloudflare / GitHub / Google Workspace / Microsoft 365 / Vercel / Linode / Vultr / Fastly / Slack / Atlassian / Okta / Zoom / Stripe / HubSpot / Salesforce / Notion / 1Password / Bitwarden / Tailscale / Datadog / New Relic / PagerDuty / Postmark / SendGrid / Mailgun / Render / Fly.io / Railway / Discord / Zapier / n8n / Make / Heroku) + shared `saascommon` foundation + CIS SaaS Benchmarks + custom "SaaS-Hardening v1" framework + tail-cloud aggregator dashboard + cross-vendor identity map.
+
+### Reasoning
+- **The bar-raising arc is structurally separate from breadth.** Hand-crafting every interaction (v2.12), writing a category-defining doc site (v2.13), shipping defense-grade defaults (v2.14), and codifying a test-pyramid maturity bar (v2.16) are each milestone-scale lifts. Folding them into v2.x.x patches would mean they never get a focused commit chain + tracking issue + dedicated release post.
+- **Tail clouds is the highest-leverage breadth bet in v2.x.** Most compliance violations live in the SaaS sprawl — oversharing in Drive, scope-creeping OAuth in HubSpot, stale Slack apps, GitHub branch-protection drift. Cloud providers (AWS/GCP/DO/Hetzner) are already deeply covered by v0.7–v0.21. The audience compliance team's actual workday surface is the SaaS app catalog, and no OSS compliance tool covers it at depth today.
+- **Per-vendor phases scale the work.** 26 phases at ~1 weekend each = ~6 months elapsed for v2.6 alone. That maps to roughly the same investment as v0.11 (Kubernetes deep, 139 checks) + v0.19 (DO deepening, 144 checks) + v0.20 (Linux deepening, 119 checks) combined — which is right-sized for SaaS surface coverage. Phase-per-vendor keeps each commit a self-contained scope a contributor can review without context on the other 22 vendors.
+- **Bar-raising arc + tail clouds compose.** v2.13 documents the v2.6 tail-cloud playbooks per vendor; v2.15 (code health) audits the new saascommon code; v2.16 (test maturity) fuzz-tests every vendor SDK response parser; v2.17 (DX) ships the plugin SDK that lets community contribute additional vendor packs. v2.x rows reinforce each other.
+- **Bar position matters more than feature count.** A v2.x that adds 9 new features + ships tail clouds shallowly would be ~21 rows of incremental work. The same 21 rows with the bar-raising arc + tail-clouds-deep produces a product that competes with Wiz / Snyk / Vanta at maturity — not just at feature parity.
+- **ADR-016's "v1.x for polish, v2.x for breadth" thesis is preserved.** The bar-raising arc is not breadth (no new providers, no new check types); it's depth on existing surfaces. It belongs in v2.x because it presumes v1.x's polish is in place and pushes one layer further.
+
+### Rejected alternatives
+- **Cap v2.x at 12 rows; ship bar-raising in unscoped v2.x.x patches.** Rejected: patches don't get tracking issues, don't get release posts, and tend to drift toward "next big feature gets priority over polish." The v1.x experience shows patches handle <5% scope (v1.5.1 was the outlier and required its own ADR-018). Bar-raising at v2.x scale needs dedicated milestone slots.
+- **Cap v2.x at 12 rows; defer bar-raising to v3.0+.** Rejected: a hypothetical v3.0 lives under `/v3/` Go module path per [ADR-014](#adr-014--v10-api-freeze-pkgcompliancekit-is-the-semver-surface), and there's no surface-break signal yet. The bar-raising arc fits cleanly inside v2.x without a major-version bump.
+- **Merge bar-raising rows (v2.15+v2.16 → quality bar; v2.17 absorbed into v2.13).** Rejected: code health and test maturity are scopes large enough to each warrant a dedicated milestone with its own DoD. Merging would compress 20 phases into 10 and dilute the per-row outcome.
+- **Keep v2.6 tail clouds as one shallow row.** Rejected: covers maybe 30 checks across 6 vendors at shallow depth — same problem v0.1's "10 DO checks" had before v0.19 deepening lifted it to 144. Shallow tail-clouds wastes the marketing moment (the audience that searches "open source SaaS compliance scanner" lands on us as the obvious answer).
+- **Add tail clouds as v2.21, leave v2.6 unchanged.** Rejected: v2.6 already says "tail clouds." Splitting "shallow v2.6 + deep v2.21" would confuse contributors + auditors. One row, deep treatment is cleaner.
+- **Add even more rows (15+ new milestones, including AI/LLM-native, mobile-native apps, marketplace economy, hardware appliance, on-prem air-gap)**. Considered. AI/LLM-native is genuinely on the table for v2.x.x but the shape is too uncertain to pin today; mobile-native is replaced by v1.16 PWA + v2.12 / v2.20 enterprise polish; marketplace economy is part of v2.9; air-gap is mostly v2.14 zero-trust + v2.5 OS hardening. Keep v2.x at 21 rows; revisit at v2.10 ship time.
+
+### Consequences
+- **ROADMAP grows from 21 v2.x rows to 21 (existing 12 + 9 new)** in the overview table at the top.
+- **9 new detail sections** (v2.12–v2.20) below the v1.19 detail section, each with Goal + Deliverables + Out-of-scope + Dependencies + API-surface impact (matching the v1.6–v1.19 detail-section shape).
+- **v2.6 gets a full 26-phase detail section** breaking down per-vendor coverage, framework wiring, and aggregator dashboard. Other v2.0–v2.5 + v2.7–v2.11 rows stay table-only until kickoff (per the "post-launch feedback is the right input" convention).
+- **`project-v1x-scope` memory renamed to `project-scope-arc`** + extended with v2.12–v2.20 + the v2.6 26-phase outline. Future scope-expansion decisions (e.g. v2.x.x patches, new milestones) link back here.
+- **Forward references**: ADR-020 reserved for the v2.13 docs-site-engine pick (Hugo vs Mkdocs Material) at v2.13 kickoff. Plugin host model decision (ADR open question from line 661) defers to v2.9 kickoff per existing convention.
+- **Total milestone count** (v0.1–v2.20) grows to 50: 22 pre-v1 (v0.1–v0.22) + 1 (v1.0) + 19 (v1.1–v1.19) + 21 (v2.0–v2.20). Roughly 3–4 years of focused weekend work at the current cadence; the v2.x arc is intentionally a multi-year commitment.
+
+---
+
 ## Open questions (not yet decided)
 
-- **Plugin host model:** subprocess gRPC (Terraform-provider pattern), WASM via wazero, or both? Decision at v2.0.
+- **Plugin host model:** subprocess gRPC (Terraform-provider pattern), WASM via wazero, or both? Decision at v2.9 (was v2.0; renumbered to track the plugin marketplace milestone).
 - **CIS Certification pursuit:** worth the paperwork for credibility? Decide post-launch once audience traction is known.
+- **Docs-site engine (Hugo vs Mkdocs Material):** decision at v2.13 kickoff (reserved ADR-020). Hugo has the lead on theme flexibility + build speed; Mkdocs Material wins on plugin ecosystem + search-out-of-the-box. Either choice keeps the multi-version-selector + pagefind invariant from the v2.13 deliverables.
