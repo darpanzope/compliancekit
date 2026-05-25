@@ -148,8 +148,13 @@ func isFormPost(r *http.Request) bool {
 		strings.HasPrefix(ct, "multipart/form-data")
 }
 
-// clientIP returns the request's source IP — RealIP middleware has
-// already set RemoteAddr to the X-Forwarded-For value when present.
+// clientIP returns the request's TCP peer IP (host portion of
+// r.RemoteAddr). v1.14.1 removed the upstream middleware.RealIP
+// dependency per GHSA-3fxj-6jh8-hvhx — X-Forwarded-For is no longer
+// trusted automatically. When the daemon runs behind a proxy the
+// audit_log shows the proxy's IP; the proxy's own access log keeps
+// the real client. A v1.15.x trust-list middleware will reinstate
+// the forwarded-header path opt-in.
 func clientIP(r *http.Request) string {
 	host := r.RemoteAddr
 	if i := strings.LastIndex(host, ":"); i >= 0 {

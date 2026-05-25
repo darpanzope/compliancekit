@@ -585,9 +585,11 @@ func joinComma(xs []string) string {
 	return out
 }
 
-// clientIPFromReq strips the port off RemoteAddr. RealIP middleware
-// has already set RemoteAddr to the X-Forwarded-For value when
-// present.
+// clientIPFromReq strips the port off RemoteAddr. v1.14.1 removed
+// the middleware.RealIP X-Forwarded-For mutation per GHSA-3fxj-6jh8-
+// hvhx; the daemon now records the raw TCP peer for the audit_log.
+// See clientIP in internal/server/auth/handlers.go for the same
+// rationale.
 func clientIPFromReq(r *http.Request) string {
 	host := r.RemoteAddr
 	for i := len(host) - 1; i >= 0; i-- {

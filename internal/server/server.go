@@ -80,7 +80,16 @@ func New(cfg Config) *Server {
 	// Middleware order matters; the chain runs top-down on the way in
 	// and bottom-up on the way out.
 	r.Use(middleware.RequestID) // every request gets an X-Request-ID for log correlation
-	r.Use(middleware.RealIP)    // honor X-Forwarded-For when behind a reverse proxy
+	// middleware.RealIP was removed at v1.14.1 per GHSA-3fxj-6jh8-hvhx /
+	// GHSA-rjr7-jggh-pgcp / GHSA-9g5q-2w5x-hmxf: it overwrites r.RemoteAddr
+	// from X-Forwarded-For / X-Real-IP / True-Client-IP unconditionally,
+	// which means an attacker on a daemon exposed without a trusted
+	// reverse-proxy in front can forge the source IP in audit_log + the
+	// activity timeline. The audit_log + login handler now use the raw
+	// TCP peer (r.RemoteAddr). Operators behind a proxy see the proxy's
+	// IP in audit_log; the proxy's own access log carries the real
+	// client. A properly-vetted forwarded-header middleware (trust-list
+	// configured) lands in v1.15.x.
 	r.Use(middleware.Recoverer) // panics → 500 + stack in the log
 	r.Use(middleware.Timeout(60 * time.Second))
 	r.Use(securityHeaders)     // CSP, HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy
