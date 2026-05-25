@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -225,12 +226,46 @@ func runServe(ctx context.Context, stdout interface {
 	pool.Start(ctx)
 	defer pool.Stop()
 
+	// v1.15 phase 7 — deep readiness checks. /health stays cheap;
+	// /health/ready 503s when any of the registered probes fails.
+	srv.WithReadiness(server.ReadinessCheck{
+		Name:    "db",
+		Check:   func(ctx context.Context) error { return st.DB().PingContext(ctx) },
+		Timeout: 3 * time.Second,
+	})
+	srv.WithReadiness(server.ReadinessCheck{
+		Name: "migrations",
+		Check: func(ctx context.Context) error {
+			v, err := st.Version(ctx)
+			if err != nil {
+				return err
+			}
+			if v == 0 {
+				return fmt.Errorf("schema_migrations empty — MigrateUp never ran")
+			}
+			return nil
+		},
+		Timeout: 3 * time.Second,
+	})
+	srv.WithReadiness(server.ReadinessCheck{
+		Name: "leader",
+		Check: func(_ context.Context) error {
+			// Standbys answer 200 — only "absolutely-not-leader-yet"
+			// failures (boot race) should ever surface here. SQLite
+			// short-circuits to leader=true so this is always nil.
+			_ = elector // keep elector referenced; LB-leader-only routing lands at v1.15.x
+			return nil
+		},
+		Timeout: 1 * time.Second,
+	})
+
 	fmt.Fprintf(stdout, "compliancekit daemon listening on http://%s\n", srv.Addr())
-	fmt.Fprintf(stdout, "  health:  http://%s/health\n", srv.Addr())
-	fmt.Fprintf(stdout, "  metrics: http://%s/metrics\n", srv.Addr())
-	fmt.Fprintf(stdout, "  api:     http://%s/api/v1/\n", srv.Addr())
-	fmt.Fprintf(stdout, "  ui:      http://%s/\n", srv.Addr())
-	fmt.Fprintf(stdout, "  store:   %s (driver=%s)\n", dbPath, st.Driver())
+	fmt.Fprintf(stdout, "  health:    http://%s/health\n", srv.Addr())
+	fmt.Fprintf(stdout, "  readiness: http://%s/health/ready\n", srv.Addr())
+	fmt.Fprintf(stdout, "  metrics:   http://%s/metrics\n", srv.Addr())
+	fmt.Fprintf(stdout, "  api:       http://%s/api/v1/\n", srv.Addr())
+	fmt.Fprintf(stdout, "  ui:        http://%s/\n", srv.Addr())
+	fmt.Fprintf(stdout, "  store:     %s (driver=%s)\n", dbPath, st.Driver())
 	fmt.Fprintln(stdout, "(Ctrl-C to stop)")
 	return srv.Run(ctx)
 }

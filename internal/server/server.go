@@ -63,10 +63,11 @@ func Default() Config {
 
 // Server is the running daemon. Construct via New(); start via Run().
 type Server struct {
-	cfg     Config
-	router  chi.Router
-	httpSrv *http.Server
-	metrics *metricsRegistry
+	cfg       Config
+	router    chi.Router
+	httpSrv   *http.Server
+	metrics   *metricsRegistry
+	readiness *ReadinessRegistry // v1.15 phase 7 — /health/ready probes
 }
 
 // New builds the daemon. Wires middleware in the right order
@@ -116,7 +117,13 @@ func New(cfg Config) *Server {
 		ReadHeaderTimeout: cfg.ReadHeaderTimeout,
 		IdleTimeout:       cfg.IdleTimeout,
 	}
-	return &Server{cfg: cfg, router: r, httpSrv: httpSrv, metrics: m}
+	s := &Server{cfg: cfg, router: r, httpSrv: httpSrv, metrics: m}
+	// v1.15 phase 7 — /health/ready runs every registered readiness
+	// check + returns 200 only when all pass. Mounted here so a
+	// fresh Server has the route even before cmd/serve appends the
+	// DB / queue / leader checks.
+	r.Get("/health/ready", s.healthReadyHandler())
+	return s
 }
 
 // Router returns the chi router so later-phase packages (api/, auth/,
