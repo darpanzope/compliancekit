@@ -109,7 +109,17 @@ jobs:
       - name: Install Cosign
         uses: sigstore/cosign-installer@v3
         with:
-          cosign-release: 'v2.4.1'
+          # Pin to a real published release. An invalid value here
+          # makes cosign-installer silently fall back to
+          # `go install github.com/sigstore/cosign/v2/cmd/cosign@main`,
+          # which floats on cosign's main branch — and on
+          # 2026-05-25 a mid-day main-branch tightening of the
+          # sigstore bundle policy started rejecting
+          # goreleaser-action's pre-existing checksum bundle with
+          # "bundle does not contain cert for verification". Pinning
+          # to v2.6.3 (latest v2.x as of 2026-04-06) restores a
+          # stable verify-blob contract.
+          cosign-release: 'v2.6.3'
 
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v7
