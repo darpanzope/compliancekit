@@ -348,6 +348,7 @@ func (u *UI) Mount(r chi.Router) {
 		u.mountNotifyTemplatesRoutes(r)
 		u.mountPluginsRoutes(r)
 		u.mountDashboardsRoutes(r)
+		u.mountMultiscanRoutes(r)
 		u.mountInboxV2Routes(r)
 		u.mountRulesRoutes(r)
 		u.mountRemediationRoutes(r)
