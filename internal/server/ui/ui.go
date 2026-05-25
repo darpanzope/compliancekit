@@ -35,6 +35,7 @@ import (
 	"github.com/darpanzope/compliancekit/internal/server/backups"
 	"github.com/darpanzope/compliancekit/internal/server/collab"
 	"github.com/darpanzope/compliancekit/internal/server/comments"
+	"github.com/darpanzope/compliancekit/internal/server/dashboards"
 	"github.com/darpanzope/compliancekit/internal/server/logs"
 	"github.com/darpanzope/compliancekit/internal/server/plugins"
 	srvrbac "github.com/darpanzope/compliancekit/internal/server/rbac"
@@ -71,6 +72,8 @@ var defaultNav = []navItem{
 		Icon: template.HTML(`<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`)},
 	{Href: "/rules", Key: "rules", Label: "Rules",
 		Icon: template.HTML(`<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>`)},
+	{Href: "/dashboards", Key: "dashboards", Label: "Dashboards",
+		Icon: template.HTML(`<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>`)},
 	{Href: "/settings/providers", Key: "settings", Label: "Settings",
 		Icon: template.HTML(`<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`)},
 }
@@ -235,6 +238,7 @@ type UI struct {
 	roles           *srvrbac.Store            // v1.12 phase 0 — role + permission grid
 	tokensRepo      *auth.Tokens              // v1.12 phase 9 — API token UI
 	pluginCatalog   *plugins.Catalog          // v1.13 phase 8 — installed-plugins UI
+	dashboardsRepoH *dashboards.Store         // v1.14 phase 0 — dashboard storage
 	backups         *backups.Manager          // v1.12 phase 8 — backup/restore
 	backupDir       string
 	backupDSN       string
@@ -343,6 +347,7 @@ func (u *UI) Mount(r chi.Router) {
 		u.mountTokensRoutes(r)
 		u.mountNotifyTemplatesRoutes(r)
 		u.mountPluginsRoutes(r)
+		u.mountDashboardsRoutes(r)
 		u.mountInboxV2Routes(r)
 		u.mountRulesRoutes(r)
 		u.mountRemediationRoutes(r)
