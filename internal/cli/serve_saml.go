@@ -88,9 +88,10 @@ func envOr(key, def string) string {
 
 func envBool(key string, def bool) bool {
 	v := strings.ToLower(strings.TrimSpace(os.Getenv(key)))
-	switch v {
-	case "1", "true", "yes", "on":
+	if isTruthy(v) {
 		return true
+	}
+	switch v {
 	case "0", "false", "no", "off":
 		return false
 	}
