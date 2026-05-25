@@ -1,0 +1,23 @@
+{{- /*
+SQLite mode persistence — skipped when ha.enabled because Postgres
+holds the state.
+*/ -}}
+{{- if and .Values.persistence.enabled (not .Values.ha.enabled) -}}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "compliancekit.fullname" . }}-data
+  labels:
+    {{- include "compliancekit.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    {{- range .Values.persistence.accessModes }}
+    - {{ . | quote }}
+    {{- end }}
+  {{- with .Values.persistence.storageClass }}
+  storageClassName: {{ . | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.size | quote }}
+{{- end -}}

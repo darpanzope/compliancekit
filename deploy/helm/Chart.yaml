@@ -1,0 +1,42 @@
+apiVersion: v2
+name: compliancekit
+description: |
+  Open-source compliance scanner for cloud and Linux infrastructure.
+  Single-binary daemon with a REST API + web UI; ships SQLite by
+  default + opt-in HA Postgres mode.
+type: application
+
+# Chart version follows the daemon image version. Bump together when
+# a release cuts a new tag.
+version: 1.15.0
+appVersion: "v1.15.0"
+
+home: https://github.com/darpanzope/compliancekit
+sources:
+  - https://github.com/darpanzope/compliancekit
+
+icon: https://raw.githubusercontent.com/darpanzope/compliancekit/main/internal/server/assets/icon-512.png
+
+maintainers:
+  - name: Darpan Zope
+    url: https://github.com/darpanzope
+
+keywords:
+  - compliance
+  - security
+  - audit
+  - cis
+  - soc2
+  - iso27001
+  - kubernetes
+  - aws
+  - gcp
+  - digitalocean
+  - hetzner
+
+annotations:
+  artifacthub.io/license: MIT
+  artifacthub.io/category: security
+  artifacthub.io/changes: |
+    - kind: added
+      description: Initial chart release at v1.15.0 (Deploy & operate milestone)

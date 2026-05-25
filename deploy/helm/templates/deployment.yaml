@@ -1,0 +1,154 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "compliancekit.fullname" . }}
+  labels:
+    {{- include "compliancekit.labels" . | nindent 4 }}
+spec:
+  # Single replica is the default; HA mode (Postgres + advisory-lock
+  # leader election) is the only safe way to scale > 1.
+  replicas: {{ if .Values.ha.enabled }}{{ .Values.replicaCount }}{{ else }}1{{ end }}
+  strategy:
+    {{- if .Values.ha.enabled }}
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    {{- else }}
+    # SQLite mode can't roll multiple pods at once — the second pod
+    # would race the first for the open WAL.
+    type: Recreate
+    {{- end }}
+  selector:
+    matchLabels:
+      {{- include "compliancekit.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "compliancekit.selectorLabels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      serviceAccountName: {{ include "compliancekit.serviceAccountName" . }}
+      {{- with .Values.image.pullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- with .Values.priorityClassName }}
+      priorityClassName: {{ . }}
+      {{- end }}
+      containers:
+        - name: compliancekit
+          image: {{ include "compliancekit.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          args:
+            - "serve"
+            - "--addr=0.0.0.0"
+            - "--port=8080"
+            {{- if .Values.ha.enabled }}
+            - "--db=$(CK_DB_DSN)"
+            {{- else }}
+            - "--db=/var/lib/compliancekit/serve.db"
+            {{- end }}
+            {{- if .Values.auth.insecureCookies }}
+            - "--insecure-cookies"
+            {{- end }}
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          env:
+            {{- if .Values.ha.enabled }}
+            - name: CK_DB_DSN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ default (printf "%s-postgres" (include "compliancekit.fullname" .)) .Values.ha.postgres.existingSecret }}
+                  key: {{ .Values.ha.postgres.existingSecretKey }}
+            {{- end }}
+            {{- if .Values.auth.scim.enabled }}
+            - name: CK_SCIM_BEARER_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ default (printf "%s-scim" (include "compliancekit.fullname" .)) .Values.auth.scim.existingSecret }}
+                  key: {{ .Values.auth.scim.existingSecretKey }}
+            {{- end }}
+            {{- range $tag, $cfg := .Values.auth.oidc.providers }}
+            - { name: CK_OIDC_{{ upper $tag }}_CLIENT_ID,     value: {{ $cfg.clientId | quote }} }
+            - { name: CK_OIDC_{{ upper $tag }}_CLIENT_SECRET, valueFrom: { secretKeyRef: { name: {{ printf "%s-oidc-%s" (include "compliancekit.fullname" $) $tag }}, key: clientSecret } } }
+            - { name: CK_OIDC_{{ upper $tag }}_REDIRECT_URL,  value: {{ $cfg.redirectUrl | quote }} }
+            {{- if $cfg.issuerUrl }}
+            - { name: CK_OIDC_{{ upper $tag }}_ISSUER_URL, value: {{ $cfg.issuerUrl | quote }} }
+            {{- end }}
+            {{- end }}
+            {{- range $tag, $cfg := .Values.auth.saml.providers }}
+            - { name: CK_SAML_{{ upper $tag }}_ROOT_URL,    value: {{ $cfg.rootUrl | quote }} }
+            - { name: CK_SAML_{{ upper $tag }}_ENTRY_POINT, value: {{ $cfg.entryPoint | quote }} }
+            - { name: CK_SAML_{{ upper $tag }}_SP_CERT_PEM, valueFrom: { secretKeyRef: { name: {{ printf "%s-saml-%s" (include "compliancekit.fullname" $) $tag }}, key: spCertPem } } }
+            - { name: CK_SAML_{{ upper $tag }}_SP_KEY_PEM,  valueFrom: { secretKeyRef: { name: {{ printf "%s-saml-%s" (include "compliancekit.fullname" $) $tag }}, key: spKeyPem } } }
+            {{- if $cfg.idpMetadataXml }}
+            - { name: CK_SAML_{{ upper $tag }}_IDP_METADATA_XML, valueFrom: { secretKeyRef: { name: {{ printf "%s-saml-%s" (include "compliancekit.fullname" $) $tag }}, key: idpMetadataXml } } }
+            {{- end }}
+            {{- end }}
+            {{- with .Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- with .Values.livenessProbe }}
+          livenessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.readinessProbe }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            {{- if not .Values.ha.enabled }}
+            - name: data
+              mountPath: /var/lib/compliancekit
+            {{- end }}
+            {{- if .Values.plugins.enabled }}
+            - name: plugins
+              mountPath: /var/lib/compliancekit/plugins
+              readOnly: true
+            {{- end }}
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        {{- if not .Values.ha.enabled }}
+        - name: data
+          {{- if .Values.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "compliancekit.fullname" . }}-data
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+        {{- end }}
+        {{- if .Values.plugins.enabled }}
+        - name: plugins
+          persistentVolumeClaim:
+            claimName: {{ default (printf "%s-plugins" (include "compliancekit.fullname" .)) .Values.plugins.existingPVC }}
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

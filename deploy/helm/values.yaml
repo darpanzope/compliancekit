@@ -1,0 +1,170 @@
+# Default values for compliancekit.
+#
+# Override individual keys via --set or a custom values.yaml; the
+# tree below documents every supported knob. Defaults are tuned for
+# a single-replica SQLite install — toggle ha.enabled=true to lift
+# into a Postgres + leader-elected multi-replica setup.
+
+# ─── Image ───────────────────────────────────────────────────────────
+image:
+  repository: ghcr.io/darpanzope/compliancekit
+  # The default uses the chart's appVersion so the chart is
+  # self-pinning; override for canary deployments.
+  tag: ""
+  pullPolicy: IfNotPresent
+  pullSecrets: []
+
+# ─── Replicas + scheduling ───────────────────────────────────────────
+replicaCount: 1
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+
+# ─── HA mode ────────────────────────────────────────────────────────
+# Lifts the daemon from "single replica + SQLite" to "N replicas +
+# Postgres + pg_advisory_lock leader election" per the v1.15 phase 4
+# pattern. When enabled, replicaCount can be > 1; the workers fail
+# over via the advisory lock without manual intervention.
+ha:
+  enabled: false
+  # Postgres DSN — supply via an existing secret (existingSecret) OR
+  # via dsn (renders into the chart-created Secret).
+  postgres:
+    existingSecret: ""
+    existingSecretKey: dsn
+    # Used only when existingSecret is empty.
+    dsn: "postgres://compliancekit:replaceme@compliancekit-postgres:5432/compliancekit?sslmode=require"
+
+# ─── Persistence (SQLite mode only) ─────────────────────────────────
+# When ha.enabled=false, the daemon writes its SQLite file to this
+# PVC. Ignored in HA mode (state lives in Postgres).
+persistence:
+  enabled: true
+  storageClass: ""
+  size: 10Gi
+  accessModes:
+    - ReadWriteOnce
+
+# ─── Service + ingress ─────────────────────────────────────────────
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8080
+  annotations: {}
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: compliancekit.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+  # Example tls block:
+  # tls:
+  #   - secretName: compliancekit-tls
+  #     hosts:
+  #       - compliancekit.example.com
+
+# ─── Auth / OIDC / SAML / SCIM ─────────────────────────────────────
+# Each block here lands as environment variables on the daemon Pod.
+# See CONFIGURATION.md for the canonical env-var names; the chart
+# passes the keys through verbatim under the matching CK_* envelope.
+auth:
+  # Drop the Secure cookie attribute + the __Host- prefix. Required
+  # for plain-HTTP loopback / dev; NEVER enable in production.
+  insecureCookies: false
+
+  oidc:
+    # Map of provider tag → { clientId, clientSecret, redirectUrl,
+    # issuerUrl }. Tag becomes the CK_OIDC_<TAG>_ prefix.
+    providers: {}
+
+  saml:
+    # Map of provider tag → { rootUrl, entryPoint, idpMetadataXml,
+    # spCertPem, spKeyPem, ... }. See deploy/helm/templates/saml-
+    # secret.yaml for the canonical key set.
+    providers: {}
+
+  scim:
+    enabled: false
+    # Either set bearerToken directly OR pass via existingSecret.
+    existingSecret: ""
+    existingSecretKey: bearer
+    bearerToken: ""
+
+# ─── Service account + RBAC ─────────────────────────────────────────
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 65532
+  runAsGroup: 65532
+  fsGroup: 65532
+  seccompProfile:
+    type: RuntimeDefault
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+# ─── Probes ─────────────────────────────────────────────────────────
+# /health is cheap (200 + "ok"); /health/ready (v1.15 phase 7) covers
+# DB writable + migrations current + queue alive + leader-elected.
+livenessProbe:
+  httpGet:
+    path: /health
+    port: http
+  initialDelaySeconds: 5
+  periodSeconds: 30
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /health/ready
+    port: http
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+# ─── Plugins (v1.13) ────────────────────────────────────────────────
+plugins:
+  # Mount an emptyDir + bind operator-supplied plugin manifests in
+  # via init-container; or use an existing PVC pre-populated with
+  # plugin manifests.
+  enabled: false
+  existingPVC: ""
+  # PEM-encoded cosign pubkey for plugin signature verification.
+  # Empty + allowUnsigned=true is the dev shortcut; production
+  # operators set the pubkey + leave allowUnsigned=false.
+  cosignPubkey: ""
+  allowUnsigned: false
+
+# ─── Pod-level extras ──────────────────────────────────────────────
+nodeSelector: {}
+tolerations: []
+affinity: {}
+priorityClassName: ""
+
+podAnnotations: {}
+podLabels: {}
+
+# extraEnv lets operators inject any CK_* variable not covered above.
+extraEnv: []
+# - name: CK_BACKUP_DIR
+#   value: /var/lib/compliancekit/backups

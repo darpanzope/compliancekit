@@ -1,0 +1,37 @@
+compliancekit has been installed in the {{ .Release.Namespace }} namespace.
+
+  Release name:  {{ .Release.Name }}
+  Image:         {{ include "compliancekit.image" . }}
+  Replicas:      {{ if .Values.ha.enabled }}{{ .Values.replicaCount }} (HA / Postgres){{ else }}1 (single / SQLite){{ end }}
+
+{{- if .Values.ingress.enabled }}
+
+The daemon is reachable via the configured Ingress hosts:
+{{- range .Values.ingress.hosts }}
+  https://{{ .host }}
+{{- end }}
+{{- else }}
+
+The daemon is not exposed via an Ingress. Port-forward for local
+access:
+
+  kubectl --namespace {{ .Release.Namespace }} port-forward \
+    svc/{{ include "compliancekit.fullname" . }} \
+    {{ .Values.service.port }}:{{ .Values.service.port }}
+
+Then open http://localhost:{{ .Values.service.port }}/.
+{{- end }}
+
+Health checks:
+
+  /health        cheap liveness    (kubelet livenessProbe)
+  /health/ready  deep readiness    (kubelet readinessProbe — v1.15 phase 7)
+
+Bootstrap an admin user once the pod is Running:
+
+  kubectl --namespace {{ .Release.Namespace }} exec -it \
+    deploy/{{ include "compliancekit.fullname" . }} -- \
+    compliancekit serve users create --admin \
+      --email=admin@example.com --password=$(openssl rand -hex 16)
+
+See https://github.com/darpanzope/compliancekit for the full docs.
