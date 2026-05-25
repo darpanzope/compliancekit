@@ -1,0 +1,74 @@
+{
+  "uid": "ck-findings",
+  "title": "Findings Overview",
+  "description": "Per-scan finding totals + severity mix + framework coverage trend. Pair with the v1.14 Executive Overview dashboard inside compliancekit.",
+  "tags": ["compliancekit", "findings"],
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
+  "time": { "from": "now-7d", "to": "now" },
+  "refresh": "1m",
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Findings ingested / hour",
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+      "targets": [{
+        "expr": "sum(rate(compliancekit_findings_ingested_total[5m])) * 3600",
+        "refId": "A",
+        "legendFormat": "findings/hour"
+      }]
+    },
+    {
+      "type": "timeseries",
+      "title": "Findings by severity",
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+      "targets": [{
+        "expr": "sum by (severity) (rate(compliancekit_findings_ingested_total[5m])) * 60",
+        "refId": "A",
+        "legendFormat": "{{severity}}"
+      }]
+    },
+    {
+      "type": "stat",
+      "title": "Current open critical",
+      "gridPos": { "x": 0, "y": 8, "w": 6, "h": 4 },
+      "targets": [{
+        "expr": "compliancekit_findings_open{severity=\"critical\"}",
+        "refId": "A"
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green" }, { "color": "yellow", "value": 1 }, { "color": "red", "value": 5 }] }
+        }
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Current open high",
+      "gridPos": { "x": 6, "y": 8, "w": 6, "h": 4 },
+      "targets": [{ "expr": "compliancekit_findings_open{severity=\"high\"}", "refId": "A" }]
+    },
+    {
+      "type": "timeseries",
+      "title": "Scans completed / day",
+      "gridPos": { "x": 12, "y": 8, "w": 12, "h": 4 },
+      "targets": [{
+        "expr": "sum(increase(compliancekit_scans_completed_total[1d]))",
+        "refId": "A",
+        "legendFormat": "scans/day"
+      }]
+    },
+    {
+      "type": "table",
+      "title": "Top failing checks (last 24h)",
+      "gridPos": { "x": 0, "y": 12, "w": 24, "h": 10 },
+      "targets": [{
+        "expr": "topk(10, sum by (check_id) (increase(compliancekit_findings_ingested_total{status=\"fail\"}[24h])))",
+        "refId": "A",
+        "format": "table",
+        "instant": true
+      }]
+    }
+  ]
+}

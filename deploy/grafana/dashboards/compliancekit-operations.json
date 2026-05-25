@@ -1,0 +1,98 @@
+{
+  "uid": "ck-operations",
+  "title": "Compliancekit Operations",
+  "description": "Daemon liveness, HTTP latency, error rate, leader-election state. Use as the on-call default board.",
+  "tags": ["compliancekit", "operations"],
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
+  "timezone": "",
+  "time": { "from": "now-6h", "to": "now" },
+  "refresh": "30s",
+  "templating": {
+    "list": [
+      {
+        "name": "instance",
+        "label": "Instance",
+        "type": "query",
+        "datasource": { "type": "prometheus", "uid": "${DS_PROM}" },
+        "query": "label_values(compliancekit_http_requests_total, instance)",
+        "includeAll": true,
+        "multi": true,
+        "current": { "selected": false, "text": "All", "value": "$__all" }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Up",
+      "gridPos": { "x": 0, "y": 0, "w": 4, "h": 4 },
+      "targets": [{ "expr": "up{job=\"compliancekit\", instance=~\"$instance\"}", "refId": "A" }],
+      "options": { "colorMode": "value", "graphMode": "none", "textMode": "value_and_name" },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "green", "value": 1 }] }
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "HTTP requests/s by status",
+      "gridPos": { "x": 4, "y": 0, "w": 10, "h": 8 },
+      "targets": [{
+        "expr": "sum by (status) (rate(compliancekit_http_requests_total{instance=~\"$instance\"}[5m]))",
+        "refId": "A",
+        "legendFormat": "{{status}}"
+      }]
+    },
+    {
+      "type": "timeseries",
+      "title": "HTTP latency (p50 / p95 / p99)",
+      "gridPos": { "x": 14, "y": 0, "w": 10, "h": 8 },
+      "targets": [
+        { "expr": "histogram_quantile(0.50, sum by (le) (rate(compliancekit_http_request_duration_seconds_bucket{instance=~\"$instance\"}[5m])))", "refId": "p50", "legendFormat": "p50" },
+        { "expr": "histogram_quantile(0.95, sum by (le) (rate(compliancekit_http_request_duration_seconds_bucket{instance=~\"$instance\"}[5m])))", "refId": "p95", "legendFormat": "p95" },
+        { "expr": "histogram_quantile(0.99, sum by (le) (rate(compliancekit_http_request_duration_seconds_bucket{instance=~\"$instance\"}[5m])))", "refId": "p99", "legendFormat": "p99" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" } }
+    },
+    {
+      "type": "stat",
+      "title": "5xx rate (per min)",
+      "gridPos": { "x": 0, "y": 8, "w": 4, "h": 4 },
+      "targets": [{
+        "expr": "sum(rate(compliancekit_http_requests_total{status=~\"5..\", instance=~\"$instance\"}[5m])) * 60",
+        "refId": "A"
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green" }, { "color": "yellow", "value": 0.1 }, { "color": "red", "value": 1 }] }
+        }
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Goroutines",
+      "gridPos": { "x": 0, "y": 12, "w": 4, "h": 4 },
+      "targets": [{ "expr": "go_goroutines{instance=~\"$instance\"}", "refId": "A" }]
+    },
+    {
+      "type": "timeseries",
+      "title": "Memory in-use",
+      "gridPos": { "x": 4, "y": 8, "w": 10, "h": 8 },
+      "targets": [{ "expr": "process_resident_memory_bytes{instance=~\"$instance\"}", "refId": "A", "legendFormat": "{{instance}}" }],
+      "fieldConfig": { "defaults": { "unit": "decbytes" } }
+    },
+    {
+      "type": "timeseries",
+      "title": "Readiness fail rate (v1.15 phase 7)",
+      "gridPos": { "x": 14, "y": 8, "w": 10, "h": 8 },
+      "targets": [{
+        "expr": "rate(compliancekit_http_requests_total{path=\"/health/ready\", status=\"503\", instance=~\"$instance\"}[5m])",
+        "refId": "A",
+        "legendFormat": "/health/ready 503/s"
+      }]
+    }
+  ]
+}

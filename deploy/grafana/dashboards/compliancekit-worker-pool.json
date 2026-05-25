@@ -1,0 +1,77 @@
+{
+  "uid": "ck-worker-pool",
+  "title": "Worker Pool",
+  "description": "Queue depth, worker count, scan duration. The board to open when the on-call alert says 'queue not draining'.",
+  "tags": ["compliancekit", "workers"],
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
+  "time": { "from": "now-3h", "to": "now" },
+  "refresh": "15s",
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Queue depth",
+      "description": "v1.11 phase 8 gauge. Sustained > 5 triggers the autoscaler (burst workers up to Concurrency+4).",
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+      "targets": [{
+        "expr": "compliancekit_worker_queue_depth",
+        "refId": "A",
+        "legendFormat": "depth"
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green" }, { "color": "yellow", "value": 5 }, { "color": "red", "value": 20 }] }
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Active workers",
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+      "targets": [{
+        "expr": "compliancekit_worker_active_count",
+        "refId": "A",
+        "legendFormat": "active"
+      }]
+    },
+    {
+      "type": "timeseries",
+      "title": "Scan duration (p50 / p95 / p99)",
+      "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 },
+      "targets": [
+        { "expr": "histogram_quantile(0.50, sum by (le) (rate(compliancekit_scan_duration_seconds_bucket[5m])))", "refId": "p50", "legendFormat": "p50" },
+        { "expr": "histogram_quantile(0.95, sum by (le) (rate(compliancekit_scan_duration_seconds_bucket[5m])))", "refId": "p95", "legendFormat": "p95" },
+        { "expr": "histogram_quantile(0.99, sum by (le) (rate(compliancekit_scan_duration_seconds_bucket[5m])))", "refId": "p99", "legendFormat": "p99" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" } }
+    },
+    {
+      "type": "timeseries",
+      "title": "Scans dispatched / failed (rate)",
+      "gridPos": { "x": 12, "y": 8, "w": 12, "h": 8 },
+      "targets": [
+        { "expr": "rate(compliancekit_scans_dispatched_total[5m])", "refId": "A", "legendFormat": "dispatched/s" },
+        { "expr": "rate(compliancekit_scans_failed_total[5m])",    "refId": "B", "legendFormat": "failed/s" }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Leader (v1.15 phase 4)",
+      "description": "1 = this daemon holds the pg_advisory_lock; 0 = standby. Sum across instances should equal exactly 1 in HA mode.",
+      "gridPos": { "x": 0, "y": 16, "w": 6, "h": 4 },
+      "targets": [{ "expr": "compliancekit_leader_status", "refId": "A" }]
+    },
+    {
+      "type": "stat",
+      "title": "Sum leaders (HA invariant)",
+      "gridPos": { "x": 6, "y": 16, "w": 6, "h": 4 },
+      "targets": [{ "expr": "sum(compliancekit_leader_status)", "refId": "A" }],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "red" }, { "color": "green", "value": 1 }, { "color": "red", "value": 2 }] }
+        }
+      }
+    }
+  ]
+}
