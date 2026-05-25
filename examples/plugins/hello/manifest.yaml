@@ -1,0 +1,17 @@
+apiVersion: compliancekit.io/v1
+name: hello
+version: v0.1.0
+author: compliancekit
+license: Apache-2.0
+description: Reference plugin — the canonical starter pack the v1.13 docs reference.
+
+kinds:
+  - check
+
+required_scopes:
+  - scans:read
+
+declared_egress: []
+
+rego_packs:
+  - rego/hello.rego
