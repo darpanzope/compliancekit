@@ -44,6 +44,7 @@ type Pool struct {
 	events         *events.Producer // v1.6: nil-safe; nil means no fan-out
 	observer       DepthObserver    // v1.11 phase 8: queue-depth metric sink
 	burstJobs      chan Job         // v1.11 phase 8: extra-worker job channel
+	leader         func() bool      // v1.15 phase 4: HA leader gate; nil = always true
 	wg             sync.WaitGroup
 }
 
@@ -230,12 +231,30 @@ func (p *Pool) Start(ctx context.Context) {
 // parent context is canceled.
 func (p *Pool) Stop() { p.wg.Wait() }
 
+// WithLeader installs the HA leader-election gate. When set, the
+// drain loop short-circuits when leader() returns false — only the
+// leader claims rows from the shared scans table. Nil leaves the
+// pool in single-leader (always-true) mode, the v1.14-and-earlier
+// behavior.
+func (p *Pool) WithLeader(leader func() bool) *Pool {
+	p.leader = leader
+	return p
+}
+
 // drainQueue picks up every queued row in order and pushes them to
 // the jobs channel. Each row is transitioned to status='running'
 // inside the same SELECT...UPDATE transaction (with a fresh
 // triggered_at timestamp). Failed updates simply skip the row — the
 // next tick will retry.
+//
+// v1.15 phase 4 — in HA mode, only the elected leader claims rows;
+// standby replicas skip the entire drain so they don't race the
+// leader for the same row. SQLite + non-HA Postgres deploys leave
+// p.leader nil and fall through unchanged.
 func (p *Pool) drainQueue(ctx context.Context, jobs chan<- Job) {
+	if p.leader != nil && !p.leader() {
+		return
+	}
 	for {
 		j, ok := p.claimOne(ctx)
 		if !ok {

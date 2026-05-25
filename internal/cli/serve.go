@@ -16,6 +16,7 @@ import (
 	"github.com/darpanzope/compliancekit/internal/server/api"
 	"github.com/darpanzope/compliancekit/internal/server/auth"
 	"github.com/darpanzope/compliancekit/internal/server/events"
+	"github.com/darpanzope/compliancekit/internal/server/leader"
 	"github.com/darpanzope/compliancekit/internal/server/logs"
 	"github.com/darpanzope/compliancekit/internal/server/scim"
 	"github.com/darpanzope/compliancekit/internal/server/store"
@@ -202,6 +203,17 @@ func runServe(ctx context.Context, stdout interface {
 	workerCfg.Runner = worker.NewRealRunner(st).WithEvents(eventBus)
 	workerCfg.Events = eventBus
 	pool := worker.New(st, workerCfg)
+
+	// v1.15 phase 4 — HA Postgres leader election. SQLite stores
+	// short-circuit to leader=true; Postgres stores race for
+	// pg_advisory_lock(ck_lead). Only the leader claims rows from
+	// the shared scans table; standbys serve UI + API but skip the
+	// drain loop so the v1.5.1 phase 6 cron + the v1.6 scan-trigger
+	// REST handler don't double-execute.
+	elector := leader.New(st)
+	<-elector.Start(ctx)
+	defer elector.Stop()
+	pool.WithLeader(elector.IsLeader)
 
 	// Install signal handlers on the parent context. When the user
 	// hits Ctrl-C or systemd sends SIGTERM, the signal-aware context
