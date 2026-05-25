@@ -60,7 +60,10 @@ jobs:
         run: golangci-lint run --timeout=5m
 
       - name: Test
-        run: go test -race -timeout=60s ./...
+        # -short skips the v1.11 bench harness (100k-row seed). The
+        # 120s timeout matches the Makefile bump landed at v1.12 to
+        # accommodate the v1.12+ ui-test surface under -race.
+        run: go test -race -short -timeout=120s ./...
 
       # v1.0 external-embedder contract test. Compiles under
       # -tags=external and uses ONLY the exported surface of
@@ -70,7 +73,7 @@ jobs:
       # contract narrowing (e.g. an unexported method an embedder
       # was relying on) that the api.txt diff alone can miss.
       - name: External embed test
-        run: go test -tags=external -timeout=60s ./pkg/compliancekit/...
+        run: go test -tags=external -timeout=120s ./pkg/compliancekit/...
 
       # Fails when the committed docs/checks.md drifts from the live
       # check registry. Forces a new or renamed check to ship with a

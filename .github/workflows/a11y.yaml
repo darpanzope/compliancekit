@@ -45,6 +45,15 @@ jobs:
       - name: Install axe-core CLI
         run: npm install -g @axe-core/cli@4.10.0
 
+      # The runner ships a Chrome version; axe-core's bundled
+      # ChromeDriver may pin to a newer release than the installed
+      # binary. browser-driver-manager pulls the ChromeDriver that
+      # matches the runner's Chrome, eliminating the
+      # "session not created: only supports Chrome version N" error
+      # the matrix hits whenever Chrome / ChromeDriver drift.
+      - name: Sync ChromeDriver to runner Chrome
+        run: npx -y browser-driver-manager install chrome
+
       - name: Build compliancekit binary
         run: go build -o /tmp/ck ./cmd/compliancekit
 
