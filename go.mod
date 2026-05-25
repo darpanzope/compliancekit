@@ -36,7 +36,7 @@ require (
 	github.com/go-chi/chi/v5 v5.2.5
 	github.com/google/uuid v1.6.0
 	github.com/hashicorp/golang-lru/v2 v2.0.7
-	github.com/hetznercloud/hcloud-go/v2 v2.40.0
+	github.com/hetznercloud/hcloud-go/v2 v2.41.2
 	github.com/jackc/pgx/v5 v5.9.2
 	github.com/microcosm-cc/bluemonday v1.0.27
 	github.com/muesli/termenv v0.16.0
