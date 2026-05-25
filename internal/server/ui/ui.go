@@ -36,6 +36,7 @@ import (
 	"github.com/darpanzope/compliancekit/internal/server/collab"
 	"github.com/darpanzope/compliancekit/internal/server/comments"
 	"github.com/darpanzope/compliancekit/internal/server/logs"
+	"github.com/darpanzope/compliancekit/internal/server/plugins"
 	srvrbac "github.com/darpanzope/compliancekit/internal/server/rbac"
 	"github.com/darpanzope/compliancekit/internal/server/store"
 	"github.com/darpanzope/compliancekit/pkg/compliancekit"
@@ -233,6 +234,7 @@ type UI struct {
 	rulesRepo       *rules.Repo               // v1.9 phase 0 — rules engine persistence
 	roles           *srvrbac.Store            // v1.12 phase 0 — role + permission grid
 	tokensRepo      *auth.Tokens              // v1.12 phase 9 — API token UI
+	pluginCatalog   *plugins.Catalog          // v1.13 phase 8 — installed-plugins UI
 	backups         *backups.Manager          // v1.12 phase 8 — backup/restore
 	backupDir       string
 	backupDSN       string
@@ -340,6 +342,7 @@ func (u *UI) Mount(r chi.Router) {
 		u.mountBackupsRoutes(r)
 		u.mountTokensRoutes(r)
 		u.mountNotifyTemplatesRoutes(r)
+		u.mountPluginsRoutes(r)
 		u.mountInboxV2Routes(r)
 		u.mountRulesRoutes(r)
 		u.mountRemediationRoutes(r)

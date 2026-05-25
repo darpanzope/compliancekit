@@ -1,0 +1,78 @@
+{{define "content"}}
+<div class="max-w-5xl mx-auto" x-data="{ tab: 'installed' }">
+  <div class="mb-6">
+    <a href="/settings/providers" class="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5">
+      <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      Settings
+    </a>
+    <h1 class="mt-2 text-2xl font-semibold tracking-tight">Plugins</h1>
+    <p class="text-sm text-muted-foreground mt-1">Discovered from <code class="text-[11px] px-1 py-0.5 rounded bg-muted">$XDG_DATA_HOME/compliancekit/plugins/</code>. The CLI manages install/remove; the daemon hot-reloads on file change.</p>
+  </div>
+
+  <div class="flex gap-1 mb-4 border-b border-border">
+    <button type="button" @click="tab = 'installed'"
+            :class="tab === 'installed' ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'"
+            class="px-4 py-2 text-sm font-medium border-b-2 transition">Installed ({{ len .Installed }})</button>
+    <button type="button" @click="tab = 'community'"
+            :class="tab === 'community' ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'"
+            class="px-4 py-2 text-sm font-medium border-b-2 transition">Community ({{ len .Community }})</button>
+  </div>
+
+  <div x-show="tab === 'installed'">
+    {{ if .Disabled }}
+    <div class="ck-card p-8 text-center text-sm text-muted-foreground">
+      Plugin discovery is disabled in this daemon. Start the daemon with <code class="text-[11px] px-1 py-0.5 rounded bg-muted">--plugins-dir</code> or unset <code class="text-[11px] px-1 py-0.5 rounded bg-muted">--disable-plugins</code> to enable.
+    </div>
+    {{ else if not .Installed }}
+    <div class="ck-card p-8 text-center text-sm text-muted-foreground">
+      No plugins installed yet. Run <code class="text-[11px] px-1 py-0.5 rounded bg-muted">compliancekit checks new my-pack</code> to scaffold one, then <code class="text-[11px] px-1 py-0.5 rounded bg-muted">compliancekit plugins install ./my-pack</code>.
+    </div>
+    {{ else }}
+    <div class="ck-card overflow-hidden">
+      <table class="w-full text-sm">
+        <thead class="bg-muted/50">
+          <tr class="text-left">
+            <th class="px-4 py-3 text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Name</th>
+            <th class="px-4 py-3 text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Version</th>
+            <th class="px-4 py-3 text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Kinds</th>
+            <th class="px-4 py-3 text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Signature</th>
+            <th class="px-4 py-3 text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Reloads</th>
+            <th class="px-4 py-3 text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Path</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-border">
+          {{ range .Installed }}
+          <tr class="hover:bg-muted/30 transition-colors">
+            <td class="px-4 py-3">
+              <div class="font-medium">{{ .Name }}</div>
+              {{ if .Description }}<div class="text-xs text-muted-foreground mt-0.5">{{ .Description }}</div>{{ end }}
+            </td>
+            <td class="px-4 py-3 font-mono text-xs">{{ .Version }}</td>
+            <td class="px-4 py-3 text-xs">{{ range .Kinds }}<code class="text-[11px] px-1 py-0.5 rounded bg-muted mr-1">{{ . }}</code>{{ end }}</td>
+            <td class="px-4 py-3 text-xs">
+              {{ if .SignatureValid }}<span class="text-success">signed ✓</span>{{ else }}<span class="text-warning">unsigned</span>{{ end }}
+            </td>
+            <td class="px-4 py-3 tabular-nums text-xs">{{ .Generation }}</td>
+            <td class="px-4 py-3 font-mono text-[11px] text-muted-foreground truncate max-w-xs">{{ .Path }}</td>
+          </tr>
+          {{ end }}
+        </tbody>
+      </table>
+    </div>
+    {{ end }}
+  </div>
+
+  <div x-show="tab === 'community'" x-cloak>
+    <p class="text-xs text-muted-foreground mb-3">Browse curated community packs. v1.13 ships a static list; v2.9 swaps in a live registry feed.</p>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+      {{ range .Community }}
+      <a href="{{ .Source }}" target="_blank" rel="noopener noreferrer" class="ck-card p-4 transition hover:shadow-elevated focus:outline-none focus:ring-2 focus:ring-ring">
+        <div class="font-medium text-sm">{{ .Name }}</div>
+        <div class="text-xs text-muted-foreground mt-1">{{ .Description }}</div>
+        <div class="mt-2">{{ range .Kinds }}<code class="text-[11px] px-1 py-0.5 rounded bg-muted mr-1">{{ . }}</code>{{ end }}</div>
+      </a>
+      {{ end }}
+    </div>
+  </div>
+</div>
+{{end}}
