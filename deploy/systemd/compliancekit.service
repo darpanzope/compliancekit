@@ -1,0 +1,74 @@
+# v1.15 phase 6 — systemd unit for compliancekit.
+#
+# Install:
+#   sudo cp deploy/systemd/compliancekit.service /etc/systemd/system/
+#   sudo useradd --system --user-group --create-home \
+#     --home-dir /var/lib/compliancekit --shell /usr/sbin/nologin \
+#     compliancekit
+#   sudo install -d -o compliancekit -g compliancekit /var/lib/compliancekit
+#   sudo cp /path/to/compliancekit /usr/local/bin/compliancekit
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now compliancekit
+#
+# Override DSN / flags via:
+#   sudo systemctl edit compliancekit
+# and write a [Service] section that resets Environment / ExecStart.
+
+[Unit]
+Description=compliancekit daemon
+Documentation=https://github.com/darpanzope/compliancekit
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=compliancekit
+Group=compliancekit
+WorkingDirectory=/var/lib/compliancekit
+
+# Default: SQLite under /var/lib/compliancekit. Override via
+# `systemctl edit` to point at Postgres in production.
+Environment=CK_DB=/var/lib/compliancekit/serve.db
+
+ExecStart=/usr/local/bin/compliancekit serve \
+  --addr 127.0.0.1 \
+  --port 8080 \
+  --db ${CK_DB}
+
+Restart=on-failure
+RestartSec=5s
+TimeoutStopSec=30s
+
+# ─── Hardening (systemd-analyze security target: < 2.0) ─────────
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/compliancekit
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectClock=true
+ProtectHostname=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictNamespaces=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged @resources
+CapabilityBoundingSet=
+AmbientCapabilities=
+UMask=0027
+
+# Resource caps — sized for the v1.4 single-tenant baseline. Bump
+# LimitNOFILE if you push past ~500 concurrent SSE subscribers; bump
+# the memory caps if you ingest larger Trivy / Grype scans.
+LimitNOFILE=65536
+LimitNPROC=4096
+
+[Install]
+WantedBy=multi-user.target
