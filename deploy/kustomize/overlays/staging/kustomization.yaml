@@ -1,0 +1,27 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# staging overlay — production shape but smaller resource envelope,
+# pinned tag, replica still 1 + SQLite. Ingress lives at the
+# overlay level so operators can edit per-environment hostnames
+# without touching the base.
+
+namespace: compliancekit-staging
+nameSuffix: -staging
+
+resources:
+  - ../../base
+  - ingress.yaml
+
+images:
+  - name: ghcr.io/darpanzope/compliancekit
+    newTag: v1.15.0
+
+patches:
+  - target:
+      kind: PersistentVolumeClaim
+      name: data
+    patch: |-
+      - op: replace
+        path: /spec/resources/requests/storage
+        value: 5Gi

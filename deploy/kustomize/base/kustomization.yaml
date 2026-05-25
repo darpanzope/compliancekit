@@ -1,0 +1,24 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# v1.15 phase 2 — Kustomize base. Mirror of the Helm chart's
+# zero-overlay output (single replica + SQLite). Overlays under
+# ../overlays/{dev,staging,prod}/ patch this for each environment.
+
+namespace: compliancekit
+namePrefix: compliancekit-
+
+commonLabels:
+  app.kubernetes.io/name: compliancekit
+  app.kubernetes.io/component: daemon
+
+resources:
+  - namespace.yaml
+  - serviceaccount.yaml
+  - deployment.yaml
+  - service.yaml
+  - pvc.yaml
+
+images:
+  - name: ghcr.io/darpanzope/compliancekit
+    newTag: v1.15.0

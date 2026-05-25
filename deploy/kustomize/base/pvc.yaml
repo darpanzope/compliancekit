@@ -1,0 +1,12 @@
+# Base ships the SQLite-mode PVC. The prod overlay drops this in
+# favour of an external Postgres + HA.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: data
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi

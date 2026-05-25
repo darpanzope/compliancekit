@@ -1,0 +1,40 @@
+# prod HA patch: 2 replicas + RollingUpdate + switch --db to the
+# Postgres DSN coming from the secret. Drops the SQLite volume mount;
+# the daemon's /var/lib/compliancekit becomes a bare emptyDir (only
+# used for plugin manifest scratch in v1.13+).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: daemon
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    spec:
+      containers:
+        - name: compliancekit
+          args:
+            - serve
+            - --addr=0.0.0.0
+            - --port=8080
+            - --db=$(CK_DB_DSN)
+          env:
+            - name: CK_DB_DSN
+              valueFrom:
+                secretKeyRef:
+                  name: postgres
+                  key: dsn
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: data
+              mountPath: /var/lib/compliancekit
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: data
+          emptyDir: {}
