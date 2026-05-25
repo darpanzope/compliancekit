@@ -33,6 +33,7 @@ func (u *UI) dashboardsRepo() *dashboards.Store {
 func (u *UI) mountDashboardsRoutes(r chi.Router) {
 	r.Get("/dashboards", u.dashboardsList)
 	r.Post("/dashboards", u.dashboardsCreate)
+	r.Post("/dashboards/clone", u.dashboardsCloneTemplate)
 	r.Get("/dashboards/{id}", u.dashboardsShow)
 	r.Post("/dashboards/{id}", u.dashboardsUpdate)
 	r.Post("/dashboards/{id}/delete", u.dashboardsDelete)
@@ -45,6 +46,7 @@ func (u *UI) mountDashboardsRoutes(r chi.Router) {
 type dashboardsListView struct {
 	View
 	Dashboards []dashboardRow
+	Templates  []dashboards.Template
 }
 
 type dashboardRow struct {
@@ -82,8 +84,32 @@ func (u *UI) dashboardsList(w http.ResponseWriter, r *http.Request) {
 	view := dashboardsListView{
 		View:       u.viewFor(r, "Dashboards", "dashboards", View{Flash: r.URL.Query().Get("flash")}),
 		Dashboards: rows,
+		Templates:  dashboards.BuiltinTemplates(),
 	}
 	u.render(w, "dashboards_list.html", view)
+}
+
+func (u *UI) dashboardsCloneTemplate(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "parse form", http.StatusBadRequest)
+		return
+	}
+	tmpl := strings.TrimSpace(r.FormValue("template"))
+	name := strings.TrimSpace(r.FormValue("name"))
+	teamShare := r.FormValue("team") == "1"
+	owner := userIDFromCtx(r.Context())
+	if teamShare && u.isAdmin(r.Context()) {
+		owner = ""
+	}
+	d, err := u.dashboardsRepo().CloneTemplate(r.Context(), tmpl, owner, userIDFromCtx(r.Context()), name)
+	if err != nil {
+		http.Redirect(w, r, "/dashboards?flash=template-error", http.StatusSeeOther)
+		return
+	}
+	u.AuditLog(r.Context(), "dashboard.clone_template", "dashboard", d.ID, map[string]any{
+		"template": tmpl, "team": owner == "",
+	})
+	http.Redirect(w, r, "/dashboards/"+d.ID+"?flash=created", http.StatusSeeOther)
 }
 
 func (u *UI) dashboardsCreate(w http.ResponseWriter, r *http.Request) {
