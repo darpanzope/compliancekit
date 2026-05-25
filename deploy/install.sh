@@ -4,7 +4,6 @@
 #
 # Pipe-from-curl usage:
 #
-#   curl -sSf https://compliancekit.dev/install.sh | sh
 #   curl -sSf https://raw.githubusercontent.com/darpanzope/compliancekit/main/deploy/install.sh | sh
 #
 # What it does:

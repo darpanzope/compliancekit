@@ -2370,7 +2370,7 @@ See [ADR-016](DECISIONS.md#adr-016--v1x-is-fully-scoped-to-server--uiux--backend
 - **systemd unit + NixOS module**: ship-with templates for the two most-requested non-K8s deploy patterns.
 - **Deep healthchecks**: `/health/ready` checks DB writable + migrations current + queue alive + leader-elected. `/health/live` is the cheap one.
 - **Grafana dashboards**: JSON bundle in `grafana/dashboards/` — "Compliancekit Operations", "Findings Overview", "Worker Pool". Import into any Grafana.
-- **One-line installer**: `curl -sSf https://compliancekit.dev/install.sh | sh` parity with brew (chooses the right binary + drops a systemd unit / launchd plist).
+- **One-line installer**: `curl -sSf https://raw.githubusercontent.com/darpanzope/compliancekit/main/deploy/install.sh | sh` parity with brew (chooses the right binary + drops a systemd unit / launchd plist). A vanity `compliancekit.dev/install.sh` shortcut may land later if the domain is acquired; the raw GitHub URL is the canonical install endpoint.
 
 **Out of scope at v1.15**
 
