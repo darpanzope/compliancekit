@@ -33,7 +33,7 @@ require (
 	github.com/crewjam/saml v0.5.1
 	github.com/digitalocean/godo v1.192.0
 	github.com/fsnotify/fsnotify v1.10.1
-	github.com/go-chi/chi/v5 v5.2.5
+	github.com/go-chi/chi/v5 v5.3.0
 	github.com/google/uuid v1.6.0
 	github.com/hashicorp/golang-lru/v2 v2.0.7
 	github.com/hetznercloud/hcloud-go/v2 v2.41.2
