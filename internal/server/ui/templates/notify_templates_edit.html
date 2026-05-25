@@ -1,0 +1,62 @@
+{{define "content"}}
+<div class="max-w-6xl mx-auto" x-data>
+  <div class="mb-6">
+    <a href="/settings/notify-templates" class="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5">
+      <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      Notification templates
+    </a>
+    <h1 class="mt-2 text-2xl font-semibold tracking-tight">{{ .Kind }} template</h1>
+    <p class="text-sm text-muted-foreground mt-1">Go <code class="text-[11px] px-1 py-0.5 rounded bg-muted">text/template</code> body. Funcs available: <code class="text-[11px] px-1 py-0.5 rounded bg-muted">upper</code>, <code class="text-[11px] px-1 py-0.5 rounded bg-muted">lower</code>, <code class="text-[11px] px-1 py-0.5 rounded bg-muted">title</code>. Payload: the finding JSON.</p>
+  </div>
+
+  {{ if eq .Flash "saved" }}<div class="mb-4 rounded-md border border-success/30 bg-success/10 px-3 py-2 text-sm text-success">Template saved.</div>{{ end }}
+  {{ if eq .Flash "parse-error" }}<div class="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">Template failed to parse — not saved.</div>{{ end }}
+
+  <form action="/settings/notify-templates/{{ .Kind }}" method="post"
+        class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+    <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
+
+    <!-- Editor -->
+    <div class="ck-card p-4 space-y-3">
+      <div class="flex items-center justify-between">
+        <label class="text-xs font-medium text-foreground">Template body</label>
+        <button type="submit"
+                class="inline-flex h-8 items-center gap-1.5 rounded-md bg-primary text-primary-foreground px-3 text-xs font-medium hover:opacity-90 transition">Save</button>
+      </div>
+      <textarea name="body" rows="22"
+                hx-post="/settings/notify-templates/preview"
+                hx-trigger="keyup changed delay:300ms, change"
+                hx-include="closest form"
+                hx-target="#preview-out"
+                hx-swap="innerHTML"
+                class="w-full font-mono text-xs rounded-md border border-input bg-background p-3 focus:outline-none focus:ring-2 focus:ring-ring transition">{{ .Body }}</textarea>
+
+      <details class="text-xs">
+        <summary class="cursor-pointer text-muted-foreground">Sample payload (JSON the preview renders against)</summary>
+        <textarea name="payload" rows="10"
+                  hx-post="/settings/notify-templates/preview"
+                  hx-trigger="keyup changed delay:300ms, change"
+                  hx-include="closest form"
+                  hx-target="#preview-out"
+                  hx-swap="innerHTML"
+                  class="mt-2 w-full font-mono text-[11px] rounded-md border border-input bg-background p-2 focus:outline-none focus:ring-2 focus:ring-ring transition">{{ .SamplePayload }}</textarea>
+      </details>
+    </div>
+
+    <!-- Preview -->
+    <div class="ck-card p-4">
+      <div class="flex items-center justify-between mb-3">
+        <label class="text-xs font-medium text-foreground">Live preview</label>
+        <span class="text-[10px] uppercase tracking-wider text-muted-foreground">rendered</span>
+      </div>
+      <div id="preview-out" class="rounded-md border border-border bg-muted/30 p-3 min-h-[20rem]">
+        {{ if .PreviewErr }}
+          <div class="text-xs text-destructive font-mono whitespace-pre-wrap">{{ .PreviewErr }}</div>
+        {{ else }}
+          <pre class="font-mono text-xs whitespace-pre-wrap">{{ .Preview }}</pre>
+        {{ end }}
+      </div>
+    </div>
+  </form>
+</div>
+{{end}}

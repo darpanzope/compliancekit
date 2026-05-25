@@ -339,6 +339,7 @@ func (u *UI) Mount(r chi.Router) {
 		u.mountSessionsRoutes(r)
 		u.mountBackupsRoutes(r)
 		u.mountTokensRoutes(r)
+		u.mountNotifyTemplatesRoutes(r)
 		u.mountInboxV2Routes(r)
 		u.mountRulesRoutes(r)
 		u.mountRemediationRoutes(r)
