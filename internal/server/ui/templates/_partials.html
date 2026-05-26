@@ -33,21 +33,21 @@ values as repeated name=value pairs natively. v1.5 Phase 1.
     hx-target="#finding-detail-panel"
     hx-swap="innerHTML"
     @click="window.dispatchEvent(new CustomEvent('open-detail'))">
-  <td class="px-4 py-3">{{ template "severity_pill" .Severity }}</td>
-  <td class="px-4 py-3">
+  <td data-label="Severity" class="px-4 py-3">{{ template "severity_pill" .Severity }}</td>
+  <td data-label="Status" class="px-4 py-3">
     {{ if eq .Status "fail" }}<span class="text-xs text-destructive font-medium">fail</span>
     {{ else if eq .Status "pass" }}<span class="text-xs text-success font-medium">pass</span>
     {{ else if eq .Status "error" }}<span class="text-xs text-warning font-medium">error</span>
     {{ else }}<span class="text-xs text-muted-foreground">{{ .Status }}</span>{{ end }}
   </td>
-  <td class="px-4 py-3 font-mono text-xs whitespace-nowrap">{{ .CheckID }}</td>
-  <td class="px-4 py-3 text-xs">
+  <td data-label="Check" class="px-4 py-3 font-mono text-xs whitespace-nowrap">{{ .CheckID }}</td>
+  <td data-label="Resource" class="px-4 py-3 text-xs">
     <div class="font-medium">{{ .ResourceName }}</div>
     <div class="text-muted-foreground font-mono text-[11px] mt-0.5">{{ .ResourceType }} · {{ .ResourceID }}</div>
   </td>
-  <td class="px-4 py-3 text-xs text-muted-foreground">{{ .Provider }}</td>
-  <td class="px-4 py-3 text-xs">{{ range $i, $f := .Frameworks }}{{ if $i }}, {{ end }}<span class="text-muted-foreground">{{ $f }}</span>{{ end }}</td>
-  <td class="px-4 py-3 text-xs text-muted-foreground tabular-nums whitespace-nowrap">{{ .LastSeenIn }}</td>
+  <td data-label="Provider" class="px-4 py-3 text-xs text-muted-foreground">{{ .Provider }}</td>
+  <td data-label="Frameworks" class="px-4 py-3 text-xs">{{ range $i, $f := .Frameworks }}{{ if $i }}, {{ end }}<span class="text-muted-foreground">{{ $f }}</span>{{ end }}</td>
+  <td data-label="Last seen" class="px-4 py-3 text-xs text-muted-foreground tabular-nums whitespace-nowrap">{{ .LastSeenIn }}</td>
 </tr>
 {{ else }}
 {{ if not .HasNext }}<tr><td colspan="7" class="p-12 text-center text-sm text-muted-foreground">No findings match the current filters.</td></tr>{{ end }}
