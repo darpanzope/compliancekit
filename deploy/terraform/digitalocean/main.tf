@@ -191,10 +191,23 @@ resource "digitalocean_certificate" "main" {
   domains = [var.domain]
 }
 
+locals {
+  domain_parts = split(".", var.domain)
+  parts_count  = length(local.domain_parts)
+  # apex_domain is always the last two labels of var.domain (e.g.
+  # "example.com" from "app.example.com"). subdomain is everything
+  # before the apex, or "@" if var.domain is already the apex.
+  apex_domain = join(".", slice(local.domain_parts, local.parts_count - 2, local.parts_count))
+  subdomain   = local.parts_count > 2 ? join(".", slice(local.domain_parts, 0, local.parts_count - 2)) : "@"
+}
+
 resource "digitalocean_record" "main" {
-  domain = split(".", var.domain)[length(split(".", var.domain)) - 2] + "." + split(".", var.domain)[length(split(".", var.domain)) - 1]
+  # HCL's `+` operator is arithmetic only; the v1.15.0 code path
+  # tried to concat strings with `+` and `terraform validate` failed
+  # at every plan. v1.15.1 phase 2 fix.
+  domain = local.apex_domain
   type   = "A"
-  name   = split(".", var.domain)[0]
+  name   = local.subdomain
   value  = digitalocean_loadbalancer.main.ip
   ttl    = 300
 }
