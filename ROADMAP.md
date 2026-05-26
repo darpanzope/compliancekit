@@ -2364,9 +2364,11 @@ See [ADR-016](DECISIONS.md#adr-016--v1x-is-fully-scoped-to-server--uiux--backend
 
 ---
 
-### v1.15 ✅ — Deploy & operate (shipped 2026-05-25)
+### v1.15 ✅ — Deploy & operate (shipped 2026-05-25; v1.15.1 patch shipped 2026-05-26)
 
 **Goal:** the daemon goes from "build from source" to "kubectl apply -f". Helm, Kustomize, operator, Terraform — every deployment pattern operators expect.
+
+**v1.15.1 patch (2026-05-26)** — eight-phase patch chain closing the audit findings against v1.15.0. The v1.15.0 deploy artifacts shipped with five image-pull-blocking bugs (Helm `appVersion` + Kustomize hardcoded tags + operator install.yaml all referenced `v1.15.0`, but goreleaser publishes as `1.15.0`; the operator binary was never added to `.goreleaser.yaml` so its image never existed; the DigitalOcean terraform module had an HCL string-concat-with-`+` syntax error that failed `terraform validate`) plus six UX gaps (the `--demo` seeder inserted scans without findings or resources; `render --format=ocsf` was rejected because the constant is `json-ocsf`; `checks list --provider=k8s` returned 0 because the tag is `kubernetes`; `plugins list` silently filtered unsigned packs without a hint; `/settings` returned 404; `scripts/install.sh` was a stale v0.5-era duplicate of `deploy/install.sh`). v1.15.1 fixes all eleven + bumps the image-size budget from an unreachable 30 MiB to a measured-ceiling 60 MiB + wires the budget script into the release workflow as a post-publish gate (it had been a hand-tool only). Patch tag is the same Helm chart version (`1.15.1`) so the chart and image stay in lockstep.
 
 **Deliverables**
 
@@ -2374,7 +2376,7 @@ See [ADR-016](DECISIONS.md#adr-016--v1x-is-fully-scoped-to-server--uiux--backend
 - **Kustomize overlay**: community-template-style. Base + overlays for dev / staging / prod.
 - **K8s operator** (basic): `ComplianceSchedule` CRD reconciles cron schedules (replaces in-daemon cron when running in K8s — schedule-as-Kubernetes-resource); `ScanJob` CRD for ad-hoc one-shot scans (creates a Pod with the right config). Full reconciler with CRD-driven profiles + waivers is the v2.10 milestone.
 - **Terraform modules**: `terraform-aws-compliancekit`, `-gcp-`, `-do-`, `-hetzner-`. Provisions a VM / managed service + Postgres + reverse proxy + DNS in each cloud.
-- **Distroless multi-arch image**: `linux/amd64` + `linux/arm64`. `gcr.io/distroless/static-debian12:nonroot` base. ~25 MB.
+- **Distroless multi-arch image**: `linux/amd64` + `linux/arm64`. `gcr.io/distroless/static-debian12:nonroot` base. ~45 MiB compressed published (measured at v1.15.0). The "~25 MB" target the original deliverable specified turned out to be aspirational — the daemon bundles Go + K8s SDKs + OPA + chromedp + crewjam/saml + Preline + i18n which all roll into a single ~45 MiB gzipped layer. CI gate at 60 MiB enforced via `deploy/scripts/image-size-budget.sh` (v1.15.1 phase 3 wired it into `.github/workflows/release.yaml`; before that it was a hand-tool only). v2.15 code-health pass may shrink toward the original aspiration by moving chromedp + OPA to v1.13 plugins.
 - **HA Postgres docs**: replica setup, leader election via `pg_advisory_lock` (already used at v1.3 for migrations; extended to worker leader-election).
 - **systemd unit + NixOS module**: ship-with templates for the two most-requested non-K8s deploy patterns.
 - **Deep healthchecks**: `/health/ready` checks DB writable + migrations current + queue alive + leader-elected. `/health/live` is the cheap one.
