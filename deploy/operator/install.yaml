@@ -88,7 +88,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: operator
-          image: ghcr.io/darpanzope/compliancekit-operator:v1.15.0
+          image: ghcr.io/darpanzope/compliancekit-operator:1.15.1
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false
@@ -99,7 +99,7 @@ spec:
             - --metrics-bind-address=:8080
             - --health-probe-bind-address=:8081
             - --leader-elect=true
-            - --default-image=ghcr.io/darpanzope/compliancekit:v1.15.0
+            - --default-image=ghcr.io/darpanzope/compliancekit:1.15.1
           ports:
             - { name: metrics, containerPort: 8080 }
             - { name: probes,  containerPort: 8081 }

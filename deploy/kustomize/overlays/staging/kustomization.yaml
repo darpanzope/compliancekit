@@ -15,7 +15,7 @@ resources:
 
 images:
   - name: ghcr.io/darpanzope/compliancekit
-    newTag: v1.15.0
+    newTag: 1.15.1
 
 patches:
   - target:

@@ -1,0 +1,16 @@
+# terraform init writes provider binaries here. They're per-platform,
+# per-version, hundreds of MB, and reproducible from the lockfile —
+# never commit.
+**/.terraform/
+
+# Lockfiles are committed (so CI uses the same provider versions),
+# but state files are not — they hold infrastructure secrets.
+**/*.tfstate
+**/*.tfstate.*
+**/*.tfvars
+**/*.tfvars.json
+**/.terraform.tfstate.lock.info
+
+# Local plan output (may contain credentials).
+**/*.plan
+**/tfplan

@@ -7,7 +7,7 @@ deploy/kustomize/
 ├── base/                   single-replica + SQLite (the chart-zero shape)
 └── overlays/
     ├── dev/                latest tag + --insecure-cookies + 1Gi PVC
-    ├── staging/            v1.15.0 tag + Ingress + cert-manager-staging
+    ├── staging/            1.15.1 tag + Ingress + cert-manager-staging
     └── prod/               HA Postgres mode + 2 replicas + cert-manager-prod
 ```
 
