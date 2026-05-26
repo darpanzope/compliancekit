@@ -386,5 +386,48 @@ table.list tbody tr:hover { background: var(--legacy-panel-2); }
      don't flash open on first paint. -->
 <style>[x-cloak] { display: none !important; }</style>
 
+<!--
+  v1.16 phase 2 — PWA install banner. Pinned at the bottom of the
+  viewport (above the v1.16 phase 6 mobile action bar later) so it's
+  always thumb-reachable without obscuring page content. Two flows:
+    - Android / desktop Chrome / Edge: the browser fires
+      `beforeinstallprompt`; the banner's Install button calls
+      installer.prompt() to surface the native install UI.
+    - iOS Safari: no beforeinstallprompt event. The banner instead
+      shows a one-tap copy explaining the Share-sheet → Add to Home
+      Screen flow with an illustration of the share icon.
+  Dismissal persists in localStorage; we never re-prompt once the
+  user says no (matches Linear / Vercel install-banner pattern).
+-->
+<div x-data="installBanner()"
+     x-show="visible"
+     x-cloak
+     x-transition.opacity
+     class="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 backdrop-blur px-4 py-3 sm:px-6 shadow-soft"
+     role="region"
+     aria-label="Install compliancekit">
+  <div class="mx-auto max-w-3xl flex items-start gap-3">
+    <img src="/assets/icon-192.png" alt="" class="h-10 w-10 rounded-md shrink-0">
+    <div class="flex-1 min-w-0">
+      <p class="text-sm font-medium text-foreground">Install compliancekit</p>
+      <p class="mt-0.5 text-xs text-muted-foreground" x-text="hint"></p>
+    </div>
+    <div class="flex items-center gap-2 shrink-0">
+      <button type="button"
+              x-show="canPromptNative"
+              @click="install"
+              class="h-9 px-3 rounded-md bg-primary text-primary-foreground text-xs font-medium hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-ring transition">
+        Install
+      </button>
+      <button type="button"
+              @click="dismiss"
+              class="h-9 px-3 rounded-md border border-input text-xs font-medium hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring transition"
+              aria-label="Dismiss install banner">
+        Not now
+      </button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>{{end}}
