@@ -311,6 +311,15 @@ func (u *UI) Mount(r chi.Router) {
 	// Safari fetch the manifest before the user has a session.
 	r.Get("/manifest.webmanifest", manifestHandler())
 
+	// v1.16 phase 1 — service worker at the root scope. Browsers
+	// pin the SW's controlling scope to the path the script lived
+	// at OR (with the Service-Worker-Allowed header) up to a parent
+	// path. Serving from /sw.js gives us / scope and lets the SW
+	// intercept every navigation. Unauthenticated for the same
+	// reason as the manifest.
+	r.Get("/sw.js", serviceWorkerHandler())
+	r.Get("/offline", u.offlinePage)
+
 	r.Get("/", u.rootRedirect)
 	r.Get("/login", u.login)
 	r.Post("/logout", u.logout)
@@ -420,6 +429,39 @@ func manifestHandler() http.HandlerFunc {
 		w.Header().Set("Cache-Control", "public, max-age=3600")
 		_, _ = w.Write(body)
 	}
+}
+
+// serviceWorkerHandler serves the v1.16 service worker at /sw.js so
+// it controls the entire / scope (browser pins SW scope to the
+// served path or shallower via Service-Worker-Allowed). No cache —
+// browsers compare byte-for-byte and re-install when sw.js changes,
+// so a Cache-Control max-age delays new SW deployments. v1.16
+// phase 1.
+func serviceWorkerHandler() http.HandlerFunc {
+	body, err := assets.FS.ReadFile("sw.js")
+	return func(w http.ResponseWriter, r *http.Request) {
+		if err != nil {
+			http.Error(w, "sw unavailable", http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "application/javascript; charset=utf-8")
+		w.Header().Set("Cache-Control", "no-cache")
+		w.Header().Set("Service-Worker-Allowed", "/")
+		_, _ = w.Write(body)
+	}
+}
+
+// offlinePage renders the static fallback shown by the service
+// worker when both the network and the page cache miss. Rendered
+// through the standard template pipeline so it inherits the v1.18
+// layout + theme tokens; lives at /offline so the SW can precache
+// it during install. v1.16 phase 1.
+func (u *UI) offlinePage(w http.ResponseWriter, r *http.Request) {
+	// viewFor reads the session for nav highlighting; offline mode
+	// may not have one. Pass an unauthenticated View so the template
+	// still renders cleanly.
+	view := View{Title: "Offline"}
+	u.render(w, "offline.html", view)
 }
 
 // assetsHandler serves the embedded UI bundle (Tailwind CSS + vendored

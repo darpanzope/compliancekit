@@ -695,3 +695,26 @@ function commentComposer() {
     },
   };
 }
+
+// v1.16 phase 1 — Service worker registration. Registers /sw.js with
+// the root scope so it can intercept every navigation + fetch on the
+// daemon. Idempotent — re-registering an unchanged sw.js is a no-op.
+// Failure is non-fatal: the daemon still works without offline / push
+// support, the user just loses PWA install affordances.
+if ('serviceWorker' in navigator && window.location.protocol !== 'data:') {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('/sw.js', { scope: '/' }).then(
+      function (reg) {
+        // Log under the global ck namespace for browser console
+        // discoverability; never alerts the user.
+        window.ck = window.ck || {};
+        window.ck.sw = reg;
+      },
+      function (err) {
+        if (window.console && console.warn) {
+          console.warn('compliancekit: service worker registration failed:', err);
+        }
+      }
+    );
+  });
+}

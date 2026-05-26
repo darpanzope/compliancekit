@@ -16,6 +16,6 @@ import "embed"
 // worker). Served at /assets/* by the ui package.
 //
 //go:embed app.css app.js a11y.js htmx.min.js alpine.min.js preline.js
-//go:embed manifest.webmanifest
+//go:embed manifest.webmanifest sw.js
 //go:embed icon-192.png icon-512.png icon-maskable-512.png apple-touch-icon.png favicon-32.png
 var FS embed.FS
