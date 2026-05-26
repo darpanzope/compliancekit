@@ -301,6 +301,70 @@ html.contrast-more.dark {
     contain-intrinsic-size: 0 96px; /* card-style rows (rules, teams) */
   }
 
+  /* v1.16 phase 3 — Mobile card mode for data tables.
+     `ck-table-cards` on the <table> swaps the default horizontal
+     layout for a stacked-card layout at <640px width. Each row
+     becomes a card; each cell uses the value of `data-label` as
+     the visible field name. THEAD is hidden on mobile because the
+     per-cell labels replace it.
+     Markup pattern:
+       <table class="ck-table-cards">
+         <thead><tr><th>Severity</th>...</tr></thead>
+         <tbody><tr>
+           <td data-label="Severity">…</td>
+           <td data-label="Resource">…</td>
+         </tr></tbody>
+       </table>
+     This keeps a single source of truth in the template — the same
+     table renders as a real table at sm:+ and as cards below. */
+  @media (max-width: 639px) {
+    .ck-table-cards thead { display: none; }
+    .ck-table-cards,
+    .ck-table-cards tbody,
+    .ck-table-cards tr {
+      display: block;
+      width: 100%;
+    }
+    .ck-table-cards tr {
+      border: 1px solid hsl(var(--border));
+      border-radius: var(--radius);
+      margin-bottom: 12px;
+      padding: 4px 0;
+      background: hsl(var(--card));
+    }
+    .ck-table-cards td {
+      display: flex;
+      gap: 12px;
+      align-items: baseline;
+      justify-content: space-between;
+      padding: 8px 14px;
+      border-bottom: 1px solid hsl(var(--border));
+    }
+    .ck-table-cards td:last-child { border-bottom: 0; }
+    .ck-table-cards td::before {
+      content: attr(data-label);
+      flex: 0 0 auto;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: hsl(var(--muted-foreground));
+      min-width: 90px;
+    }
+    /* Cells flagged data-label-hide stay table-only — useful for
+       per-row action menus that the mobile-card layout drops. */
+    .ck-table-cards td[data-label-hide] { display: none; }
+  }
+
+  /* v1.16 phase 3 — Comfortable safe-area padding for iOS PWA mode.
+     When launched as a standalone PWA, iOS Safari leaves a strip
+     at the bottom that overlaps page content (the home-indicator
+     drag affordance). `pb-safe` adds env(safe-area-inset-bottom)
+     so the v1.16 phase 2 install banner + phase 6 bottom action
+     bar don't end up under the system gesture area. */
+  .pb-safe { padding-bottom: env(safe-area-inset-bottom, 0); }
+  .pt-safe { padding-top: env(safe-area-inset-top, 0); }
+
   /* v1.10 phase 0/1 — Skip-link. Visually hidden until it receives
      keyboard focus, then docks to the top-left. Operators tabbing
      into the page hit it first; Enter jumps focus into <main>. */

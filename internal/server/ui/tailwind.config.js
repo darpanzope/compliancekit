@@ -16,6 +16,18 @@ module.exports = {
       padding: '1.5rem',
       screens: { '2xl': '1400px' },
     },
+    // v1.16 phase 3 — narrow `xs:` breakpoint for iPhone-SE-class
+    // viewports (375px). Tailwind's default `sm:` starts at 640px,
+    // which is too wide for "actually a phone". Pages opt into the
+    // mobile-card layout by gating with xs:hidden / xs:block.
+    screens: {
+      xs: '400px',
+      sm: '640px',
+      md: '768px',
+      lg: '1024px',
+      xl: '1280px',
+      '2xl': '1536px',
+    },
     extend: {
       colors: {
         border: 'hsl(var(--border))',

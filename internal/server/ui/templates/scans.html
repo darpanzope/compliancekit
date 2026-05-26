@@ -57,8 +57,8 @@
   </div>
 
   <div class="ck-card overflow-hidden">
-    <div class="overflow-x-auto">
-      <table class="w-full text-sm">
+    <div class="overflow-x-auto sm:block">
+      <table class="ck-table-cards w-full text-sm">
         <thead class="bg-muted/50">
           <tr class="text-left">
             <th class="px-4 py-3 text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Created</th>
@@ -74,15 +74,15 @@
         <tbody class="divide-y divide-border">
           {{ range .Items }}
           <tr onclick="window.location='/scans/{{.ID}}'" data-scan-id="{{.ID}}" class="ck-vrow hover:bg-muted/30 cursor-pointer transition-colors">
-            <td class="px-4 py-3 font-mono text-xs">{{ .CreatedAt }}</td>
-            <td class="px-4 py-3">
+            <td data-label="Created" class="px-4 py-3 font-mono text-xs">{{ .CreatedAt }}</td>
+            <td data-label="Status" class="px-4 py-3">
               {{ if eq .Status "completed" }}<span data-status-pill class="inline-flex items-center gap-1.5 text-xs text-success"><span class="h-2 w-2 rounded-full bg-success"></span>completed</span>
               {{ else if eq .Status "running" }}<span data-status-pill class="inline-flex items-center gap-1.5 text-xs"><span class="h-2 w-2 rounded-full bg-warning animate-pulse"></span>running</span>
               {{ else if eq .Status "queued" }}<span data-status-pill class="inline-flex items-center gap-1.5 text-xs text-muted-foreground"><span class="h-2 w-2 rounded-full bg-muted-foreground"></span>queued</span>
               {{ else if eq .Status "failed" }}<span data-status-pill class="inline-flex items-center gap-1.5 text-xs text-destructive"><span class="h-2 w-2 rounded-full bg-destructive"></span>failed</span>
               {{ else }}<span data-status-pill class="text-xs text-muted-foreground">{{ .Status }}</span>{{ end }}
             </td>
-            <td class="px-4 py-3 text-xs">
+            <td data-label="Source" class="px-4 py-3 text-xs">
               {{ if eq .Source "cli" }}<span class="inline-flex items-center gap-1 rounded bg-primary/10 text-primary px-1.5 py-0.5 text-[10px] uppercase tracking-wider">CLI push</span>
               {{ else if eq .Source "schedule" }}<span class="inline-flex items-center gap-1 rounded bg-warning/10 text-warning px-1.5 py-0.5 text-[10px] uppercase tracking-wider">Scheduled</span>
               {{ else if eq .Source "webhook" }}<span class="inline-flex items-center gap-1 rounded bg-success/10 text-success px-1.5 py-0.5 text-[10px] uppercase tracking-wider">Webhook</span>
@@ -90,11 +90,11 @@
               {{ else }}<span class="text-muted-foreground">{{ .Source }}</span>{{ end }}
               {{ if .Trigger }}<span class="ml-1 font-mono text-[10px] text-muted-foreground" title="Trigger metadata">{{ .Trigger }}</span>{{ end }}
             </td>
-            <td class="px-4 py-3 font-mono text-xs text-muted-foreground">{{ .ProvidersScanned }}</td>
-            <td class="px-4 py-3 tabular-nums">{{ .Score }}/100</td>
-            <td class="px-4 py-3 tabular-nums">{{ .TotalFindings }}</td>
-            <td class="px-4 py-3 tabular-nums">{{ .ActionableFindings }}</td>
-            <td class="px-4 py-3 text-xs text-muted-foreground tabular-nums">{{ if .DurationMS }}{{ .DurationMS }}ms{{ else }}—{{ end }}</td>
+            <td data-label="Providers" class="px-4 py-3 font-mono text-xs text-muted-foreground">{{ .ProvidersScanned }}</td>
+            <td data-label="Score" class="px-4 py-3 tabular-nums">{{ .Score }}/100</td>
+            <td data-label="Findings" class="px-4 py-3 tabular-nums">{{ .TotalFindings }}</td>
+            <td data-label="Actionable" class="px-4 py-3 tabular-nums">{{ .ActionableFindings }}</td>
+            <td data-label="Duration" class="px-4 py-3 text-xs text-muted-foreground tabular-nums">{{ if .DurationMS }}{{ .DurationMS }}ms{{ else }}—{{ end }}</td>
           </tr>
           {{ else }}
           <tr><td colspan="8" class="p-12 text-center text-sm text-muted-foreground">

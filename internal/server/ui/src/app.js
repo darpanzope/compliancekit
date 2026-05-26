@@ -695,3 +695,99 @@ function commentComposer() {
     },
   };
 }
+
+// v1.16 phase 1 — Service worker registration. Registers /sw.js with
+// the root scope so it can intercept every navigation + fetch on the
+// daemon. Idempotent — re-registering an unchanged sw.js is a no-op.
+// Failure is non-fatal: the daemon still works without offline / push
+// support, the user just loses PWA install affordances.
+if ('serviceWorker' in navigator && window.location.protocol !== 'data:') {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('/sw.js', { scope: '/' }).then(
+      function (reg) {
+        // Log under the global ck namespace for browser console
+        // discoverability; never alerts the user.
+        window.ck = window.ck || {};
+        window.ck.sw = reg;
+      },
+      function (err) {
+        if (window.console && console.warn) {
+          console.warn('compliancekit: service worker registration failed:', err);
+        }
+      }
+    );
+  });
+}
+
+// v1.16 phase 2 — PWA install banner factory. Bound to <div
+// x-data="installBanner()"> in base.html. Two-flow:
+//
+//   Android / Chromium desktop: capture beforeinstallprompt + show
+//     a banner with an Install button; clicking it calls the saved
+//     prompt() handle to surface the browser's native install UI.
+//   iOS Safari: no event fires. Detect iOS + display-mode standalone
+//     state; show a banner explaining Share → Add to Home Screen.
+//
+// Dismissal persists in localStorage; we never re-prompt the same
+// browser. The display-mode media query suppresses the banner once
+// the app is launched in standalone mode.
+function installBanner() {
+  return {
+    visible: false,
+    canPromptNative: false,
+    hint: '',
+    _deferred: null,
+    init: function () {
+      // Honor a prior dismissal.
+      try {
+        if (localStorage.getItem('ck-install-dismissed') === '1') return;
+      } catch (e) {}
+      // Skip entirely when launched in standalone mode (already installed).
+      var standalone =
+        (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
+        window.navigator.standalone === true;
+      if (standalone) return;
+
+      var self = this;
+      // Chromium path: cache the event so we can fire it on user gesture.
+      window.addEventListener('beforeinstallprompt', function (e) {
+        e.preventDefault();
+        self._deferred = e;
+        self.canPromptNative = true;
+        self.hint = 'Add compliancekit to your home screen for one-tap access and offline support.';
+        self.visible = true;
+      });
+
+      // iOS Safari path: no event, but the standalone state is queryable.
+      var ua = window.navigator.userAgent || '';
+      var isIOS = /iPad|iPhone|iPod/.test(ua) && !window.MSStream;
+      if (isIOS) {
+        self.canPromptNative = false;
+        self.hint =
+          'On iOS: tap the Share icon in Safari, then choose "Add to Home Screen" to install.';
+        // Delay slightly so the banner doesn't fight first paint;
+        // gives the SW registration time to settle.
+        setTimeout(function () {
+          self.visible = true;
+        }, 2000);
+      }
+    },
+    install: async function () {
+      if (!this._deferred) return;
+      this._deferred.prompt();
+      try {
+        var choice = await this._deferred.userChoice;
+        if (choice && choice.outcome === 'accepted') {
+          this.visible = false;
+          this._deferred = null;
+        }
+      } catch (e) {}
+    },
+    dismiss: function () {
+      this.visible = false;
+      try {
+        localStorage.setItem('ck-install-dismissed', '1');
+      } catch (e) {}
+    },
+  };
+}
