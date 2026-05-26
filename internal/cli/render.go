@@ -65,6 +65,14 @@ func runRender(stdout io.Writer, in, format, out, baselinePath string) error {
 	if err != nil {
 		return fmt.Errorf("read %s: %w", in, err)
 	}
+	// v1.15.1 phase 5 — `ocsf` is the user-facing format name (CLI
+	// help, ROADMAP, docs); `json-ocsf` is the historical internal
+	// constant from v0.13. The audit caught --format=ocsf rejecting
+	// with "unknown output format". Alias both directions so existing
+	// scripts using either name keep working.
+	if format == "ocsf" {
+		format = report.FormatOCSF
+	}
 	r, err := report.New(format)
 	if err != nil {
 		return err

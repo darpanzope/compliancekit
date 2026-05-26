@@ -171,6 +171,25 @@ func newPluginsListCmd() *cobra.Command {
 			}
 			items := cat.All()
 			if len(items) == 0 {
+				// v1.15.1 phase 5 — if there are plugins on disk but the
+				// catalog filtered them all (unsigned without
+				// CK_ALLOW_UNSIGNED_PLUGINS=1 and --allow-unsigned both
+				// off), the bare "no plugins installed" message reads
+				// like the install never happened. Hint at the cause.
+				if d, derr := os.ReadDir(pluginsDir(dir)); derr == nil {
+					hidden := 0
+					for _, entry := range d {
+						if entry.IsDir() {
+							hidden++
+						}
+					}
+					if hidden > 0 && !allowUnsignedFromFlag(allowUnsigned) && pubkey == "" {
+						fmt.Fprintf(cmd.OutOrStdout(),
+							"no plugins installed under %s (%d unsigned hidden — pass --allow-unsigned or set CK_ALLOW_UNSIGNED_PLUGINS=1 to show)\n",
+							pluginsDir(dir), hidden)
+						return nil
+					}
+				}
 				fmt.Fprintf(cmd.OutOrStdout(), "no plugins installed under %s\n", pluginsDir(dir))
 				return nil
 			}

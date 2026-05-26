@@ -126,6 +126,12 @@ func filterChecksByFramework(checks []compliancekit.Check, framework string) []c
 }
 
 func filterChecksByProvider(checks []compliancekit.Check, provider string) []compliancekit.Check {
+	// v1.15.1 phase 5 — `k8s` is the documented short form (CLI
+	// help, ROADMAP, `scan k8s`); checks are tagged `kubernetes`
+	// internally. Audit caught --provider=k8s returning 0 checks.
+	if provider == "k8s" {
+		provider = "kubernetes"
+	}
 	out := make([]compliancekit.Check, 0, len(checks))
 	for _, c := range checks {
 		if c.Provider == provider {

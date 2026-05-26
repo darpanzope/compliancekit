@@ -324,6 +324,14 @@ func (u *UI) Mount(r chi.Router) {
 		r.Get("/providers", func(w http.ResponseWriter, req *http.Request) {
 			http.Redirect(w, req, "/settings/providers", http.StatusMovedPermanently)
 		})
+		// v1.15.1 phase 5 — bare /settings used to 404 because every
+		// settings page registers a leaf route (/settings/providers,
+		// /settings/frameworks, etc.) without a landing handler.
+		// Audit caught it; redirect to the most-common landing (the
+		// providers page) so the typed URL always works.
+		r.Get("/settings", func(w http.ResponseWriter, req *http.Request) {
+			http.Redirect(w, req, "/settings/providers", http.StatusMovedPermanently)
+		})
 		u.mountChecksRoutes(r)
 		u.mountSetupRoutes(r)
 		u.mountSettingsRoutes(r)
