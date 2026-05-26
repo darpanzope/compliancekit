@@ -275,12 +275,21 @@ func securityHeaders(next http.Handler) http.Handler {
 		// land as inline `style=` attributes. No inline `<script>` tags
 		// ship — the No-FOUC bootstrap + cmdk factory live in
 		// /assets/app.js (v1.5.1).
+		// manifest-src + worker-src added at v1.16 phase 0 so the PWA
+		// install path can fetch /manifest.webmanifest + register the
+		// /sw.js service worker without CSP refusals. Both are scoped
+		// to 'self' — first-party only, same as every other directive.
+		// Without explicit manifest-src, Chrome falls back to default-
+		// src which is permissive enough; we list it for clarity + so
+		// the policy survives a future tightening of default-src.
 		h.Set("Content-Security-Policy",
 			"default-src 'self'; "+
 				"img-src 'self' data:; "+
 				"style-src 'self' 'unsafe-inline'; "+
 				"script-src 'self' 'unsafe-eval'; "+
 				"connect-src 'self'; "+
+				"manifest-src 'self'; "+
+				"worker-src 'self'; "+
 				"frame-ancestors 'none'; "+
 				"base-uri 'self'; "+
 				"form-action 'self'")

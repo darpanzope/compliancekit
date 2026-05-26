@@ -305,6 +305,12 @@ type View struct {
 func (u *UI) Mount(r chi.Router) {
 	r.Get("/assets/*", assetsHandler())
 
+	// v1.16 phase 0 — PWA manifest at the web root so browsers find
+	// it via the <link rel="manifest"> tag in base.html without
+	// scoping to /assets/. Served unauthenticated because Chrome /
+	// Safari fetch the manifest before the user has a session.
+	r.Get("/manifest.webmanifest", manifestHandler())
+
 	r.Get("/", u.rootRedirect)
 	r.Get("/login", u.login)
 	r.Post("/logout", u.logout)
@@ -395,6 +401,25 @@ func (u *UI) adminOnly(next http.HandlerFunc) http.HandlerFunc {
 func (u *UI) adminLogsPage(w http.ResponseWriter, r *http.Request) {
 	view := u.viewFor(r, "Daemon logs", "admin", View{})
 	u.render(w, "admin_logs.html", view)
+}
+
+// manifestHandler serves the PWA web app manifest at the root path
+// (browsers expect /manifest.webmanifest or similar at the document
+// scope). Content-type matters — Chrome rejects manifests served as
+// application/json. v1.16 phase 0.
+func manifestHandler() http.HandlerFunc {
+	body, err := assets.FS.ReadFile("manifest.webmanifest")
+	return func(w http.ResponseWriter, r *http.Request) {
+		if err != nil {
+			http.Error(w, "manifest unavailable", http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "application/manifest+json")
+		// Modest cache so a manifest change picks up within an hour
+		// without operators forcing a full DNS flush.
+		w.Header().Set("Cache-Control", "public, max-age=3600")
+		_, _ = w.Write(body)
+	}
 }
 
 // assetsHandler serves the embedded UI bundle (Tailwind CSS + vendored

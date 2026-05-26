@@ -7,6 +7,27 @@
 <title>{{ .Title }} · compliancekit</title>
 
 <!--
+  v1.16 phase 0 — PWA install surface. The manifest enables
+  Add-to-Home-Screen on iOS/Android + standalone-app launch from
+  any browser-native install prompt. Icons live under /assets/.
+  theme-color matches the indigo-700 primary in app.css so the
+  iOS status bar + Android task switcher tint correctly. The
+  apple-touch-icon link is mandatory for iOS Safari's install
+  flow (manifest icons alone are insufficient on iOS < 17).
+-->
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#1e40af" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0f172a" media="(prefers-color-scheme: dark)">
+<meta name="application-name" content="compliancekit">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="compliancekit">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/assets/icon-192.png">
+
+<!--
   v1.5.1 — No-FOUC theme bootstrap + Cmd+K factory. Lives in
   internal/server/ui/src/app.js so the daemon's strict CSP
   (script-src 'self', no 'unsafe-inline') doesn't block it. Loaded
