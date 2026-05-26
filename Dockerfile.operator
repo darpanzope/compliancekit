@@ -1,0 +1,25 @@
+# Dockerfile for the compliancekit Kubernetes operator.
+#
+# Built by GoReleaser during release; the COPY assumes the binary
+# already sits next to this file (goreleaser drops it there per
+# .goreleaser.yaml's dockers.* stanza for compliancekit-operator).
+#
+# Same distroless base as the daemon — the operator is a long-running
+# in-cluster process that should ship the smallest possible attack
+# surface. Reconciler talks to the apiserver via the in-cluster SA
+# token, and to the daemon via HTTPS, so it needs the same CA bundle.
+
+FROM gcr.io/distroless/static-debian12:nonroot
+
+LABEL org.opencontainers.image.title="compliancekit-operator" \
+      org.opencontainers.image.description="Kubernetes operator for compliancekit — reconciles ComplianceSchedule and ScanJob CRDs" \
+      org.opencontainers.image.url="https://github.com/darpanzope/compliancekit" \
+      org.opencontainers.image.source="https://github.com/darpanzope/compliancekit" \
+      org.opencontainers.image.licenses="MIT"
+
+COPY compliancekit-operator /usr/local/bin/compliancekit-operator
+
+USER nonroot:nonroot
+WORKDIR /work
+
+ENTRYPOINT ["/usr/local/bin/compliancekit-operator"]

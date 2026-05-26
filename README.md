@@ -106,7 +106,7 @@ brew install darpanzope/tap/compliancekit
 ### Linux / macOS (one-line installer)
 
 ```
-curl -sSfL https://raw.githubusercontent.com/darpanzope/compliancekit/main/scripts/install.sh | sh
+curl -sSfL https://raw.githubusercontent.com/darpanzope/compliancekit/main/deploy/install.sh | sh
 ```
 
 ### Go

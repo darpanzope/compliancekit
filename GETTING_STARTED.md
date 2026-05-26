@@ -12,7 +12,7 @@ Pick the path that matches your environment:
 | Path | Command |
 |---|---|
 | macOS (Homebrew) | `brew install darpanzope/tap/compliancekit` |
-| Linux / macOS (script) | `curl -sSfL https://raw.githubusercontent.com/darpanzope/compliancekit/main/scripts/install.sh \| sh` |
+| Linux / macOS (script) | `curl -sSfL https://raw.githubusercontent.com/darpanzope/compliancekit/main/deploy/install.sh \| sh` |
 | Go | `go install github.com/darpanzope/compliancekit/cmd/compliancekit@latest` |
 | Docker | `docker run --rm -v $PWD:/work ghcr.io/darpanzope/compliancekit:latest scan` |
 

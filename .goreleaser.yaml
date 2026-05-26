@@ -49,8 +49,33 @@ builds:
       - amd64
       - arm64
 
+  # v1.15 phase 3 ships the K8s operator binary. The operator runs
+  # inside Kubernetes only (Linux), so we skip Darwin builds — that
+  # keeps the release matrix tight and the Homebrew formula
+  # uninterested in the operator. v1.15.1 phase 1 wires this in
+  # after the v1.15.0 audit found the deploy/operator/install.yaml
+  # references an image that was never built.
+  - id: compliancekit-operator
+    main: ./cmd/operator
+    binary: compliancekit-operator
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w
+      - -X main.version={{ .Version }}
+      - -X main.commit={{ .ShortCommit }}
+      - -X main.date={{ .Date }}
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+
 archives:
   - id: compliancekit
+    builds: [compliancekit]
     formats: [tar.gz]
     name_template: >-
       {{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}
@@ -59,6 +84,16 @@ archives:
       - README.md
       - SECURITY.md
       - docs/checks.md
+
+  - id: compliancekit-operator
+    builds: [compliancekit-operator]
+    formats: [tar.gz]
+    name_template: >-
+      compliancekit-operator_{{ .Version }}_{{ .Os }}_{{ .Arch }}
+    files:
+      - LICENSE
+      - deploy/operator/install.yaml
+      - deploy/operator/crds
 
 checksum:
   name_template: 'checksums.txt'
@@ -134,6 +169,50 @@ dockers:
       - "--label=org.opencontainers.image.created={{ .Date }}"
       - "--label=org.opencontainers.image.licenses=MIT"
 
+  # Operator images. Same shape as the daemon (per-arch dockers
+  # combined into a multi-arch manifest below). v1.15.1 phase 1.
+  - id: operator-amd64
+    ids: [compliancekit-operator]
+    image_templates:
+      - "ghcr.io/darpanzope/compliancekit-operator:{{ .Version }}-amd64"
+    use: buildx
+    goos: linux
+    goarch: amd64
+    dockerfile: Dockerfile.operator
+    build_flag_templates:
+      - "--cache-from=type=gha,scope=compliancekit-operator-amd64"
+      - "--cache-to=type=gha,mode=max,scope=compliancekit-operator-amd64"
+      - "--platform=linux/amd64"
+      - "--label=org.opencontainers.image.title=compliancekit-operator"
+      - "--label=org.opencontainers.image.description=Kubernetes operator for compliancekit"
+      - "--label=org.opencontainers.image.url=https://github.com/darpanzope/compliancekit"
+      - "--label=org.opencontainers.image.source=https://github.com/darpanzope/compliancekit"
+      - "--label=org.opencontainers.image.version={{ .Version }}"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+      - "--label=org.opencontainers.image.created={{ .Date }}"
+      - "--label=org.opencontainers.image.licenses=MIT"
+
+  - id: operator-arm64
+    ids: [compliancekit-operator]
+    image_templates:
+      - "ghcr.io/darpanzope/compliancekit-operator:{{ .Version }}-arm64"
+    use: buildx
+    goos: linux
+    goarch: arm64
+    dockerfile: Dockerfile.operator
+    build_flag_templates:
+      - "--cache-from=type=gha,scope=compliancekit-operator-arm64"
+      - "--cache-to=type=gha,mode=max,scope=compliancekit-operator-arm64"
+      - "--platform=linux/arm64"
+      - "--label=org.opencontainers.image.title=compliancekit-operator"
+      - "--label=org.opencontainers.image.description=Kubernetes operator for compliancekit"
+      - "--label=org.opencontainers.image.url=https://github.com/darpanzope/compliancekit"
+      - "--label=org.opencontainers.image.source=https://github.com/darpanzope/compliancekit"
+      - "--label=org.opencontainers.image.version={{ .Version }}"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+      - "--label=org.opencontainers.image.created={{ .Date }}"
+      - "--label=org.opencontainers.image.licenses=MIT"
+
 docker_manifests:
   - name_template: "ghcr.io/darpanzope/compliancekit:{{ .Version }}"
     image_templates:
@@ -143,6 +222,14 @@ docker_manifests:
     image_templates:
       - "ghcr.io/darpanzope/compliancekit:{{ .Version }}-amd64"
       - "ghcr.io/darpanzope/compliancekit:{{ .Version }}-arm64"
+  - name_template: "ghcr.io/darpanzope/compliancekit-operator:{{ .Version }}"
+    image_templates:
+      - "ghcr.io/darpanzope/compliancekit-operator:{{ .Version }}-amd64"
+      - "ghcr.io/darpanzope/compliancekit-operator:{{ .Version }}-arm64"
+  - name_template: "ghcr.io/darpanzope/compliancekit-operator:latest"
+    image_templates:
+      - "ghcr.io/darpanzope/compliancekit-operator:{{ .Version }}-amd64"
+      - "ghcr.io/darpanzope/compliancekit-operator:{{ .Version }}-arm64"
 
 docker_signs:
   - cmd: cosign
@@ -154,6 +241,9 @@ docker_signs:
 
 brews:
   - name: compliancekit
+    # Only the daemon ships via Homebrew. The operator runs in-cluster
+    # only (Linux), so no Darwin archive exists for it to bundle.
+    ids: [compliancekit]
     # Push under Formula/ (Homebrew's expected layout). Without this
     # directive the formula lands at tap root and 'brew install <tap>/
     # <formula>' fails to resolve it.
@@ -208,7 +298,7 @@ release:
     brew install darpanzope/tap/compliancekit
 
     # Linux / macOS (one-line installer)
-    curl -sSfL https://raw.githubusercontent.com/darpanzope/compliancekit/main/scripts/install.sh | sh
+    curl -sSfL https://raw.githubusercontent.com/darpanzope/compliancekit/main/deploy/install.sh | sh
 
     # Docker
     docker run --rm ghcr.io/darpanzope/compliancekit:{{ .Version }} version
