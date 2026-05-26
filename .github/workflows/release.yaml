@@ -145,3 +145,31 @@ jobs:
           # Tells cosign to use the ambient OIDC token rather than
           # prompting for a browser-based one.
           COSIGN_EXPERIMENTAL: 'true'
+
+      # v1.15.1 phase 3 — gate the published image size against the
+      # documented budget. crane is the canonical way to read OCI
+      # manifest layer sizes without pulling the actual layers. The
+      # script lives under deploy/scripts/ so operators can run it
+      # locally with the same contract.
+      - name: Install crane
+        run: go install github.com/google/go-containerregistry/cmd/crane@latest
+
+      - name: Image size budget — daemon
+        env:
+          IMAGE_TAG: ${{ github.ref_name }}
+          BUDGET_MB: '60'
+        # github.ref_name is the v-prefixed tag (e.g. "v1.15.1"); the
+        # published image tag drops the `v` (goreleaser .Version).
+        run: |
+          IMAGE_TAG="${IMAGE_TAG#v}" \
+          REGISTRY=ghcr.io/darpanzope/compliancekit \
+          ./deploy/scripts/image-size-budget.sh
+
+      - name: Image size budget — operator
+        env:
+          IMAGE_TAG: ${{ github.ref_name }}
+          BUDGET_MB: '60'
+        run: |
+          IMAGE_TAG="${IMAGE_TAG#v}" \
+          REGISTRY=ghcr.io/darpanzope/compliancekit-operator \
+          ./deploy/scripts/image-size-budget.sh
