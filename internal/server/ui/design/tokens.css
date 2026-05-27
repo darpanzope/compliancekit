@@ -1,0 +1,313 @@
+/*
+  v1.18 phase 0 — Design system tokens (ADR-017).
+
+  Canonical source of truth for color / spacing / radii / shadows /
+  typography / motion durations + easings. Three palettes — light
+  (`:root`), dark (`.dark`), and high-contrast (`prefers-contrast: more`
+  + `html.contrast-more`) — reference identical token names so the
+  cascade can swap palettes without re-shaping a single component.
+
+  Why one file:
+  - Every Tailwind utility (`bg-primary`, `text-severity-critical`,
+    `shadow-soft`) resolves to a token here via `tailwind.config.js`.
+  - Every component partial (`internal/server/ui/design/components/`
+    landing at phase 3) consumes tokens via the same names.
+  - v2.x platform work extends the contract by adding tokens here, never
+    by inlining hex / rgb values into a template.
+
+  Rules of engagement:
+  - All colors are HSL triples so `hsl(var(--token) / <alpha>)` works.
+  - All durations are ms, all easings are cubic-bezier — no `ease-in-out`
+    keywords (they aren't tokenizable across palettes).
+  - Token names follow `--<scope>-<role>` (e.g. `--severity-critical-bg`,
+    `--status-resolved`) so future scopes (per-provider, per-framework)
+    extend the same shape without aliasing.
+*/
+
+@layer base {
+  :root {
+    /* ====== Brand ====== */
+    --primary: 239 66% 58%;
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 251 71% 67%;
+
+    /* ====== Surfaces ====== */
+    --background: 220 25% 98%;
+    --foreground: 234 20% 12%;
+    --card: 0 0% 100%;
+    --card-foreground: 234 20% 12%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 234 20% 12%;
+
+    --muted: 220 14% 96%;
+    --muted-foreground: 234 10% 50%;
+    --accent: 192 91% 48%;
+    --accent-foreground: 0 0% 100%;
+    --secondary: 220 14% 96%;
+    --secondary-foreground: 234 20% 12%;
+
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 239 66% 58%;
+
+    /* ====== Semantics ====== */
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+
+    /* ====== Severity (per-domain) ====== */
+    --severity-critical: 0 84% 60%;
+    --severity-critical-bg: 0 86% 97%;
+    --severity-high: 25 95% 53%;
+    --severity-high-bg: 33 100% 96%;
+    --severity-medium: 43 96% 56%;
+    --severity-medium-bg: 55 92% 95%;
+    --severity-low: 217 91% 60%;
+    --severity-low-bg: 214 95% 93%;
+    --severity-info: 215 16% 47%;
+    --severity-info-bg: 210 40% 96%;
+
+    /* ====== Status (per-domain) ====== */
+    --status-open: 0 84% 60%;
+    --status-acknowledged: 43 96% 56%;
+    --status-resolved: 142 71% 45%;
+    --status-false-positive: 215 16% 47%;
+    --status-running: 217 91% 60%;
+    --status-completed: 142 71% 45%;
+    --status-failed: 0 84% 60%;
+    --status-pending: 215 16% 47%;
+
+    /* ====== Resource (per-provider) ======
+       Phase 1 expands this to the full provider taxonomy
+       (DO/AWS/GCP/Hetzner/K8s/Linux). The v1.3 baseline lives here. */
+    --resource-droplet: 217 91% 60%;
+    --resource-database: 271 91% 65%;
+    --resource-kubernetes: 189 94% 43%;
+    --resource-spaces: 25 95% 53%;
+    --resource-load-balancer: 142 76% 36%;
+    --resource-firewall: 0 84% 60%;
+    --resource-vpc: 251 71% 67%;
+    --resource-domain: 178 78% 40%;
+
+    /* ====== Sidebar palette family ====== */
+    --sidebar: 0 0% 100%;
+    --sidebar-foreground: 234 20% 12%;
+    --sidebar-primary: 239 66% 58%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 14% 96%;
+    --sidebar-accent-foreground: 234 20% 12%;
+    --sidebar-border: 220 13% 91%;
+
+    /* ====== Geometry ====== */
+    --radius: 0.75rem;
+
+    /* ====== Shadow scale (named depths) ======
+       Phase 6 adds `--shadow-glass` + its backdrop-blur companion. */
+    --shadow-soft: 0 4px 16px -4px rgb(0 0 0 / 0.08);
+    --shadow-elevated: 0 10px 30px -10px rgb(99 102 241 / 0.2);
+    --shadow-floating: 0 20px 50px -12px rgb(0 0 0 / 0.25);
+
+    /* ====== Typography ======
+       System fonts only per ADR-015 (no CDN, no FOUC). The mono stack
+       matches GitHub / Linear so code surfaces feel native. */
+    --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+      "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+    --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+      "Liberation Mono", monospace;
+
+    /* Type scale — rem, anchored at 16px root. The 2xs (11px) tier is
+       reserved for table column labels + uppercase eyebrow text where
+       12px reads as too loud. */
+    --text-2xs: 0.6875rem;
+    --text-xs: 0.75rem;
+    --text-sm: 0.875rem;
+    --text-base: 1rem;
+    --text-lg: 1.125rem;
+    --text-xl: 1.25rem;
+    --text-2xl: 1.5rem;
+    --text-3xl: 1.875rem;
+    --text-4xl: 2.25rem;
+    --text-5xl: 3rem;
+
+    --leading-tight: 1.25;
+    --leading-snug: 1.375;
+    --leading-normal: 1.5;
+    --leading-relaxed: 1.625;
+
+    --tracking-tight: -0.01em;
+    --tracking-normal: 0;
+    --tracking-wide: 0.04em;
+
+    /* ====== Motion ======
+       4 standard durations + 6 Framer-style easings. Phase 8 wires the
+       tokens into Tailwind utilities (transition-duration, ease-*) and
+       skeleton/nprogress motion. The reduced-motion @media block at the
+       bottom of this file zeroes both regardless of consumer. */
+    --motion-75: 75ms;
+    --motion-150: 150ms;
+    --motion-250: 250ms;
+    --motion-400: 400ms;
+
+    --ease-in-quad: cubic-bezier(0.55, 0.085, 0.68, 0.53);
+    --ease-out-quad: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    --ease-in-out-quad: cubic-bezier(0.455, 0.03, 0.515, 0.955);
+    --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --ease-soft-in: cubic-bezier(0.4, 0, 1, 1);
+    --ease-soft-out: cubic-bezier(0, 0, 0.2, 1);
+  }
+
+  .dark {
+    --background: 234 25% 8%;
+    --foreground: 220 14% 96%;
+    --card: 234 20% 12%;
+    --card-foreground: 220 14% 96%;
+    --popover: 234 20% 12%;
+    --popover-foreground: 220 14% 96%;
+
+    --primary: 251 71% 67%;
+    --primary-foreground: 234 25% 8%;
+    --primary-glow: 239 66% 58%;
+
+    --secondary: 234 15% 16%;
+    --secondary-foreground: 220 14% 96%;
+    --muted: 234 15% 16%;
+    --muted-foreground: 234 10% 65%;
+    --accent: 192 91% 48%;
+    --accent-foreground: 0 0% 100%;
+
+    --border: 234 15% 20%;
+    --input: 234 15% 20%;
+    --ring: 251 71% 67%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+
+    /* Severity bg variants get reduced-opacity overlay in dark mode. */
+    --severity-critical-bg: 0 63% 31%;
+    --severity-high-bg: 25 63% 31%;
+    --severity-medium-bg: 43 63% 31%;
+    --severity-low-bg: 217 63% 31%;
+    --severity-info-bg: 215 16% 27%;
+
+    --sidebar: 234 20% 12%;
+    --sidebar-foreground: 220 14% 96%;
+    --sidebar-primary: 251 71% 67%;
+    --sidebar-primary-foreground: 234 25% 8%;
+    --sidebar-accent: 234 15% 16%;
+    --sidebar-accent-foreground: 220 14% 96%;
+    --sidebar-border: 234 15% 20%;
+
+    --shadow-soft: 0 4px 16px -4px rgb(0 0 0 / 0.4);
+    --shadow-elevated: 0 10px 30px -10px rgb(0 0 0 / 0.6);
+    --shadow-floating: 0 20px 50px -12px rgb(0 0 0 / 0.7);
+  }
+}
+
+/*
+  v1.10 phase 4 — High-contrast palette.
+  Lives outside @layer base so Tailwind's content-purge doesn't drop the
+  @media query (purge keeps class rules but @media blocks containing only
+  token overrides can be flagged unused). Auto-selects when prefers-
+  contrast: more matches (OS-level high-contrast preference); operators
+  can also force via the `.contrast-more` class on <html> (theme toggle
+  hook). Contrast ratios validated against WCAG AAA (7:1 for normal
+  text, 4.5:1 for large text); colour-blind safe via Sim Daltonism check.
+*/
+@media (prefers-contrast: more) {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 0%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 0%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 0%;
+    --muted: 0 0% 95%;
+    --muted-foreground: 0 0% 15%;
+    --border: 0 0% 0%;
+    --input: 0 0% 0%;
+    --ring: 222 100% 35%;
+    --primary: 222 100% 35%;
+    --primary-foreground: 0 0% 100%;
+    --destructive: 0 100% 35%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 142 100% 25%;
+    --success-foreground: 0 0% 100%;
+    --warning: 30 100% 30%;
+    --warning-foreground: 0 0% 100%;
+    --severity-critical: 0 100% 35%;
+    --severity-high: 25 100% 30%;
+    --severity-medium: 43 100% 25%;
+    --severity-low: 217 100% 35%;
+    --severity-info: 0 0% 15%;
+  }
+  .dark {
+    --background: 0 0% 0%;
+    --foreground: 0 0% 100%;
+    --card: 0 0% 5%;
+    --card-foreground: 0 0% 100%;
+    --popover: 0 0% 5%;
+    --popover-foreground: 0 0% 100%;
+    --muted: 0 0% 12%;
+    --muted-foreground: 0 0% 90%;
+    --border: 0 0% 100%;
+    --input: 0 0% 100%;
+    --ring: 60 100% 70%;
+    --primary: 60 100% 70%;
+    --primary-foreground: 0 0% 0%;
+    --destructive: 0 100% 65%;
+    --destructive-foreground: 0 0% 0%;
+    --success: 142 100% 65%;
+    --success-foreground: 0 0% 0%;
+    --warning: 38 100% 65%;
+    --warning-foreground: 0 0% 0%;
+  }
+}
+
+/* Forced high-contrast (operator override via the theme picker).
+   Same overrides; .contrast-more on <html> wins regardless of OS. */
+html.contrast-more:not(.dark) {
+  --background: 0 0% 100%;
+  --foreground: 0 0% 0%;
+  --card: 0 0% 100%;
+  --card-foreground: 0 0% 0%;
+  --border: 0 0% 0%;
+  --ring: 222 100% 35%;
+  --primary: 222 100% 35%;
+  --destructive: 0 100% 35%;
+}
+html.contrast-more.dark {
+  --background: 0 0% 0%;
+  --foreground: 0 0% 100%;
+  --card: 0 0% 5%;
+  --card-foreground: 0 0% 100%;
+  --border: 0 0% 100%;
+  --ring: 60 100% 70%;
+  --primary: 60 100% 70%;
+  --destructive: 0 100% 65%;
+}
+
+/*
+  v1.10 phase 5 — Reduced motion.
+  Honors prefers-reduced-motion: reduce by zeroing every CSS animation
+  + transition. Operators with vestibular disorders see instant state
+  changes instead of slide-in/fade animations. The !important is load-
+  bearing — Tailwind's transition utilities would otherwise win the
+  cascade. v1.18 phase 8 motion utilities all defer here.
+*/
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

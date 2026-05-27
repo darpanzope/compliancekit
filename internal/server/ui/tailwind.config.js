@@ -1,14 +1,22 @@
 /** @type {import('tailwindcss').Config} */
-// v1.4 Phase 0 Tailwind config. Tokens live in src/input.css under
-// :root and .dark; this file maps Tailwind color/shadow keys onto
-// the CSS variables so utilities like bg-primary, text-severity-critical,
-// shadow-soft work out of the box. v1.18 design-system milestone
-// expands this further (per-domain palettes for every provider).
+// v1.4 Phase 0 Tailwind config. v1.18 phase 0 (ADR-017) relocated the
+// canonical token vocabulary to internal/server/ui/design/tokens.css.
+// This file maps Tailwind color/shadow/font/duration/easing keys onto
+// those CSS variables so utilities like `bg-primary`,
+// `text-severity-critical`, `shadow-soft`, `font-mono`, `duration-150`,
+// `ease-spring` resolve to the design-system contract. Adding a new
+// utility key here without a matching token in tokens.css is the v1.18
+// anti-pattern: every utility resolves to a token.
 module.exports = {
   darkMode: ['class'],
   content: [
     'internal/server/ui/templates/**/*.html',
     'internal/server/ui/src/**/*.{html,js}',
+    // v1.18 phase 0 — component partials + the /design route templates
+    // landing at phase 3 + phase 7. Tailwind scans these for class
+    // usage so utilities used only inside the design system land in the
+    // compiled bundle.
+    'internal/server/ui/design/**/*.{html,js}',
   ],
   theme: {
     container: {
@@ -130,6 +138,32 @@ module.exports = {
         lg: 'var(--radius)',
         md: 'calc(var(--radius) - 2px)',
         sm: 'calc(var(--radius) - 4px)',
+      },
+      // v1.18 phase 0 — typography tokens. System fonts only per
+      // ADR-015. The `2xs` (11px) tier is reserved for table column
+      // labels + uppercase eyebrow text.
+      fontFamily: {
+        sans: 'var(--font-sans)',
+        mono: 'var(--font-mono)',
+      },
+      fontSize: {
+        '2xs': ['var(--text-2xs)', { lineHeight: 'var(--leading-snug)' }],
+      },
+      // v1.18 phase 0 — motion tokens. 4 standard durations + 6 Framer-
+      // style easings. Phase 8 wires skeletons + nprogress on top.
+      transitionDuration: {
+        75: 'var(--motion-75)',
+        150: 'var(--motion-150)',
+        250: 'var(--motion-250)',
+        400: 'var(--motion-400)',
+      },
+      transitionTimingFunction: {
+        'in-quad': 'var(--ease-in-quad)',
+        'out-quad': 'var(--ease-out-quad)',
+        'in-out-quad': 'var(--ease-in-out-quad)',
+        'spring': 'var(--ease-spring)',
+        'soft-in': 'var(--ease-soft-in)',
+        'soft-out': 'var(--ease-soft-out)',
       },
     },
   },

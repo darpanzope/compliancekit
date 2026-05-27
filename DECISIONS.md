@@ -624,6 +624,59 @@ The v2.x lineup absorbs the displaced items: v2.1 multi-tenant, v2.2 Trust Cente
 
 ---
 
+## ADR-017 — Design system contract: tokens, components, motion, illustrations live under `internal/server/ui/design/`
+**Date:** 2026-05-27
+**Status:** Accepted
+
+### Question
+ADR-016's consequence section reserved ADR-017 as the v1.18 codification of the design-system contract. v1.4 phase 0 shipped a first cut of CSS-variable tokens directly in `internal/server/ui/src/input.css`; v1.18's 12-phase scope adds per-domain palette extensions, gradient utilities, ~20–25 vendored components, a MetricCard primitive, a `/design` live docs route, motion durations + easings, skeletons + nprogress, optimistic toasts, ~30 empty-state illustrations, avatars, status pills, an iconography sprite expansion, and chart interactivity hooks. How do we organize that work so v2.x platform expansion (multi-tenant, GRC, auditor portal, tail clouds, OS expansion) can build on it without re-deriving the contract?
+
+### Decision
+**`internal/server/ui/design/` is the canonical location for the design-system contract.** The directory tree:
+
+```
+internal/server/ui/design/
+  tokens.css                  # the single source of truth (color, type, motion, shadow, spacing)
+  components/                 # 20–25 vendored htmx + Alpine partials (phase 3+)
+    ck-button.html
+    ck-card.html
+    ck-metric-card.html
+    ...
+  illustrations/              # ~30 hand-drawn-style vanilla-SVG empty-state svgs (phase 10)
+  icons/                      # tabler-icons sprite source (~100 symbols at phase 11)
+  args.go                     # typed Go structs that back template args
+  design.go                   # /design route handler (phase 7 — live component zoo)
+```
+
+Three palettes (`:root` light / `.dark` dark / `prefers-contrast: more` + `html.contrast-more` high-contrast) reference identical token names. Tailwind utilities (`bg-primary`, `text-severity-critical`, `shadow-soft`, `font-mono`, `duration-150`, `ease-spring`) resolve to tokens via `tailwind.config.js` `theme.extend`. Component partials use `{{ template "ck-button" args }}` with `args` carrying a typed Go struct from `internal/server/ui/design/args.go`. The `/design` route renders every variant of every component so visual-regression diffs are local + low-cost.
+
+### Reasoning
+- **A single source of truth for tokens lets palette swaps happen without re-shaping a single layout coordinate.** Three palettes for the same component set means a token-keyed contract — not a per-palette stylesheet — is the only design that scales. Hex values inlined into a template are the v1.18 anti-pattern.
+- **The htmx + Alpine stack (ADR-015) ships server-rendered partials, not React components.** A "design system" in this stack is `{{ template "ck-button" .Args }}` + a typed Go struct (`ButtonArgs{Variant: "primary", Tooltip: "Save changes"}`). The API shape is borrowed from shadcn/ui (variant + slot + tooltip + clean prop set) but the implementation is server-rendered.
+- **Co-locating tokens + components + illustrations + icons under one directory** makes the v1.18 contract self-contained. v2.x work that adds (say) a new provider palette adds one line to `tokens.css`. Work that adds a new component adds one HTML partial + one Go struct + one `/design` entry. The directory is the contract surface; nothing about a new component spills into the rest of `internal/server/ui/`.
+- **A `/design` live docs route doubles as visual-regression target + internal-contributor onboarding.** Operators don't see it (un-linked from the navbar by default). Contributors land there to learn the component library; visual-regression diffs (out-of-band tooling — Percy / Chromatic local equivalent) snapshot it for the per-commit gate v2.x might add. CI gate from the v1.18 plumbing checklist: any new component lands with a `/design` entry.
+- **Tailwind `content` glob extends to `internal/server/ui/design/**/*.{html,js}` so utilities used only inside component partials still land in the compiled bundle.** Forgetting this would silently drop classes — caught at v1.16 phase 3 already for the new mobile-card utilities.
+- **Typography + motion + shadow scales are tokenized the same way as color.** `--text-2xs` (11px) for table column labels + uppercase eyebrow text; `--motion-{75,150,250,400}` for the 4 standard durations; `--ease-{in-quad,out-quad,in-out-quad,spring,soft-in,soft-out}` for the 6 Framer-style easings. Tailwind utilities (`text-2xs`, `duration-150`, `ease-spring`) consume them via `theme.extend`. The `prefers-reduced-motion: reduce` block at the bottom of `tokens.css` zeroes every motion regardless of consumer (the `!important` is load-bearing).
+- **No CDN, no FOUC, no custom webfonts.** ADR-015 stack ceiling. The `--font-sans` stack starts with `ui-sans-serif, system-ui, -apple-system` so every platform sees its native typeface; `--font-mono` matches the GitHub / Linear stack so code surfaces feel native. Per ADR-016 v1.x out-of-scope ("Custom font face. System fonts only; no CDN, no FOUC.").
+
+### Rejected alternatives
+- **Keep tokens in `src/input.css` and skip the `design/` directory.** Rejected: the v1.18 scope (components + illustrations + icons + the `/design` route handler) needs a directory anyway — co-locating tokens with the rest of the contract is the natural shape. Splitting tokens away from components creates a "design system" that's actually two directories with cross-dependencies.
+- **Ship a real component library (shadcn-style) by vendoring React + a build step.** Rejected as a stack break per ADR-015. The htmx + Alpine stack is a load-bearing constraint — the v1.18 commitment is "match the shadcn ceiling via carefully crafted Go templates, not by switching stacks."
+- **Use a CSS preprocessor (SCSS) or a CSS-in-JS layer for tokens.** Rejected: CSS custom properties are the universal token transport; they cascade through `@media (prefers-contrast: more)`, `.dark`, and `html.contrast-more` without preprocessor support. Adding SCSS would be one more build dep with zero corresponding capability.
+- **Auto-generate the `/design` route from a YAML manifest.** Rejected for v1.18: writing the route by hand keeps it consistent with the rest of the daemon's UI (server-side Go handlers, htmx partials). A YAML-driven generator would add a build-time generator dep for one route. Re-evaluate at v2.x if the component count crosses ~50.
+
+### Consequences
+- **`internal/server/ui/design/tokens.css` is the single source of truth.** `src/input.css` `@import`s it at the top and contributes only the daemon's utility classes (`ck-card`, `ck-pill-*`, `ck-vrow`, `ck-table-cards`, `pb-safe`, `ck-skip-link`, `ck-focus-ring`). New tokens land in `tokens.css`; new utility classes land in `input.css`.
+- **`tailwind.config.js` `theme.extend` consumes the tokens via CSS variables** (`hsl(var(--primary))`, `var(--shadow-soft)`, `var(--font-mono)`, `var(--motion-150)`, `var(--ease-spring)`). The Tailwind `content` glob includes `internal/server/ui/design/**/*.{html,js}` so component-partial utilities reach the compiled bundle.
+- **Component partials are server-rendered Go templates** under `internal/server/ui/design/components/`. Each ships with a typed Go struct in `args.go` so handlers pass arguments by name rather than as `map[string]any`.
+- **`/design` route handler ships at phase 7** as a single page that renders every component variant + every palette swatch + every easing curve + every shadow scale. Out-of-band visual-regression diffs target it. Unlinked from the daemon's primary navbar.
+- **Typography + motion + shadow tokens** are first-class: `--font-{sans,mono}`, `--text-{2xs,xs,sm,base,lg,xl,2xl,3xl,4xl,5xl}`, `--leading-{tight,snug,normal,relaxed}`, `--tracking-{tight,normal,wide}`, `--motion-{75,150,250,400}`, `--ease-{in-quad,out-quad,in-out-quad,spring,soft-in,soft-out}`, `--shadow-{soft,elevated,floating}` (phase 6 adds `--shadow-glass` + backdrop-blur).
+- **The `prefers-reduced-motion: reduce` and `prefers-contrast: more` blocks at the bottom of `tokens.css`** stay outside `@layer base` so Tailwind's content-purge doesn't drop the `@media` rules. The `!important` on the reduced-motion overrides is load-bearing (Tailwind's `transition-duration` utilities would otherwise win the cascade).
+- **No inline `<script>` blocks** per ADR-018. Component partials needing JS register `Alpine.data()` factories in `internal/server/ui/src/app.js`.
+- **v2.x extends the contract by adding tokens / components / illustrations** to `internal/server/ui/design/`; never by inlining values into a template. This commitment is the v2.x prerequisite — without it, every new provider (v2.6 tail clouds) or every new framework (v2.7 OSCAL) would re-derive its own colors.
+
+---
+
 ## ADR-018 — Strict CSP with `'unsafe-eval'`: the cost-of-doing-business for Alpine 3
 **Date:** 2026-05-19
 **Status:** Accepted
