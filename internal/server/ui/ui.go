@@ -38,6 +38,7 @@ import (
 	"github.com/darpanzope/compliancekit/internal/server/dashboards"
 	"github.com/darpanzope/compliancekit/internal/server/logs"
 	"github.com/darpanzope/compliancekit/internal/server/plugins"
+	"github.com/darpanzope/compliancekit/internal/server/push"
 	srvrbac "github.com/darpanzope/compliancekit/internal/server/rbac"
 	"github.com/darpanzope/compliancekit/internal/server/store"
 	"github.com/darpanzope/compliancekit/pkg/compliancekit"
@@ -242,6 +243,7 @@ type UI struct {
 	backups         *backups.Manager          // v1.12 phase 8 — backup/restore
 	backupDir       string
 	backupDSN       string
+	push            *push.Store // v1.16 phase 4 — Web Push subscriptions (nil = disabled)
 }
 
 // New constructs the UI handle.
@@ -381,6 +383,7 @@ func (u *UI) Mount(r chi.Router) {
 		u.mountScoresRoutes(r)
 		u.mountDiffRoutes(r)
 		u.mountSearchRoutes(r)
+		u.mountNotificationsRoutes(r)
 		// v1.6 phase 6 — admin-only log tail. Both routes nested
 		// inside the existing RequireAuth + RequireCSRF group;
 		// adminOnly adds an IsAdmin check on top.

@@ -146,7 +146,49 @@ async function handleNavigate(req) {
   }
 }
 
-// v1.16 phase 4 will add a 'push' event handler here for Web Push.
+// v1.16 phase 4 — Web Push event handler. Browsers wake the SW
+// when a VAPID-signed push arrives; we decrypt the payload (the
+// browser handles that automatically because the keys were
+// provisioned during subscribe()) and surface it as a system
+// notification. Tag dedupes repeat alerts so a stuck monitor
+// doesn't fill the notification shade.
+self.addEventListener('push', (event) => {
+  let payload = { title: 'compliancekit', body: '', url: '/' };
+  if (event.data) {
+    try {
+      payload = Object.assign(payload, event.data.json());
+    } catch (e) {
+      payload.body = event.data.text();
+    }
+  }
+  const opts = {
+    body: payload.body,
+    icon: '/assets/icon-192.png',
+    badge: '/assets/icon-192.png',
+    tag: payload.tag || 'compliancekit-' + (payload.severity || 'info'),
+    data: { url: payload.url || '/' },
+    renotify: false,
+  };
+  event.waitUntil(self.registration.showNotification(payload.title, opts));
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const targetURL = (event.notification.data && event.notification.data.url) || '/';
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((all) => {
+      // Focus an existing tab on the same origin if one is open, else open new.
+      for (const c of all) {
+        if (c.url.indexOf(self.location.origin) === 0 && 'focus' in c) {
+          c.navigate(targetURL);
+          return c.focus();
+        }
+      }
+      if (clients.openWindow) return clients.openWindow(targetURL);
+    }),
+  );
+});
+
 // v1.16 phase 7 may extend handleNavigate to surface a "showing
 // cached" banner via clients.postMessage when the cached fallback
 // fires.

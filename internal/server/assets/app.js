@@ -791,3 +791,132 @@ function installBanner() {
     },
   };
 }
+
+// v1.16 phase 4 — /settings/notifications Alpine factory. Manages
+// the per-browser Web Push subscription lifecycle (the server-side
+// catalog of every device lives at GET /api/v1/push/subscriptions,
+// rendered into the template ahead of this script booting). Two
+// flows:
+//
+//   Enable:  Notification.requestPermission → SW pushManager.subscribe
+//            with the daemon's VAPID public key → POST /api/v1/push
+//            /subscribe with endpoint + keys
+//   Disable: SW pushSubscription.unsubscribe → POST /api/v1/push
+//            /unsubscribe with the endpoint
+//
+// Browsers refuse pushManager.subscribe() outside HTTPS / localhost
+// + outside a user gesture, so the button click is the entry point.
+function pushSubs() {
+  return {
+    supported: false,
+    subscribed: false,
+    loading: false,
+    message: '',
+    messageOK: false,
+    statusHint: 'Checking browser support...',
+    _vapidKey: null,
+    init: async function () {
+      this.supported = 'serviceWorker' in navigator &&
+        'PushManager' in window &&
+        'Notification' in window;
+      if (!this.supported) {
+        this.statusHint = 'This browser does not support Web Push.';
+        return;
+      }
+      try {
+        var reg = await navigator.serviceWorker.ready;
+        var sub = await reg.pushManager.getSubscription();
+        this.subscribed = !!sub;
+        this.statusHint = this.subscribed
+          ? 'Subscribed. Critical findings push to this browser within seconds.'
+          : 'Not subscribed. Enable to receive critical-finding alerts.';
+      } catch (e) {
+        this.statusHint = 'Service worker not ready.';
+      }
+    },
+    subscribe: async function () {
+      this.loading = true; this.message = '';
+      try {
+        var perm = await Notification.requestPermission();
+        if (perm !== 'granted') {
+          throw new Error('notifications permission ' + perm);
+        }
+        if (!this._vapidKey) {
+          var r = await fetch('/api/v1/push/vapid-public-key');
+          if (!r.ok) throw new Error('vapid key fetch ' + r.status);
+          var j = await r.json();
+          this._vapidKey = urlBase64ToUint8Array(j.key);
+        }
+        var reg = await navigator.serviceWorker.ready;
+        var sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: this._vapidKey,
+        });
+        var subJSON = sub.toJSON();
+        var resp = await fetch('/api/v1/push/subscribe', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': csrfToken(),
+          },
+          body: JSON.stringify({
+            endpoint: subJSON.endpoint,
+            keys: subJSON.keys,
+          }),
+        });
+        if (!resp.ok) throw new Error('subscribe POST ' + resp.status);
+        this.subscribed = true;
+        this.statusHint = 'Subscribed. Critical findings push to this browser within seconds.';
+        this.message = 'Push enabled on this browser.'; this.messageOK = true;
+      } catch (e) {
+        this.message = 'Subscribe failed: ' + e.message; this.messageOK = false;
+      } finally {
+        this.loading = false;
+      }
+    },
+    unsubscribe: async function () {
+      this.loading = true; this.message = '';
+      try {
+        var reg = await navigator.serviceWorker.ready;
+        var sub = await reg.pushManager.getSubscription();
+        if (sub) {
+          await sub.unsubscribe();
+          await fetch('/api/v1/push/unsubscribe', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRF-Token': csrfToken(),
+            },
+            body: JSON.stringify({ endpoint: sub.endpoint }),
+          });
+        }
+        this.subscribed = false;
+        this.statusHint = 'Not subscribed. Enable to receive critical-finding alerts.';
+        this.message = 'Push disabled on this browser.'; this.messageOK = true;
+      } catch (e) {
+        this.message = 'Unsubscribe failed: ' + e.message; this.messageOK = false;
+      } finally {
+        this.loading = false;
+      }
+    },
+  };
+}
+
+// Helpers for the push factory. csrfToken pulls the value out of the
+// ck_csrf cookie (set by auth.SetCookies); urlBase64ToUint8Array
+// converts the daemon's URL-safe-base64 VAPID public key into the
+// raw Uint8Array PushManager.subscribe expects.
+function csrfToken() {
+  var m = document.cookie.match(/(?:^|;\s*)ck_csrf=([^;]+)/);
+  return m ? decodeURIComponent(m[1]) : '';
+}
+function urlBase64ToUint8Array(base64String) {
+  var padding = '='.repeat((4 - base64String.length % 4) % 4);
+  var base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  var raw = window.atob(base64);
+  var out = new Uint8Array(raw.length);
+  for (var i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+  return out;
+}

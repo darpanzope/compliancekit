@@ -23,6 +23,7 @@ import (
 
 	"github.com/darpanzope/compliancekit/internal/server/auth"
 	"github.com/darpanzope/compliancekit/internal/server/events"
+	"github.com/darpanzope/compliancekit/internal/server/push"
 	srvrbac "github.com/darpanzope/compliancekit/internal/server/rbac"
 	"github.com/darpanzope/compliancekit/internal/server/respcache"
 	"github.com/darpanzope/compliancekit/internal/server/store"
@@ -40,6 +41,8 @@ type API struct {
 	events   *events.Producer // v1.6: SSE event bus (nil OK — handler returns 503)
 	cache    *respcache.Cache // v1.11: LRU; nil OK — cache lookup short-circuits
 	rbac     *srvrbac.Store   // v1.12 phase 2: role-derived session scope check
+	push     *push.Store      // v1.16 phase 4: Web Push subscriptions (nil OK — endpoints 503)
+	pushSend *push.Sender     // v1.16 phase 4: VAPID sender (nil OK)
 }
 
 // New constructs the API handle. The Mount() method wires every
@@ -62,6 +65,16 @@ func (a *API) WithEvents(p *events.Producer) *API {
 // Nil/unset means every request hits the DB — the v1.10 default.
 func (a *API) WithCache(c *respcache.Cache) *API {
 	a.cache = c
+	return a
+}
+
+// WithPush installs the v1.16 phase 4 Web Push store + sender.
+// Returns the receiver for chaining. When set, /api/v1/push/*
+// endpoints mount + critical-finding events fan out to subscribed
+// devices. Nil/unset means push endpoints 503 and no push fires.
+func (a *API) WithPush(s *push.Store, sender *push.Sender) *API {
+	a.push = s
+	a.pushSend = sender
 	return a
 }
 
@@ -118,6 +131,18 @@ func (a *API) Mount(r chi.Router) {
 		// scopeGate(ScopeScansRead) like the rest of /api/v1.
 		if a.events != nil {
 			r.Get("/events", a.scopeGate(auth.ScopeScansRead, a.events.Handler()))
+		}
+
+		// v1.16 phase 4: Web Push subscription management. Mounted
+		// only when WithPush installed both a Store + Sender. The
+		// handlers also nil-check internally and return 503 if push
+		// is misconfigured at runtime (db lost the VAPID row, etc.)
+		// so a partial setup degrades to a clear error not a 404.
+		if a.push != nil && a.pushSend != nil {
+			r.Get("/push/vapid-public-key", a.pushVAPIDPublic)
+			r.Post("/push/subscribe", a.scopeGate(auth.ScopeSettingsWrite, a.pushSubscribe))
+			r.Post("/push/unsubscribe", a.scopeGate(auth.ScopeSettingsWrite, a.pushUnsubscribe))
+			r.Get("/push/subscriptions", a.scopeGate(auth.ScopeSettingsRead, a.pushListSubscriptions))
 		}
 	})
 }

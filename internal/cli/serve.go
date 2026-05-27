@@ -19,6 +19,7 @@ import (
 	"github.com/darpanzope/compliancekit/internal/server/events"
 	"github.com/darpanzope/compliancekit/internal/server/leader"
 	"github.com/darpanzope/compliancekit/internal/server/logs"
+	"github.com/darpanzope/compliancekit/internal/server/push"
 	"github.com/darpanzope/compliancekit/internal/server/scim"
 	"github.com/darpanzope/compliancekit/internal/server/store"
 	"github.com/darpanzope/compliancekit/internal/server/ui"
@@ -136,8 +137,13 @@ func runServe(ctx context.Context, stdout interface {
 	slog.SetDefault(slog.New(logBuf.Handler(stderrH)))
 
 	srv := server.New(cfg)
-	// Mount the v1.3 REST API on the daemon's chi router.
-	apiH := api.New(st, users, tokens, sessions).WithEvents(eventBus)
+	pushStore, pushSender := setupPush(ctx, st)
+	// Mount the v1.3 REST API on the daemon's chi router. WithPush is
+	// nil-safe — when pushSender is nil the handlers branch around the
+	// route registration; no conditional here.
+	apiH := api.New(st, users, tokens, sessions).
+		WithEvents(eventBus).
+		WithPush(pushStore, pushSender)
 	apiH.Mount(srv.Router())
 	// Mount /api/auth/{login,logout,me} so the UI login form has a
 	// real POST target. Missing in v1.3.0; fixed in v1.3.1.
@@ -150,7 +156,7 @@ func runServe(ctx context.Context, stdout interface {
 	webhookH.Mount(srv.Router())
 
 	// Mount the v1.3 minimal UI shell (login + scans + providers + checks).
-	uiH := ui.New(st, users, sessions).WithLogBuffer(logBuf)
+	uiH := ui.New(st, users, sessions).WithLogBuffer(logBuf).WithPush(pushStore)
 	// v1.12 phase 8 — backup directory + Postgres DSN for pg_dump.
 	uiH.SetBackupConfig(os.Getenv("CK_BACKUP_DIR"), backupDSN(dbPath))
 	uiH.Mount(srv.Router())
@@ -309,4 +315,19 @@ func makeParentDir(path string) error {
 		return nil
 	}
 	return os.MkdirAll(dir, 0o750)
+}
+
+// setupPush wires v1.16 phase 4 Web Push. Returns the store + sender
+// for the daemon to thread into api + ui handles. Failure is non-
+// fatal — the daemon boots without push, and /api/v1/push/* + /settings/
+// notifications surface a 503 / disabled state until VAPID setup
+// recovers (typically a DB-writable + restart).
+func setupPush(ctx context.Context, st *store.Store) (*push.Store, *push.Sender) {
+	ps := push.NewStore(st)
+	sender, err := push.NewSender(ctx, ps, "")
+	if err != nil {
+		slog.Warn("push: VAPID setup failed; Web Push disabled", "err", err)
+		return ps, nil
+	}
+	return ps, sender
 }
