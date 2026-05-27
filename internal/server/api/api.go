@@ -144,6 +144,12 @@ func (a *API) Mount(r chi.Router) {
 			r.Post("/push/unsubscribe", a.scopeGate(auth.ScopeSettingsWrite, a.pushUnsubscribe))
 			r.Get("/push/subscriptions", a.scopeGate(auth.ScopeSettingsRead, a.pushListSubscriptions))
 		}
+
+		// v1.17 phase 6: snapshot API. Immutable point-in-time views
+		// over the canonical 4 tables; compose with the warehouse
+		// loaders so "export the q1-2026 snapshot to BigQuery" is one
+		// command.
+		a.mountSnapshotRoutes(r)
 	})
 }
 
