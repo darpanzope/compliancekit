@@ -146,8 +146,10 @@ func runWarehouseLoad(ctx context.Context, stdout io.Writer, to, dbPath string,
 			ProjectID: bq.Project, Dataset: bq.Dataset, Location: bq.Location,
 		})
 	case "snowflake":
-		_ = sf
-		return fmt.Errorf("snowflake loader ships at v1.17 phase 3")
+		loader = warehouse.NewSnowflakeLoader(warehouse.SnowflakeConfig{
+			Account: sf.Account, Warehouse: sf.Warehouse, Database: sf.Database,
+			Schema: sf.Schema, User: sf.User, Password: sf.Password,
+		})
 	case "redshift":
 		_ = rs
 		return fmt.Errorf("redshift loader ships at v1.17 phase 4")
