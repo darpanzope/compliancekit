@@ -62,6 +62,7 @@ Run 'compliancekit doctor' first to validate your config and connectivity.`,
 	cmd.AddCommand(newServeCmd())
 	cmd.AddCommand(newTUICmd())
 	cmd.AddCommand(newPluginsCmd())
+	cmd.AddCommand(newWarehouseCmd())
 
 	styleHelp(cmd)
 
