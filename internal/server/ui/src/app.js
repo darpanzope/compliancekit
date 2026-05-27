@@ -1025,3 +1025,45 @@ function quickScanProgress(scanID, streamURL) {
   else document.addEventListener('DOMContentLoaded', function () { installSwipe(document); });
   document.body.addEventListener('htmx:afterSwap', function (e) { installSwipe(e.target || document); });
 })();
+
+// v1.16 phase 7 — Offline banner. Listens for the ck:offline
+// postMessage the service worker broadcasts when it serves a
+// navigation from cache. Surfaces a fixed banner across the top
+// of the viewport with a Retry button. Auto-dismisses when a
+// navigation lands a fresh response (caught via
+// navigator.onLine + a window load event clearing the banner).
+(function () {
+  if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return;
+  navigator.serviceWorker.addEventListener('message', function (event) {
+    var msg = event && event.data;
+    if (!msg || msg.type !== 'ck:offline') return;
+    showOfflineBanner();
+  });
+
+  function showOfflineBanner() {
+    if (document.getElementById('ck-offline-banner')) return;
+    var bar = document.createElement('div');
+    bar.id = 'ck-offline-banner';
+    bar.setAttribute('role', 'status');
+    bar.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:50;' +
+      'background:hsl(var(--warning));color:hsl(var(--warning-foreground));' +
+      'padding:6px 12px;font-size:12px;text-align:center;' +
+      'font-family:ui-sans-serif,system-ui,sans-serif;' +
+      'box-shadow:0 1px 2px rgba(0,0,0,0.15);';
+    bar.innerHTML =
+      '<span>Showing cached content &mdash; daemon unreachable.</span> ' +
+      '<button type="button" id="ck-offline-retry" ' +
+      'style="margin-left:8px;text-decoration:underline;background:none;border:0;color:inherit;cursor:pointer;font:inherit;">Retry</button>';
+    document.body.appendChild(bar);
+    var btn = document.getElementById('ck-offline-retry');
+    if (btn) btn.addEventListener('click', function () { window.location.reload(); });
+  }
+
+  // Hide the banner whenever the browser regains connectivity. The
+  // user has to retry / navigate before the cached page refreshes,
+  // but at least the warning stops shouting.
+  window.addEventListener('online', function () {
+    var b = document.getElementById('ck-offline-banner');
+    if (b && b.parentNode) b.parentNode.removeChild(b);
+  });
+})();

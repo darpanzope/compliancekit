@@ -139,11 +139,34 @@ async function handleNavigate(req) {
     return res;
   } catch (err) {
     const cached = await cache.match(req);
-    if (cached) return cached;
+    if (cached) {
+      // v1.16 phase 7 — notify all controlled pages that this
+      // navigation is being served from cache so they can surface
+      // the "Showing cached" banner. broadcast to every controlled
+      // client (not just the one making the request) so cross-tab
+      // operators see the banner consistently.
+      broadcast({ type: 'ck:offline', url: req.url, at: Date.now() });
+      return cached;
+    }
     const offline = await caches.match(OFFLINE_PAGE);
-    if (offline) return offline;
+    if (offline) {
+      broadcast({ type: 'ck:offline', url: req.url, at: Date.now() });
+      return offline;
+    }
     return new Response('offline', { status: 503, headers: { 'Content-Type': 'text/plain' } });
   }
+}
+
+// broadcast posts a message to every controlled client. Used for
+// the v1.16 phase 7 "showing cached" banner — operators see it
+// across tabs without each tab having to poll navigator.onLine.
+async function broadcast(msg) {
+  try {
+    const all = await self.clients.matchAll({ includeUncontrolled: true });
+    all.forEach((c) => {
+      try { c.postMessage(msg); } catch (e) {}
+    });
+  } catch (e) {}
 }
 
 // v1.16 phase 4 — Web Push event handler. Browsers wake the SW
