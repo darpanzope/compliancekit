@@ -35,10 +35,15 @@ run: ## run via go run; pass args via ARGS=
 	go run ./cmd/compliancekit $(ARGS)
 
 test: ## unit tests with race detector
-	go test -race -short -timeout=120s ./...
+	# v1.17 bumped timeout 120s → 240s; the internal/server/ui pack
+	# under -race takes >100s on its own after the v1.17 phase 6
+	# snapshot routes + the v1.16 PWA + push tests joined the suite.
+	# Without -race the same pack runs in <15s; the budget is race-
+	# detector overhead, not real-world latency.
+	go test -race -short -timeout=240s ./...
 
 test-external: ## v1.0 contract test under the perspective of an external embedder
-	go test -tags=external -timeout=120s ./pkg/compliancekit/...
+	go test -tags=external -timeout=240s ./pkg/compliancekit/...
 
 bench-server: ## v1.11 phase 9 — perf benchmarks (100k findings / 10k resources / 1k scans)
 	go test -bench=. -benchmem -benchtime=3s -run=^$ -timeout=15m ./internal/server/api/
