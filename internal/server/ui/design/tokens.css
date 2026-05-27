@@ -81,8 +81,14 @@
     --status-pending: 215 16% 47%;
 
     /* ====== Resource (per-provider) ======
-       Phase 1 expands this to the full provider taxonomy
-       (DO/AWS/GCP/Hetzner/K8s/Linux). The v1.3 baseline lives here. */
+       Phase 1 extends this to the full provider taxonomy
+       (DO/AWS/GCP/Hetzner/K8s/Linux) the daemon ships under
+       internal/collectors/. The unprefixed DO names are the v1.3
+       baseline; the provider-prefixed names below are the v1.18
+       phase 1 extension. Add a new provider's resources here, not in
+       a per-template style block. */
+
+    /* DigitalOcean (v1.3 baseline — unprefixed for backwards-compat). */
     --resource-droplet: 217 91% 60%;
     --resource-database: 271 91% 65%;
     --resource-kubernetes: 189 94% 43%;
@@ -91,6 +97,74 @@
     --resource-firewall: 0 84% 60%;
     --resource-vpc: 251 71% 67%;
     --resource-domain: 178 78% 40%;
+
+    /* AWS (orange/amber family — provider brand). */
+    --resource-aws-ec2: 25 95% 53%;
+    --resource-aws-s3: 38 92% 50%;
+    --resource-aws-iam: 14 91% 55%;
+    --resource-aws-rds: 271 91% 65%;
+    --resource-aws-eks: 189 94% 43%;
+    --resource-aws-kms: 348 83% 47%;
+    --resource-aws-cloudtrail: 160 84% 39%;
+    --resource-aws-configservice: 215 16% 47%;
+    --resource-aws-guardduty: 0 84% 60%;
+
+    /* GCP (blue family — provider brand). */
+    --resource-gcp-compute: 217 91% 60%;
+    --resource-gcp-storage: 38 92% 50%;
+    --resource-gcp-iam: 14 91% 55%;
+    --resource-gcp-gke: 189 94% 43%;
+    --resource-gcp-kms: 348 83% 47%;
+    --resource-gcp-bigquery: 251 71% 67%;
+    --resource-gcp-sqladmin: 271 91% 65%;
+    --resource-gcp-logging: 160 84% 39%;
+
+    /* Hetzner (red family — provider brand). */
+    --resource-hetzner-server: 0 84% 60%;
+    --resource-hetzner-volume: 25 95% 53%;
+    --resource-hetzner-network: 189 94% 43%;
+    --resource-hetzner-firewall: 14 91% 55%;
+    --resource-hetzner-load-balancer: 142 76% 36%;
+    --resource-hetzner-floating-ip: 251 71% 67%;
+
+    /* Kubernetes (cyan/teal family — k8s brand blue-cyan). */
+    --resource-k8s-pod: 189 94% 43%;
+    --resource-k8s-deployment: 217 91% 60%;
+    --resource-k8s-service: 142 76% 36%;
+    --resource-k8s-ingress: 178 78% 40%;
+    --resource-k8s-configmap: 38 92% 50%;
+    --resource-k8s-secret: 348 83% 47%;
+    --resource-k8s-namespace: 251 71% 67%;
+    --resource-k8s-node: 215 16% 47%;
+    --resource-k8s-statefulset: 271 91% 65%;
+    --resource-k8s-daemonset: 25 95% 53%;
+    --resource-k8s-role: 14 91% 55%;
+    --resource-k8s-clusterrole: 0 84% 60%;
+
+    /* Linux (warm-gray + tux-orange family). */
+    --resource-linux-host: 215 16% 47%;
+    --resource-linux-package: 38 92% 50%;
+    --resource-linux-service: 217 91% 60%;
+    --resource-linux-user: 271 91% 65%;
+    --resource-linux-group: 251 71% 67%;
+    --resource-linux-file: 43 96% 56%;
+    --resource-linux-firewall: 0 84% 60%;
+    --resource-linux-kernel: 14 91% 55%;
+    --resource-linux-ssh: 142 76% 36%;
+    --resource-linux-audit: 160 84% 39%;
+    --resource-linux-filesystem: 178 78% 40%;
+
+    /* ====== Provider brand colors ======
+       Used by provider badges, sidebar headings, header logos. Each
+       maps to the canonical brand color of the provider. Phase 11
+       (avatars + status pills + iconography) consumes these for the
+       provider sprite. */
+    --brand-aws: 25 95% 53%;
+    --brand-gcp: 217 91% 60%;
+    --brand-do: 210 84% 60%;
+    --brand-hetzner: 0 84% 60%;
+    --brand-kubernetes: 215 81% 56%;
+    --brand-linux: 30 78% 47%;
 
     /* ====== Sidebar palette family ====== */
     --sidebar: 0 0% 100%;
