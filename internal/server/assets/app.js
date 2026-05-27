@@ -920,3 +920,46 @@ function urlBase64ToUint8Array(base64String) {
   for (var i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
   return out;
 }
+
+// v1.16 phase 5 — Quick-scan progress factory. Bound to <div
+// x-data="quickScanProgress(scanID, streamURL)"> inserted into the
+// /quick-scan page by the POST /quick-scan/run htmx swap.
+// Subscribes to the daemon's SSE stream for the scan, drives a
+// percent + status text update, then htmx-loads the top-5 findings
+// into a sibling slot once status flips to completed/failed.
+function quickScanProgress(scanID, streamURL) {
+  return {
+    percent: 0,
+    status: 'queued',
+    _es: null,
+    init: function () {
+      var self = this;
+      try {
+        this._es = new EventSource(streamURL);
+        this._es.addEventListener('progress', function (e) {
+          try {
+            var d = JSON.parse(e.data);
+            if (typeof d.percent === 'number') self.percent = d.percent;
+            if (d.status) self.status = d.status;
+          } catch (err) {}
+        });
+        this._es.addEventListener('scan.completed', function () { self.finish('completed'); });
+        this._es.addEventListener('scan.failed', function () { self.finish('failed'); });
+        this._es.addEventListener('done', function () { self.finish('completed'); });
+      } catch (e) {
+        // EventSource isn't supported — fall back to a single results load.
+        setTimeout(function () { self.finish('completed'); }, 2000);
+      }
+    },
+    finish: function (final) {
+      this.percent = 100;
+      this.status = final === 'completed' ? 'Scan complete' : 'Scan failed';
+      if (this._es) { try { this._es.close(); } catch (e) {} this._es = null; }
+      // htmx loads the results partial into the inline slot.
+      var slot = document.getElementById('quickscan-results-slot');
+      if (slot && window.htmx) {
+        window.htmx.ajax('GET', '/quick-scan/' + scanID + '/results', { target: slot, swap: 'innerHTML' });
+      }
+    },
+  };
+}

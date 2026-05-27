@@ -55,6 +55,19 @@ const (
 	stepScan     setupStep = "scan"
 )
 
+// Provider ID constants. Duplicated string literals across the ui
+// package (setup wizard, CI generator, quick-scan landing) tripped
+// the goconst lint at v1.16 phase 5; centralizing avoids drift if
+// a provider id ever changes.
+const (
+	providerAWS          = "aws"
+	providerGCP          = "gcp"
+	providerDigitalOcean = "digitalocean"
+	providerHetzner      = "hetzner"
+	providerKubernetes   = "kubernetes"
+	providerLinux        = "linux"
+)
+
 // providerCard is the shape every provider tile in step=provider
 // renders from. The MVP enables DO only; the rest are visible with
 // "Coming in v1.4 Phase 2 (settings page)" hints so the operator

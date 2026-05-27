@@ -384,6 +384,7 @@ func (u *UI) Mount(r chi.Router) {
 		u.mountDiffRoutes(r)
 		u.mountSearchRoutes(r)
 		u.mountNotificationsRoutes(r)
+		u.mountQuickScanRoutes(r)
 		// v1.6 phase 6 — admin-only log tail. Both routes nested
 		// inside the existing RequireAuth + RequireCSRF group;
 		// adminOnly adds an IsAdmin check on top.
