@@ -963,3 +963,65 @@ function quickScanProgress(scanID, streamURL) {
     },
   };
 }
+
+// v1.16 phase 6 — Swipe gesture wiring. Hooks touch events on any
+// element matching `[data-ck-swipe]` and emits a `ck:swipe` custom
+// event on the element with detail = { direction: 'left' | 'right',
+// distance }. Templates wire the event to a domain action via
+// @ck:swipe.left="ack" / @ck:swipe.right="waive" on the element
+// (Alpine catches them). Threshold = 80px so accidental scrolls
+// don't trigger. Skipped entirely when the device doesn't expose
+// touch events (desktop browsers stay unaffected).
+(function () {
+  if (typeof window === 'undefined') return;
+  if (!('ontouchstart' in window) && !('ontouchstart' in document.documentElement)) return;
+
+  var SWIPE_THRESHOLD = 80;   // px — minimum horizontal travel
+  var VERTICAL_MAX = 40;      // px — vertical wiggle allowed before we cancel
+
+  function installSwipe(root) {
+    var nodes = root.querySelectorAll('[data-ck-swipe]');
+    nodes.forEach(function (el) {
+      if (el.__ckSwipeBound) return;
+      el.__ckSwipeBound = true;
+
+      var startX = 0, startY = 0, tracking = false;
+      el.addEventListener('touchstart', function (e) {
+        if (e.touches.length !== 1) { tracking = false; return; }
+        startX = e.touches[0].clientX;
+        startY = e.touches[0].clientY;
+        tracking = true;
+      }, { passive: true });
+
+      el.addEventListener('touchmove', function (e) {
+        if (!tracking) return;
+        var dy = Math.abs(e.touches[0].clientY - startY);
+        if (dy > VERTICAL_MAX) tracking = false;
+      }, { passive: true });
+
+      el.addEventListener('touchend', function (e) {
+        if (!tracking) return;
+        tracking = false;
+        var dx = e.changedTouches[0].clientX - startX;
+        if (Math.abs(dx) < SWIPE_THRESHOLD) return;
+        var direction = dx < 0 ? 'left' : 'right';
+        el.dispatchEvent(new CustomEvent('ck:swipe', {
+          detail: { direction: direction, distance: Math.abs(dx) },
+          bubbles: true,
+        }));
+        // Mirror as a direction-specific event so Alpine bindings can
+        // write `@ck:swipe.left="ack()"` cleanly.
+        el.dispatchEvent(new CustomEvent('ck:swipe-' + direction, {
+          detail: { distance: Math.abs(dx) },
+          bubbles: true,
+        }));
+      });
+    });
+  }
+
+  // Initial pass + re-scan after every htmx swap so new rows pick up
+  // swipe handlers without operators wiring anything per-template.
+  if (document.readyState !== 'loading') installSwipe(document);
+  else document.addEventListener('DOMContentLoaded', function () { installSwipe(document); });
+  document.body.addEventListener('htmx:afterSwap', function (e) { installSwipe(e.target || document); });
+})();

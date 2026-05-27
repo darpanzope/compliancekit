@@ -387,6 +387,67 @@ table.list tbody tr:hover { background: var(--legacy-panel-2); }
 <style>[x-cloak] { display: none !important; }</style>
 
 <!--
+  v1.16 phase 6 — bottom action bar. Mobile-only (sm:hidden hides
+  it on tablet+); pinned to the viewport bottom with pb-safe so it
+  clears the iOS home-indicator. Five thumb-reachable actions:
+  Home (Scans), Quick scan, Findings, Inbox, Menu. The hamburger
+  Menu fires the same mobileMenuOpen Alpine state as the topbar
+  hamburger so operators get a consistent open path. The bar adds
+  64+pb-safe height which the page templates account for via the
+  pb-24 they already carry on max-width containers.
+-->
+<nav class="sm:hidden fixed inset-x-0 bottom-0 z-30 border-t border-border bg-card/95 backdrop-blur pb-safe"
+     aria-label="Bottom navigation">
+  <ul class="grid grid-cols-5">
+    {{- $bottomNav := list "scans" "quick-scan" "findings" "inbox" "menu" -}}
+    <li>
+      <a href="/scans" aria-label="Scans"
+        class="flex flex-col items-center justify-center gap-0.5 h-16 text-[10px] uppercase tracking-wider
+               {{ if eq .Active "scans" }}text-primary{{ else }}text-muted-foreground hover:text-foreground{{ end }}">
+        <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+        <span>Scans</span>
+      </a>
+    </li>
+    <li>
+      <a href="/quick-scan" aria-label="Quick scan"
+        class="flex flex-col items-center justify-center gap-0.5 h-16 text-[10px] uppercase tracking-wider
+               {{ if eq .Active "quick-scan" }}text-primary{{ else }}text-muted-foreground hover:text-foreground{{ end }}">
+        <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        <span>Scan</span>
+      </a>
+    </li>
+    <li>
+      <a href="/findings" aria-label="Findings"
+        class="flex flex-col items-center justify-center gap-0.5 h-16 text-[10px] uppercase tracking-wider
+               {{ if eq .Active "findings" }}text-primary{{ else }}text-muted-foreground hover:text-foreground{{ end }}">
+        <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <span>Findings</span>
+      </a>
+    </li>
+    <li>
+      <a href="/inbox" aria-label="Inbox"
+        class="flex flex-col items-center justify-center gap-0.5 h-16 text-[10px] uppercase tracking-wider
+               {{ if eq .Active "inbox" }}text-primary{{ else }}text-muted-foreground hover:text-foreground{{ end }}">
+        <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
+        <span>Inbox</span>
+      </a>
+    </li>
+    <li>
+      <button type="button" aria-label="Open menu"
+        @click="mobileMenuOpen = true"
+        class="w-full flex flex-col items-center justify-center gap-0.5 h-16 text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground">
+        <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        <span>Menu</span>
+      </button>
+    </li>
+  </ul>
+  {{- /* Used so the `$bottomNav` slice can drive a future dynamic
+       config. Today the buttons are inline so the active-class
+       conditional stays readable. */ -}}
+  <span hidden>{{ $bottomNav }}</span>
+</nav>
+
+<!--
   v1.16 phase 2 — PWA install banner. Pinned at the bottom of the
   viewport (above the v1.16 phase 6 mobile action bar later) so it's
   always thumb-reachable without obscuring page content. Two flows:

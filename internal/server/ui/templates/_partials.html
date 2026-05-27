@@ -29,10 +29,14 @@ values as repeated name=value pairs natively. v1.5 Phase 1.
 {{ define "findings_row_body" }}
 {{ range .Items }}
 <tr class="ck-vrow hover:bg-muted/30 cursor-pointer transition-colors"
+    data-ck-swipe
+    data-finding-id="{{ .ID }}"
     hx-get="/findings/{{ .ID }}/detail"
     hx-target="#finding-detail-panel"
     hx-swap="innerHTML"
-    @click="window.dispatchEvent(new CustomEvent('open-detail'))">
+    @click="window.dispatchEvent(new CustomEvent('open-detail'))"
+    @ck:swipe-left="window.dispatchEvent(new CustomEvent('ck-finding-action', { detail: { id: $el.dataset.findingId, action: 'ack' } }))"
+    @ck:swipe-right="window.dispatchEvent(new CustomEvent('ck-finding-action', { detail: { id: $el.dataset.findingId, action: 'waive' } }))">
   <td data-label="Severity" class="px-4 py-3">{{ template "severity_pill" .Severity }}</td>
   <td data-label="Status" class="px-4 py-3">
     {{ if eq .Status "fail" }}<span class="text-xs text-destructive font-medium">fail</span>
