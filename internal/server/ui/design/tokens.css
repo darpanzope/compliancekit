@@ -175,6 +175,21 @@
     --sidebar-accent-foreground: 234 20% 12%;
     --sidebar-border: 220 13% 91%;
 
+    /* ====== Gradient utilities (phase 2) ======
+       Drive the hero MetricCard variants — the thing that makes a
+       dashboard look modern vs. flat. 135deg per the v1.18 spec
+       (top-left → bottom-right diagonal). Each gradient anchors on a
+       semantic token + falls toward a slightly darker shade so the
+       card has subtle depth without a separate shadow. Phase 4
+       (MetricCard) consumes these via `bg-gradient-{variant}`. */
+    --gradient-primary:  linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)));
+    --gradient-critical: linear-gradient(135deg, hsl(var(--severity-critical)), hsl(0 75% 50%));
+    --gradient-high:     linear-gradient(135deg, hsl(var(--severity-high)), hsl(25 88% 45%));
+    --gradient-medium:   linear-gradient(135deg, hsl(var(--severity-medium)), hsl(38 92% 50%));
+    --gradient-low:      linear-gradient(135deg, hsl(var(--severity-low)), hsl(189 94% 43%));
+    --gradient-success:  linear-gradient(135deg, hsl(var(--success)), hsl(160 84% 39%));
+    --gradient-info:     linear-gradient(135deg, hsl(var(--severity-info)), hsl(215 28% 35%));
+
     /* ====== Geometry ====== */
     --radius: 0.75rem;
 
@@ -281,6 +296,17 @@
     --shadow-soft: 0 4px 16px -4px rgb(0 0 0 / 0.4);
     --shadow-elevated: 0 10px 30px -10px rgb(0 0 0 / 0.6);
     --shadow-floating: 0 20px 50px -12px rgb(0 0 0 / 0.7);
+
+    /* Dark-mode gradients lean toward darker stops so colored
+       MetricCards keep contrast against the dark background without
+       glowing too bright. Phase 2. */
+    --gradient-primary:  linear-gradient(135deg, hsl(var(--primary)), hsl(239 66% 48%));
+    --gradient-critical: linear-gradient(135deg, hsl(var(--severity-critical)), hsl(0 70% 38%));
+    --gradient-high:     linear-gradient(135deg, hsl(var(--severity-high)), hsl(25 80% 40%));
+    --gradient-medium:   linear-gradient(135deg, hsl(var(--severity-medium)), hsl(38 90% 42%));
+    --gradient-low:      linear-gradient(135deg, hsl(var(--severity-low)), hsl(217 75% 42%));
+    --gradient-success:  linear-gradient(135deg, hsl(var(--success)), hsl(160 75% 30%));
+    --gradient-info:     linear-gradient(135deg, hsl(var(--severity-info)), hsl(215 24% 24%));
   }
 }
 

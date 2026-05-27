@@ -182,12 +182,18 @@ module.exports = {
           border: 'hsl(var(--sidebar-border))',
         },
       },
+      // v1.18 phase 2 — gradient utilities. Each utility resolves to a
+      // `--gradient-*` token in design/tokens.css so dark mode + the
+      // high-contrast palette can override the stops without touching
+      // tailwind.config.js. New gradients land in tokens.css, not here.
       backgroundImage: {
-        'gradient-primary': 'linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)))',
-        'gradient-critical': 'linear-gradient(135deg, hsl(var(--severity-critical)), hsl(0 75% 50%))',
-        'gradient-high': 'linear-gradient(135deg, hsl(var(--severity-high)), hsl(25 88% 45%))',
-        'gradient-medium': 'linear-gradient(135deg, hsl(var(--severity-medium)), hsl(38 92% 50%))',
-        'gradient-low': 'linear-gradient(135deg, hsl(var(--severity-low)), hsl(189 94% 43%))',
+        'gradient-primary':  'var(--gradient-primary)',
+        'gradient-critical': 'var(--gradient-critical)',
+        'gradient-high':     'var(--gradient-high)',
+        'gradient-medium':   'var(--gradient-medium)',
+        'gradient-low':      'var(--gradient-low)',
+        'gradient-success':  'var(--gradient-success)',
+        'gradient-info':     'var(--gradient-info)',
       },
       boxShadow: {
         soft: 'var(--shadow-soft)',
