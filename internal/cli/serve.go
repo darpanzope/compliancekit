@@ -25,6 +25,7 @@ import (
 	"github.com/darpanzope/compliancekit/internal/server/ui"
 	"github.com/darpanzope/compliancekit/internal/server/webhook"
 	"github.com/darpanzope/compliancekit/internal/server/worker"
+	"github.com/darpanzope/compliancekit/internal/warehouse"
 )
 
 // newServeCmd builds `compliancekit serve`, the v1.3 daemon entry
@@ -207,7 +208,11 @@ func runServe(ctx context.Context, stdout interface {
 	// real findings. The control-plane gap that made /scans/new
 	// feel like it worked but insert nothing (F1) is closed here.
 	workerCfg := worker.Default()
-	workerCfg.Runner = worker.NewRealRunner(st).WithEvents(eventBus)
+	// v1.17 phase 5: optional OpenLineage emitter (Marquez, DataHub,
+	// Astronomer, ...) reads URL from CK_OPENLINEAGE_URL env. Empty
+	// = no events fire (zero-cost default).
+	lineage := warehouse.NewOpenLineageEmitter(os.Getenv("CK_OPENLINEAGE_URL"))
+	workerCfg.Runner = worker.NewRealRunner(st).WithEvents(eventBus).WithOpenLineage(lineage)
 	workerCfg.Events = eventBus
 	pool := worker.New(st, workerCfg)
 

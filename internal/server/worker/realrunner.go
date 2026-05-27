@@ -44,6 +44,7 @@ import (
 	"github.com/darpanzope/compliancekit/internal/server/events"
 	"github.com/darpanzope/compliancekit/internal/server/store"
 	"github.com/darpanzope/compliancekit/internal/waivers"
+	"github.com/darpanzope/compliancekit/internal/warehouse"
 	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
@@ -57,9 +58,10 @@ const (
 // engine. Constructed via NewRealRunner; pass to worker.Default()
 // or worker.Config.Runner.
 type RealRunner struct {
-	store  *store.Store
-	log    *slog.Logger
-	events *events.Producer // v1.6: nil-safe
+	store   *store.Store
+	log     *slog.Logger
+	events  *events.Producer              // v1.6: nil-safe
+	lineage *warehouse.OpenLineageEmitter // v1.17 phase 5: nil-safe
 }
 
 // NewRealRunner returns a Runner that builds collectors from the
@@ -77,13 +79,32 @@ func (r *RealRunner) WithEvents(p *events.Producer) *RealRunner {
 	return r
 }
 
+// WithOpenLineage installs the v1.17 phase 5 OpenLineage emitter
+// so every scan publishes a START + COMPLETE event to the
+// configured Marquez/DataHub receiver. Returns the receiver for
+// chaining. Nil/unset means no events fire (the daemon still
+// works; lineage just stays unrecorded).
+func (r *RealRunner) WithOpenLineage(em *warehouse.OpenLineageEmitter) *RealRunner {
+	r.lineage = em
+	return r
+}
+
 // Run satisfies worker.Runner.
 func (r *RealRunner) Run(ctx context.Context, j Job) error {
+	if r.lineage != nil {
+		_ = r.lineage.EmitScanStart(ctx, j.ScanID, nil) // providers populated below; fire-and-forget START
+	}
 	collectors, providerScope, err := r.buildCollectors(ctx)
 	if err != nil {
+		if r.lineage != nil {
+			_ = r.lineage.EmitScanFail(ctx, j.ScanID, nil, err)
+		}
 		return fmt.Errorf("build collectors: %w", err)
 	}
 	if len(collectors) == 0 {
+		if r.lineage != nil {
+			_ = r.lineage.EmitScanFail(ctx, j.ScanID, nil, fmt.Errorf("no enabled providers"))
+		}
 		return fmt.Errorf("no enabled providers in daemon config — open /settings/providers and enable at least one")
 	}
 
@@ -135,6 +156,14 @@ func (r *RealRunner) Run(ctx context.Context, j Job) error {
 		"findings", len(findings),
 		"muted", muted,
 	)
+	// v1.17 phase 5: emit the COMPLETE lineage event with all 4
+	// warehouse output datasets so the lineage graph captures every
+	// downstream artifact. Fire-and-forget; we already have the
+	// scan result + don't want to fail the run if the OpenLineage
+	// receiver is misconfigured.
+	if r.lineage != nil {
+		_ = r.lineage.EmitScanComplete(ctx, j.ScanID, providerScope, warehouse.AllTables)
+	}
 	return nil
 }
 
