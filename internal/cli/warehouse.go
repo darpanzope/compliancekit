@@ -151,8 +151,10 @@ func runWarehouseLoad(ctx context.Context, stdout io.Writer, to, dbPath string,
 			Schema: sf.Schema, User: sf.User, Password: sf.Password,
 		})
 	case "redshift":
-		_ = rs
-		return fmt.Errorf("redshift loader ships at v1.17 phase 4")
+		loader = warehouse.NewRedshiftLoader(warehouse.RedshiftConfig{
+			ClusterID: rs.Cluster, Database: rs.Database,
+			SecretARN: rs.SecretARN, StageS3URI: rs.StageS3URI,
+		})
 	default:
 		return fmt.Errorf("--to must be one of: bigquery, snowflake, redshift")
 	}
