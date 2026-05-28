@@ -47,6 +47,19 @@
 <!-- v1.4 Phase 0: compiled Tailwind bundle (tokens + utilities). -->
 <link rel="stylesheet" href="/assets/app.css">
 
+{{ if .BrandPrimary }}
+<!--
+  v1.18 phase 12 — operator brand-primary override. Injected as an
+  inline <style> (CSP-safe — style-src allows 'unsafe-inline'; no inline
+  <script>). cli/serve.go validates WCAG contrast via
+  design.ParseBrandPrimary before this is ever non-empty, so white text
+  on the override stays readable. Overrides --primary + the tokens that
+  track it so buttons, the focus ring, and the sidebar accent rebrand
+  together.
+-->
+<style>:root,.dark{--primary:{{ .BrandPrimary }};--ring:{{ .BrandPrimary }};--sidebar-primary:{{ .BrandPrimary }};}</style>
+{{ end }}
+
 <!--
   Vendored htmx + Alpine + Preline (pinned versions; updated via
   `make ui-vendor`). Alpine is deferred so its bootstrap fires after

@@ -349,6 +349,16 @@ function toastSystem() {
           href: ev.entity_id ? '/scans/' + ev.entity_id : '/scans',
         });
         window.ck.announce('Scan completed' + dur + '.');
+        // v1.18 phase 12 — magic moment: a fresh scan that closes with
+        // zero critical findings fires confetti + a celebration toast.
+        // critical === -1 means the count is unknown (query failed) so
+        // we stay quiet.
+        var crit = ev.data && typeof ev.data.critical === 'number' ? ev.data.critical : -1;
+        if (crit === 0) {
+          window.ck.confetti();
+          window.ck.toast({ variant: 'success', title: 'Zero critical findings 🎉', message: 'This scan closed clean. Nice work.' });
+          window.ck.announce('Scan closed with zero critical findings.', { assertive: true });
+        }
       });
       window.ck.events.on('scan.failed', function (ev) {
         self.push({
@@ -1215,6 +1225,39 @@ window.ck = window.ck || {};
   });
 })();
 
+// v1.18 phase 12 — confetti. window.ck.confetti() spawns a short burst
+// of DOM particles from the top of the viewport. No canvas, no library:
+// ~60 absolutely-positioned divs that fall + spin + fade, then clean up
+// after themselves. Skipped entirely under prefers-reduced-motion (the
+// celebration still toasts; it just doesn't animate).
+window.ck = window.ck || {};
+window.ck.confetti = function (opts) {
+  opts = opts || {};
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  var count = opts.count || 60;
+  var colors = ['#6366f1', '#22c55e', '#f59e0b', '#06b6d4', '#ec4899', '#a855f7'];
+  var layer = document.createElement('div');
+  layer.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:80;overflow:hidden;';
+  document.body.appendChild(layer);
+  for (var i = 0; i < count; i++) {
+    var p = document.createElement('div');
+    var size = 6 + Math.random() * 6;
+    var left = Math.random() * 100;
+    var delay = Math.random() * 0.2;
+    var dur = 1.6 + Math.random() * 1.4;
+    var rot = (Math.random() * 720 - 360) | 0;
+    var drift = (Math.random() * 120 - 60) | 0;
+    p.style.cssText =
+      'position:absolute;top:-16px;left:' + left + '%;width:' + size + 'px;height:' + (size * 0.5) + 'px;' +
+      'background:' + colors[i % colors.length] + ';opacity:0.9;border-radius:1px;' +
+      'will-change:transform,opacity;' +
+      'animation:ck-confetti-fall ' + dur + 's cubic-bezier(.2,.6,.4,1) ' + delay + 's forwards;' +
+      '--ck-drift:' + drift + 'px;--ck-rot:' + rot + 'deg;';
+    layer.appendChild(p);
+  }
+  setTimeout(function () { if (layer.parentNode) layer.parentNode.removeChild(layer); }, 3400);
+};
+
 // v1.18 phase 9 — optimistic-UI Alpine helper. Wrap a mutating control
 // in x-data="ckOptimistic()" and call apply(fn) on submit: it runs fn
 // immediately (the optimistic update) + records a rollback. If the
@@ -1257,6 +1300,35 @@ document.addEventListener('alpine:init', function () {
       open: false,
       toggle: function () { this.open = !this.open; },
       close: function () { this.open = false; },
+    };
+  });
+  // ckChartTip — rich hover tooltip for the v1.18 phase 12 score
+  // chart. show($event) reads the hovered point's data-* attributes +
+  // positions the tooltip near the cursor within the chart card.
+  window.Alpine.data('ckChartTip', function () {
+    return {
+      open: false,
+      tip: { date: '', score: '', total: '', actionable: '' },
+      style: '',
+      show: function (e) {
+        var t = e.target;
+        if (!t || !t.dataset) return;
+        this.tip = {
+          date: t.dataset.date || '',
+          score: t.dataset.score || '',
+          total: t.dataset.total || '',
+          actionable: t.dataset.actionable || '',
+        };
+        // Position relative to the chart card (the x-data root).
+        var host = this.$el;
+        var hr = host.getBoundingClientRect();
+        var pr = t.getBoundingClientRect();
+        var x = pr.left - hr.left + pr.width / 2;
+        var y = pr.top - hr.top;
+        this.style = 'left:' + x + 'px; top:' + y + 'px;';
+        this.open = true;
+      },
+      hide: function () { this.open = false; },
     };
   });
   // ckModal — open/close keyed by ID, with focus-trap on open. The

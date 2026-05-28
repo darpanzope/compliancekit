@@ -554,6 +554,53 @@
   .ck-nprogress[data-state="loading"] { opacity: 1; }
   .ck-nprogress[data-state="done"]    { opacity: 0; }
 
+  /* =====================================================================
+     v1.18 phase 12 — magic moments (confetti, celebration card, streak
+     badges). Confetti keyframes are referenced by inline styles the
+     window.ck.confetti() controller sets; the reduced-motion media block
+     in tokens.css can't reach inline animation, so the controller itself
+     no-ops under prefers-reduced-motion.
+     ===================================================================== */
+  .ck-celebrate-card {
+    @apply relative overflow-hidden rounded-xl p-5 text-white flex items-center gap-4;
+    background: var(--gradient-success);
+    box-shadow: var(--shadow-elevated);
+  }
+  .ck-celebrate-card .ck-celebrate-icon {
+    @apply inline-flex items-center justify-center rounded-full w-12 h-12 shrink-0;
+    background-color: hsl(0 0% 100% / 0.2);
+  }
+  .ck-celebrate-title { @apply text-lg font-semibold; }
+  .ck-celebrate-sub   { color: hsl(0 0% 100% / 0.85); @apply text-sm; }
+
+  /* Streak badges — bronze (3wk) / silver (6wk) / gold (12wk). */
+  .ck-streak {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold;
+  }
+  .ck-streak-bronze { background-color: hsl(25 60% 92%); color: hsl(25 70% 35%); }
+  .ck-streak-silver { background-color: hsl(220 14% 92%); color: hsl(220 12% 38%); }
+  .ck-streak-gold   { background-color: hsl(43 92% 90%); color: hsl(38 80% 38%); }
+  .dark .ck-streak-bronze { background-color: hsl(25 40% 22%); color: hsl(25 80% 70%); }
+  .dark .ck-streak-silver { background-color: hsl(220 14% 24%); color: hsl(220 14% 80%); }
+  .dark .ck-streak-gold   { background-color: hsl(43 50% 22%); color: hsl(43 90% 70%); }
+
+  @keyframes ck-confetti-fall {
+    0%   { transform: translateY(0) translateX(0) rotate(0); opacity: 1; }
+    100% { transform: translateY(105vh) translateX(var(--ck-drift, 0)) rotate(var(--ck-rot, 360deg)); opacity: 0; }
+  }
+
+  /* v1.18 phase 12 — chart rich tooltip. Positioned by the ckChartTip
+     Alpine factory (left/top in px relative to the chart card); the
+     transform lifts it above + centers it over the hovered point. */
+  .ck-chart-tip {
+    @apply absolute z-30 pointer-events-none rounded-lg p-3 min-w-[150px];
+    transform: translate(-50%, calc(-100% - 10px));
+    background-color: hsl(var(--popover));
+    color: hsl(var(--popover-foreground));
+    border: 1px solid hsl(var(--border));
+    box-shadow: var(--shadow-floating);
+  }
+
   /* Skeleton-during-fetch: an element with `ck-loading-target` shows
      its `.ck-skeleton` children + hides its real content while an
      htmx request that names it via hx-indicator is in flight. htmx

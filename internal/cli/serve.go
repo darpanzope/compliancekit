@@ -23,6 +23,7 @@ import (
 	"github.com/darpanzope/compliancekit/internal/server/scim"
 	"github.com/darpanzope/compliancekit/internal/server/store"
 	"github.com/darpanzope/compliancekit/internal/server/ui"
+	"github.com/darpanzope/compliancekit/internal/server/ui/design"
 	"github.com/darpanzope/compliancekit/internal/server/webhook"
 	"github.com/darpanzope/compliancekit/internal/server/worker"
 	"github.com/darpanzope/compliancekit/internal/warehouse"
@@ -160,6 +161,8 @@ func runServe(ctx context.Context, stdout interface {
 	uiH := ui.New(st, users, sessions).WithLogBuffer(logBuf).WithPush(pushStore)
 	// v1.12 phase 8 — backup directory + Postgres DSN for pg_dump.
 	uiH.SetBackupConfig(os.Getenv("CK_BACKUP_DIR"), backupDSN(dbPath))
+	// v1.18 phase 12 — brand-kit primary-color override (CK_BRAND_PRIMARY).
+	setupBrandKit(uiH, stdout)
 	uiH.Mount(srv.Router())
 
 	// v1.5.1 F15: discover OIDC providers via env vars + mount each
@@ -327,6 +330,25 @@ func makeParentDir(path string) error {
 // fatal — the daemon boots without push, and /api/v1/push/* + /settings/
 // notifications surface a 503 / disabled state until VAPID setup
 // recovers (typically a DB-writable + restart).
+// setupBrandKit applies the v1.18 phase 12 CK_BRAND_PRIMARY override.
+// The env value is a #rrggbb hex; design.ParseBrandPrimary validates
+// WCAG contrast (white text on the color must clear 3:1) before it's
+// applied, so a low-contrast brand color is rejected with a warning
+// rather than shipping unreadable buttons. Extracted from runServe to
+// keep its cyclomatic complexity under the lint budget.
+func setupBrandKit(uiH *ui.UI, stdout interface{ Write([]byte) (int, error) }) {
+	bp := os.Getenv("CK_BRAND_PRIMARY")
+	if bp == "" {
+		return
+	}
+	if hsl, contrast, ok := design.ParseBrandPrimary(bp); ok {
+		uiH.SetBrandPrimary(hsl)
+		fmt.Fprintf(stdout, "  brand:   primary override %s (contrast %.1f:1)\n", bp, contrast)
+		return
+	}
+	fmt.Fprintf(stdout, "  brand:   warning — CK_BRAND_PRIMARY %q rejected (malformed or contrast below %.1f:1)\n", bp, design.BrandPrimaryMinContrast)
+}
+
 func setupPush(ctx context.Context, st *store.Store) (*push.Store, *push.Sender) {
 	ps := push.NewStore(st)
 	sender, err := push.NewSender(ctx, ps, "")

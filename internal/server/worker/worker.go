@@ -378,7 +378,28 @@ func (p *Pool) updateScanCompleted(ctx context.Context, id, finishedAt string, d
 	if _, err := p.store.DB().ExecContext(ctx, q, finishedAt, durationMS, id); err != nil {
 		p.log.Warn("worker: mark completed failed", "scan_id", id, "err", err)
 	}
-	p.publishEvent(events.TypeScanCompleted, id, map[string]any{"duration_ms": durationMS})
+	// v1.18 phase 12 — carry the open-critical count so the client can
+	// fire the zero-critical confetti / celebration moment. Best-effort:
+	// a query error just omits the field (no confetti, no error path).
+	critical := p.countCriticalFindings(ctx, id)
+	p.publishEvent(events.TypeScanCompleted, id, map[string]any{
+		"duration_ms": durationMS,
+		"critical":    critical,
+	})
+}
+
+// countCriticalFindings returns the number of open critical findings
+// for a scan. Used to drive the v1.18 zero-critical celebration.
+func (p *Pool) countCriticalFindings(ctx context.Context, scanID string) int {
+	q := fmt.Sprintf( //nolint:gosec // placeholders only; no user input
+		`SELECT COUNT(*) FROM findings WHERE scan_id = %s AND severity = 'critical' AND status NOT IN ('resolved','false_positive')`,
+		p.ph(1))
+	var n int
+	if err := p.store.DB().QueryRowContext(ctx, q, scanID).Scan(&n); err != nil {
+		p.log.Warn("worker: count critical failed", "scan_id", scanID, "err", err)
+		return -1 // sentinel: unknown — client treats <0 as "don't celebrate"
+	}
+	return n
 }
 
 func (p *Pool) updateScanFailed(ctx context.Context, id, finishedAt, message string, durationMS int) {

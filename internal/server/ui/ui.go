@@ -335,7 +335,8 @@ type UI struct {
 	backups         *backups.Manager          // v1.12 phase 8 — backup/restore
 	backupDir       string
 	backupDSN       string
-	push            *push.Store // v1.16 phase 4 — Web Push subscriptions (nil = disabled)
+	push            *push.Store  // v1.16 phase 4 — Web Push subscriptions (nil = disabled)
+	brandPrimary    template.CSS // v1.18 phase 12 — operator brand primary override (HSL triple), empty = default
 }
 
 // New constructs the UI handle.
@@ -366,6 +367,16 @@ func (u *UI) WithLogBuffer(b *logs.Buffer) *UI {
 	return u
 }
 
+// SetBrandPrimary installs the v1.18 phase 12 operator brand-primary
+// override as an HSL triple ("239 66% 58%"). base.html injects it as a
+// --primary / --ring / --sidebar-primary override in an inline <style>
+// (CSP-safe; no inline <script>). cli/serve.go validates contrast via
+// design.ParseBrandPrimary before calling this; an empty string leaves
+// the default brand palette intact.
+func (u *UI) SetBrandPrimary(hslTriple string) {
+	u.brandPrimary = template.CSS(hslTriple) //nolint:gosec // validated HSL triple from design.ParseBrandPrimary, not raw input
+}
+
 // View is the layout-template payload. The Content sub-template
 // reads .Items / .Total / .Providers / etc. — driver helpers below
 // load the right shape per page.
@@ -386,6 +397,10 @@ type View struct {
 	// SAMLProviders enumerates the v1.12 phase 3 SAML connections. The
 	// login template renders one "Sign in with X" button per entry.
 	SAMLProviders []auth.SAMLProviderButton
+
+	// BrandPrimary is the v1.18 phase 12 operator brand-primary override
+	// (HSL triple). When set, base.html injects a --primary override.
+	BrandPrimary template.CSS
 
 	// Page-specific
 	Items any
@@ -737,6 +752,7 @@ func (u *UI) loadCheckOverrides(ctx context.Context) map[string]bool {
 func (u *UI) viewFor(r *http.Request, title, active string, v View) View {
 	v.Title = title
 	v.Active = active
+	v.BrandPrimary = u.brandPrimary
 	if sess := auth.FromContext(r.Context()); sess != nil {
 		v.CSRFToken = sess.CSRFToken
 		if usr, err := u.users.ByID(r.Context(), sess.UserID); err == nil {
