@@ -121,8 +121,15 @@
   <!-- Toasts -->
   <section id="comp-ck-toast" class="mb-10">
     <h2 class="text-lg font-semibold mb-4">ck-toast</h2>
-    <div class="flex flex-col gap-3">
+    <div class="flex flex-col gap-3 mb-4">
       {{ range .Toasts }}{{ template "ck-toast" . }}{{ end }}
+    </div>
+    <!-- Live queue demo — click to push a toast into the #ck-toasts
+         queue (phase 9). x-data scope so Alpine wires the @click. -->
+    <div x-data="{}" class="flex flex-wrap gap-2">
+      <button type="button" class="ck-btn ck-btn-secondary ck-btn-sm" @click="window.ck.toast({variant:'success',title:'Saved',message:'Your change was applied.'})">Push success</button>
+      <button type="button" class="ck-btn ck-btn-secondary ck-btn-sm" @click="window.ck.toast({variant:'warning',title:'Heads up',message:'3 waivers expire soon.'})">Push warning</button>
+      <button type="button" class="ck-btn ck-btn-secondary ck-btn-sm" @click="window.ck.toast({variant:'error',title:'Failed',message:'Could not reach the provider.'})">Push error</button>
     </div>
   </section>
 

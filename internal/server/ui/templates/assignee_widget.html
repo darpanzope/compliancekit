@@ -1,5 +1,6 @@
 {{ define "assignee_widget" }}
-<div id="assignee-widget-{{ .FindingID }}" class="ck-card p-3 text-xs" x-data="{ editing: false }">
+<div id="assignee-widget-{{ .FindingID }}" class="ck-card p-3 text-xs" x-data="{ editing: false }"
+     @htmx:after-request="if ($event.detail.successful) window.ck.toast({variant:'success',title:'Assignee updated'})">
   <div class="flex items-center justify-between gap-2">
     <div class="text-[11px] uppercase tracking-wider text-muted-foreground">Assignee</div>
     <button type="button" @click="editing = !editing"
@@ -15,10 +16,15 @@
       <span class="text-muted-foreground">Unassigned</span>
     {{ end }}
   </div>
+  <!-- v1.18 phase 9 — optimistic close: the edit panel collapses the
+       instant the operator hits Save; the server swap reconciles the
+       widget content + the success toast confirms. A failed request
+       fires the global error toast (app.js htmx:responseError). -->
   <form x-show="editing" x-cloak class="mt-2 space-y-2"
         hx-post="/findings/{{ .FindingID }}/assign"
         hx-target="#assignee-widget-{{ .FindingID }}"
-        hx-swap="outerHTML">
+        hx-swap="outerHTML"
+        @htmx:before-request="editing = false">
     <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
     <select name="user_id" class="ck-input text-xs w-full">
       <option value="">— unassigned —</option>

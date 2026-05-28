@@ -342,6 +342,21 @@
   .ck-toast-title { @apply font-medium text-foreground; }
   .ck-toast-message { @apply text-muted-foreground text-xs; }
   .ck-toast-close { @apply text-muted-foreground hover:text-foreground text-lg leading-none w-5 h-5 -mt-0.5; }
+  /* v1.18 phase 9 — toast queue container + slide-in/out. The queue is
+     fixed bottom-right (above the iOS safe area), stacks newest-last,
+     and each toast slides in from the right + fades out on dismiss. */
+  .ck-toasts {
+    @apply fixed z-[70] flex flex-col gap-2 pointer-events-none;
+    right: 1rem;
+    bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+    max-width: calc(100vw - 2rem);
+  }
+  .ck-toasts .ck-toast {
+    transition: transform var(--motion-250) var(--ease-out-quad),
+                opacity var(--motion-250) var(--ease-out-quad);
+  }
+  .ck-toast-enter { opacity: 0; transform: translateX(16px); }
+  .ck-toast-leave { opacity: 0; transform: translateX(16px); }
 
   /* ck-skeleton — phase 8 fleshes out animation timing. */
   .ck-skeleton {

@@ -1129,6 +1129,117 @@ function quickScanProgress(scanID, streamURL) {
   document.addEventListener('htmx:timeout', settle);
 })();
 
+// v1.18 phase 9 — toast queue. window.ck.toast({variant,title,message,
+// timeout}) appends a slide-in toast to #ck-toasts; it auto-dismisses
+// after `timeout` ms (default 5000, 0 = sticky), and the operator can
+// click the × or swipe it horizontally to dismiss early. Severity-coded
+// via the ck-toast-{variant} classes (phase 3). No framework — plain
+// DOM so it works before Alpine boots (e.g. from an htmx error handler).
+window.ck = window.ck || {};
+(function () {
+  function container() {
+    return document.getElementById('ck-toasts');
+  }
+  function dismiss(node) {
+    if (!node || node.dataset.leaving) return;
+    node.dataset.leaving = '1';
+    node.classList.add('ck-toast-leave');
+    setTimeout(function () {
+      if (node.parentNode) node.parentNode.removeChild(node);
+    }, 250);
+  }
+  function esc(s) {
+    var d = document.createElement('div');
+    d.textContent = s == null ? '' : String(s);
+    return d.innerHTML;
+  }
+  window.ck.toast = function (opts) {
+    opts = opts || {};
+    var host = container();
+    if (!host) return;
+    var variant = opts.variant || 'info';
+    var node = document.createElement('div');
+    node.className = 'ck-toast ck-toast-' + variant + ' ck-toast-enter';
+    node.setAttribute('role', variant === 'error' ? 'alert' : 'status');
+    node.innerHTML =
+      '<div class="ck-toast-icon" aria-hidden="true"></div>' +
+      '<div class="ck-toast-body">' +
+      (opts.title ? '<p class="ck-toast-title">' + esc(opts.title) + '</p>' : '') +
+      (opts.message ? '<p class="ck-toast-message">' + esc(opts.message) + '</p>' : '') +
+      '</div>' +
+      '<button type="button" class="ck-toast-close" aria-label="Dismiss">&times;</button>';
+    host.appendChild(node);
+    // Force a reflow then drop the enter class so the CSS transition runs.
+    void node.offsetWidth;
+    node.classList.remove('ck-toast-enter');
+    node.querySelector('.ck-toast-close').addEventListener('click', function () { dismiss(node); });
+    // Swipe-to-dismiss: track horizontal pointer drag.
+    var startX = null;
+    node.addEventListener('pointerdown', function (e) { startX = e.clientX; });
+    node.addEventListener('pointerup', function (e) {
+      if (startX !== null && Math.abs(e.clientX - startX) > 60) dismiss(node);
+      startX = null;
+    });
+    var timeout = opts.timeout === undefined ? 5000 : opts.timeout;
+    if (timeout > 0) setTimeout(function () { dismiss(node); }, timeout);
+    return node;
+  };
+
+  // Bridge: a `ck-toast` CustomEvent (from Alpine, or an HX-Trigger
+  // header the daemon sets on a mutation response) raises a toast.
+  // htmx parses HX-Trigger into a window CustomEvent whose detail is
+  // the JSON value, so `HX-Trigger: {"ck-toast":{"variant":"success",
+  // "title":"Saved"}}` just works.
+  window.addEventListener('ck-toast', function (e) {
+    window.ck.toast(e.detail || {});
+  });
+
+  // Global failure feedback: any htmx response error (4xx/5xx) or
+  // network/timeout error raises an error toast. This is the
+  // reconcile-on-error half of optimistic UI applied across every
+  // htmx mutation at once — the ckOptimistic helper handles the
+  // visual rollback per element.
+  document.addEventListener('htmx:responseError', function (e) {
+    var status = e.detail && e.detail.xhr ? e.detail.xhr.status : 0;
+    window.ck.toast({
+      variant: 'error',
+      title: 'Request failed',
+      message: status ? 'The server returned ' + status + '.' : 'Please try again.',
+    });
+  });
+  document.addEventListener('htmx:sendError', function () {
+    window.ck.toast({ variant: 'error', title: 'Network error', message: 'Could not reach the daemon.' });
+  });
+})();
+
+// v1.18 phase 9 — optimistic-UI Alpine helper. Wrap a mutating control
+// in x-data="ckOptimistic()" and call apply(fn) on submit: it runs fn
+// immediately (the optimistic update) + records a rollback. If the
+// triggering htmx request errors, the helper reverts the DOM change
+// and the global error toast above explains why. On success the
+// optimistic state stands (the server swap reconciles it).
+document.addEventListener('alpine:init', function () {
+  if (!window.Alpine) return;
+  window.Alpine.data('ckOptimistic', function () {
+    return {
+      pending: false,
+      _rollback: null,
+      // optimistic(applyFn, rollbackFn): apply now, remember how to undo.
+      optimistic: function (applyFn, rollbackFn) {
+        this.pending = true;
+        this._rollback = rollbackFn || null;
+        if (typeof applyFn === 'function') applyFn();
+      },
+      // call from @htmx:after-request to settle / roll back.
+      settle: function (ok) {
+        this.pending = false;
+        if (!ok && typeof this._rollback === 'function') this._rollback();
+        this._rollback = null;
+      },
+    };
+  });
+});
+
 // v1.18 phase 3 — Alpine factories for the design-system components.
 // ck-dropdown + ck-modal partials reference these via x-data; Alpine
 // auto-registers them on alpine:init. Adding a new interactive

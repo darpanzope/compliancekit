@@ -118,6 +118,14 @@ table.list tbody tr:hover { background: var(--legacy-panel-2); }
 <div id="ck-nprogress" class="ck-nprogress" aria-hidden="true"></div>
 
 <!--
+  v1.18 phase 9 — toast queue mount. The ckToasts controller in app.js
+  appends slide-in toasts here; window.ck.toast({...}) or a `ck-toast`
+  CustomEvent pushes one. Stacks bottom-right, auto-dismisses, click /
+  swipe to dismiss. role/aria-live live on each toast partial.
+-->
+<div id="ck-toasts" class="ck-toasts" aria-live="polite"></div>
+
+<!--
   v1.10 phase 9 — Inline help.
   Pages can override by defining their own
   <template id="ck-help-content"> later in the document (the
