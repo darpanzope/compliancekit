@@ -1,0 +1,14 @@
+{{- /*
+  ck-checkbox — labeled checkbox.
+*/ -}}
+{{ define "ck-checkbox" }}
+{{- $id := .ID }}{{ if not $id }}{{ $id = .Name }}{{ end -}}
+<label class="ck-checkbox-row" for="{{ $id }}">
+  <input id="{{ $id }}" name="{{ .Name }}" type="checkbox"
+    class="ck-checkbox"
+    value="{{ if .Value }}{{ .Value }}{{ else }}on{{ end }}"
+    {{ if .Checked }}checked{{ end }}
+    {{ .Attrs }}/>
+  <span class="ck-checkbox-label">{{ .Label }}</span>
+</label>
+{{ end }}

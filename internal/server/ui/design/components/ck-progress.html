@@ -1,0 +1,12 @@
+{{- /*
+  ck-progress — horizontal progress bar. Value is clamped to [0,100].
+  Variant maps the fill color onto a semantic token.
+*/ -}}
+{{ define "ck-progress" }}
+{{- $variant := .Variant }}{{ if not $variant }}{{ $variant = "primary" }}{{ end -}}
+{{- $v := .Value }}{{ if lt $v 0 }}{{ $v = 0 }}{{ end }}{{ if gt $v 100 }}{{ $v = 100 }}{{ end -}}
+<div class="ck-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ $v }}"
+  {{ if .Label }}aria-label="{{ .Label }}"{{ end }}>
+  <div class="ck-progress-bar ck-progress-{{ $variant }}" style="width: {{ $v }}%"></div>
+</div>
+{{ end }}

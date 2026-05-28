@@ -1,0 +1,20 @@
+{{- /*
+  ck-modal — Alpine-driven modal. The `ckModal` factory in src/app.js
+  handles open/close + focus trap + Esc dismiss. Trigger the modal
+  from anywhere with `window.dispatchEvent(new CustomEvent('ck-modal-open',{detail:'<id>'}))`.
+*/ -}}
+{{ define "ck-modal" }}
+<div x-data="ckModal('{{ .ID }}')" x-show="open" x-cloak
+  @keydown.window.escape="close()"
+  class="ck-modal-backdrop"
+  role="dialog"
+  aria-modal="true"
+  {{ if .Title }}aria-labelledby="{{ .ID }}-title"{{ end }}
+  id="{{ .ID }}">
+  <div class="ck-modal-panel" @click.outside="close()">
+    {{- if .Title }}<header class="ck-modal-header"><h2 id="{{ .ID }}-title">{{ .Title }}</h2><button type="button" class="ck-modal-close" @click="close()" aria-label="Close">&times;</button></header>{{ end -}}
+    <div class="ck-modal-body">{{ .Body }}</div>
+    {{- if .Actions }}<footer class="ck-modal-actions">{{ .Actions }}</footer>{{ end -}}
+  </div>
+</div>
+{{ end }}

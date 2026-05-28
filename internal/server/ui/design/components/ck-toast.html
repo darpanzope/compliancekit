@@ -1,0 +1,19 @@
+{{- /*
+  ck-toast — single toast row. Phase 9 ships the slide-in queue + the
+  Alpine factory that wires click/swipe-to-dismiss. Phase 3 ships the
+  partial stub so server-rendered initial-state toasts work.
+*/ -}}
+{{ define "ck-toast" }}
+{{- $variant := .Variant }}{{ if not $variant }}{{ $variant = "info" }}{{ end -}}
+<div class="ck-toast ck-toast-{{ $variant }}" role="status" aria-live="polite"
+  {{ if .ID }}id="{{ .ID }}"{{ end }}
+  data-variant="{{ $variant }}">
+  <div class="ck-toast-icon" aria-hidden="true"></div>
+  <div class="ck-toast-body">
+    {{- if .Title }}<p class="ck-toast-title">{{ .Title }}</p>{{ end -}}
+    {{- if .Message }}<p class="ck-toast-message">{{ .Message }}</p>{{ end -}}
+  </div>
+  <button type="button" class="ck-toast-close" aria-label="Dismiss"
+    {{ if .ID }}data-toast-id="{{ .ID }}"{{ end }}>&times;</button>
+</div>
+{{ end }}

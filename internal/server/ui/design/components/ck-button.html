@@ -1,0 +1,31 @@
+{{- /*
+  ck-button — primary interactive element.
+  ButtonArgs: Variant (primary|secondary|destructive|ghost|link),
+  Size (sm|md|lg), Label, IconLeft, IconRight, Tooltip, Type (button|
+  submit|reset), Href (renders <a>), Disabled, Loading, Attrs, ID, Class.
+*/ -}}
+{{ define "ck-button" }}
+{{- $variant := .Variant }}{{ if not $variant }}{{ $variant = "primary" }}{{ end -}}
+{{- $size := .Size }}{{ if not $size }}{{ $size = "md" }}{{ end -}}
+{{- if .Href -}}
+<a class="ck-btn ck-btn-{{ $variant }} ck-btn-{{ $size }}{{ if .Class }} {{ .Class }}{{ end }}"
+  href="{{ .Href }}"
+  {{ if .Disabled }}aria-disabled="true" tabindex="-1"{{ end }}
+  {{ if .ID }}id="{{ .ID }}"{{ end }}
+  {{ if .Tooltip }}title="{{ .Tooltip }}" aria-label="{{ .Tooltip }}"{{ end }}
+  {{ .Attrs }}>
+{{- else -}}
+<button class="ck-btn ck-btn-{{ $variant }} ck-btn-{{ $size }}{{ if .Class }} {{ .Class }}{{ end }}"
+  type="{{ if .Type }}{{ .Type }}{{ else }}button{{ end }}"
+  {{ if .Disabled }}disabled aria-disabled="true"{{ end }}
+  {{ if .Loading }}aria-busy="true"{{ end }}
+  {{ if .ID }}id="{{ .ID }}"{{ end }}
+  {{ if .Tooltip }}title="{{ .Tooltip }}" aria-label="{{ .Tooltip }}"{{ end }}
+  {{ .Attrs }}>
+{{- end -}}
+{{- if .IconLeft }}<span class="ck-btn-icon">{{ .IconLeft }}</span>{{ end -}}
+{{- if .Loading }}<span class="ck-spinner ck-spinner-sm" aria-hidden="true"></span>{{ end -}}
+{{- if .Label }}<span>{{ .Label }}</span>{{ end -}}
+{{- if .IconRight }}<span class="ck-btn-icon">{{ .IconRight }}</span>{{ end -}}
+{{- if .Href -}}</a>{{- else -}}</button>{{- end -}}
+{{ end }}

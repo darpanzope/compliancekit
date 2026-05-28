@@ -1,0 +1,14 @@
+{{- /*
+  ck-empty-state — canonical empty surface. Phase 10 catalogs the
+  ~30 hand-drawn-style illustrations callers pass via Illustration.
+*/ -}}
+{{ define "ck-empty-state" }}
+<div class="ck-empty-state">
+  {{- if .Illustration -}}
+  <div class="ck-empty-illustration" aria-hidden="true">{{ .Illustration }}</div>
+  {{- end -}}
+  {{- if .Title }}<h3 class="ck-empty-title">{{ .Title }}</h3>{{ end -}}
+  {{- if .Description }}<p class="ck-empty-description">{{ .Description }}</p>{{ end -}}
+  {{- if .Action }}<div class="ck-empty-action">{{ .Action }}</div>{{ end -}}
+</div>
+{{ end }}

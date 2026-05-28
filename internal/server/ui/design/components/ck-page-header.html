@@ -1,0 +1,18 @@
+{{- /*
+  ck-page-header — canonical page header convention. Title left,
+  bulk-actions Actions slot right. Tooltip surfaces an InfoTooltip
+  next to the title when set.
+*/ -}}
+{{ define "ck-page-header" }}
+<header class="ck-page-header">
+  <div class="ck-page-header-text">
+    {{- if .Eyebrow }}<p class="ck-page-eyebrow">{{ .Eyebrow }}</p>{{ end -}}
+    <div class="ck-page-title-row">
+      <h1 class="ck-page-title">{{ .Title }}</h1>
+      {{- if .Tooltip }}{{ template "ck-info-tooltip" (mkInfoTooltip .Tooltip) }}{{ end -}}
+    </div>
+    {{- if .Subtitle }}<p class="ck-page-subtitle">{{ .Subtitle }}</p>{{ end -}}
+  </div>
+  {{- if .Actions }}<div class="ck-page-header-actions">{{ .Actions }}</div>{{ end -}}
+</header>
+{{ end }}

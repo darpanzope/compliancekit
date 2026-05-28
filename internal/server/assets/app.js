@@ -1067,3 +1067,52 @@ function quickScanProgress(scanID, streamURL) {
     if (b && b.parentNode) b.parentNode.removeChild(b);
   });
 })();
+
+// v1.18 phase 3 — Alpine factories for the design-system components.
+// ck-dropdown + ck-modal partials reference these via x-data; Alpine
+// auto-registers them on alpine:init. Adding a new interactive
+// component? Register its factory here, never in an inline <script>
+// (CSP would block it per ADR-018).
+document.addEventListener('alpine:init', function () {
+  if (!window.Alpine) return;
+  // ckDropdown — open/close + click-outside dismiss. Matches the
+  // ck-dropdown.html partial's x-data binding.
+  window.Alpine.data('ckDropdown', function () {
+    return {
+      open: false,
+      toggle: function () { this.open = !this.open; },
+      close: function () { this.open = false; },
+    };
+  });
+  // ckModal — open/close keyed by ID, with focus-trap on open. The
+  // partial passes its own ID into the factory so cross-page modals
+  // don't collide. window.dispatchEvent(new CustomEvent('ck-modal-open',
+  // {detail:'<id>'})) opens; Esc / click-outside closes.
+  window.Alpine.data('ckModal', function (id) {
+    return {
+      open: false,
+      id: id,
+      _onOpen: null,
+      init: function () {
+        var self = this;
+        self._onOpen = function (e) {
+          if (e && e.detail === self.id) {
+            self.open = true;
+            // Move focus into the panel on the next tick so the close
+            // button receives focus and screen readers announce it.
+            setTimeout(function () {
+              var el = document.getElementById(self.id);
+              var btn = el && el.querySelector('button');
+              if (btn) btn.focus();
+            }, 30);
+          }
+        };
+        window.addEventListener('ck-modal-open', self._onOpen);
+      },
+      destroy: function () {
+        if (this._onOpen) window.removeEventListener('ck-modal-open', this._onOpen);
+      },
+      close: function () { this.open = false; },
+    };
+  });
+});

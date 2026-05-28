@@ -1,0 +1,11 @@
+{{- /*
+  ck-icon — sprite reference. Phase 11 expands the sprite to ~100
+  symbols + ships internal/server/ui/design/icons/. The href is
+  served from /assets/sprite.svg.
+*/ -}}
+{{ define "ck-icon" }}
+{{- $size := .Size }}{{ if not $size }}{{ $size = "18" }}{{ end -}}
+<svg class="ck-icon{{ if .Class }} {{ .Class }}{{ end }}" width="{{ $size }}" height="{{ $size }}" aria-hidden="true" focusable="false">
+  <use href="/assets/sprite.svg#{{ .Name }}"/>
+</svg>
+{{ end }}

@@ -1,0 +1,7 @@
+{{- /*
+  ck-spinner — inline loading spinner. Sizes: sm|md|lg.
+*/ -}}
+{{ define "ck-spinner" }}
+{{- $size := .Size }}{{ if not $size }}{{ $size = "md" }}{{ end -}}
+<span class="ck-spinner ck-spinner-{{ $size }}{{ if .Class }} {{ .Class }}{{ end }}" role="status" aria-label="Loading"></span>
+{{ end }}

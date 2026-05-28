@@ -1,0 +1,12 @@
+{{- /*
+  ck-card — surface container. Variants: flat|raised|floating|glass.
+  Phase 6 wires the depth scale; flat is the v1.4 baseline.
+*/ -}}
+{{ define "ck-card" }}
+{{- $variant := .Variant }}{{ if not $variant }}{{ $variant = "flat" }}{{ end -}}
+{{- $padding := .Padding }}{{ if not $padding }}{{ $padding = "md" }}{{ end -}}
+<section class="ck-card ck-card-{{ $variant }} ck-card-pad-{{ $padding }}{{ if .Class }} {{ .Class }}{{ end }}">
+  {{- if .Title }}<header class="ck-card-title">{{ .Title }}</header>{{ end -}}
+  {{- if .Body }}<div class="ck-card-body">{{ .Body }}</div>{{ end -}}
+</section>
+{{ end }}

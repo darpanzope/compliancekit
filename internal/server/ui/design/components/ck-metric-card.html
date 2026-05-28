@@ -1,0 +1,29 @@
+{{- /*
+  ck-metric-card — hero metric primitive. Phase 4 fleshes the gradient
+  variants + the trend arrow + the decorative top-right circle. Phase
+  3 ships the structural stub.
+*/ -}}
+{{ define "ck-metric-card" }}
+{{- $variant := .Variant }}{{ if not $variant }}{{ $variant = "default" }}{{ end -}}
+{{- $isGradient := and (ne $variant "default") (ne $variant "info") -}}
+{{- $tag := "section" }}{{ if .Href }}{{ $tag = "a" }}{{ end -}}
+<{{ $tag }} class="ck-metric-card ck-metric-{{ $variant }}{{ if .Class }} {{ .Class }}{{ end }}"
+  {{ if .Href }}href="{{ .Href }}"{{ end }}
+  {{ if .Tooltip }}title="{{ .Tooltip }}"{{ end }}>
+  {{- if $isGradient -}}
+  <span class="ck-metric-decoration" aria-hidden="true"></span>
+  {{- end -}}
+  <div class="ck-metric-head">
+    <h3 class="ck-metric-title">{{ .Title }}</h3>
+    {{- if .Icon }}<span class="ck-metric-icon">{{ .Icon }}</span>{{ end -}}
+  </div>
+  <div class="ck-metric-value">{{ .Value }}</div>
+  {{- if .Subtitle }}<div class="ck-metric-subtitle">{{ .Subtitle }}</div>{{ end -}}
+  {{- with .Trend -}}
+  <div class="ck-metric-trend ck-trend-{{ .Direction }} ck-trend-{{ .Polarity }}">
+    <span class="ck-trend-arrow" aria-hidden="true">{{ if eq .Direction "up" }}&uarr;{{ else if eq .Direction "down" }}&darr;{{ else }}&minus;{{ end }}</span>
+    <span>{{ .Delta }}</span>
+  </div>
+  {{- end -}}
+</{{ $tag }}>
+{{ end }}

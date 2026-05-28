@@ -1,0 +1,16 @@
+{{- /*
+  ck-select — labeled <select>.
+*/ -}}
+{{ define "ck-select" }}
+{{- $id := .ID }}{{ if not $id }}{{ $id = .Name }}{{ end -}}
+<div class="ck-field">
+  {{- if .Label }}<label for="{{ $id }}" class="ck-field-label">{{ .Label }}{{ if .Required }} <span aria-hidden="true">*</span>{{ end }}</label>{{ end -}}
+  <select id="{{ $id }}" name="{{ .Name }}" class="ck-select"
+    {{ if .Required }}required{{ end }}
+    {{ .Attrs }}>
+    {{- range .Options -}}
+    <option value="{{ .Value }}"{{ if eq .Value $.Selected }} selected{{ end }}>{{ .Label }}</option>
+    {{- end -}}
+  </select>
+</div>
+{{ end }}

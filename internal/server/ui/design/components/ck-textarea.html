@@ -1,0 +1,14 @@
+{{- /*
+  ck-textarea — labeled <textarea>. Rows defaults to 3.
+*/ -}}
+{{ define "ck-textarea" }}
+{{- $id := .ID }}{{ if not $id }}{{ $id = .Name }}{{ end -}}
+{{- $rows := .Rows }}{{ if not $rows }}{{ $rows = 3 }}{{ end -}}
+<div class="ck-field">
+  {{- if .Label }}<label for="{{ $id }}" class="ck-field-label">{{ .Label }}</label>{{ end -}}
+  <textarea id="{{ $id }}" name="{{ .Name }}" rows="{{ $rows }}"
+    class="ck-textarea"
+    {{ if .Placeholder }}placeholder="{{ .Placeholder }}"{{ end }}
+    {{ .Attrs }}>{{ .Value }}</textarea>
+</div>
+{{ end }}

@@ -1,0 +1,20 @@
+{{- /*
+  ck-section — heading + description + body slot. Use to scaffold long
+  pages with grouped sub-sections.
+*/ -}}
+{{ define "ck-section" }}
+<section class="ck-section">
+  {{- if or .Title .Tooltip -}}
+  <header class="ck-section-head">
+    {{- if .Title -}}
+      <div class="ck-section-title-row">
+        <h2 class="ck-section-title">{{ .Title }}</h2>
+        {{- if .Tooltip }}{{ template "ck-info-tooltip" (mkInfoTooltip .Tooltip) }}{{ end -}}
+      </div>
+    {{- end -}}
+    {{- if .Description }}<p class="ck-section-description">{{ .Description }}</p>{{ end -}}
+  </header>
+  {{- end -}}
+  <div class="ck-section-body">{{ .Body }}</div>
+</section>
+{{ end }}

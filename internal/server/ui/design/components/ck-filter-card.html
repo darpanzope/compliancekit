@@ -1,0 +1,10 @@
+{{- /*
+  ck-filter-card — canonical left-column filter convention. Title row +
+  Body slot. Drops into a sidebar/aside; the page layout decides width.
+*/ -}}
+{{ define "ck-filter-card" }}
+<aside class="ck-filter-card{{ if .Class }} {{ .Class }}{{ end }}">
+  {{- if .Title }}<header class="ck-filter-card-title">{{ .Title }}</header>{{ end -}}
+  <div class="ck-filter-card-body">{{ .Body }}</div>
+</aside>
+{{ end }}

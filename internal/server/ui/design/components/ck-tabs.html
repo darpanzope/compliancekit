@@ -1,0 +1,14 @@
+{{- /*
+  ck-tabs — tablist. Each TabItem.Href turns the row into a link
+  (server-side navigation). Current matches Items.Key to mark the
+  active row.
+*/ -}}
+{{ define "ck-tabs" }}
+<nav class="ck-tabs{{ if .Class }} {{ .Class }}{{ end }}" role="tablist" {{ if .Name }}aria-label="{{ .Name }}"{{ end }}>
+  {{- range .Items -}}
+  <a href="{{ .Href }}" role="tab"
+    class="ck-tab{{ if eq .Key $.Current }} ck-tab-active{{ end }}"
+    aria-selected="{{ if eq .Key $.Current }}true{{ else }}false{{ end }}">{{ .Label }}</a>
+  {{- end -}}
+</nav>
+{{ end }}

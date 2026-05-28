@@ -1,0 +1,10 @@
+{{- /*
+  ck-skeleton — loading-placeholder shape. Variants: text|circle|rect.
+  Phase 8 wires the pulse animation + page-fetch lifecycle.
+*/ -}}
+{{ define "ck-skeleton" }}
+{{- $variant := .Variant }}{{ if not $variant }}{{ $variant = "text" }}{{ end -}}
+<span class="ck-skeleton ck-skeleton-{{ $variant }}{{ if .Class }} {{ .Class }}{{ end }}"
+  aria-hidden="true"
+  {{ if or .Width .Height }}style="{{ if .Width }}width:{{ .Width }};{{ end }}{{ if .Height }}height:{{ .Height }};{{ end }}"{{ end }}></span>
+{{ end }}

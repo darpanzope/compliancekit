@@ -1,0 +1,9 @@
+{{- /*
+  ck-pill — small label-on-bg pill. Variant maps onto the severity-*
+  / status-* / resource-* token families. The .ck-pill-{variant}
+  classes are defined in input.css @layer components.
+*/ -}}
+{{ define "ck-pill" }}
+{{- $variant := .Variant }}{{ if not $variant }}{{ $variant = "info" }}{{ end -}}
+<span class="ck-pill ck-pill-{{ $variant }}{{ if .Class }} {{ .Class }}{{ end }}">{{ .Label }}</span>
+{{ end }}

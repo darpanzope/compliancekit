@@ -1,0 +1,20 @@
+{{- /*
+  ck-input — labeled <input>. Hint and Error render below the input;
+  Error wins when both are set.
+*/ -}}
+{{ define "ck-input" }}
+{{- $type := .Type }}{{ if not $type }}{{ $type = "text" }}{{ end -}}
+{{- $id := .ID }}{{ if not $id }}{{ $id = .Name }}{{ end -}}
+<div class="ck-field">
+  {{- if .Label }}<label for="{{ $id }}" class="ck-field-label">{{ .Label }}{{ if .Required }} <span aria-hidden="true">*</span>{{ end }}</label>{{ end -}}
+  <input id="{{ $id }}" name="{{ .Name }}" type="{{ $type }}"
+    class="ck-input{{ if .Error }} ck-input-error{{ end }}"
+    value="{{ .Value }}"
+    {{ if .Placeholder }}placeholder="{{ .Placeholder }}"{{ end }}
+    {{ if .Required }}required{{ end }}
+    {{ if .Disabled }}disabled{{ end }}
+    {{ if .Error }}aria-invalid="true"{{ end }}
+    {{ .Attrs }}/>
+  {{- if .Error }}<p class="ck-field-error" role="alert">{{ .Error }}</p>{{ else if .Hint }}<p class="ck-field-hint">{{ .Hint }}</p>{{ end -}}
+</div>
+{{ end }}

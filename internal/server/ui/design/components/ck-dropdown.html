@@ -1,0 +1,30 @@
+{{- /*
+  ck-dropdown — button + popover menu. Powered by Alpine — the toggle
+  + click-outside dismiss live in the `ckDropdown` Alpine factory in
+  src/app.js (phase 3 wires the factory).
+*/ -}}
+{{ define "ck-dropdown" }}
+{{- $align := .Align }}{{ if not $align }}{{ $align = "left" }}{{ end -}}
+<div x-data="ckDropdown()" class="ck-dropdown{{ if .Class }} {{ .Class }}{{ end }}"
+  {{ if .ID }}id="{{ .ID }}"{{ end }}>
+  <button type="button" class="ck-dropdown-trigger" @click="toggle()" :aria-expanded="open">
+    {{ .Trigger }}
+  </button>
+  <div class="ck-dropdown-menu ck-dropdown-align-{{ $align }}"
+    x-show="open" x-transition x-cloak @click.outside="close()" role="menu">
+    {{- range .Items -}}
+      {{- if .Divider -}}
+        <hr class="ck-dropdown-divider"/>
+      {{- else -}}
+        <a class="ck-dropdown-item ck-dropdown-item-{{ if .Variant }}{{ .Variant }}{{ else }}default{{ end }}"
+          {{ if .Href }}href="{{ .Href }}"{{ end }}
+          role="menuitem"
+          {{ .Attrs }}>
+          {{- if .IconHTML }}<span class="ck-dropdown-icon">{{ .IconHTML }}</span>{{ end -}}
+          <span>{{ .Label }}</span>
+        </a>
+      {{- end -}}
+    {{- end -}}
+  </div>
+</div>
+{{ end }}

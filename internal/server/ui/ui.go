@@ -41,6 +41,7 @@ import (
 	"github.com/darpanzope/compliancekit/internal/server/push"
 	srvrbac "github.com/darpanzope/compliancekit/internal/server/rbac"
 	"github.com/darpanzope/compliancekit/internal/server/store"
+	"github.com/darpanzope/compliancekit/internal/server/ui/design"
 	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 )
 
@@ -131,6 +132,12 @@ var templateFuncs = template.FuncMap{
 	// used by the rule editor template to pass a kind list into a
 	// data-attribute the Alpine factory parses.
 	"joinCSV": func(s []string) string { return strings.Join(s, ",") },
+	// mkInfoTooltip packs a string into a design.InfoTooltipArgs so
+	// page-header + section partials can invoke ck-info-tooltip with
+	// just a tooltip string. v1.18 phase 3.
+	"mkInfoTooltip": func(text string) design.InfoTooltipArgs {
+		return design.InfoTooltipArgs{Text: text}
+	},
 }
 
 // chipGroup is the partial-args struct filter_chip_group renders
@@ -217,8 +224,13 @@ func byteUpper(b byte) byte {
 
 // tmpl is parsed once at init with the shared funcmap so navItems +
 // userInitials resolve inside base.html. Each render takes the
-// page-specific content template name + the View payload.
-var tmpl = template.Must(template.New("ui").Funcs(templateFuncs).ParseFS(tmplFS, "templates/*.html"))
+// page-specific content template name + the View payload. v1.18
+// phase 3 composes design/components/*.html into the same tree so
+// `{{ template "ck-button" .Args }}` works inside any daemon template.
+var tmpl = template.Must(
+	template.Must(template.New("ui").Funcs(templateFuncs).ParseFS(tmplFS, "templates/*.html")).
+		ParseFS(design.ComponentsFS, design.ComponentsGlob),
+)
 
 // UI is the handler bundle. Constructed with the same store + auth
 // dependencies the API layer uses.

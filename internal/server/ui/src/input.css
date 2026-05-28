@@ -154,4 +154,328 @@
     outline-offset: 2px;
     border-radius: 4px;
   }
+
+  /* =====================================================================
+     v1.18 phase 3 — Component scaffold composite classes.
+     Each ck-* class composes Tailwind utilities + tokens. The
+     corresponding partial under internal/server/ui/design/components/
+     references these by name. Add new component classes here, not in
+     the partial HTML.
+     ===================================================================== */
+
+  /* ck-button */
+  .ck-btn {
+    @apply inline-flex items-center justify-center gap-2 font-medium rounded-md border border-transparent transition-colors duration-150 ease-out-quad select-none whitespace-nowrap;
+  }
+  .ck-btn[disabled],
+  .ck-btn[aria-disabled="true"] { @apply opacity-50 pointer-events-none; }
+  .ck-btn[aria-busy="true"]     { @apply pointer-events-none; }
+  .ck-btn-sm { @apply h-8 px-3 text-xs; }
+  .ck-btn-md { @apply h-9 px-4 text-sm; }
+  .ck-btn-lg { @apply h-10 px-5 text-base; }
+  .ck-btn-primary     { @apply bg-primary text-primary-foreground hover:opacity-90; }
+  .ck-btn-secondary   { @apply bg-secondary text-secondary-foreground hover:bg-muted border-border; }
+  .ck-btn-destructive { @apply bg-destructive text-destructive-foreground hover:opacity-90; }
+  .ck-btn-ghost       { @apply bg-transparent text-foreground hover:bg-muted; }
+  .ck-btn-link        { @apply bg-transparent text-primary underline-offset-4 hover:underline; }
+  .ck-btn-icon        { @apply inline-flex items-center justify-center; }
+
+  /* ck-card depth variants (phase 6 will land glass + backdrop-blur). */
+  .ck-card-flat { box-shadow: var(--shadow-soft); }
+  .ck-card-raised { box-shadow: var(--shadow-elevated); }
+  .ck-card-floating { box-shadow: var(--shadow-floating); }
+  .ck-card-glass {
+    background-color: hsl(var(--card) / 0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+  .ck-card-pad-sm { @apply p-3; }
+  .ck-card-pad-md { @apply p-5; }
+  .ck-card-pad-lg { @apply p-8; }
+  .ck-card-title { @apply text-sm font-semibold text-foreground mb-3; }
+  .ck-card-body  { @apply text-sm text-foreground; }
+
+  /* ck-metric-card */
+  .ck-metric-card {
+    @apply relative overflow-hidden rounded-xl border border-border bg-card text-card-foreground p-5 flex flex-col gap-1;
+    box-shadow: var(--shadow-soft);
+  }
+  .ck-metric-card[href] { @apply transition-colors duration-150 ease-out-quad hover:opacity-95; }
+  .ck-metric-head { @apply flex items-start justify-between gap-3; }
+  .ck-metric-title { @apply text-2xs uppercase tracking-wide font-medium text-muted-foreground; }
+  .ck-metric-icon { @apply inline-flex items-center justify-center rounded-full bg-muted text-foreground w-8 h-8; }
+  .ck-metric-value { @apply text-3xl font-semibold tracking-tight text-foreground; }
+  .ck-metric-subtitle { @apply text-xs text-muted-foreground; }
+  .ck-metric-trend { @apply inline-flex items-center gap-1 text-xs font-medium mt-1; }
+  .ck-trend-good { @apply text-success; }
+  .ck-trend-bad  { @apply text-destructive; }
+  .ck-trend-neutral { @apply text-muted-foreground; }
+  .ck-metric-decoration {
+    @apply absolute -right-6 -top-6 w-24 h-24 rounded-full opacity-20;
+    background: hsl(var(--foreground) / 0.15);
+  }
+  /* Gradient variants — phase 4 lands the white-on-gradient typography. */
+  .ck-metric-primary,
+  .ck-metric-critical,
+  .ck-metric-high,
+  .ck-metric-medium,
+  .ck-metric-low,
+  .ck-metric-success { @apply text-white border-0; }
+  .ck-metric-primary  { background: var(--gradient-primary); }
+  .ck-metric-critical { background: var(--gradient-critical); }
+  .ck-metric-high     { background: var(--gradient-high); }
+  .ck-metric-medium   { background: var(--gradient-medium); }
+  .ck-metric-low      { background: var(--gradient-low); }
+  .ck-metric-success  { background: var(--gradient-success); }
+  .ck-metric-primary  .ck-metric-title,
+  .ck-metric-critical .ck-metric-title,
+  .ck-metric-high     .ck-metric-title,
+  .ck-metric-medium   .ck-metric-title,
+  .ck-metric-low      .ck-metric-title,
+  .ck-metric-success  .ck-metric-title {
+    color: hsl(0 0% 100% / 0.85);
+  }
+  .ck-metric-primary  .ck-metric-value,
+  .ck-metric-critical .ck-metric-value,
+  .ck-metric-high     .ck-metric-value,
+  .ck-metric-medium   .ck-metric-value,
+  .ck-metric-low      .ck-metric-value,
+  .ck-metric-success  .ck-metric-value {
+    color: hsl(0 0% 100%);
+  }
+  .ck-metric-primary  .ck-metric-subtitle,
+  .ck-metric-critical .ck-metric-subtitle,
+  .ck-metric-high     .ck-metric-subtitle,
+  .ck-metric-medium   .ck-metric-subtitle,
+  .ck-metric-low      .ck-metric-subtitle,
+  .ck-metric-success  .ck-metric-subtitle {
+    color: hsl(0 0% 100% / 0.85);
+  }
+  .ck-metric-primary  .ck-metric-icon,
+  .ck-metric-critical .ck-metric-icon,
+  .ck-metric-high     .ck-metric-icon,
+  .ck-metric-medium   .ck-metric-icon,
+  .ck-metric-low      .ck-metric-icon,
+  .ck-metric-success  .ck-metric-icon {
+    background-color: hsl(0 0% 100% / 0.2);
+    color: hsl(0 0% 100%);
+  }
+
+  /* ck-pill — the .ck-pill-{critical,high,medium,low,info} severity
+     variants exist above; phase 3 adds the status variants + a base
+     .ck-pill class for layout. */
+  .ck-pill { @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium; }
+  .ck-status-pill { @apply px-2 py-0.5 rounded-full text-xs font-medium; }
+  .ck-status-dot  { @apply w-1.5 h-1.5 rounded-full; background-color: currentColor; }
+  .ck-status-open              { background-color: hsl(var(--status-open) / 0.1);              color: hsl(var(--status-open)); }
+  .ck-status-acknowledged      { background-color: hsl(var(--status-acknowledged) / 0.1);      color: hsl(var(--status-acknowledged)); }
+  .ck-status-resolved          { background-color: hsl(var(--status-resolved) / 0.1);          color: hsl(var(--status-resolved)); }
+  .ck-status-false-positive    { background-color: hsl(var(--status-false-positive) / 0.1);    color: hsl(var(--status-false-positive)); }
+  .ck-status-running           { background-color: hsl(var(--status-running) / 0.1);           color: hsl(var(--status-running)); }
+  .ck-status-completed         { background-color: hsl(var(--status-completed) / 0.1);         color: hsl(var(--status-completed)); }
+  .ck-status-failed            { background-color: hsl(var(--status-failed) / 0.1);            color: hsl(var(--status-failed)); }
+  .ck-status-pending           { background-color: hsl(var(--status-pending) / 0.1);           color: hsl(var(--status-pending)); }
+
+  /* ck-info-tooltip — CSS-only hover; no JS needed. The body shows on
+     hover/focus of the trigger. */
+  .ck-info-tooltip {
+    @apply relative inline-flex items-center justify-center w-4 h-4 rounded-full text-muted-foreground cursor-help align-middle;
+  }
+  .ck-info-tooltip svg { @apply opacity-60; }
+  .ck-info-tooltip:hover svg,
+  .ck-info-tooltip:focus svg { @apply opacity-100; }
+  .ck-info-tooltip-body {
+    @apply absolute z-50 hidden whitespace-normal w-56 text-xs leading-snug rounded-md p-2 shadow-floating;
+    background-color: hsl(var(--popover));
+    color: hsl(var(--popover-foreground));
+    border: 1px solid hsl(var(--border));
+  }
+  .ck-info-tooltip:hover .ck-info-tooltip-body,
+  .ck-info-tooltip:focus .ck-info-tooltip-body { @apply block; }
+  .ck-info-tooltip[data-placement="top"]    .ck-info-tooltip-body { bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%); }
+  .ck-info-tooltip[data-placement="bottom"] .ck-info-tooltip-body { top: calc(100% + 6px);    left: 50%; transform: translateX(-50%); }
+  .ck-info-tooltip[data-placement="left"]   .ck-info-tooltip-body { right: calc(100% + 6px);  top: 50%;  transform: translateY(-50%); }
+  .ck-info-tooltip[data-placement="right"]  .ck-info-tooltip-body { left: calc(100% + 6px);   top: 50%;  transform: translateY(-50%); }
+
+  /* ck-page-header */
+  .ck-page-header { @apply flex flex-wrap items-start justify-between gap-4 mb-6; }
+  .ck-page-header-text { @apply flex flex-col gap-1; }
+  .ck-page-eyebrow { @apply text-xs uppercase tracking-wide text-muted-foreground font-medium; }
+  .ck-page-title-row { @apply flex items-center gap-2; }
+  .ck-page-title { @apply text-2xl font-semibold tracking-tight text-foreground; }
+  .ck-page-subtitle { @apply text-sm text-muted-foreground; }
+  .ck-page-header-actions { @apply flex items-center gap-2; }
+
+  /* ck-filter-card */
+  .ck-filter-card { @apply rounded-xl border border-border bg-card p-4 text-sm; box-shadow: var(--shadow-soft); }
+  .ck-filter-card-title { @apply text-xs uppercase tracking-wide font-medium text-muted-foreground mb-3; }
+  .ck-filter-card-body { @apply flex flex-col gap-3; }
+
+  /* ck-toast — phase 9 fleshes out the queue + the dismiss UX. */
+  .ck-toast {
+    @apply pointer-events-auto flex items-start gap-3 rounded-lg p-3 text-sm w-80 max-w-full;
+    background-color: hsl(var(--card));
+    color: hsl(var(--card-foreground));
+    border: 1px solid hsl(var(--border));
+    box-shadow: var(--shadow-floating);
+  }
+  .ck-toast-info     { border-left: 4px solid hsl(var(--severity-info)); }
+  .ck-toast-success  { border-left: 4px solid hsl(var(--success)); }
+  .ck-toast-warning  { border-left: 4px solid hsl(var(--warning)); }
+  .ck-toast-error    { border-left: 4px solid hsl(var(--destructive)); }
+  .ck-toast-icon  { @apply w-2 h-2 mt-2 rounded-full; }
+  .ck-toast-info    .ck-toast-icon { background-color: hsl(var(--severity-info)); }
+  .ck-toast-success .ck-toast-icon { background-color: hsl(var(--success)); }
+  .ck-toast-warning .ck-toast-icon { background-color: hsl(var(--warning)); }
+  .ck-toast-error   .ck-toast-icon { background-color: hsl(var(--destructive)); }
+  .ck-toast-body  { @apply flex-1 min-w-0; }
+  .ck-toast-title { @apply font-medium text-foreground; }
+  .ck-toast-message { @apply text-muted-foreground text-xs; }
+  .ck-toast-close { @apply text-muted-foreground hover:text-foreground text-lg leading-none w-5 h-5 -mt-0.5; }
+
+  /* ck-skeleton — phase 8 fleshes out animation timing. */
+  .ck-skeleton {
+    @apply inline-block rounded;
+    background: linear-gradient(90deg, hsl(var(--muted)) 0%, hsl(var(--muted-foreground) / 0.15) 50%, hsl(var(--muted)) 100%);
+    background-size: 200% 100%;
+    animation: ck-skeleton-pulse 1.4s var(--ease-in-out-quad) infinite;
+  }
+  .ck-skeleton-text   { @apply h-3 w-full; }
+  .ck-skeleton-circle { @apply rounded-full w-8 h-8; }
+  .ck-skeleton-rect   { @apply h-24 w-full rounded-md; }
+  @keyframes ck-skeleton-pulse {
+    0%   { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  /* ck-avatar — phase 11 wires the deterministic gradient picker. */
+  .ck-avatar {
+    @apply inline-flex items-center justify-center rounded-full font-semibold text-white;
+    background: var(--gradient-primary);
+  }
+  .ck-avatar-sm { @apply w-6 h-6 text-xs; }
+  .ck-avatar-md { @apply w-8 h-8 text-sm; }
+  .ck-avatar-lg { @apply w-10 h-10 text-base; }
+
+  /* ck-empty-state */
+  .ck-empty-state { @apply flex flex-col items-center justify-center text-center gap-3 py-12 px-6; }
+  .ck-empty-illustration { @apply w-32 h-32 text-muted-foreground; }
+  .ck-empty-title { @apply text-base font-semibold text-foreground; }
+  .ck-empty-description { @apply text-sm text-muted-foreground max-w-md; }
+  .ck-empty-action { @apply mt-2; }
+
+  /* ck-icon — sprite-based. The svg uses currentColor by default so
+     callers control color via text-* utilities. */
+  .ck-icon { @apply inline-block fill-current; vertical-align: -2px; }
+
+  /* ck-tabs */
+  .ck-tabs { @apply flex gap-1 border-b border-border; }
+  .ck-tab {
+    @apply inline-flex items-center px-3 py-2 -mb-px text-sm font-medium text-muted-foreground border-b-2 border-transparent transition-colors duration-150 ease-out-quad hover:text-foreground;
+  }
+  .ck-tab-active { @apply text-foreground border-b-primary; border-bottom-color: hsl(var(--primary)); }
+
+  /* ck-dropdown */
+  .ck-dropdown { @apply relative inline-block; }
+  .ck-dropdown-trigger { @apply ck-btn ck-btn-ghost ck-btn-md; }
+  .ck-dropdown-menu {
+    @apply absolute top-full mt-1 min-w-[180px] rounded-md p-1 z-40;
+    background-color: hsl(var(--popover));
+    color: hsl(var(--popover-foreground));
+    border: 1px solid hsl(var(--border));
+    box-shadow: var(--shadow-elevated);
+  }
+  .ck-dropdown-align-left  { @apply left-0; }
+  .ck-dropdown-align-right { @apply right-0; }
+  .ck-dropdown-item {
+    @apply flex items-center gap-2 px-3 py-1.5 rounded-sm text-sm cursor-pointer text-foreground hover:bg-muted;
+  }
+  .ck-dropdown-item-destructive { @apply text-destructive hover:bg-destructive/10; }
+  .ck-dropdown-icon { @apply inline-flex items-center justify-center w-4 h-4; }
+  .ck-dropdown-divider { @apply my-1 border-border; }
+
+  /* ck-field — wraps label/input/hint/error rows. */
+  .ck-field { @apply flex flex-col gap-1.5; }
+  .ck-field-label { @apply text-sm font-medium text-foreground; }
+  .ck-field-hint  { @apply text-xs text-muted-foreground; }
+  .ck-field-error { @apply text-xs text-destructive; }
+
+  /* ck-input, ck-select, ck-textarea — shared form-control sizing. */
+  .ck-input,
+  .ck-select,
+  .ck-textarea {
+    @apply w-full text-sm rounded-md border border-input bg-background text-foreground transition-colors duration-150 ease-out-quad;
+  }
+  .ck-input    { @apply h-9 px-3; }
+  .ck-select   { @apply h-9 px-3 pr-8 appearance-none bg-no-repeat; background-position: right 0.6rem center; background-size: 0.75rem; background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='%23999' stroke-width='1.5'><polyline points='3 5 6 8 9 5'/></svg>"); }
+  .ck-textarea { @apply px-3 py-2 leading-snug; }
+  .ck-input-error { @apply border-destructive; }
+  .ck-input:disabled,
+  .ck-select:disabled,
+  .ck-textarea:disabled { @apply opacity-50 cursor-not-allowed; }
+
+  /* ck-checkbox-row */
+  .ck-checkbox-row { @apply inline-flex items-center gap-2 cursor-pointer text-sm; }
+  .ck-checkbox     { @apply w-4 h-4 rounded border-input accent-primary; }
+  .ck-checkbox-label { @apply text-foreground; }
+
+  /* ck-modal */
+  .ck-modal-backdrop {
+    @apply fixed inset-0 z-50 flex items-center justify-center bg-black/50;
+  }
+  .ck-modal-panel {
+    @apply w-full max-w-lg max-h-[90vh] flex flex-col rounded-xl overflow-hidden;
+    background-color: hsl(var(--card));
+    color: hsl(var(--card-foreground));
+    border: 1px solid hsl(var(--border));
+    box-shadow: var(--shadow-floating);
+  }
+  .ck-modal-header { @apply flex items-center justify-between p-4 border-b border-border; }
+  .ck-modal-header h2 { @apply text-base font-semibold; }
+  .ck-modal-close { @apply text-muted-foreground hover:text-foreground text-xl leading-none w-6 h-6; }
+  .ck-modal-body { @apply p-4 overflow-y-auto flex-1; }
+  .ck-modal-actions { @apply flex items-center justify-end gap-2 p-4 border-t border-border; }
+
+  /* ck-banner */
+  .ck-banner {
+    @apply flex items-start gap-3 rounded-md p-3 text-sm border;
+  }
+  .ck-banner-info    { border-color: hsl(var(--severity-info) / 0.3); background-color: hsl(var(--severity-info) / 0.05); }
+  .ck-banner-success { border-color: hsl(var(--success) / 0.3);       background-color: hsl(var(--success) / 0.05); }
+  .ck-banner-warning { border-color: hsl(var(--warning) / 0.3);       background-color: hsl(var(--warning) / 0.05); }
+  .ck-banner-error   { border-color: hsl(var(--destructive) / 0.3);   background-color: hsl(var(--destructive) / 0.05); }
+  .ck-banner-body    { @apply flex-1; }
+  .ck-banner-title   { @apply font-medium text-foreground; }
+  .ck-banner-message { @apply text-muted-foreground text-xs; }
+  .ck-banner-action  { @apply ml-auto; }
+
+  /* ck-section */
+  .ck-section { @apply flex flex-col gap-3 mb-6; }
+  .ck-section-head { @apply flex flex-col gap-1; }
+  .ck-section-title-row { @apply flex items-center gap-2; }
+  .ck-section-title { @apply text-base font-semibold text-foreground; }
+  .ck-section-description { @apply text-sm text-muted-foreground; }
+  .ck-section-body { @apply text-sm text-foreground; }
+
+  /* ck-divider */
+  .ck-divider { @apply border-0 bg-border; }
+  .ck-divider-horizontal { @apply w-full h-px my-3; }
+  .ck-divider-vertical { @apply w-px h-full mx-3 inline-block; }
+
+  /* ck-spinner */
+  .ck-spinner {
+    @apply inline-block rounded-full border-current border-r-transparent animate-spin align-middle;
+    border-style: solid;
+  }
+  .ck-spinner-sm { @apply w-3.5 h-3.5 border-2; }
+  .ck-spinner-md { @apply w-5 h-5 border-2; }
+  .ck-spinner-lg { @apply w-7 h-7 border-[3px]; }
+
+  /* ck-progress */
+  .ck-progress { @apply w-full h-2 rounded-full overflow-hidden bg-muted; }
+  .ck-progress-bar { @apply h-full transition-all duration-250 ease-out-quad; }
+  .ck-progress-primary  { background-color: hsl(var(--primary)); }
+  .ck-progress-success  { background-color: hsl(var(--success)); }
+  .ck-progress-warning  { background-color: hsl(var(--warning)); }
+  .ck-progress-critical { background-color: hsl(var(--severity-critical)); }
 }

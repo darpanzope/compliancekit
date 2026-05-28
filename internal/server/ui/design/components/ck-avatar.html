@@ -1,0 +1,11 @@
+{{- /*
+  ck-avatar — hash-from-name initials-gradient avatar. Phase 11 wires
+  the deterministic-gradient picker; phase 3 ships the structural stub.
+*/ -}}
+{{ define "ck-avatar" }}
+{{- $size := .Size }}{{ if not $size }}{{ $size = "md" }}{{ end -}}
+<span class="ck-avatar ck-avatar-{{ $size }}{{ if .Class }} {{ .Class }}{{ end }}"
+  data-name="{{ .Name }}"
+  role="img"
+  aria-label="{{ if .Name }}{{ .Name }}{{ else }}avatar{{ end }}">{{ .Initials }}</span>
+{{ end }}

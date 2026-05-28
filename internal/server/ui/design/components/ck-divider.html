@@ -1,0 +1,7 @@
+{{- /*
+  ck-divider — horizontal or vertical separator. Default horizontal.
+*/ -}}
+{{ define "ck-divider" }}
+{{- $orient := .Orientation }}{{ if not $orient }}{{ $orient = "horizontal" }}{{ end -}}
+<hr class="ck-divider ck-divider-{{ $orient }}{{ if .Class }} {{ .Class }}{{ end }}" role="separator" aria-orientation="{{ $orient }}"/>
+{{ end }}

@@ -1,0 +1,12 @@
+{{- /*
+  ck-status-pill — pill specialized for the v1.18 status taxonomy
+  (open|acknowledged|resolved|running|completed|failed|pending|
+  false-positive). Phase 11 audit-applies across every status surface.
+*/ -}}
+{{ define "ck-status-pill" }}
+{{- $status := .Status }}{{ if not $status }}{{ $status = "pending" }}{{ end -}}
+<span class="ck-pill ck-status-pill ck-status-{{ $status }}{{ if .Class }} {{ .Class }}{{ end }}">
+  <span class="ck-status-dot" aria-hidden="true"></span>
+  <span>{{ if .Label }}{{ .Label }}{{ else }}{{ $status }}{{ end }}</span>
+</span>
+{{ end }}

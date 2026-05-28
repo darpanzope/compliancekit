@@ -1,0 +1,14 @@
+{{- /*
+  ck-banner — inline page-top banner (not a toast). Variants:
+  info|success|warning|error.
+*/ -}}
+{{ define "ck-banner" }}
+{{- $variant := .Variant }}{{ if not $variant }}{{ $variant = "info" }}{{ end -}}
+<div class="ck-banner ck-banner-{{ $variant }}" role="status">
+  <div class="ck-banner-body">
+    {{- if .Title }}<p class="ck-banner-title">{{ .Title }}</p>{{ end -}}
+    {{- if .Message }}<p class="ck-banner-message">{{ .Message }}</p>{{ end -}}
+  </div>
+  {{- if .Action }}<div class="ck-banner-action">{{ .Action }}</div>{{ end -}}
+</div>
+{{ end }}
