@@ -140,6 +140,23 @@ var templateFuncs = template.FuncMap{
 	},
 	// illustration returns the named empty-state SVG (v1.18 phase 10).
 	"illustration": design.Illustration,
+	// icon builds a design.IconArgs for the ck-icon sprite partial
+	// (v1.18 phase 11): `{{ template "ck-icon" (icon "search" "18") }}`.
+	"icon": func(name, size string) design.IconArgs {
+		return design.IconArgs{Name: name, Size: size}
+	},
+	// mkAvatar builds a design.AvatarArgs with the deterministic
+	// per-name gradient resolved (v1.18 phase 11). The topbar avatar +
+	// any assignee/owner surface renders the same color for the same
+	// person across pages.
+	"mkAvatar": func(initials, name, size string) design.AvatarArgs {
+		return design.AvatarArgs{
+			Initials: initials,
+			Name:     name,
+			Size:     size,
+			Gradient: design.AvatarGradient(name),
+		}
+	},
 	// mkEmpty builds a design.EmptyStateArgs from (illustration, title,
 	// description) so a page can render a canonical empty state with
 	// `{{ template "ck-empty-state" (mkEmpty "no-findings" "…" "…") }}`.

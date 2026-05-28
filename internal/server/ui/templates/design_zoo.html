@@ -187,8 +187,15 @@
 
   <!-- Icon -->
   <section id="comp-ck-icon" class="mb-10">
-    <h2 class="text-lg font-semibold mb-4">ck-icon</h2>
-    <p class="text-sm text-muted-foreground">Sprite-symbol references resolve at phase 11; the partial emits a <code class="font-mono text-xs">&lt;use href="/assets/sprite.svg#name"&gt;</code>.</p>
+    <h2 class="text-lg font-semibold mb-4">ck-icon <span class="text-sm font-normal text-muted-foreground">(sprite — {{ len .SpriteIcons }} shown)</span></h2>
+    <div class="grid grid-cols-4 sm:grid-cols-8 gap-4 text-foreground">
+      {{ range .SpriteIcons }}
+      <div class="flex flex-col items-center gap-1.5">
+        {{ template "ck-icon" (icon . "24") }}
+        <code class="text-[10px] text-muted-foreground truncate max-w-full">{{ . }}</code>
+      </div>
+      {{ end }}
+    </div>
   </section>
 
   <!-- Tabs -->

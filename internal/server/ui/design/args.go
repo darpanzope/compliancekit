@@ -129,12 +129,14 @@ type SkeletonArgs struct {
 	Class   string
 }
 
-// AvatarArgs renders the hash-from-name gradient avatar. Phase 11
-// wires the deterministic-gradient picker.
+// AvatarArgs renders the hash-from-name gradient avatar. Set Gradient
+// (via AvatarGradient) for the deterministic per-name gradient; leave
+// it empty to fall back to the default brand gradient. v1.18 phase 11.
 type AvatarArgs struct {
 	Initials string
-	Name     string // drives the gradient choice
-	Size     string // sm | md | lg (default md)
+	Name     string       // drives the gradient choice
+	Size     string       // sm | md | lg (default md)
+	Gradient template.CSS // deterministic gradient (from AvatarGradient)
 	Class    string
 }
 

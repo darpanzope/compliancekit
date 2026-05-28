@@ -168,6 +168,34 @@ func TestIllustrationsEmbedded(t *testing.T) {
 	}
 }
 
+// TestAvatarGradientDeterministic asserts AvatarGradient is stable per
+// name (same name → same gradient) + different names usually differ.
+// v1.18 phase 11.
+func TestAvatarGradientDeterministic(t *testing.T) {
+	t.Parallel()
+	a1 := design.AvatarGradient("Darpan Zope")
+	a2 := design.AvatarGradient("Darpan Zope")
+	if a1 != a2 {
+		t.Errorf("AvatarGradient not deterministic: %q != %q", a1, a2)
+	}
+	if !strings.Contains(string(a1), "linear-gradient") {
+		t.Errorf("AvatarGradient should be a linear-gradient, got %q", a1)
+	}
+	if design.AvatarGradient("") != "var(--gradient-primary)" {
+		t.Error("empty name should fall back to the brand gradient")
+	}
+	// The palette has 12 hues, so the picker should produce more than
+	// one distinct gradient across a spread of names (sanity check that
+	// it isn't constant).
+	seen := map[template.CSS]bool{}
+	for _, n := range []string{"alice", "bob", "carol", "dave", "erin", "frank", "grace", "heidi"} {
+		seen[design.AvatarGradient(n)] = true
+	}
+	if len(seen) < 2 {
+		t.Errorf("AvatarGradient produced only %d distinct gradients across 8 names — picker looks constant", len(seen))
+	}
+}
+
 // TestComponentsFSRoots checks the embedded FS exposes the components
 // directory at the expected path. Catches a go:embed glob change.
 func TestComponentsFSRoots(t *testing.T) {

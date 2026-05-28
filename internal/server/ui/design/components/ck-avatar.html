@@ -6,6 +6,7 @@
 {{- $size := .Size }}{{ if not $size }}{{ $size = "md" }}{{ end -}}
 <span class="ck-avatar ck-avatar-{{ $size }}{{ if .Class }} {{ .Class }}{{ end }}"
   data-name="{{ .Name }}"
+  {{ if .Gradient }}style="background:{{ .Gradient }}"{{ end }}
   role="img"
   aria-label="{{ if .Name }}{{ .Name }}{{ else }}avatar{{ end }}">{{ .Initials }}</span>
 {{ end }}

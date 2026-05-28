@@ -287,15 +287,18 @@ function scansLive() {
           if (pill) {
             // Replace just the status pill in place. Keeps the row
             // identity stable so animations + click handlers carry.
+            // v1.18 phase 11 — mirrors the ck-status-pill markup in
+            // scans.html so the SSE in-place swap keeps the design-system
+            // status-pill styling.
             var html = '';
             if (t === 'scan.completed') {
-              html = '<span data-status-pill class="inline-flex items-center gap-1.5 text-xs text-success"><span class="h-2 w-2 rounded-full bg-success"></span>completed</span>';
+              html = '<span data-status-pill class="ck-pill ck-status-pill ck-status-completed"><span class="ck-status-dot"></span>completed</span>';
             } else if (t === 'scan.started') {
-              html = '<span data-status-pill class="inline-flex items-center gap-1.5 text-xs"><span class="h-2 w-2 rounded-full bg-warning animate-pulse"></span>running</span>';
+              html = '<span data-status-pill class="ck-pill ck-status-pill ck-status-running"><span class="ck-status-dot animate-pulse"></span>running</span>';
             } else if (t === 'scan.failed') {
-              html = '<span data-status-pill class="inline-flex items-center gap-1.5 text-xs text-destructive"><span class="h-2 w-2 rounded-full bg-destructive"></span>failed</span>';
+              html = '<span data-status-pill class="ck-pill ck-status-pill ck-status-failed"><span class="ck-status-dot"></span>failed</span>';
             } else { // queued
-              html = '<span data-status-pill class="inline-flex items-center gap-1.5 text-xs text-muted-foreground"><span class="h-2 w-2 rounded-full bg-muted-foreground"></span>queued</span>';
+              html = '<span data-status-pill class="ck-pill ck-status-pill ck-status-pending"><span class="ck-status-dot"></span>queued</span>';
             }
             pill.outerHTML = html;
           }

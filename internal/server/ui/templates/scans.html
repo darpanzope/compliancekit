@@ -79,11 +79,14 @@
           <tr onclick="window.location='/scans/{{.ID}}'" data-scan-id="{{.ID}}" class="ck-vrow hover:bg-muted/30 cursor-pointer transition-colors">
             <td data-label="Created" class="px-4 py-3 font-mono text-xs">{{ .CreatedAt }}</td>
             <td data-label="Status" class="px-4 py-3">
-              {{ if eq .Status "completed" }}<span data-status-pill class="inline-flex items-center gap-1.5 text-xs text-success"><span class="h-2 w-2 rounded-full bg-success"></span>completed</span>
-              {{ else if eq .Status "running" }}<span data-status-pill class="inline-flex items-center gap-1.5 text-xs"><span class="h-2 w-2 rounded-full bg-warning animate-pulse"></span>running</span>
-              {{ else if eq .Status "queued" }}<span data-status-pill class="inline-flex items-center gap-1.5 text-xs text-muted-foreground"><span class="h-2 w-2 rounded-full bg-muted-foreground"></span>queued</span>
-              {{ else if eq .Status "failed" }}<span data-status-pill class="inline-flex items-center gap-1.5 text-xs text-destructive"><span class="h-2 w-2 rounded-full bg-destructive"></span>failed</span>
-              {{ else }}<span data-status-pill class="text-xs text-muted-foreground">{{ .Status }}</span>{{ end }}
+              {{/* v1.18 phase 11 — status-pill system. The outer span keeps
+                   data-status-pill so the SSE live updater (app.js) can swap
+                   it in place; the JS replacement markup mirrors these. */}}
+              {{ if eq .Status "completed" }}<span data-status-pill class="ck-pill ck-status-pill ck-status-completed"><span class="ck-status-dot"></span>completed</span>
+              {{ else if eq .Status "running" }}<span data-status-pill class="ck-pill ck-status-pill ck-status-running"><span class="ck-status-dot animate-pulse"></span>running</span>
+              {{ else if eq .Status "queued" }}<span data-status-pill class="ck-pill ck-status-pill ck-status-pending"><span class="ck-status-dot"></span>queued</span>
+              {{ else if eq .Status "failed" }}<span data-status-pill class="ck-pill ck-status-pill ck-status-failed"><span class="ck-status-dot"></span>failed</span>
+              {{ else }}<span data-status-pill class="ck-pill ck-status-pill ck-status-pending">{{ .Status }}</span>{{ end }}
             </td>
             <td data-label="Source" class="px-4 py-3 text-xs">
               {{ if eq .Source "cli" }}<span class="inline-flex items-center gap-1 rounded bg-primary/10 text-primary px-1.5 py-0.5 text-[10px] uppercase tracking-wider">CLI push</span>

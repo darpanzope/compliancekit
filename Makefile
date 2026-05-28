@@ -104,6 +104,7 @@ ui: ## compile internal/server/assets/ from src/input.css + vendor/ (requires ui
 	@cp internal/server/ui/vendor/preline-$(PRELINE_VERSION).js   internal/server/assets/preline.js
 	@cp internal/server/ui/src/app.js                              internal/server/assets/app.js
 	@cp internal/server/ui/src/a11y.js                             internal/server/assets/a11y.js
+	@cp internal/server/ui/src/sprite.svg                          internal/server/assets/sprite.svg
 	@echo "ui assets compiled → internal/server/assets/"
 
 ui-check: ## fail if internal/server/assets/ is stale (CI gate)

@@ -17,6 +17,7 @@ type designZooView struct {
 	View
 	Components    []string
 	Illustrations []string
+	SpriteIcons   []string
 	PageTitle     design.PageHeaderArgs
 	Buttons       []design.ButtonArgs
 	ModalButton   design.ButtonArgs
@@ -88,6 +89,14 @@ func buildDesignZoo() designZooView {
 	return designZooView{
 		Components:    design.ComponentNames,
 		Illustrations: design.IllustrationNames,
+		SpriteIcons: []string{
+			"search", "filter", "settings", "bell", "shield-check", "key",
+			"server", "database", "cloud", "git-branch", "bar-chart", "activity",
+			"severity-critical", "severity-high", "severity-medium", "severity-low",
+			"status-running", "status-completed", "status-failed",
+			"provider-aws", "provider-gcp", "provider-kubernetes", "provider-linux",
+			"book", "award", "scale", "rocket", "sparkles", "zap", "sun", "moon",
+		},
 		PageTitle: design.PageHeaderArgs{
 			Title:    "Design system",
 			Subtitle: "Live component zoo — every variant, palette, easing, and shadow the daemon UI is built from. Canned data; no backend.",
@@ -154,9 +163,11 @@ func buildDesignZoo() designZooView {
 			{Variant: "text", Width: "70%"},
 		},
 		Avatars: []design.AvatarArgs{
-			{Initials: "DZ", Name: "Darpan Zope", Size: "sm"},
-			{Initials: "AB", Name: "Ada Byron", Size: "md"},
-			{Initials: "GH", Name: "Grace Hopper", Size: "lg"},
+			{Initials: "DZ", Name: "Darpan Zope", Size: "sm", Gradient: design.AvatarGradient("Darpan Zope")},
+			{Initials: "AB", Name: "Ada Byron", Size: "md", Gradient: design.AvatarGradient("Ada Byron")},
+			{Initials: "GH", Name: "Grace Hopper", Size: "lg", Gradient: design.AvatarGradient("Grace Hopper")},
+			{Initials: "AT", Name: "Alan Turing", Size: "lg", Gradient: design.AvatarGradient("Alan Turing")},
+			{Initials: "KJ", Name: "Katherine Johnson", Size: "lg", Gradient: design.AvatarGradient("Katherine Johnson")},
 		},
 		Spinners: []design.SpinnerArgs{{Size: "sm"}, {Size: "md"}, {Size: "lg"}},
 		Progress: []design.ProgressArgs{

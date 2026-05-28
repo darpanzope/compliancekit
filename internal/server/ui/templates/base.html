@@ -306,7 +306,7 @@ table.list tbody tr:hover { background: var(--legacy-panel-2); }
               <span class="text-sm font-medium">{{ .User.Email }}</span>
               <span class="text-[10px] uppercase tracking-wide text-muted-foreground">user</span>
             </span>
-            <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-gradient-primary text-white text-xs font-semibold uppercase">{{ userInitials .User.Email }}</span>
+            {{ template "ck-avatar" (mkAvatar (userInitials .User.Email) .User.Email "md") }}
           </button>
           <div x-show="open" x-cloak
                class="absolute right-0 top-full mt-2 w-48 rounded-md border border-border bg-popover text-popover-foreground shadow-elevated z-50">
