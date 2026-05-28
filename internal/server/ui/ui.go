@@ -447,6 +447,11 @@ func (u *UI) Mount(r chi.Router) {
 		u.mountSearchRoutes(r)
 		u.mountNotificationsRoutes(r)
 		u.mountQuickScanRoutes(r)
+		// v1.18 phase 7 — /design live component zoo. Auth-gated like
+		// every other UI route but uses canned data (no DB). Unlinked
+		// from defaultNav by design — it's a contributor + visual-
+		// regression artifact, not an operator page.
+		r.Get("/design", u.designZoo)
 		// v1.6 phase 6 — admin-only log tail. Both routes nested
 		// inside the existing RequireAuth + RequireCSRF group;
 		// adminOnly adds an IsAdmin check on top.

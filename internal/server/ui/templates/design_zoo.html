@@ -1,0 +1,247 @@
+{{define "content"}}
+{{- /*
+  v1.18 phase 7 — /design live component zoo. Renders every component
+  variant + palette swatch + easing curve + shadow scale with canned
+  data (no DB). Doubles as the visual-regression target + the internal-
+  contributor onboarding artifact. Unlinked from the primary navbar.
+
+  Every entry in design.ComponentNames must have a `comp-<name>` section
+  here — the phase-7 CI test (design_route_test.go) asserts it.
+*/ -}}
+<div class="max-w-6xl mx-auto pb-24">
+
+  {{ template "ck-page-header" .PageTitle }}
+
+  <!-- Component index -->
+  <nav class="ck-card ck-card-flat ck-card-pad-md mb-8">
+    <div class="text-xs uppercase tracking-wide font-medium text-muted-foreground mb-3">{{ len .Components }} components</div>
+    <div class="flex flex-wrap gap-2">
+      {{ range .Components }}
+      <a href="#comp-{{ . }}" class="text-xs font-mono px-2 py-1 rounded bg-muted hover:bg-secondary transition-colors duration-150">{{ . }}</a>
+      {{ end }}
+    </div>
+  </nav>
+
+  <!-- Palettes -->
+  <section id="comp-palettes" class="mb-10">
+    <h2 class="text-lg font-semibold mb-4">Palettes</h2>
+    {{ range .Palettes }}
+    <div class="mb-5">
+      <div class="text-xs uppercase tracking-wide text-muted-foreground mb-2">{{ .Group }}</div>
+      <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+        {{ range .Swatches }}
+        <div class="flex flex-col gap-1">
+          <div class="h-12 rounded-md border border-border" style="background:{{ .Var }}"></div>
+          <code class="text-[10px] text-muted-foreground truncate">{{ .Name }}</code>
+        </div>
+        {{ end }}
+      </div>
+    </div>
+    {{ end }}
+  </section>
+
+  <!-- MetricCards -->
+  <section id="comp-ck-metric-card" class="mb-10">
+    <h2 class="text-lg font-semibold mb-4">ck-metric-card</h2>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+      {{ range .Metrics }}{{ template "ck-metric-card" . }}{{ end }}
+    </div>
+  </section>
+
+  <!-- Buttons -->
+  <section id="comp-ck-button" class="mb-10">
+    <h2 class="text-lg font-semibold mb-4">ck-button</h2>
+    <div class="flex flex-wrap items-center gap-3">
+      {{ range .Buttons }}{{ template "ck-button" . }}{{ end }}
+    </div>
+  </section>
+
+  <!-- Card depths -->
+  <section id="comp-ck-card" class="mb-10">
+    <h2 class="text-lg font-semibold mb-4">ck-card depth scale</h2>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+      {{ range .CardDepths }}
+      <div class="ck-card ck-card-{{ .Variant }} ck-card-pad-md">
+        <div class="ck-card-title">{{ .Label }}</div>
+        <div class="ck-card-body text-xs text-muted-foreground">{{ .Note }}</div>
+      </div>
+      {{ end }}
+    </div>
+  </section>
+
+  <!-- Severity pills -->
+  <section id="comp-ck-pill" class="mb-10">
+    <h2 class="text-lg font-semibold mb-4">ck-pill</h2>
+    <div class="flex flex-wrap items-center gap-2">
+      {{ range .Pills }}{{ template "ck-pill" . }}{{ end }}
+    </div>
+  </section>
+
+  <!-- Status pills -->
+  <section id="comp-ck-status-pill" class="mb-10">
+    <h2 class="text-lg font-semibold mb-4">ck-status-pill</h2>
+    <div class="flex flex-wrap items-center gap-2">
+      {{ range .StatusPills }}{{ template "ck-status-pill" . }}{{ end }}
+    </div>
+  </section>
+
+  <!-- Info tooltip -->
+  <section id="comp-ck-info-tooltip" class="mb-10">
+    <h2 class="text-lg font-semibold mb-4">ck-info-tooltip</h2>
+    <div class="flex items-center gap-2 text-sm">
+      <span>Hover the icon</span>
+      {{ template "ck-info-tooltip" .Tooltip }}
+    </div>
+  </section>
+
+  <!-- Page header -->
+  <section id="comp-ck-page-header" class="mb-10">
+    <h2 class="text-lg font-semibold mb-4">ck-page-header</h2>
+    <div class="ck-card ck-card-flat ck-card-pad-md">
+      {{ template "ck-page-header" .Header }}
+    </div>
+  </section>
+
+  <!-- Filter card -->
+  <section id="comp-ck-filter-card" class="mb-10">
+    <h2 class="text-lg font-semibold mb-4">ck-filter-card</h2>
+    <div class="max-w-xs">
+      {{ template "ck-filter-card" .FilterCard }}
+    </div>
+  </section>
+
+  <!-- Banners -->
+  <section id="comp-ck-banner" class="mb-10">
+    <h2 class="text-lg font-semibold mb-4">ck-banner</h2>
+    <div class="flex flex-col gap-3 max-w-2xl">
+      {{ range .Banners }}{{ template "ck-banner" . }}{{ end }}
+    </div>
+  </section>
+
+  <!-- Toasts -->
+  <section id="comp-ck-toast" class="mb-10">
+    <h2 class="text-lg font-semibold mb-4">ck-toast</h2>
+    <div class="flex flex-col gap-3">
+      {{ range .Toasts }}{{ template "ck-toast" . }}{{ end }}
+    </div>
+  </section>
+
+  <!-- Skeletons -->
+  <section id="comp-ck-skeleton" class="mb-10">
+    <h2 class="text-lg font-semibold mb-4">ck-skeleton</h2>
+    <div class="flex items-center gap-4 max-w-md">
+      {{ template "ck-skeleton" (index .Skeletons 0) }}
+      <div class="flex-1 flex flex-col gap-2">
+        {{ template "ck-skeleton" (index .Skeletons 1) }}
+        {{ template "ck-skeleton" (index .Skeletons 2) }}
+      </div>
+    </div>
+  </section>
+
+  <!-- Avatars -->
+  <section id="comp-ck-avatar" class="mb-10">
+    <h2 class="text-lg font-semibold mb-4">ck-avatar</h2>
+    <div class="flex items-center gap-3">
+      {{ range .Avatars }}{{ template "ck-avatar" . }}{{ end }}
+    </div>
+  </section>
+
+  <!-- Empty state -->
+  <section id="comp-ck-empty-state" class="mb-10">
+    <h2 class="text-lg font-semibold mb-4">ck-empty-state</h2>
+    <div class="ck-card ck-card-flat">
+      {{ template "ck-empty-state" .EmptyState }}
+    </div>
+  </section>
+
+  <!-- Icon -->
+  <section id="comp-ck-icon" class="mb-10">
+    <h2 class="text-lg font-semibold mb-4">ck-icon</h2>
+    <p class="text-sm text-muted-foreground">Sprite-symbol references resolve at phase 11; the partial emits a <code class="font-mono text-xs">&lt;use href="/assets/sprite.svg#name"&gt;</code>.</p>
+  </section>
+
+  <!-- Tabs -->
+  <section id="comp-ck-tabs" class="mb-10">
+    <h2 class="text-lg font-semibold mb-4">ck-tabs</h2>
+    {{ template "ck-tabs" .Tabs }}
+  </section>
+
+  <!-- Dropdown -->
+  <section id="comp-ck-dropdown" class="mb-10">
+    <h2 class="text-lg font-semibold mb-4">ck-dropdown</h2>
+    {{ template "ck-dropdown" .Dropdown }}
+  </section>
+
+  <!-- Form controls -->
+  <section id="comp-ck-input" class="mb-10">
+    <h2 class="text-lg font-semibold mb-4">ck-input / ck-select / ck-textarea / ck-checkbox</h2>
+    <div class="max-w-sm flex flex-col gap-4">
+      {{ template "ck-input" .Input }}
+      <span id="comp-ck-select">{{ template "ck-select" .Select }}</span>
+      <span id="comp-ck-textarea">{{ template "ck-textarea" .Textarea }}</span>
+      <span id="comp-ck-checkbox">{{ template "ck-checkbox" .Checkbox }}</span>
+    </div>
+  </section>
+
+  <!-- Section + divider -->
+  <section id="comp-ck-section" class="mb-10">
+    <h2 class="text-lg font-semibold mb-4">ck-section / ck-divider</h2>
+    <div class="ck-card ck-card-flat ck-card-pad-md">
+      {{ template "ck-section" .Section }}
+      <span id="comp-ck-divider">{{ template "ck-divider" .Divider }}</span>
+    </div>
+  </section>
+
+  <!-- Spinner + progress -->
+  <section id="comp-ck-spinner" class="mb-10">
+    <h2 class="text-lg font-semibold mb-4">ck-spinner</h2>
+    <div class="flex items-center gap-4">
+      {{ range .Spinners }}{{ template "ck-spinner" . }}{{ end }}
+    </div>
+  </section>
+  <section id="comp-ck-progress" class="mb-10">
+    <h2 class="text-lg font-semibold mb-4">ck-progress</h2>
+    <div class="max-w-md flex flex-col gap-3">
+      {{ range .Progress }}{{ template "ck-progress" . }}{{ end }}
+    </div>
+  </section>
+
+  <!-- Modal (trigger) -->
+  <section id="comp-ck-modal" class="mb-10">
+    <h2 class="text-lg font-semibold mb-4">ck-modal</h2>
+    {{ template "ck-button" .ModalButton }}
+    {{ template "ck-modal" .Modal }}
+  </section>
+
+  <!-- Easings -->
+  <section id="comp-easings" class="mb-10">
+    <h2 class="text-lg font-semibold mb-4">Motion easings</h2>
+    <p class="text-sm text-muted-foreground mb-4">Hover a row to play the transition.</p>
+    <div class="flex flex-col gap-2 max-w-lg">
+      {{ range .Easings }}
+      <div class="group flex items-center gap-3 text-xs">
+        <code class="w-28 text-muted-foreground">{{ .Name }}</code>
+        <div class="flex-1 h-6 rounded bg-muted relative overflow-hidden">
+          <span class="absolute left-0 top-1 h-4 w-4 rounded-full bg-primary group-hover:left-[calc(100%-1rem)]"
+                style="{{ .Style }}"></span>
+        </div>
+      </div>
+      {{ end }}
+    </div>
+  </section>
+
+  <!-- Shadows -->
+  <section id="comp-shadows" class="mb-10">
+    <h2 class="text-lg font-semibold mb-4">Shadow scale</h2>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-6 p-4">
+      {{ range .Shadows }}
+      <div class="flex flex-col items-center gap-2">
+        <div class="h-16 w-full rounded-lg bg-card {{ .Class }}"></div>
+        <code class="text-[10px] text-muted-foreground">{{ .Class }}</code>
+      </div>
+      {{ end }}
+    </div>
+  </section>
+
+</div>
+{{end}}
