@@ -129,12 +129,23 @@
   <!-- Skeletons -->
   <section id="comp-ck-skeleton" class="mb-10">
     <h2 class="text-lg font-semibold mb-4">ck-skeleton</h2>
-    <div class="flex items-center gap-4 max-w-md">
+    <div class="flex items-center gap-4 max-w-md mb-4">
       {{ template "ck-skeleton" (index .Skeletons 0) }}
       <div class="flex-1 flex flex-col gap-2">
         {{ template "ck-skeleton" (index .Skeletons 1) }}
         {{ template "ck-skeleton" (index .Skeletons 2) }}
       </div>
+    </div>
+    <!-- Skeleton-during-fetch pattern: wrap a swap target in
+         `ck-loading-target` + give it a `ck-loading-skeleton` (shown
+         while htmx-request) and a `ck-loading-content` (shown otherwise).
+         Point an htmx request at it with hx-indicator. Phase 8. -->
+    <div class="ck-loading-target max-w-md">
+      <div class="ck-loading-skeleton flex flex-col gap-2">
+        {{ template "ck-skeleton" (index .Skeletons 1) }}
+        {{ template "ck-skeleton" (index .Skeletons 2) }}
+      </div>
+      <div class="ck-loading-content text-sm text-muted-foreground">Loaded content shows here once the fetch settles.</div>
     </div>
   </section>
 

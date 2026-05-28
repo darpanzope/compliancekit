@@ -488,4 +488,40 @@
   .ck-progress-success  { background-color: hsl(var(--success)); }
   .ck-progress-warning  { background-color: hsl(var(--warning)); }
   .ck-progress-critical { background-color: hsl(var(--severity-critical)); }
+
+  /* =====================================================================
+     v1.18 phase 8 — page-top nprogress + skeleton-during-fetch.
+     ===================================================================== */
+
+  /* nprogress — a thin bar pinned to the top edge. The ckNprogress
+     controller (app.js) sets data-state + a CSS var --ck-np (0..1)
+     that drives scaleX off the htmx request lifecycle. The trailing
+     glow echoes the Linear / YouTube top-loader look. */
+  .ck-nprogress {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    z-index: 60;
+    transform: scaleX(var(--ck-np, 0));
+    transform-origin: 0 50%;
+    background: hsl(var(--primary));
+    box-shadow: 0 0 8px hsl(var(--primary) / 0.6);
+    opacity: 0;
+    transition: transform var(--motion-250) var(--ease-out-quad),
+                opacity var(--motion-150) var(--ease-out-quad);
+  }
+  .ck-nprogress[data-state="loading"] { opacity: 1; }
+  .ck-nprogress[data-state="done"]    { opacity: 0; }
+
+  /* Skeleton-during-fetch: an element with `ck-loading-target` shows
+     its `.ck-skeleton` children + hides its real content while an
+     htmx request that names it via hx-indicator is in flight. htmx
+     toggles the `htmx-request` class on the indicated element. The
+     <200ms-op convention (spinner not skeleton) is a usage guideline,
+     not enforced in CSS. */
+  .ck-loading-target .ck-loading-skeleton { display: none; }
+  .ck-loading-target.htmx-request .ck-loading-skeleton { display: block; }
+  .ck-loading-target.htmx-request .ck-loading-content { display: none; }
 }

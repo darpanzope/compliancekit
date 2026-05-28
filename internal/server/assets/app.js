@@ -1068,6 +1068,67 @@ function quickScanProgress(scanID, streamURL) {
   });
 })();
 
+// v1.18 phase 8 — page-top nprogress bar driven by the htmx request
+// lifecycle. No dependency on the nprogress npm package — a ~30-line
+// controller that nudges a CSS var (--ck-np, 0..1) on #ck-nprogress.
+//
+// htmx fires htmx:beforeRequest when a swap starts + htmx:afterRequest
+// when it settles. We trickle toward 0.9 while in flight (so long
+// requests still feel alive) and snap to 1.0 + fade on completion.
+// Concurrent requests are reference-counted so a burst of swaps shows
+// one continuous bar, not a flicker per request.
+(function () {
+  var bar = null;
+  var pending = 0;
+  var progress = 0;
+  var trickleTimer = null;
+
+  function el() {
+    if (!bar) bar = document.getElementById('ck-nprogress');
+    return bar;
+  }
+  function set(p) {
+    var node = el();
+    if (!node) return;
+    progress = p;
+    node.style.setProperty('--ck-np', String(p));
+  }
+  function start() {
+    var node = el();
+    if (!node) return;
+    node.setAttribute('data-state', 'loading');
+    if (progress < 0.08) set(0.08);
+    if (!trickleTimer) {
+      trickleTimer = setInterval(function () {
+        // Ease toward 0.9 but never reach it until the request finishes.
+        if (progress < 0.9) set(progress + (0.9 - progress) * 0.12);
+      }, 250);
+    }
+  }
+  function done() {
+    var node = el();
+    if (!node) return;
+    if (trickleTimer) { clearInterval(trickleTimer); trickleTimer = null; }
+    set(1);
+    node.setAttribute('data-state', 'done');
+    // Reset the scale after the fade so the next request starts at 0.
+    setTimeout(function () { set(0); }, 300);
+  }
+
+  document.addEventListener('htmx:beforeRequest', function () {
+    pending++;
+    start();
+  });
+  function settle() {
+    pending = Math.max(0, pending - 1);
+    if (pending === 0) done();
+  }
+  document.addEventListener('htmx:afterRequest', settle);
+  // htmx:sendError / timeout still need to clear the bar.
+  document.addEventListener('htmx:sendError', settle);
+  document.addEventListener('htmx:timeout', settle);
+})();
+
 // v1.18 phase 3 — Alpine factories for the design-system components.
 // ck-dropdown + ck-modal partials reference these via x-data; Alpine
 // auto-registers them on alpine:init. Adding a new interactive

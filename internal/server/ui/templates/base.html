@@ -110,6 +110,14 @@ table.list tbody tr:hover { background: var(--legacy-panel-2); }
 <div id="ck-announcer-assertive" class="sr-only" aria-live="assertive" aria-atomic="true"></div>
 
 <!--
+  v1.18 phase 8 — page-top nprogress bar. The ckNprogress controller
+  in app.js drives the scaleX transform off the htmx request lifecycle
+  (htmx:beforeRequest → start, htmx:afterRequest → finish). Honors
+  prefers-reduced-motion via the tokens.css media block.
+-->
+<div id="ck-nprogress" class="ck-nprogress" aria-hidden="true"></div>
+
+<!--
   v1.10 phase 9 — Inline help.
   Pages can override by defining their own
   <template id="ck-help-content"> later in the document (the
