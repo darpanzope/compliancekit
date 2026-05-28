@@ -138,6 +138,56 @@ var templateFuncs = template.FuncMap{
 	"mkInfoTooltip": func(text string) design.InfoTooltipArgs {
 		return design.InfoTooltipArgs{Text: text}
 	},
+	// mkMetric builds a design.MetricCardArgs from the common
+	// (title, value, variant) tuple + auto-attaches a severity glyph
+	// when variant names a severity. v1.18 phase 4 — lets templates
+	// render hero stat tiles with `{{ template "ck-metric-card"
+	// (mkMetric "Critical" "12" "critical") }}` without constructing
+	// the full struct or repeating the icon SVG per call site.
+	"mkMetric": func(title, value, variant string) design.MetricCardArgs {
+		return design.MetricCardArgs{
+			Title:   title,
+			Value:   value,
+			Variant: variant,
+			Tooltip: title,
+			Icon:    severityMetricIcon(variant),
+		}
+	},
+	// mkMetricTrend is mkMetric + a trend arrow. Direction is up|down|
+	// flat; polarity is good|bad|neutral (colors the arrow). v1.18
+	// phase 4.
+	"mkMetricTrend": func(title, value, variant, delta, direction, polarity string) design.MetricCardArgs {
+		return design.MetricCardArgs{
+			Title:   title,
+			Value:   value,
+			Variant: variant,
+			Tooltip: title,
+			Icon:    severityMetricIcon(variant),
+			Trend:   &design.MetricTrend{Delta: delta, Direction: direction, Polarity: polarity},
+		}
+	},
+}
+
+// severityMetricIcon returns the inline glyph for a MetricCard whose
+// variant names a severity (critical/high/medium/low/info). Any other
+// variant returns empty so the card renders without an icon. The SVGs
+// are trusted (build-time literals) so template.HTML is safe. v1.18
+// phase 4.
+func severityMetricIcon(variant string) template.HTML {
+	switch variant {
+	case "critical":
+		return template.HTML(`<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`)
+	case "high":
+		return template.HTML(`<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`)
+	case "medium":
+		return template.HTML(`<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`)
+	case "low":
+		return template.HTML(`<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>`)
+	case "info":
+		return template.HTML(`<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>`)
+	default:
+		return ""
+	}
 }
 
 // chipGroup is the partial-args struct filter_chip_group renders

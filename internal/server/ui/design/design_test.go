@@ -93,6 +93,58 @@ func TestComponentsRender(t *testing.T) {
 	}
 }
 
+// TestMetricCardCriticalTrend pins the v1.18 phase 4 DoD: a critical-
+// variant MetricCard with `trend up 12%` renders the gradient class +
+// the trend arrow + the decorative circle.
+func TestMetricCardCriticalTrend(t *testing.T) {
+	t.Parallel()
+	tmpl, err := template.New("metric-test").ParseFS(design.ComponentsFS, "components/ck-metric-card.html")
+	if err != nil {
+		t.Fatalf("ParseFS: %v", err)
+	}
+	args := design.MetricCardArgs{
+		Title:   "Open critical",
+		Value:   "12",
+		Variant: "critical",
+		Trend:   &design.MetricTrend{Delta: "12%", Direction: "up", Polarity: "bad"},
+	}
+	var buf bytes.Buffer
+	if err := tmpl.ExecuteTemplate(&buf, "ck-metric-card", args); err != nil {
+		t.Fatalf("ExecuteTemplate: %v", err)
+	}
+	out := buf.String()
+	for _, want := range []string{
+		"ck-metric-critical",   // gradient variant class
+		"ck-metric-decoration", // decorative top-right circle
+		"ck-metric-trend",      // trend container
+		"ck-trend-up",          // direction
+		"ck-trend-bad",         // polarity → red arrow
+		"&uarr;",               // up arrow glyph
+		"12%",                  // delta text
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("critical+trend MetricCard missing %q\n--- output ---\n%s", want, out)
+		}
+	}
+}
+
+// TestMetricCardInfoIsFlat asserts the info variant does NOT render the
+// gradient decoration (info is a flat card per phase 4).
+func TestMetricCardInfoIsFlat(t *testing.T) {
+	t.Parallel()
+	tmpl, err := template.New("metric-test").ParseFS(design.ComponentsFS, "components/ck-metric-card.html")
+	if err != nil {
+		t.Fatalf("ParseFS: %v", err)
+	}
+	var buf bytes.Buffer
+	if err := tmpl.ExecuteTemplate(&buf, "ck-metric-card", design.MetricCardArgs{Title: "Info", Value: "3", Variant: "info"}); err != nil {
+		t.Fatalf("ExecuteTemplate: %v", err)
+	}
+	if strings.Contains(buf.String(), "ck-metric-decoration") {
+		t.Errorf("info MetricCard should be flat (no decoration circle)\n--- output ---\n%s", buf.String())
+	}
+}
+
 // TestComponentsFSRoots checks the embedded FS exposes the components
 // directory at the expected path. Catches a go:embed glob change.
 func TestComponentsFSRoots(t *testing.T) {

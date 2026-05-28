@@ -260,6 +260,13 @@
     background-color: hsl(0 0% 100% / 0.2);
     color: hsl(0 0% 100%);
   }
+  /* info is a flat card (no gradient): tint the value + icon with the
+     info token so the card still reads as part of the severity row. */
+  .ck-metric-info .ck-metric-value { color: hsl(var(--severity-info)); }
+  .ck-metric-info .ck-metric-icon {
+    background-color: hsl(var(--severity-info) / 0.12);
+    color: hsl(var(--severity-info));
+  }
 
   /* ck-pill — the .ck-pill-{critical,high,medium,low,info} severity
      variants exist above; phase 3 adds the status variants + a base

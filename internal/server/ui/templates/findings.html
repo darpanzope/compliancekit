@@ -46,13 +46,14 @@
     </div>
   </div>
 
-  <!-- Severity stats -->
+  <!-- Severity stats — v1.18 phase 4 hero MetricCards (gradient
+       variants for actionable severities, flat info card). -->
   <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
-    <div class="ck-card p-4"><div class="text-[11px] uppercase tracking-wider text-muted-foreground">Critical</div><div class="mt-1 text-2xl font-semibold tabular-nums text-severity-critical">{{ .Stats.Critical }}</div></div>
-    <div class="ck-card p-4"><div class="text-[11px] uppercase tracking-wider text-muted-foreground">High</div>    <div class="mt-1 text-2xl font-semibold tabular-nums text-severity-high">{{ .Stats.High }}</div></div>
-    <div class="ck-card p-4"><div class="text-[11px] uppercase tracking-wider text-muted-foreground">Medium</div>  <div class="mt-1 text-2xl font-semibold tabular-nums text-severity-medium">{{ .Stats.Medium }}</div></div>
-    <div class="ck-card p-4"><div class="text-[11px] uppercase tracking-wider text-muted-foreground">Low</div>     <div class="mt-1 text-2xl font-semibold tabular-nums text-severity-low">{{ .Stats.Low }}</div></div>
-    <div class="ck-card p-4"><div class="text-[11px] uppercase tracking-wider text-muted-foreground">Info</div>    <div class="mt-1 text-2xl font-semibold tabular-nums text-severity-info">{{ .Stats.Info }}</div></div>
+    {{ template "ck-metric-card" (mkMetric "Critical" (printf "%d" .Stats.Critical) "critical") }}
+    {{ template "ck-metric-card" (mkMetric "High"     (printf "%d" .Stats.High)     "high") }}
+    {{ template "ck-metric-card" (mkMetric "Medium"   (printf "%d" .Stats.Medium)   "medium") }}
+    {{ template "ck-metric-card" (mkMetric "Low"      (printf "%d" .Stats.Low)      "low") }}
+    {{ template "ck-metric-card" (mkMetric "Info"     (printf "%d" .Stats.Info)     "info") }}
   </div>
 
   <!-- Advanced filter bar (chip-based, multi-OR within group / AND across groups) -->
