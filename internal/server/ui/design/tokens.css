@@ -194,10 +194,14 @@
     --radius: 0.75rem;
 
     /* ====== Shadow scale (named depths) ======
-       Phase 6 adds `--shadow-glass` + its backdrop-blur companion. */
+       The four-stop depth scale the ck-card flat/raised/floating/glass
+       variants resolve to. Glass pairs a diffuse shadow with the
+       --blur-glass backdrop-filter companion. Phase 6. */
     --shadow-soft: 0 4px 16px -4px rgb(0 0 0 / 0.08);
     --shadow-elevated: 0 10px 30px -10px rgb(99 102 241 / 0.2);
     --shadow-floating: 0 20px 50px -12px rgb(0 0 0 / 0.25);
+    --shadow-glass: 0 8px 32px -8px rgb(0 0 0 / 0.12);
+    --blur-glass: 12px;
 
     /* ====== Typography ======
        System fonts only per ADR-015 (no CDN, no FOUC). The mono stack
@@ -296,6 +300,7 @@
     --shadow-soft: 0 4px 16px -4px rgb(0 0 0 / 0.4);
     --shadow-elevated: 0 10px 30px -10px rgb(0 0 0 / 0.6);
     --shadow-floating: 0 20px 50px -12px rgb(0 0 0 / 0.7);
+    --shadow-glass: 0 8px 32px -8px rgb(0 0 0 / 0.5);
 
     /* Dark-mode gradients lean toward darker stops so colored
        MetricCards keep contrast against the dark background without

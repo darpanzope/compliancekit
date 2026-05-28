@@ -195,10 +195,16 @@ module.exports = {
         'gradient-success':  'var(--gradient-success)',
         'gradient-info':     'var(--gradient-info)',
       },
+      // v1.18 phase 6 — named depth scale. `shadow-glass` pairs with
+      // the `backdrop-blur-glass` utility for frosted panels.
       boxShadow: {
         soft: 'var(--shadow-soft)',
         elevated: 'var(--shadow-elevated)',
         floating: 'var(--shadow-floating)',
+        glass: 'var(--shadow-glass)',
+      },
+      backdropBlur: {
+        glass: 'var(--blur-glass)',
       },
       borderRadius: {
         lg: 'var(--radius)',

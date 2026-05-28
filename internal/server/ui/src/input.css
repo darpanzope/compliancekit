@@ -180,14 +180,17 @@
   .ck-btn-link        { @apply bg-transparent text-primary underline-offset-4 hover:underline; }
   .ck-btn-icon        { @apply inline-flex items-center justify-center; }
 
-  /* ck-card depth variants (phase 6 will land glass + backdrop-blur). */
+  /* ck-card depth variants — the flat/raised/floating/glass scale from
+     the same named shadow tokens. Glass pairs the diffuse --shadow-glass
+     with the --blur-glass backdrop-filter companion. Phase 6. */
   .ck-card-flat { box-shadow: var(--shadow-soft); }
   .ck-card-raised { box-shadow: var(--shadow-elevated); }
   .ck-card-floating { box-shadow: var(--shadow-floating); }
   .ck-card-glass {
     background-color: hsl(var(--card) / 0.7);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    box-shadow: var(--shadow-glass);
+    backdrop-filter: blur(var(--blur-glass));
+    -webkit-backdrop-filter: blur(var(--blur-glass));
   }
   .ck-card-pad-sm { @apply p-3; }
   .ck-card-pad-md { @apply p-5; }
