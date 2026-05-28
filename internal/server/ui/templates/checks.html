@@ -4,7 +4,10 @@
   <!-- Header -->
   <div class="flex flex-wrap items-end justify-between gap-4 mb-6">
     <div>
-      <h1 class="text-2xl font-semibold tracking-tight">Checks</h1>
+      <div class="flex items-center gap-2">
+        <h1 class="text-2xl font-semibold tracking-tight">Checks</h1>
+        {{ template "ck-info-tooltip" (mkInfoTooltip "The full catalog of checks compliancekit runs. Each maps to a control in one or more compliance frameworks; tailor or disable them per your policy.") }}
+      </div>
       <p class="text-sm text-muted-foreground mt-1">
         <span class="tabular-nums">{{ .Matching }}</span> matching of <span class="tabular-nums">{{ .Total }}</span> shipped checks
         {{ if gt .OverrideCount 0 }}<span class="mx-1.5 text-border">·</span><a href="/checks/diff" class="text-primary hover:underline tabular-nums">{{ .OverrideCount }} tailored</a>{{ end }}

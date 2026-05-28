@@ -2,7 +2,10 @@
 <div class="max-w-5xl mx-auto">
   <div class="flex items-center justify-between mb-6 gap-4">
     <div>
-      <h1 class="text-2xl font-semibold tracking-tight">Dashboards</h1>
+      <div class="flex items-center gap-2">
+        <h1 class="text-2xl font-semibold tracking-tight">Dashboards</h1>
+        {{ template "ck-info-tooltip" (mkInfoTooltip "Custom dashboards built from widgets. Compose score trends, severity breakdowns, and provider coverage into one at-a-glance view.") }}
+      </div>
       <p class="text-sm text-muted-foreground mt-1">Compose typed widgets onto a canvas. Clone a built-in template to start, or drag widgets onto a blank dashboard.</p>
     </div>
   </div>

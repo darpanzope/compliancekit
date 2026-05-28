@@ -2,7 +2,10 @@
 <div class="max-w-6xl mx-auto">
   <div class="flex items-end justify-between gap-4 mb-6">
     <div>
-      <h1 class="text-2xl font-semibold tracking-tight">Resources</h1>
+      <div class="flex items-center gap-2">
+        <h1 class="text-2xl font-semibold tracking-tight">Resources</h1>
+        {{ template "ck-info-tooltip" (mkInfoTooltip "Every resource compliancekit discovered across your providers. Click one to see its findings and how it relates to other resources.") }}
+      </div>
       <p class="text-sm text-muted-foreground mt-1"><span class="tabular-nums">{{ .Total }}</span> resource{{ if ne .Total 1 }}s{{ end }} with open findings. Click a row to view its findings.</p>
     </div>
     <a href="/resources/map" class="inline-flex h-9 items-center gap-1.5 rounded-md border border-border bg-background px-3 text-sm font-medium hover:bg-muted transition">

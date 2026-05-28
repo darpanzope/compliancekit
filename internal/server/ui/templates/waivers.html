@@ -2,7 +2,10 @@
 <div class="max-w-6xl mx-auto">
   <div class="flex items-end justify-between gap-4 mb-6">
     <div>
-      <h1 class="text-2xl font-semibold tracking-tight">Waivers</h1>
+      <div class="flex items-center gap-2">
+        <h1 class="text-2xl font-semibold tracking-tight">Waivers</h1>
+        {{ template "ck-info-tooltip" (mkInfoTooltip "Accepted-risk exceptions. A waiver suppresses a finding for a documented reason + expiry, so your score reflects intentional decisions, not noise.") }}
+      </div>
       <p class="text-sm text-muted-foreground mt-1">Mute findings the right way — every waiver carries a reason, an approver, and an optional expiry date. Auditors see all three in the evidence pack.</p>
     </div>
   </div>

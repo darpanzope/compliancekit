@@ -6,7 +6,10 @@
         <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
         Findings
       </a>
-      <h1 class="mt-2 text-2xl font-semibold tracking-tight">Resource map</h1>
+      <div class="mt-2 flex items-center gap-2">
+        <h1 class="text-2xl font-semibold tracking-tight">Resource map</h1>
+        {{ template "ck-info-tooltip" (mkInfoTooltip "A hierarchical view of how your resources relate — provider → service → resource. Findings roll up the tree so you can spot the noisiest service fast.") }}
+      </div>
       <p class="text-sm text-muted-foreground mt-1"><span class="tabular-nums">{{ .Total }}</span> resources with open findings, grouped by provider → service → resource. Click a resource to filter the explorer to its findings.</p>
     </div>
   </div>
