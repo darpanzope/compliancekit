@@ -145,6 +145,29 @@ func TestMetricCardInfoIsFlat(t *testing.T) {
 	}
 }
 
+// TestIllustrationsEmbedded asserts the empty-state illustration
+// catalog is embedded + every name resolves to a non-empty <svg> that
+// uses currentColor (so it's theme-aware). v1.18 phase 10.
+func TestIllustrationsEmbedded(t *testing.T) {
+	t.Parallel()
+	if len(design.IllustrationNames) < 24 {
+		t.Fatalf("expected ~30 illustrations, found %d", len(design.IllustrationNames))
+	}
+	for _, name := range design.IllustrationNames {
+		svg := string(design.Illustration(name))
+		if !strings.Contains(svg, "<svg") {
+			t.Errorf("illustration %q is not an <svg>", name)
+		}
+		if !strings.Contains(svg, "currentColor") {
+			t.Errorf("illustration %q must use currentColor to stay theme-aware", name)
+		}
+	}
+	// Unknown name resolves to empty (no panic).
+	if design.Illustration("definitely-not-a-real-illustration") != "" {
+		t.Error("unknown illustration should return empty string")
+	}
+}
+
 // TestComponentsFSRoots checks the embedded FS exposes the components
 // directory at the expected path. Catches a go:embed glob change.
 func TestComponentsFSRoots(t *testing.T) {

@@ -163,10 +163,17 @@
      the partial HTML.
      ===================================================================== */
 
-  /* ck-button */
+  /* ck-button — v1.18 phase 10 adds the press micro-interaction
+     (active:scale) on top of the color transition. The transform is
+     zeroed by the reduced-motion media block in tokens.css. */
   .ck-btn {
-    @apply inline-flex items-center justify-center gap-2 font-medium rounded-md border border-transparent transition-colors duration-150 ease-out-quad select-none whitespace-nowrap;
+    @apply inline-flex items-center justify-center gap-2 font-medium rounded-md border border-transparent select-none whitespace-nowrap;
+    transition: background-color var(--motion-150) var(--ease-out-quad),
+                color var(--motion-150) var(--ease-out-quad),
+                opacity var(--motion-150) var(--ease-out-quad),
+                transform var(--motion-75) var(--ease-out-quad);
   }
+  .ck-btn:active:not([disabled]):not([aria-disabled="true"]) { transform: scale(0.97); }
   .ck-btn[disabled],
   .ck-btn[aria-disabled="true"] { @apply opacity-50 pointer-events-none; }
   .ck-btn[aria-busy="true"]     { @apply pointer-events-none; }
@@ -203,7 +210,24 @@
     @apply relative overflow-hidden rounded-xl border border-border bg-card text-card-foreground p-5 flex flex-col gap-1;
     box-shadow: var(--shadow-soft);
   }
-  .ck-metric-card[href] { @apply transition-colors duration-150 ease-out-quad hover:opacity-95; }
+  /* v1.18 phase 10 — clickable MetricCards lift on hover + settle on
+     press. transform zeroed by the reduced-motion media block. */
+  .ck-metric-card[href] {
+    transition: box-shadow var(--motion-250) var(--ease-out-quad),
+                transform var(--motion-150) var(--ease-out-quad);
+  }
+  .ck-metric-card[href]:hover  { box-shadow: var(--shadow-elevated); transform: translateY(-2px); }
+  .ck-metric-card[href]:active { transform: translateY(0); }
+
+  /* v1.18 phase 10 — generic hover-lift for any interactive surface
+     (clickable list rows, link cards). Opt in with `ck-interactive`. */
+  .ck-interactive {
+    transition: box-shadow var(--motion-250) var(--ease-out-quad),
+                transform var(--motion-150) var(--ease-out-quad),
+                background-color var(--motion-150) var(--ease-out-quad);
+  }
+  .ck-interactive:hover  { transform: translateY(-1px); }
+  .ck-interactive:active { transform: translateY(0); }
   .ck-metric-head { @apply flex items-start justify-between gap-3; }
   .ck-metric-title { @apply text-2xs uppercase tracking-wide font-medium text-muted-foreground; }
   .ck-metric-icon { @apply inline-flex items-center justify-center rounded-full bg-muted text-foreground w-8 h-8; }

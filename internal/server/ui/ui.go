@@ -138,6 +138,19 @@ var templateFuncs = template.FuncMap{
 	"mkInfoTooltip": func(text string) design.InfoTooltipArgs {
 		return design.InfoTooltipArgs{Text: text}
 	},
+	// illustration returns the named empty-state SVG (v1.18 phase 10).
+	"illustration": design.Illustration,
+	// mkEmpty builds a design.EmptyStateArgs from (illustration, title,
+	// description) so a page can render a canonical empty state with
+	// `{{ template "ck-empty-state" (mkEmpty "no-findings" "…" "…") }}`.
+	// v1.18 phase 10.
+	"mkEmpty": func(illo, title, desc string) design.EmptyStateArgs {
+		return design.EmptyStateArgs{
+			Illustration: design.Illustration(illo),
+			Title:        title,
+			Description:  desc,
+		}
+	},
 	// mkMetric builds a design.MetricCardArgs from the common
 	// (title, value, variant) tuple + auto-attaches a severity glyph
 	// when variant names a severity. v1.18 phase 4 — lets templates

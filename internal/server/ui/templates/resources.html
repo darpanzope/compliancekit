@@ -58,7 +58,10 @@
           </td>
         </tr>
         {{ else }}
-        <tr><td colspan="5" class="p-12 text-center text-sm text-muted-foreground">{{ if .Query }}No resources match "{{ .Query }}"{{ else }}No resources with open findings yet{{ end }}</td></tr>
+        <tr><td colspan="5" class="p-6">
+          {{ if .Query }}{{ template "ck-empty-state" (mkEmpty "search-empty" "No matches" (printf "No resources match \"%s\". Try a broader query." .Query)) }}
+          {{ else }}{{ template "ck-empty-state" (mkEmpty "no-resources" "No resources yet" "Run a scan to discover resources across your configured providers.") }}{{ end }}
+        </td></tr>
         {{ end }}
       </tbody>
     </table>

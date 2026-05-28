@@ -15,36 +15,37 @@ import (
 // v1.18 phase 7 (ADR-017).
 type designZooView struct {
 	View
-	Components  []string
-	PageTitle   design.PageHeaderArgs
-	Buttons     []design.ButtonArgs
-	ModalButton design.ButtonArgs
-	Metrics     []design.MetricCardArgs
-	Pills       []design.PillArgs
-	StatusPills []design.StatusPillArgs
-	Banners     []design.BannerArgs
-	Toasts      []design.ToastArgs
-	Skeletons   []design.SkeletonArgs
-	Avatars     []design.AvatarArgs
-	Spinners    []design.SpinnerArgs
-	Progress    []design.ProgressArgs
-	CardDepths  []designCardDepth
-	Header      design.PageHeaderArgs
-	FilterCard  design.FilterCardArgs
-	EmptyState  design.EmptyStateArgs
-	Tabs        design.TabsArgs
-	Dropdown    design.DropdownArgs
-	Input       design.InputArgs
-	Select      design.SelectArgs
-	Textarea    design.TextareaArgs
-	Checkbox    design.CheckboxArgs
-	Section     design.SectionArgs
-	Divider     design.DividerArgs
-	Modal       design.ModalArgs
-	Tooltip     design.InfoTooltipArgs
-	Palettes    []designSwatchGroup
-	Easings     []designEasing
-	Shadows     []designShadow
+	Components    []string
+	Illustrations []string
+	PageTitle     design.PageHeaderArgs
+	Buttons       []design.ButtonArgs
+	ModalButton   design.ButtonArgs
+	Metrics       []design.MetricCardArgs
+	Pills         []design.PillArgs
+	StatusPills   []design.StatusPillArgs
+	Banners       []design.BannerArgs
+	Toasts        []design.ToastArgs
+	Skeletons     []design.SkeletonArgs
+	Avatars       []design.AvatarArgs
+	Spinners      []design.SpinnerArgs
+	Progress      []design.ProgressArgs
+	CardDepths    []designCardDepth
+	Header        design.PageHeaderArgs
+	FilterCard    design.FilterCardArgs
+	EmptyState    design.EmptyStateArgs
+	Tabs          design.TabsArgs
+	Dropdown      design.DropdownArgs
+	Input         design.InputArgs
+	Select        design.SelectArgs
+	Textarea      design.TextareaArgs
+	Checkbox      design.CheckboxArgs
+	Section       design.SectionArgs
+	Divider       design.DividerArgs
+	Modal         design.ModalArgs
+	Tooltip       design.InfoTooltipArgs
+	Palettes      []designSwatchGroup
+	Easings       []designEasing
+	Shadows       []designShadow
 }
 
 type designCardDepth struct {
@@ -85,7 +86,8 @@ func (u *UI) designZoo(w http.ResponseWriter, r *http.Request) {
 // a zoo section without spinning up a router.
 func buildDesignZoo() designZooView {
 	return designZooView{
-		Components: design.ComponentNames,
+		Components:    design.ComponentNames,
+		Illustrations: design.IllustrationNames,
 		PageTitle: design.PageHeaderArgs{
 			Title:    "Design system",
 			Subtitle: "Live component zoo — every variant, palette, easing, and shadow the daemon UI is built from. Canned data; no backend.",
@@ -178,9 +180,10 @@ func buildDesignZoo() designZooView {
 			Body:  template.HTML(`<label class="ck-checkbox-row"><input type="checkbox" class="ck-checkbox" checked><span class="ck-checkbox-label">Critical</span></label><label class="ck-checkbox-row"><input type="checkbox" class="ck-checkbox"><span class="ck-checkbox-label">High</span></label>`),
 		},
 		EmptyState: design.EmptyStateArgs{
-			Title:       "No findings",
-			Description: "Run a scan to populate this view.",
-			Action:      template.HTML(`<a href="/scans/new" class="ck-btn ck-btn-primary ck-btn-md">Run scan</a>`),
+			Illustration: design.Illustration("no-findings"),
+			Title:        "No findings",
+			Description:  "Run a scan to populate this view.",
+			Action:       template.HTML(`<a href="/scans/new" class="ck-btn ck-btn-primary ck-btn-md">Run scan</a>`),
 		},
 		Tabs: design.TabsArgs{
 			Current: "overview",

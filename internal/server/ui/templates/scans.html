@@ -100,8 +100,8 @@
             <td data-label="Duration" class="px-4 py-3 text-xs text-muted-foreground tabular-nums">{{ if .DurationMS }}{{ .DurationMS }}ms{{ else }}—{{ end }}</td>
           </tr>
           {{ else }}
-          <tr><td colspan="8" class="p-12 text-center text-sm text-muted-foreground">
-            No scans yet. Hit <a href="/scans/new" class="text-primary hover:underline">Run scan</a> or invoke <code class="text-[11px] px-1 py-0.5 rounded bg-muted">compliancekit scan --push-to-server=...</code> from a CLI.
+          <tr><td colspan="8" class="p-6">
+            {{ template "ck-empty-state" (mkEmpty "no-scans" "No scans yet" "Run your first scan to populate the dashboard, or push from a CLI with compliancekit scan --push-to-server=…") }}
           </td></tr>
           {{ end }}
         </tbody>
