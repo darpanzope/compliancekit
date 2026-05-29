@@ -141,6 +141,54 @@ table.list tbody tr:hover { background: var(--legacy-panel-2); }
 -->
 <div id="ck-toasts" class="ck-toasts" aria-live="polite"></div>
 
+{{ if not .LoginPage }}
+<!--
+  v1.19 phase 2 — in-app feedback widget. A corner button (companion to
+  the ?-key help) opens a modal: bug / feature / love + a message. The
+  form htmx-POSTs to /feedback (session + CSRF); the server stores a row
+  + best-effort relays to CK_FEEDBACK_WEBHOOK, then swaps a thank-you
+  banner into #ck-feedback-result. Hidden on the login page.
+-->
+<div x-data="{ open: false }" @keydown.window.escape="open = false">
+  <button type="button" class="ck-feedback-fab" @click="open = true" aria-label="Send feedback" title="Send feedback">
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+  </button>
+  <div x-show="open" x-cloak class="ck-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="ck-feedback-title">
+    <div class="ck-modal-panel" @click.outside="open = false">
+      <header class="ck-modal-header">
+        <h2 id="ck-feedback-title">Send feedback</h2>
+        <button type="button" class="ck-modal-close" @click="open = false" aria-label="Close">&times;</button>
+      </header>
+      <div class="ck-modal-body">
+        <div id="ck-feedback-result"></div>
+        <form hx-post="/feedback" hx-target="#ck-feedback-result" hx-swap="innerHTML"
+              hx-on::after-request="if(event.detail.successful){this.reset(); window.ck && window.ck.toast && window.ck.toast({variant:'success',title:'Thanks for the feedback'});}"
+              class="flex flex-col gap-3">
+          <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
+          <input type="hidden" name="page_url" x-init="$el.value = window.location.pathname">
+          <div class="ck-field">
+            <label class="ck-field-label" for="ck-feedback-kind">Type</label>
+            <select id="ck-feedback-kind" name="kind" class="ck-select">
+              <option value="bug">Bug — something's broken</option>
+              <option value="feature">Feature — I wish it could…</option>
+              <option value="love">Love note — this is great</option>
+            </select>
+          </div>
+          <div class="ck-field">
+            <label class="ck-field-label" for="ck-feedback-msg">Message</label>
+            <textarea id="ck-feedback-msg" name="message" rows="4" required maxlength="4000" class="ck-textarea" placeholder="What's on your mind?"></textarea>
+          </div>
+          <div class="flex items-center justify-end gap-2">
+            <button type="button" class="ck-btn ck-btn-ghost ck-btn-sm" @click="open = false">Cancel</button>
+            <button type="submit" class="ck-btn ck-btn-primary ck-btn-sm">Send</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{{ end }}
+
 {{ if .ShowChangelog }}
 <!--
   v1.19 phase 1 — "what's new" modal. Auto-opens once per user after an

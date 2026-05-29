@@ -546,6 +546,8 @@ func (u *UI) Mount(r chi.Router) {
 		// v1.19 phase 0 — feature-tour overlay: /onboarding replay page
 		// + per-user dismiss/reset endpoints.
 		u.mountOnboardingRoutes(r)
+		// v1.19 phase 2 — in-app feedback widget + admin triage queue.
+		u.mountFeedbackRoutes(r)
 		// v1.18 phase 7 — /design live component zoo. Auth-gated like
 		// every other UI route but uses canned data (no DB). Unlinked
 		// from defaultNav by design — it's a contributor + visual-

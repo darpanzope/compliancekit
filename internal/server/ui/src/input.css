@@ -629,6 +629,21 @@
   }
   .ck-tour-prompt-fade { opacity: 0.55; }
 
+  /* v1.19 phase 2 — feedback FAB. Bottom-right, below the toast queue
+     (z-70) + below modal backdrops (z-50) so an open modal covers it. */
+  .ck-feedback-fab {
+    position: fixed; z-index: 45;
+    right: 1rem; bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+    @apply inline-flex items-center justify-center w-11 h-11 rounded-full;
+    background-color: hsl(var(--primary)); color: hsl(var(--primary-foreground));
+    box-shadow: var(--shadow-floating);
+    transition: transform var(--motion-150) var(--ease-out-quad);
+  }
+  .ck-feedback-fab:hover { transform: translateY(-2px); }
+  .ck-feedback-fab:active { transform: translateY(0); }
+  /* Nudge the FAB above the mobile bottom action bar (sm:hidden bar). */
+  @media (max-width: 639px) { .ck-feedback-fab { bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px)); } }
+
   /* v1.18 phase 12 — chart rich tooltip. Positioned by the ckChartTip
      Alpine factory (left/top in px relative to the chart card); the
      transform lifts it above + centers it over the hovered point. */

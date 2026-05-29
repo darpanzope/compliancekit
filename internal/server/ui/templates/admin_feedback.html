@@ -1,0 +1,57 @@
+{{define "content"}}
+<div class="max-w-5xl mx-auto">
+  {{ template "ck-page-header" (pageHeaderTip "Feedback" "Bug reports, feature requests, and love notes from the in-app widget." "Submissions land here + optionally relay to CK_FEEDBACK_WEBHOOK. Move a row through new → triaged → closed as you work it.") }}
+
+  {{ if not .Rows }}
+    {{ template "ck-empty-state" (mkEmpty "inbox-zero" "No feedback yet" "When someone uses the feedback widget (bottom-right corner), their note shows up here.") }}
+  {{ else }}
+  <div class="ck-card overflow-hidden">
+    <table class="ck-table-cards w-full text-sm">
+      <thead class="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
+        <tr>
+          <th class="px-4 py-2.5 font-medium">When</th>
+          <th class="px-4 py-2.5 font-medium">Type</th>
+          <th class="px-4 py-2.5 font-medium">From</th>
+          <th class="px-4 py-2.5 font-medium">Message</th>
+          <th class="px-4 py-2.5 font-medium">Status</th>
+          <th class="px-4 py-2.5 font-medium" data-label-hide></th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-border">
+        {{ range .Rows }}
+        <tr>
+          <td data-label="When" class="px-4 py-3 font-mono text-xs text-muted-foreground whitespace-nowrap">{{ .CreatedAt }}</td>
+          <td data-label="Type" class="px-4 py-3">
+            {{ if eq .Kind "bug" }}<span class="ck-pill ck-pill-high">bug</span>
+            {{ else if eq .Kind "feature" }}<span class="ck-pill ck-pill-low">feature</span>
+            {{ else }}<span class="ck-pill ck-pill-info">love</span>{{ end }}
+          </td>
+          <td data-label="From" class="px-4 py-3 text-xs">{{ if .UserEmail }}{{ .UserEmail }}{{ else }}—{{ end }}</td>
+          <td data-label="Message" class="px-4 py-3">
+            <div class="whitespace-pre-wrap">{{ .Message }}</div>
+            {{ if .PageURL }}<div class="text-[11px] text-muted-foreground mt-1">on <code>{{ .PageURL }}</code></div>{{ end }}
+          </td>
+          <td data-label="Status" class="px-4 py-3">
+            {{ if eq .Status "new" }}<span class="ck-pill ck-status-pill ck-status-open">new</span>
+            {{ else if eq .Status "triaged" }}<span class="ck-pill ck-status-pill ck-status-acknowledged">triaged</span>
+            {{ else }}<span class="ck-pill ck-status-pill ck-status-resolved">closed</span>{{ end }}
+          </td>
+          <td data-label="Actions" class="px-4 py-3">
+            <form action="/admin/feedback/{{ .ID }}/status" method="post" class="flex items-center gap-1.5">
+              <input type="hidden" name="csrf_token" value="{{ $.CSRFToken }}">
+              <select name="status" class="ck-select h-8 text-xs">
+                <option value="new"{{ if eq .Status "new" }} selected{{ end }}>new</option>
+                <option value="triaged"{{ if eq .Status "triaged" }} selected{{ end }}>triaged</option>
+                <option value="closed"{{ if eq .Status "closed" }} selected{{ end }}>closed</option>
+              </select>
+              <button type="submit" class="ck-btn ck-btn-secondary ck-btn-sm">Save</button>
+            </form>
+          </td>
+        </tr>
+        {{ end }}
+      </tbody>
+    </table>
+  </div>
+  {{ end }}
+</div>
+{{end}}
