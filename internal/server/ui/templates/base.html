@@ -361,6 +361,20 @@ table.list tbody tr:hover { background: var(--legacy-panel-2); }
           <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
         </button>
 
+        <!-- v1.19 phase 6 — sticky global-search trigger. Looks like a
+             field but opens the Cmd+K palette (dispatches ck-cmdk-open
+             which the body-level palette listens for). Hidden on the
+             smallest viewports where the bottom action bar + / shortcut
+             cover the need. -->
+        <button type="button"
+                @click="$dispatch('ck-cmdk-open')"
+                class="hidden sm:flex items-center gap-2 h-9 w-full max-w-sm rounded-md border border-border bg-background px-3 text-sm text-muted-foreground hover:bg-muted transition"
+                aria-label="Search (press / or Cmd-K)">
+          <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <span class="flex-1 text-left">Search…</span>
+          <kbd class="ck-kbd">/</kbd>
+        </button>
+
         <div class="flex-1"></div>
 
         <!-- v1.6 phase 1 — live event-bus status pill. Mounted in
@@ -470,7 +484,9 @@ table.list tbody tr:hover { background: var(--legacy-panel-2); }
      level so every authenticated page can open it via the keyboard
      shortcut. Vanilla Alpine — no extra JS library. -->
 {{ if not .LoginPage }}
-<div x-data="cmdk()" @keydown.window.prevent.cmd.k="open()" @keydown.window.prevent.ctrl.k="open()"
+<div x-data="cmdk()"
+     @keydown.window.prevent.cmd.k="open()" @keydown.window.prevent.ctrl.k="open()"
+     @ck-cmdk-open.window="open()"
      @keydown.escape.window="visible = false">
   <div x-show="visible" x-cloak class="fixed inset-0 z-50 flex items-start justify-center pt-[10vh]"
        x-transition:enter="transition ease-out duration-150"
@@ -480,28 +496,54 @@ table.list tbody tr:hover { background: var(--legacy-panel-2); }
     <div class="relative w-[640px] max-w-[90vw] ck-card-elevated overflow-hidden">
       <div class="border-b border-border p-3 flex items-center gap-2">
         <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-muted-foreground"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input type="text" x-model="query" @input.debounce.150ms="run()" placeholder="Search resources, findings, checks, providers..."
+        <input type="text" x-model="query"
+               @input.debounce.150ms="run()"
+               @keydown.down.prevent="move(1)" @keydown.up.prevent="move(-1)"
+               @keydown.enter.prevent="go()"
+               placeholder="Search findings, resources, scans, settings…"
                x-ref="input" class="flex-1 bg-transparent text-sm focus:outline-none placeholder:text-muted-foreground">
         <kbd class="px-1.5 py-0.5 text-[10px] rounded bg-muted border border-border text-muted-foreground font-mono">esc</kbd>
       </div>
-      <ul class="max-h-[400px] overflow-y-auto divide-y divide-border">
-        <template x-for="r in results" :key="r.kind + r.href">
-          <li>
-            <a :href="r.href" class="flex items-start gap-3 px-4 py-2.5 hover:bg-muted transition">
-              <span class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded text-[10px] uppercase tracking-wider font-bold
-                bg-muted text-muted-foreground"
-                x-text="r.kind.slice(0,3)"></span>
-              <span class="flex-1 min-w-0">
-                <span class="block text-sm truncate" x-text="r.label"></span>
-                <span class="block text-xs text-muted-foreground truncate" x-text="r.sub"></span>
-              </span>
-              <span x-show="r.hint" class="text-[10px] uppercase tracking-wider text-muted-foreground" x-text="r.hint"></span>
-            </a>
-          </li>
+
+      <!-- Recent searches (shown only when the query is empty) -->
+      <div x-show="query.length === 0 && recent.length > 0" x-cloak class="px-3 py-2 border-b border-border flex items-center gap-1.5 flex-wrap">
+        <span class="text-[10px] uppercase tracking-wider text-muted-foreground mr-1">Recent</span>
+        <template x-for="q in recent" :key="q">
+          <button type="button" class="px-2 py-0.5 rounded-full text-xs bg-muted hover:bg-border transition" @click="pickRecent(q)" x-text="q"></button>
         </template>
-        <li x-show="results.length === 0 && query.length > 0" x-cloak class="px-4 py-6 text-center text-xs text-muted-foreground">No matches</li>
-        <li x-show="results.length === 0 && query.length === 0" x-cloak class="px-4 py-6 text-center text-xs text-muted-foreground">Type to search across resources, findings, checks, providers, saved views.</li>
-      </ul>
+      </div>
+
+      <div class="max-h-[420px] overflow-y-auto">
+        <template x-for="group in groups" :key="group.type">
+          <div>
+            <div class="px-4 pt-3 pb-1 text-[10px] uppercase tracking-wider text-muted-foreground font-medium" x-text="group.label"></div>
+            <ul>
+              <template x-for="(r, i) in group.items" :key="r.type + r.id">
+                <li>
+                  <a :href="r.href"
+                     :data-cmdk-idx="idxOf(group, i)"
+                     :class="flat[sel] === r ? 'bg-muted ring-1 ring-inset ring-primary/40' : ''"
+                     class="flex items-center gap-3 px-4 py-2 hover:bg-muted transition"
+                     @mouseenter="sel = idxOf(group, i)">
+                    <span class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded text-[10px] uppercase tracking-wider font-bold bg-muted text-muted-foreground" x-text="badge(r.type)"></span>
+                    <span class="flex-1 min-w-0">
+                      <span class="block text-sm truncate" x-text="r.title"></span>
+                      <span class="block text-xs text-muted-foreground truncate" x-text="r.subtitle"></span>
+                    </span>
+                  </a>
+                </li>
+              </template>
+            </ul>
+          </div>
+        </template>
+        <div x-show="flat.length === 0 && query.length > 0" x-cloak class="px-4 py-6 text-center text-xs text-muted-foreground">No matches for "<span x-text="query"></span>"</div>
+        <div x-show="flat.length === 0 && query.length === 0" x-cloak class="px-4 py-6 text-center text-xs text-muted-foreground">Search across findings, resources, scans, users, waivers, settings, and docs.</div>
+      </div>
+      <div class="border-t border-border px-3 py-1.5 flex items-center gap-3 text-[10px] text-muted-foreground">
+        <span><kbd class="ck-kbd">↑</kbd><kbd class="ck-kbd">↓</kbd> navigate</span>
+        <span><kbd class="ck-kbd">↵</kbd> open</span>
+        <span class="ml-auto"><kbd class="ck-kbd">/</kbd> or <kbd class="ck-kbd">⌘K</kbd> anywhere</span>
+      </div>
     </div>
   </div>
 </div>

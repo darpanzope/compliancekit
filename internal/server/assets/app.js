@@ -511,31 +511,110 @@ function logsTail() {
   };
 }
 
-// Cmd+K global search palette factory. Referenced from base.html as
-// `x-data="cmdk()"`. Vanilla Alpine — no extra JS library. Modal is
-// mounted at body level so every authenticated page can open it via
-// the keyboard shortcut.
+// v1.19 phase 6 — "/" opens the global search palette from anywhere,
+// the way GitHub + Linear do. Guarded so it only fires when the user
+// isn't typing into a field (otherwise "/" would hijack every text
+// input). Dispatches ck-cmdk-open; the palette component listens.
+document.addEventListener('keydown', function (e) {
+  if (e.key !== '/' || e.metaKey || e.ctrlKey || e.altKey) return;
+  var t = e.target;
+  if (t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable)) return;
+  e.preventDefault();
+  window.dispatchEvent(new CustomEvent('ck-cmdk-open'));
+});
+
+// Cmd+K / "/" global search palette factory. Referenced from base.html
+// as `x-data="cmdk()"`. Vanilla Alpine — no extra JS library. Mounted
+// at body level so every authenticated page can open it.
+//
+// v1.19 phase 6 — upgraded from the v1.5 flat palette to the global
+// search index (GET /api/v1/search): results are grouped by type,
+// keyboard-navigable (↑/↓ + Enter), and recent queries persist in
+// localStorage. An empty query shows recent + index suggestions so the
+// palette is useful before the first keystroke.
+var ckRecentSearchKey = 'ck-recent-search';
 function cmdk() {
   return {
     visible: false,
     query: '',
-    results: [],
+    groups: [],   // [{type, label, items:[SearchResult]}]
+    flat: [],     // flattened items, in display order, for keyboard nav
+    sel: 0,
+    recent: [],
+    typeLabels: {
+      finding: 'Findings', resource: 'Resources', scan: 'Scans',
+      user: 'Users', waiver: 'Waivers', setting: 'Settings', doc: 'Docs',
+    },
+    typeOrder: ['finding', 'resource', 'scan', 'user', 'waiver', 'setting', 'doc'],
     open: function () {
       this.visible = true;
+      this.loadRecent();
+      this.run();
       this.$nextTick(function () {
-        if (this.$refs.input) this.$refs.input.focus();
+        if (this.$refs.input) this.$refs.input.select();
       }.bind(this));
     },
-    run: async function () {
-      if (this.query.length === 0) { this.results = []; return; }
-      try {
-        var r = await fetch('/search?q=' + encodeURIComponent(this.query));
-        if (!r.ok) { this.results = []; return; }
-        this.results = await r.json();
-      } catch (e) {
-        this.results = [];
-      }
+    close: function () { this.visible = false; },
+    loadRecent: function () {
+      try { this.recent = JSON.parse(localStorage.getItem(ckRecentSearchKey) || '[]'); }
+      catch (e) { this.recent = []; }
     },
+    saveRecent: function (q) {
+      q = (q || '').trim();
+      if (!q) return;
+      var list = (this.recent || []).filter(function (x) { return x !== q; });
+      list.unshift(q);
+      this.recent = list.slice(0, 5);
+      try { localStorage.setItem(ckRecentSearchKey, JSON.stringify(this.recent)); } catch (e) {}
+    },
+    run: async function () {
+      try {
+        var r = await fetch('/api/v1/search?q=' + encodeURIComponent(this.query) + '&limit=30',
+          { headers: { 'Accept': 'application/json' } });
+        if (!r.ok) { this.groups = []; this.flat = []; return; }
+        var data = await r.json();
+        this.groupResults(data.results || []);
+      } catch (e) { this.groups = []; this.flat = []; }
+    },
+    groupResults: function (results) {
+      var byType = {};
+      results.forEach(function (it) { (byType[it.type] = byType[it.type] || []).push(it); });
+      var groups = [], flat = [];
+      this.typeOrder.forEach(function (t) {
+        if (byType[t] && byType[t].length) {
+          groups.push({ type: t, label: this.typeLabels[t] || t, items: byType[t] });
+          byType[t].forEach(function (it) { flat.push(it); });
+        }
+      }.bind(this));
+      this.groups = groups;
+      this.flat = flat;
+      this.sel = 0;
+    },
+    move: function (delta) {
+      if (!this.flat.length) return;
+      this.sel = (this.sel + delta + this.flat.length) % this.flat.length;
+      this.$nextTick(function () {
+        var el = document.querySelector('[data-cmdk-idx="' + this.sel + '"]');
+        if (el && el.scrollIntoView) el.scrollIntoView({ block: 'nearest' });
+      }.bind(this));
+    },
+    go: function () {
+      var it = this.flat[this.sel];
+      if (!it) return;
+      this.saveRecent(this.query);
+      window.location.href = it.href;
+    },
+    pickRecent: function (q) { this.query = q; this.run(); },
+    idxOf: function (group, i) {
+      // Global flat index of item i within group (groups render in order).
+      var n = 0;
+      for (var g = 0; g < this.groups.length; g++) {
+        if (this.groups[g] === group) return n + i;
+        n += this.groups[g].items.length;
+      }
+      return n + i;
+    },
+    badge: function (type) { return (type || '?').slice(0, 3); },
   };
 }
 
