@@ -329,147 +329,33 @@ func seedDemoData(ctx context.Context, st *store.Store) error { //nolint:unparam
 		_, _ = users.Create(ctx, "demo@compliancekit.dev", "Demo Admin", "demo-please-change", true)
 	}
 
+	// v1.19 phase 4 — enable a multi-provider demo fleet so the resource
+	// map + provider breakdowns look real. DO/AWS/GCP/K8s scanned;
+	// Hetzner + Linux configured-but-disabled to show the "connect more"
+	// affordance.
 	demoCfg := `{"token":"dop_demo_redacted","region":"fra1, nyc1","services":["droplets","spaces"]}`
-	demoCfgAWS := `{"token":"AKIA_demo_redacted"}`
 	provQ := `INSERT INTO providers (id, enabled, config_json, last_auth_check_at, last_auth_status, created_at, updated_at)
 	          VALUES (?, ?, ?, ?, ?, ?, ?)
 	          ON CONFLICT(id) DO NOTHING`
 	_, _ = st.DB().ExecContext(ctx, provQ, "digitalocean", 1, demoCfg, now, "ok", now, now)
-	_, _ = st.DB().ExecContext(ctx, provQ, "aws", 0, demoCfgAWS, now, "ok", now, now)
+	_, _ = st.DB().ExecContext(ctx, provQ, "aws", 1, `{"token":"AKIA_demo_redacted"}`, now, "ok", now, now)
+	_, _ = st.DB().ExecContext(ctx, provQ, "gcp", 1, `{"token":"gcp_demo_redacted"}`, now, "ok", now, now)
+	_, _ = st.DB().ExecContext(ctx, provQ, "kubernetes", 1, `{"context":"demo-cluster"}`, now, "ok", now, now)
+	_, _ = st.DB().ExecContext(ctx, provQ, "hetzner", 0, `{"token":"hcloud_demo_redacted"}`, now, "ok", now, now)
+	_, _ = st.DB().ExecContext(ctx, provQ, "linux", 0, `{"host":"demo-host"}`, now, "ok", now, now)
 
-	scans := []struct {
-		id                   string
-		days                 int
-		score, total, action int
-	}{
-		{"demo-scan-1", 0, 78, 47, 12},
-		{"demo-scan-2", 7, 75, 51, 14},
-		{"demo-scan-3", 14, 73, 56, 16},
-	}
-	scanQ := `INSERT INTO scans (id, created_at, source, status, providers_scanned,
-	                              frameworks_scanned, score, coverage, total_findings,
-	                              actionable_findings, duration_ms)
-	          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-	          ON CONFLICT(id) DO NOTHING`
-	for _, s := range scans {
-		ts := time.Now().Add(-time.Duration(s.days) * 24 * time.Hour).UTC().Format(time.RFC3339)
-		_, _ = st.DB().ExecContext(ctx, scanQ,
-			s.id, ts, "daemon", "completed",
-			`["digitalocean"]`, `["soc2"]`,
-			s.score, 95, s.total, s.action, 8200+s.days*100)
-	}
+	// v1.19 phase 4 — screenshot-grade fleet: ~150 resources × 8 weekly
+	// scans → ~500 findings on an improving trend (see demo_seed.go).
+	seedDemoRich(ctx, st)
 
 	_, _ = st.DB().ExecContext(ctx,
 		`INSERT INTO inbox (id, user_id, created_at, severity, title, body, href)
 		 VALUES (?, NULL, ?, ?, ?, ?, ?)
 		 ON CONFLICT(id) DO NOTHING`,
-		"demo-inbox-1", now, "warning",
-		"Score dropped from 78 to 73",
-		"Run a scan to see the new findings.",
-		"/scans")
+		"demo-inbox-1", now, "info",
+		"Score improved from 64 to 90 over 8 weeks",
+		"Nice trend — your latest scan closed with the fewest findings yet.",
+		"/scores")
 
-	seedDemoFindings(ctx, st, now)
 	return nil
-}
-
-// seedDemoFindings populates the findings + resources tables for the
-// demo scans so /findings, /resources, dashboard widgets, and the
-// per-scan side panel all render against real data. v1.15.1 phase 4
-// — the v1.5.0 demo (which prompted ADR-016) only seeded scan rows;
-// every UI surface that loads findings showed an empty state.
-//
-// Each demo scan gets a fan of representative findings drawn from
-// real check IDs registered in internal/checks/. Severity mix
-// approximates a real CIS-scored fleet (mostly medium/low, a few
-// criticals and highs to make the explorer + heatmap interesting).
-//
-// Resources are upserted per finding (same id ⇒ deduplicated) so
-// /resources surfaces ~10-15 unique resources across the demo scans.
-//
-//nolint:gocyclo // straight-line seeder; cyclomatic from the slice length
-func seedDemoFindings(ctx context.Context, st *store.Store, now string) {
-	type demoFinding struct {
-		scanID, checkID, severity, status, provider     string
-		resourceID, resourceName, resourceType, message string
-		frameworkIDs                                    string // JSON array
-	}
-	// Spread ~50 findings across the 3 demo scans. The "regression"
-	// arc (more findings as we go back in time) matches the score
-	// trend the scans table already advertises (78 → 75 → 73).
-	demo := []demoFinding{
-		// demo-scan-1 (latest, 12 actionable)
-		{"demo-scan-1", "do-droplet-no-firewall", "high", "fail", "digitalocean", "do:droplet:web-prod-01", "web-prod-01", "droplet", "Droplet has no firewall attached", `["soc2","cis-v8","iso27001"]`},
-		{"demo-scan-1", "do-droplet-no-firewall", "high", "fail", "digitalocean", "do:droplet:web-prod-02", "web-prod-02", "droplet", "Droplet has no firewall attached", `["soc2","cis-v8","iso27001"]`},
-		{"demo-scan-1", "do-spaces-public-acl", "critical", "fail", "digitalocean", "do:space:assets-prod", "assets-prod", "space", "Spaces bucket has public ACL", `["soc2","pci-dss-v4","iso27001"]`},
-		{"demo-scan-1", "do-spaces-versioning-disabled", "medium", "fail", "digitalocean", "do:space:backups-prod", "backups-prod", "space", "Spaces bucket versioning is disabled", `["soc2","cis-v8"]`},
-		{"demo-scan-1", "do-account-2fa", "high", "fail", "digitalocean", "do:account:team", "team-account", "account", "Team 2FA is not enforced for all members", `["soc2","iso27001","cis-v8"]`},
-		{"demo-scan-1", "do-managed-db-public", "high", "fail", "digitalocean", "do:database:postgres-prod", "postgres-prod", "database", "Managed database accepts connections from the public internet", `["soc2","pci-dss-v4"]`},
-		{"demo-scan-1", "do-lb-tls-13", "medium", "fail", "digitalocean", "do:loadbalancer:api-lb", "api-lb", "load_balancer", "Load balancer uses TLS < 1.3", `["soc2","cis-v8"]`},
-		{"demo-scan-1", "do-droplet-old-image", "low", "fail", "digitalocean", "do:droplet:legacy-01", "legacy-01", "droplet", "Droplet image is more than 180 days old", `["cis-v8"]`},
-		{"demo-scan-1", "do-firewall-ssh-from-any", "high", "fail", "digitalocean", "do:firewall:default", "default", "firewall", "Firewall allows SSH (22) from 0.0.0.0/0", `["soc2","cis-v8","iso27001"]`},
-		{"demo-scan-1", "do-droplet-no-firewall", "pass", "pass", "digitalocean", "do:droplet:db-prod-01", "db-prod-01", "droplet", "Droplet has a firewall attached", `["soc2","cis-v8","iso27001"]`},
-		{"demo-scan-1", "do-spaces-public-acl", "pass", "pass", "digitalocean", "do:space:private-prod", "private-prod", "space", "Spaces bucket ACL is private", `["soc2","pci-dss-v4","iso27001"]`},
-		{"demo-scan-1", "do-cert-near-expiry", "medium", "fail", "digitalocean", "do:cert:wildcard", "wildcard", "certificate", "TLS certificate expires within 30 days", `["soc2","iso27001"]`},
-		{"demo-scan-1", "do-spaces-no-encryption", "medium", "fail", "digitalocean", "do:space:logs-prod", "logs-prod", "space", "Spaces bucket has no default encryption", `["soc2","pci-dss-v4"]`},
-		{"demo-scan-1", "do-firewall-rdp-from-any", "high", "fail", "digitalocean", "do:firewall:windows", "windows", "firewall", "Firewall allows RDP (3389) from 0.0.0.0/0", `["soc2","cis-v8"]`},
-		{"demo-scan-1", "do-droplet-no-backups", "low", "fail", "digitalocean", "do:droplet:web-prod-01", "web-prod-01", "droplet", "Droplet has automatic backups disabled", `["cis-v8"]`},
-
-		// demo-scan-2 (7 days ago, 14 actionable — score 75)
-		{"demo-scan-2", "do-droplet-no-firewall", "high", "fail", "digitalocean", "do:droplet:web-prod-01", "web-prod-01", "droplet", "Droplet has no firewall attached", `["soc2","cis-v8","iso27001"]`},
-		{"demo-scan-2", "do-droplet-no-firewall", "high", "fail", "digitalocean", "do:droplet:web-prod-02", "web-prod-02", "droplet", "Droplet has no firewall attached", `["soc2","cis-v8","iso27001"]`},
-		{"demo-scan-2", "do-droplet-no-firewall", "high", "fail", "digitalocean", "do:droplet:api-prod-01", "api-prod-01", "droplet", "Droplet has no firewall attached", `["soc2","cis-v8","iso27001"]`},
-		{"demo-scan-2", "do-spaces-public-acl", "critical", "fail", "digitalocean", "do:space:assets-prod", "assets-prod", "space", "Spaces bucket has public ACL", `["soc2","pci-dss-v4","iso27001"]`},
-		{"demo-scan-2", "do-spaces-public-acl", "critical", "fail", "digitalocean", "do:space:legacy-public", "legacy-public", "space", "Spaces bucket has public ACL", `["soc2","pci-dss-v4","iso27001"]`},
-		{"demo-scan-2", "do-account-2fa", "high", "fail", "digitalocean", "do:account:team", "team-account", "account", "Team 2FA is not enforced for all members", `["soc2","iso27001","cis-v8"]`},
-		{"demo-scan-2", "do-managed-db-public", "high", "fail", "digitalocean", "do:database:postgres-prod", "postgres-prod", "database", "Managed database accepts connections from the public internet", `["soc2","pci-dss-v4"]`},
-		{"demo-scan-2", "do-lb-tls-13", "medium", "fail", "digitalocean", "do:loadbalancer:api-lb", "api-lb", "load_balancer", "Load balancer uses TLS < 1.3", `["soc2","cis-v8"]`},
-		{"demo-scan-2", "do-droplet-old-image", "low", "fail", "digitalocean", "do:droplet:legacy-01", "legacy-01", "droplet", "Droplet image is more than 180 days old", `["cis-v8"]`},
-		{"demo-scan-2", "do-droplet-old-image", "low", "fail", "digitalocean", "do:droplet:legacy-02", "legacy-02", "droplet", "Droplet image is more than 180 days old", `["cis-v8"]`},
-		{"demo-scan-2", "do-firewall-ssh-from-any", "high", "fail", "digitalocean", "do:firewall:default", "default", "firewall", "Firewall allows SSH (22) from 0.0.0.0/0", `["soc2","cis-v8","iso27001"]`},
-		{"demo-scan-2", "do-firewall-rdp-from-any", "high", "fail", "digitalocean", "do:firewall:windows", "windows", "firewall", "Firewall allows RDP (3389) from 0.0.0.0/0", `["soc2","cis-v8"]`},
-		{"demo-scan-2", "do-spaces-versioning-disabled", "medium", "fail", "digitalocean", "do:space:backups-prod", "backups-prod", "space", "Spaces bucket versioning is disabled", `["soc2","cis-v8"]`},
-		{"demo-scan-2", "do-spaces-no-encryption", "medium", "fail", "digitalocean", "do:space:logs-prod", "logs-prod", "space", "Spaces bucket has no default encryption", `["soc2","pci-dss-v4"]`},
-
-		// demo-scan-3 (14 days ago, 16 actionable — score 73, worst)
-		{"demo-scan-3", "do-droplet-no-firewall", "high", "fail", "digitalocean", "do:droplet:web-prod-01", "web-prod-01", "droplet", "Droplet has no firewall attached", `["soc2","cis-v8","iso27001"]`},
-		{"demo-scan-3", "do-droplet-no-firewall", "high", "fail", "digitalocean", "do:droplet:web-prod-02", "web-prod-02", "droplet", "Droplet has no firewall attached", `["soc2","cis-v8","iso27001"]`},
-		{"demo-scan-3", "do-droplet-no-firewall", "high", "fail", "digitalocean", "do:droplet:api-prod-01", "api-prod-01", "droplet", "Droplet has no firewall attached", `["soc2","cis-v8","iso27001"]`},
-		{"demo-scan-3", "do-droplet-no-firewall", "high", "fail", "digitalocean", "do:droplet:api-prod-02", "api-prod-02", "droplet", "Droplet has no firewall attached", `["soc2","cis-v8","iso27001"]`},
-		{"demo-scan-3", "do-spaces-public-acl", "critical", "fail", "digitalocean", "do:space:assets-prod", "assets-prod", "space", "Spaces bucket has public ACL", `["soc2","pci-dss-v4","iso27001"]`},
-		{"demo-scan-3", "do-spaces-public-acl", "critical", "fail", "digitalocean", "do:space:legacy-public", "legacy-public", "space", "Spaces bucket has public ACL", `["soc2","pci-dss-v4","iso27001"]`},
-		{"demo-scan-3", "do-spaces-public-acl", "critical", "fail", "digitalocean", "do:space:misc-bucket", "misc-bucket", "space", "Spaces bucket has public ACL", `["soc2","pci-dss-v4","iso27001"]`},
-		{"demo-scan-3", "do-account-2fa", "high", "fail", "digitalocean", "do:account:team", "team-account", "account", "Team 2FA is not enforced for all members", `["soc2","iso27001","cis-v8"]`},
-		{"demo-scan-3", "do-managed-db-public", "high", "fail", "digitalocean", "do:database:postgres-prod", "postgres-prod", "database", "Managed database accepts connections from the public internet", `["soc2","pci-dss-v4"]`},
-		{"demo-scan-3", "do-managed-db-no-backup-window", "medium", "fail", "digitalocean", "do:database:postgres-prod", "postgres-prod", "database", "Managed database has no backup window configured", `["soc2","cis-v8"]`},
-		{"demo-scan-3", "do-firewall-ssh-from-any", "high", "fail", "digitalocean", "do:firewall:default", "default", "firewall", "Firewall allows SSH (22) from 0.0.0.0/0", `["soc2","cis-v8","iso27001"]`},
-		{"demo-scan-3", "do-firewall-rdp-from-any", "high", "fail", "digitalocean", "do:firewall:windows", "windows", "firewall", "Firewall allows RDP (3389) from 0.0.0.0/0", `["soc2","cis-v8"]`},
-		{"demo-scan-3", "do-droplet-old-image", "low", "fail", "digitalocean", "do:droplet:legacy-01", "legacy-01", "droplet", "Droplet image is more than 180 days old", `["cis-v8"]`},
-		{"demo-scan-3", "do-droplet-old-image", "low", "fail", "digitalocean", "do:droplet:legacy-02", "legacy-02", "droplet", "Droplet image is more than 180 days old", `["cis-v8"]`},
-		{"demo-scan-3", "do-spaces-versioning-disabled", "medium", "fail", "digitalocean", "do:space:backups-prod", "backups-prod", "space", "Spaces bucket versioning is disabled", `["soc2","cis-v8"]`},
-		{"demo-scan-3", "do-cert-near-expiry", "medium", "fail", "digitalocean", "do:cert:wildcard", "wildcard", "certificate", "TLS certificate expires within 30 days", `["soc2","iso27001"]`},
-		{"demo-scan-3", "do-spaces-no-encryption", "medium", "fail", "digitalocean", "do:space:logs-prod", "logs-prod", "space", "Spaces bucket has no default encryption", `["soc2","pci-dss-v4"]`},
-	}
-
-	const findingQ = `INSERT INTO findings (id, scan_id, fingerprint, check_id, severity, status, provider,
-	                                         resource_id, resource_name, resource_type, message,
-	                                         framework_ids, first_seen_at, last_seen_at, created_at)
-	                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-	                  ON CONFLICT(id) DO NOTHING`
-	const resourceQ = `INSERT INTO resources (id, name, type, provider, first_seen_at, last_seen_at, last_seen_scan_id)
-	                   VALUES (?, ?, ?, ?, ?, ?, ?)
-	                   ON CONFLICT(id) DO UPDATE SET
-	                     name = excluded.name, type = excluded.type, provider = excluded.provider,
-	                     last_seen_at = excluded.last_seen_at, last_seen_scan_id = excluded.last_seen_scan_id`
-
-	for i, f := range demo {
-		findingID := fmt.Sprintf("demo-finding-%03d", i+1)
-		fingerprint := fmt.Sprintf("%s|%s|%s|%s", f.scanID, f.checkID, f.resourceID, f.severity)
-		_, _ = st.DB().ExecContext(ctx, findingQ,
-			findingID, f.scanID, fingerprint, f.checkID, f.severity, f.status, f.provider,
-			f.resourceID, f.resourceName, f.resourceType, f.message,
-			f.frameworkIDs, now, now, now)
-		_, _ = st.DB().ExecContext(ctx, resourceQ,
-			f.resourceID, f.resourceName, f.resourceType, f.provider, now, now, f.scanID)
-		_ = strings.TrimSpace // keep the strings import live for future template helpers
-	}
 }

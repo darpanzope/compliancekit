@@ -148,8 +148,8 @@ func TestSeedDemoData(t *testing.T) {
 
 	cases := map[string]int{
 		"users":     1,
-		"providers": 2,
-		"scans":     3,
+		"providers": 6, // v1.19 phase 4 — DO/AWS/GCP/K8s enabled + Hetzner/Linux disabled
+		"scans":     8, // v1.19 phase 4 — 8 weekly scans
 		"inbox":     1,
 	}
 	for tbl, want := range cases {
@@ -161,6 +161,26 @@ func TestSeedDemoData(t *testing.T) {
 		if got != want {
 			t.Errorf("count(%s)=%d want %d", tbl, got, want)
 		}
+	}
+
+	// v1.19 phase 4 — screenshot-grade dataset: ~500 findings across
+	// ~150 resources on an improving trend. Assert order of magnitude
+	// (exact counts shift with the RNG/catalog) + that the newest scan
+	// carries fewer findings than the oldest.
+	var findingCount, resourceCount int
+	_ = st.DB().QueryRowContext(ctx, `SELECT COUNT(*) FROM findings`).Scan(&findingCount)
+	_ = st.DB().QueryRowContext(ctx, `SELECT COUNT(*) FROM resources`).Scan(&resourceCount)
+	if findingCount < 350 {
+		t.Errorf("findings = %d, want ~500 (screenshot-grade)", findingCount)
+	}
+	if resourceCount < 100 {
+		t.Errorf("resources = %d, want ~150 (screenshot-grade)", resourceCount)
+	}
+	var newest, oldest int
+	_ = st.DB().QueryRowContext(ctx, `SELECT total_findings FROM scans WHERE id = 'demo-scan-1'`).Scan(&newest)
+	_ = st.DB().QueryRowContext(ctx, `SELECT total_findings FROM scans WHERE id = 'demo-scan-8'`).Scan(&oldest)
+	if newest >= oldest {
+		t.Errorf("improving trend broken: newest scan %d findings >= oldest %d", newest, oldest)
 	}
 
 	// Re-running seed is idempotent — counts shouldn't double.
