@@ -18,6 +18,7 @@ func TestComponentsParse(t *testing.T) {
 	t.Helper()
 	funcs := template.FuncMap{
 		"mkInfoTooltip": func(s string) design.InfoTooltipArgs { return design.InfoTooltipArgs{Text: s} },
+		"add":           func(a, b int) int { return a + b },
 	}
 	tmpl, err := template.New("design-test").Funcs(funcs).ParseFS(design.ComponentsFS, design.ComponentsGlob)
 	if err != nil {
@@ -39,6 +40,7 @@ func TestComponentsRender(t *testing.T) {
 	t.Helper()
 	funcs := template.FuncMap{
 		"mkInfoTooltip": func(s string) design.InfoTooltipArgs { return design.InfoTooltipArgs{Text: s} },
+		"add":           func(a, b int) int { return a + b },
 	}
 	tmpl, err := template.New("design-test").Funcs(funcs).ParseFS(design.ComponentsFS, design.ComponentsGlob)
 	if err != nil {

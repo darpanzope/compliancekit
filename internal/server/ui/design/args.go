@@ -141,12 +141,22 @@ type AvatarArgs struct {
 }
 
 // EmptyStateArgs renders an empty-state. Phase 10 supplies the
-// illustration catalog (~30 hand-drawn-style SVGs).
+// illustration catalog (~30 hand-drawn-style SVGs); v1.19 phase 3 adds
+// the optional Steps coaching list (a numbered 3-step CTA, each step
+// deep-linking into the page that completes it).
 type EmptyStateArgs struct {
 	Title        string
 	Description  string
 	Illustration template.HTML
 	Action       template.HTML
+	Steps        []EmptyStep
+}
+
+// EmptyStep is one row of the empty-state coaching CTA.
+type EmptyStep struct {
+	Text string
+	Href string // deep link to the page that completes the step
+	CTA  string // link label (e.g. "Connect →")
 }
 
 // IconArgs renders a sprite-symbol reference. Phase 11 expands the

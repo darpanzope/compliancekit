@@ -9,6 +9,17 @@
   {{- end -}}
   {{- if .Title }}<h3 class="ck-empty-title">{{ .Title }}</h3>{{ end -}}
   {{- if .Description }}<p class="ck-empty-description">{{ .Description }}</p>{{ end -}}
+  {{- if .Steps -}}
+  <ol class="ck-empty-steps">
+    {{- range $i, $s := .Steps -}}
+    <li class="ck-empty-step">
+      <span class="ck-empty-step-num">{{ add $i 1 }}</span>
+      <span class="ck-empty-step-text">{{ $s.Text }}</span>
+      {{- if $s.Href }}<a href="{{ $s.Href }}" class="ck-empty-step-cta">{{ if $s.CTA }}{{ $s.CTA }}{{ else }}Open →{{ end }}</a>{{ end -}}
+    </li>
+    {{- end -}}
+  </ol>
+  {{- end -}}
   {{- if .Action }}<div class="ck-empty-action">{{ .Action }}</div>{{ end -}}
 </div>
 {{ end }}

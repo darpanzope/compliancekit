@@ -9,6 +9,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/darpanzope/compliancekit/internal/server/auth"
+	"github.com/darpanzope/compliancekit/internal/server/ui/design"
 )
 
 // tourDef is one replayable feature tour. The step content lives in the
@@ -158,4 +159,21 @@ func containsString(xs []string, s string) bool {
 		}
 	}
 	return false
+}
+
+// firstRunCoach is the v1.19 phase 3 empty-state coaching card the scans
+// page shows when the operator has zero scans: the no-scans illustration
+// + a deep-linked 3-step CTA that walks them from connecting a provider
+// through reviewing findings.
+func firstRunCoach() design.EmptyStateArgs {
+	return design.EmptyStateArgs{
+		Illustration: design.Illustration("no-scans"),
+		Title:        "Let's run your first scan",
+		Description:  "Three steps to your first compliance report.",
+		Steps: []design.EmptyStep{
+			{Text: "Connect a provider (AWS / GCP / DO / Hetzner / K8s / Linux).", Href: "/setup", CTA: "Connect →"},
+			{Text: "Run a scan against it.", Href: "/scans/new", CTA: "Run scan →"},
+			{Text: "Review + triage the findings.", Href: "/findings", CTA: "Findings →"},
+		},
+	}
 }

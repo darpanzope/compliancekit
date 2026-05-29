@@ -57,6 +57,43 @@ func TestOnboardingPageRenders(t *testing.T) {
 	}
 }
 
+// renderComponent parses the component partials with the shared funcmap
+// + executes one by name against args. Used to render a single design
+// component without the full base chrome.
+func renderComponent(t *testing.T, name string, args any) string {
+	t.Helper()
+	tmpl, err := template.New("c").Funcs(templateFuncs).ParseFS(design.ComponentsFS, design.ComponentsGlob)
+	if err != nil {
+		t.Fatalf("ParseFS components: %v", err)
+	}
+	var buf bytes.Buffer
+	if err := tmpl.ExecuteTemplate(&buf, name, args); err != nil {
+		t.Fatalf("ExecuteTemplate(%q): %v", name, err)
+	}
+	return buf.String()
+}
+
+// TestFirstRunCoach asserts the phase-3 coaching card has the 3 deep-
+// linked steps + renders them through ck-empty-state.
+func TestFirstRunCoach(t *testing.T) {
+	t.Parallel()
+	c := firstRunCoach()
+	if len(c.Steps) != 3 {
+		t.Fatalf("firstRunCoach has %d steps, want 3", len(c.Steps))
+	}
+	for _, s := range c.Steps {
+		if s.Text == "" || s.Href == "" || s.CTA == "" {
+			t.Errorf("coaching step %+v has an empty field", s)
+		}
+	}
+	out := renderComponent(t, "ck-empty-state", c)
+	for _, want := range []string{"ck-empty-steps", "/setup", "/scans/new", "/findings", "Run scan →"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("firstRunCoach render missing %q", want)
+		}
+	}
+}
+
 // TestTourCatalogStable guards the shipped tour ids — tour.js + the nav
 // data-ck-tour attributes reference these by string.
 func TestTourCatalogStable(t *testing.T) {

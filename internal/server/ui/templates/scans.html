@@ -104,7 +104,7 @@
           </tr>
           {{ else }}
           <tr><td colspan="8" class="p-6">
-            {{ template "ck-empty-state" (mkEmpty "no-scans" "No scans yet" "Run your first scan to populate the dashboard, or push from a CLI with compliancekit scan --push-to-server=…") }}
+            {{ template "ck-empty-state" firstRunCoach }}
           </td></tr>
           {{ end }}
         </tbody>

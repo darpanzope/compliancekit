@@ -315,7 +315,10 @@ func (u *UI) setupScanTrigger(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "queue scan: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	http.Redirect(w, r, "/scans?welcome=1", http.StatusSeeOther)
+	// v1.19 phase 3 — first-run product tour: land on /scans with the
+	// welcome tour auto-starting (tour.js reads ?tour=). welcome=1 keeps
+	// the existing post-wizard banner behavior.
+	http.Redirect(w, r, "/scans?welcome=1&tour=welcome", http.StatusSeeOther)
 }
 
 // setupViewFor stamps the chrome fields + the wizard's per-step

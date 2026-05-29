@@ -176,6 +176,10 @@ var templateFuncs = template.FuncMap{
 	// v1.19 phase 1 changelog modal dismisses against. base.html uses it
 	// to build the dismiss form action.
 	"changelogTourID": changelogTourID,
+	// firstRunCoach returns the canonical first-run empty-state coaching
+	// card (illustration + a deep-linked 3-step CTA). v1.19 phase 3 —
+	// the scans page renders it when the operator has zero scans.
+	"firstRunCoach": firstRunCoach,
 	// illustration returns the named empty-state SVG (v1.18 phase 10).
 	"illustration": design.Illustration,
 	// icon builds a design.IconArgs for the ck-icon sprite partial

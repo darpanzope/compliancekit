@@ -412,6 +412,15 @@
   .ck-empty-title { @apply text-base font-semibold text-foreground; }
   .ck-empty-description { @apply text-sm text-muted-foreground max-w-md; }
   .ck-empty-action { @apply mt-2; }
+  /* v1.19 phase 3 — empty-state coaching steps (numbered 3-step CTA). */
+  .ck-empty-steps { @apply mt-4 flex flex-col gap-2 text-left w-full max-w-md; }
+  .ck-empty-step { @apply flex items-center gap-3 text-sm rounded-md border border-border p-2.5; }
+  .ck-empty-step-num {
+    @apply inline-flex items-center justify-center w-6 h-6 shrink-0 rounded-full text-xs font-semibold;
+    background-color: hsl(var(--primary) / 0.12); color: hsl(var(--primary));
+  }
+  .ck-empty-step-text { @apply flex-1 text-foreground; }
+  .ck-empty-step-cta { @apply text-primary hover:underline text-sm font-medium whitespace-nowrap; }
 
   /* ck-icon — sprite-based. The svg uses currentColor by default so
      callers control color via text-* utilities. */
