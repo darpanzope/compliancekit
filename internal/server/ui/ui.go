@@ -172,6 +172,10 @@ var templateFuncs = template.FuncMap{
 	"mkButtonLink": func(label, href, variant string) design.ButtonArgs {
 		return design.ButtonArgs{Label: label, Href: href, Variant: variant}
 	},
+	// changelogTourID maps a version to the user_tour_state row id the
+	// v1.19 phase 1 changelog modal dismisses against. base.html uses it
+	// to build the dismiss form action.
+	"changelogTourID": changelogTourID,
 	// illustration returns the named empty-state SVG (v1.18 phase 10).
 	"illustration": design.Illustration,
 	// icon builds a design.IconArgs for the ck-icon sprite partial
@@ -442,6 +446,12 @@ type View struct {
 	// escapes the quotes, the browser's dataset API decodes them back to
 	// valid JSON) so tour.js skips already-seen tours.
 	DismissedToursJSON string
+
+	// ShowChangelog + Changelog drive the v1.19 phase 1 "what's new"
+	// modal — set when the session user hasn't dismissed the newest
+	// changelog entry. base.html renders the modal when ShowChangelog.
+	ShowChangelog bool
+	Changelog     changelogEntry
 
 	// Page-specific
 	Items any
@@ -803,7 +813,16 @@ func (u *UI) viewFor(r *http.Request, title, active string, v View) View {
 		if usr, err := u.users.ByID(r.Context(), sess.UserID); err == nil {
 			v.User = usr
 		}
-		v.DismissedToursJSON = u.dismissedToursJSON(r.Context(), sess.UserID)
+		// Single read of the dismissed-tour set drives both the tour
+		// overlay (data-ck-tours-dismissed) + the changelog modal gate.
+		dismissed := u.dismissedTours(r.Context(), sess.UserID)
+		v.DismissedToursJSON = jsonArray(dismissed)
+		if entry, ok := latestChangelog(); ok {
+			if !containsString(dismissed, changelogTourID(entry.Version)) {
+				v.ShowChangelog = true
+				v.Changelog = entry
+			}
+		}
 	}
 	return v
 }

@@ -137,14 +137,9 @@ func (u *UI) dismissedTours(ctx context.Context, userID string) []string {
 	return out
 }
 
-// dismissedToursJSON renders the user's dismissed-tour set as a JSON
-// array string for the body data-attribute tour.js reads. Empty user
-// or empty set → "[]".
-func (u *UI) dismissedToursJSON(ctx context.Context, userID string) string {
-	if userID == "" {
-		return "[]"
-	}
-	ids := u.dismissedTours(ctx, userID)
+// jsonArray renders a []string as a JSON array string for the body
+// data-attribute tour.js reads. nil/empty → "[]".
+func jsonArray(ids []string) string {
 	if len(ids) == 0 {
 		return "[]"
 	}
@@ -153,4 +148,14 @@ func (u *UI) dismissedToursJSON(ctx context.Context, userID string) string {
 		return "[]"
 	}
 	return string(b)
+}
+
+// containsString reports whether s is in xs.
+func containsString(xs []string, s string) bool {
+	for _, x := range xs {
+		if x == s {
+			return true
+		}
+	}
+	return false
 }

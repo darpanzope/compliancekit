@@ -141,6 +141,50 @@ table.list tbody tr:hover { background: var(--legacy-panel-2); }
 -->
 <div id="ck-toasts" class="ck-toasts" aria-live="polite"></div>
 
+{{ if .ShowChangelog }}
+<!--
+  v1.19 phase 1 — "what's new" modal. Auto-opens once per user after an
+  upgrade; the close button (or backdrop / Esc) POSTs the dismissal to
+  the phase-0 dismiss endpoint with the changelog-<version> id so it
+  reuses user_tour_state (no extra table). Deep links let the operator
+  jump straight into each new feature.
+-->
+<div x-data="{ open: true }" x-show="open" x-cloak
+     @keydown.window.escape="open = false; $refs.f && $refs.f.submit()"
+     class="ck-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="ck-changelog-title">
+  <div class="ck-modal-panel" @click.outside="open = false; $refs.f && $refs.f.submit()">
+    <header class="ck-modal-header">
+      <div>
+        <p class="ck-page-eyebrow">What's new · {{ .Changelog.Version }} · {{ .Changelog.Date }}</p>
+        <h2 id="ck-changelog-title">{{ .Changelog.Headline }}</h2>
+      </div>
+      <button type="button" class="ck-modal-close" @click="open = false; $refs.f && $refs.f.submit()" aria-label="Close">&times;</button>
+    </header>
+    <div class="ck-modal-body">
+      <ul class="flex flex-col gap-3">
+        {{ range .Changelog.Highlights }}
+        <li class="flex items-start gap-2.5">
+          <span class="mt-1 text-primary shrink-0" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </span>
+          <span class="text-sm text-foreground">
+            {{ .Text }}
+            {{ if .Href }}<a href="{{ .Href }}" class="text-primary hover:underline ml-1">Try it →</a>{{ end }}
+          </span>
+        </li>
+        {{ end }}
+      </ul>
+    </div>
+    <footer class="ck-modal-actions">
+      <form x-ref="f" action="/onboarding/tours/{{ changelogTourID .Changelog.Version }}/dismiss" method="post">
+        <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
+        <button type="submit" class="ck-btn ck-btn-primary ck-btn-md" @click="open = false">Got it</button>
+      </form>
+    </footer>
+  </div>
+</div>
+{{ end }}
+
 <!--
   v1.10 phase 9 — Inline help.
   Pages can override by defining their own
