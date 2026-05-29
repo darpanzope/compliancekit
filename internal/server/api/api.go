@@ -27,6 +27,7 @@ import (
 	srvrbac "github.com/darpanzope/compliancekit/internal/server/rbac"
 	"github.com/darpanzope/compliancekit/internal/server/respcache"
 	"github.com/darpanzope/compliancekit/internal/server/store"
+	"github.com/darpanzope/compliancekit/pkg/compliancekit"
 	pubrbac "github.com/darpanzope/compliancekit/pkg/compliancekit/rbac"
 )
 
@@ -34,15 +35,23 @@ import (
 // references to the persistence + auth dependencies the handlers
 // need.
 type API struct {
-	store    *store.Store
-	users    *auth.Users
-	tokens   *auth.Tokens
-	sessions *auth.Sessions
-	events   *events.Producer // v1.6: SSE event bus (nil OK — handler returns 503)
-	cache    *respcache.Cache // v1.11: LRU; nil OK — cache lookup short-circuits
-	rbac     *srvrbac.Store   // v1.12 phase 2: role-derived session scope check
-	push     *push.Store      // v1.16 phase 4: Web Push subscriptions (nil OK — endpoints 503)
-	pushSend *push.Sender     // v1.16 phase 4: VAPID sender (nil OK)
+	store     *store.Store
+	users     *auth.Users
+	tokens    *auth.Tokens
+	sessions  *auth.Sessions
+	events    *events.Producer // v1.6: SSE event bus (nil OK — handler returns 503)
+	cache     *respcache.Cache // v1.11: LRU; nil OK — cache lookup short-circuits
+	rbac      *srvrbac.Store   // v1.12 phase 2: role-derived session scope check
+	push      *push.Store      // v1.16 phase 4: Web Push subscriptions (nil OK — endpoints 503)
+	pushSend  *push.Sender     // v1.16 phase 4: VAPID sender (nil OK)
+	searchIdx searcher         // v1.19 phase 5: global search index (nil OK — /search 503)
+}
+
+// searcher is the global-search dependency the /api/v1/search route
+// needs. The concrete *search.Index satisfies it; the interface keeps
+// the api package from importing internal/server/search directly.
+type searcher interface {
+	Search(q string, types []compliancekit.SearchType, limit int, cursor string) compliancekit.SearchResponse
 }
 
 // New constructs the API handle. The Mount() method wires every
@@ -78,6 +87,15 @@ func (a *API) WithPush(s *push.Store, sender *push.Sender) *API {
 	return a
 }
 
+// WithSearch installs the v1.19 phase 5 global search index. Returns
+// the receiver for chaining. When set, GET /api/v1/search serves the
+// index; otherwise it 503s. Nil/unset is safe — the daemon's v1.5
+// Cmd+K palette still works against its own endpoints.
+func (a *API) WithSearch(s searcher) *API {
+	a.searchIdx = s
+	return a
+}
+
 // Mount installs the v1 routes on r. Phase 6 ships the read surface;
 // phase 7 layers the write endpoints on this same prefix. Phase 11
 // (UI shell) calls Mount before starting the server.
@@ -108,6 +126,11 @@ func (a *API) Mount(r chi.Router) {
 		// /findings but no pagination — every matching row streams.
 		r.Get("/findings.ndjson", a.scopeGate(auth.ScopeFindingsRead, a.streamFindings))
 		r.Get("/findings/{id}", a.scopeGate(auth.ScopeFindingsRead, a.getFinding))
+
+		// v1.19 phase 5 — global search across findings / resources /
+		// scans / users / waivers / settings / docs. Gated on the
+		// broadest read scope a search caller already holds.
+		r.Get("/search", a.scopeGate(searchScope, a.search))
 
 		r.Get("/resources", a.scopeGate(auth.ScopeScansRead, a.listResources))
 		r.Get("/resources/{id}", a.scopeGate(auth.ScopeScansRead, a.getResource))

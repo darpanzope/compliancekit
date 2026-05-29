@@ -21,6 +21,7 @@ import (
 	"github.com/darpanzope/compliancekit/internal/server/logs"
 	"github.com/darpanzope/compliancekit/internal/server/push"
 	"github.com/darpanzope/compliancekit/internal/server/scim"
+	"github.com/darpanzope/compliancekit/internal/server/search"
 	"github.com/darpanzope/compliancekit/internal/server/store"
 	"github.com/darpanzope/compliancekit/internal/server/ui"
 	"github.com/darpanzope/compliancekit/internal/server/ui/design"
@@ -143,9 +144,14 @@ func runServe(ctx context.Context, stdout interface {
 	// Mount the v1.3 REST API on the daemon's chi router. WithPush is
 	// nil-safe — when pushSender is nil the handlers branch around the
 	// route registration; no conditional here.
+	// v1.19 phase 5 — global search index. Built in-memory from the
+	// store, kept fresh by a 60s tick + SSE-event triggers (wired
+	// below once the signal context exists).
+	searchIdx := search.New(st)
 	apiH := api.New(st, users, tokens, sessions).
 		WithEvents(eventBus).
-		WithPush(pushStore, pushSender)
+		WithPush(pushStore, pushSender).
+		WithSearch(searchIdx)
 	apiH.Mount(srv.Router())
 	// Mount /api/auth/{login,logout,me} so the UI login form has a
 	// real POST target. Missing in v1.3.0; fixed in v1.3.1.
@@ -239,6 +245,12 @@ func runServe(ctx context.Context, stdout interface {
 
 	pool.Start(ctx)
 	defer pool.Stop()
+
+	// v1.19 phase 5 — keep the global search index fresh: an initial
+	// build, a 60s tick, and a coalesced rebuild on every SSE event
+	// (finding.created / resource.created / scan.completed all change
+	// what's searchable). Both goroutines stop with ctx.
+	startSearchIndexer(ctx, searchIdx, eventBus)
 
 	// v1.15 phase 7 — deep readiness checks. /health stays cheap;
 	// /health/ready 503s when any of the registered probes fails.
@@ -347,6 +359,30 @@ func setupBrandKit(uiH *ui.UI, stdout interface{ Write([]byte) (int, error) }) {
 		return
 	}
 	fmt.Fprintf(stdout, "  brand:   warning — CK_BRAND_PRIMARY %q rejected (malformed or contrast below %.1f:1)\n", bp, design.BrandPrimaryMinContrast)
+}
+
+// startSearchIndexer launches the v1.19 phase 5 background goroutines
+// that keep the global search index fresh: the indexer (initial build +
+// 60s tick + debounced Trigger) and an SSE-bus subscriber that fires a
+// Trigger on every event. Both stop when ctx is done. Extracted from
+// runServe to keep its cyclomatic complexity within budget.
+func startSearchIndexer(ctx context.Context, idx *search.Index, bus *events.Producer) {
+	indexer := search.NewIndexer(idx, 60*time.Second)
+	go indexer.Run(ctx)
+	go func() {
+		_, ch, _ := bus.Subscribe(0)
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case _, ok := <-ch:
+				if !ok {
+					return
+				}
+				indexer.Trigger()
+			}
+		}
+	}()
 }
 
 func setupPush(ctx context.Context, st *store.Store) (*push.Store, *push.Sender) {

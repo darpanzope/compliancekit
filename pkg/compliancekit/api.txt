@@ -12,6 +12,13 @@
 
 const CategoryCompliance = "compliance"
 const CategoryThreatModel = "threat_model"
+const SearchTypeDoc SearchType
+const SearchTypeFinding SearchType
+const SearchTypeResource SearchType
+const SearchTypeScan SearchType
+const SearchTypeSetting SearchType
+const SearchTypeUser SearchType
+const SearchTypeWaiver SearchType
 const SeverityCritical
 const SeverityHigh
 const SeverityInfo
@@ -81,6 +88,9 @@ type ResolvedControl struct
 type Resource struct
 type ResourceGraph struct
 type ResourceRef struct
+type SearchResponse struct
+type SearchResult struct
+type SearchType string
 type Secret struct
 type Severity int
 type Source struct
