@@ -107,8 +107,15 @@ func (u *UI) findingDetailPartial(w http.ResponseWriter, r *http.Request) {
 		},
 	}
 
-	// Render just the partial — no daemon chrome, htmx target is the
-	// detail panel container.
+	// v1.19 phase 9 — the detail URL doubles as a detachable permalink.
+	// htmx requests (the side-panel hx-get) get the bare partial; a
+	// direct browser navigation (the "open in new tab" detach) gets the
+	// partial wrapped in the daemon chrome so the page is styled +
+	// shareable.
+	if r.Header.Get("HX-Request") == "" {
+		u.render(w, "finding_detail_page.html", detail)
+		return
+	}
 	u.renderPartial(w, "finding_detail", detail)
 }
 

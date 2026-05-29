@@ -511,6 +511,62 @@ function logsTail() {
   };
 }
 
+// v1.19 phase 9 — finding detail-panel polish: drag-resize (persisted)
+// + j/k (or ↑/↓) navigation between findings without closing the panel.
+document.addEventListener('DOMContentLoaded', function () {
+  var panel = document.getElementById('finding-detail-panel');
+  var resizer = document.getElementById('ck-detail-resizer');
+  var body = document.getElementById('findings-body');
+  if (!panel) return;
+  var WKEY = 'ck-detail-width';
+
+  function setWidth(px) {
+    px = Math.max(360, Math.min(px, Math.round(window.innerWidth * 0.9)));
+    panel.style.width = px + 'px';
+    if (resizer) resizer.style.right = px + 'px';
+  }
+  var saved = parseInt(localStorage.getItem(WKEY) || '', 10);
+  if (saved) setWidth(saved);
+
+  if (resizer) {
+    resizer.addEventListener('mousedown', function (e) {
+      e.preventDefault();
+      document.body.style.userSelect = 'none';
+      function move(ev) { setWidth(window.innerWidth - ev.clientX); }
+      function up() {
+        document.removeEventListener('mousemove', move);
+        document.removeEventListener('mouseup', up);
+        document.body.style.userSelect = '';
+        try { localStorage.setItem(WKEY, String(parseInt(panel.style.width, 10) || 480)); } catch (e) {}
+      }
+      document.addEventListener('mousemove', move);
+      document.addEventListener('mouseup', up);
+    });
+  }
+
+  // j/k (or ↓/↑) move to the next/previous finding while the panel is
+  // open, swapping the panel content in place via htmx.
+  document.addEventListener('keydown', function (e) {
+    if (!body || panel.offsetParent === null) return; // panel hidden
+    var t = e.target;
+    if (t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable)) return;
+    var dir = 0;
+    if (e.key === 'j' || e.key === 'ArrowDown') dir = 1;
+    else if (e.key === 'k' || e.key === 'ArrowUp') dir = -1;
+    else return;
+    e.preventDefault();
+    var cur = panel.querySelector('[data-finding-id]');
+    var curId = cur && cur.getAttribute('data-finding-id');
+    var rows = Array.prototype.slice.call(body.querySelectorAll('tr[data-finding-id]'));
+    var idx = rows.findIndex(function (r) { return r.dataset.findingId === curId; });
+    var next = rows[idx + dir];
+    if (next && window.htmx) {
+      window.htmx.ajax('GET', '/findings/' + next.dataset.findingId + '/detail',
+        { target: '#finding-detail-panel', swap: 'innerHTML' });
+    }
+  });
+});
+
 // v1.19 phase 8 — findings bulk-selection controller. Vanilla + event-
 // delegated so it survives htmx infinite-scroll swaps of #findings-body.
 // Tracks the selected finding ids, reveals the bulk-actions bar with

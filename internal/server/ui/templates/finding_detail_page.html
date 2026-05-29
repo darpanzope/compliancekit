@@ -1,0 +1,19 @@
+{{ define "content" }}
+{{- /*
+  v1.19 phase 9 — full-page wrapper for the finding detail. Served by
+  findingDetailPartial on a direct (non-htmx) navigation so the "open in
+  new tab" detach button produces a styled, shareable permalink. The
+  htmx side-panel path renders the bare "finding_detail" partial instead.
+*/ -}}
+<div class="max-w-3xl mx-auto">
+  <div class="mb-4">
+    <a href="/findings" class="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5">
+      <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      All findings
+    </a>
+  </div>
+  <div class="ck-card overflow-hidden">
+    {{ template "finding_detail" . }}
+  </div>
+</div>
+{{ end }}

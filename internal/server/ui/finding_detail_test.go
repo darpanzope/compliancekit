@@ -24,7 +24,11 @@ func TestFindingDetailPartial_RendersPanel(t *testing.T) {
 		t.Fatalf("query id: %v", err)
 	}
 
+	// v1.19 phase 9 — the side panel always sends HX-Request, which
+	// selects the chrome-less partial. A direct browser navigation
+	// (the detach permalink) instead gets the full chrome page.
 	req := httptest.NewRequest("GET", "/findings/"+id+"/detail", nil)
+	req.Header.Set("HX-Request", "true")
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("id", id)
 	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
@@ -44,6 +48,20 @@ func TestFindingDetailPartial_RendersPanel(t *testing.T) {
 	}
 	if !strings.Contains(body, "Resource") {
 		t.Errorf("partial missing Resource section")
+	}
+
+	// Direct navigation (no HX-Request) → full chrome page permalink.
+	reqDirect := httptest.NewRequest("GET", "/findings/"+id+"/detail", nil)
+	rctx2 := chi.NewRouteContext()
+	rctx2.URLParams.Add("id", id)
+	reqDirect = reqDirect.WithContext(context.WithValue(reqDirect.Context(), chi.RouteCtxKey, rctx2))
+	recDirect := httptest.NewRecorder()
+	u.findingDetailPartial(recDirect, reqDirect)
+	if recDirect.Code != http.StatusOK {
+		t.Fatalf("direct status %d", recDirect.Code)
+	}
+	if !strings.Contains(recDirect.Body.String(), "<html") {
+		t.Errorf("direct navigation should render the full chrome page (detach permalink)")
 	}
 }
 
