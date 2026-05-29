@@ -32,7 +32,14 @@
     this.id = table.dataset.ckTable2;
     this.head = table.tHead && table.tHead.rows[0];
     if (!this.head) return;
-    this.ths = Array.prototype.slice.call(this.head.cells);
+    // Reserved columns (data-col starting "_", e.g. the bulk-select
+    // checkbox) are left out of resize / reorder / hide / the menu —
+    // they stay pinned at the front. apply() only re-appends managed
+    // columns, so reserved cells keep their leading DOM position.
+    this.ths = Array.prototype.slice.call(this.head.cells).filter(function (th) {
+      var k = thKey(th);
+      return k && k.charAt(0) !== '_';
+    });
     this.cols = this.ths.map(thKey);
     this.labels = {};
     this.ths.forEach(function (th, i) { this.labels[this.cols[i]] = th.textContent.trim(); }, this);
