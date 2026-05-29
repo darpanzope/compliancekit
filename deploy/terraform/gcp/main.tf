@@ -71,7 +71,7 @@ variable "regional" {
 variable "compliancekit_version" {
   description = "Tag of the compliancekit release to install."
   type        = string
-  default     = "v2.0.0"
+  default     = "v2.0.1"
 }
 
 # ─── Cloud SQL ──────────────────────────────────────────────────

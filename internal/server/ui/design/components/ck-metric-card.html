@@ -1,15 +1,20 @@
 {{- /*
-  ck-metric-card — hero metric primitive. Phase 4 fleshes the gradient
-  variants + the trend arrow + the decorative top-right circle. Phase
-  3 ships the structural stub.
+  ck-metric-card — hero metric primitive. Gradient variants + trend
+  arrow + decorative top-right circle.
+
+  NOTE: renders <a> when Href is set, else <section> — via explicit
+  branches, NOT a dynamic `<{{ $tag }}>` element name. html/template's
+  autoescaper cannot analyze a dynamic tag name and escapes the whole
+  element (it leaks as literal `&lt;section …` text). v2.0.1 fix.
 */ -}}
 {{ define "ck-metric-card" }}
 {{- $variant := .Variant }}{{ if not $variant }}{{ $variant = "default" }}{{ end -}}
 {{- $isGradient := and (ne $variant "default") (ne $variant "info") -}}
-{{- $tag := "section" }}{{ if .Href }}{{ $tag = "a" }}{{ end -}}
-<{{ $tag }} class="ck-metric-card ck-metric-{{ $variant }}{{ if .Class }} {{ .Class }}{{ end }}"
-  {{ if .Href }}href="{{ .Href }}"{{ end }}
-  {{ if .Tooltip }}title="{{ .Tooltip }}"{{ end }}>
+{{- if .Href -}}
+<a class="ck-metric-card ck-metric-{{ $variant }}{{ if .Class }} {{ .Class }}{{ end }}" href="{{ .Href }}"{{ if .Tooltip }} title="{{ .Tooltip }}"{{ end }}>
+{{- else -}}
+<section class="ck-metric-card ck-metric-{{ $variant }}{{ if .Class }} {{ .Class }}{{ end }}"{{ if .Tooltip }} title="{{ .Tooltip }}"{{ end }}>
+{{- end -}}
   {{- if $isGradient -}}
   <span class="ck-metric-decoration" aria-hidden="true"></span>
   {{- end -}}
@@ -25,5 +30,5 @@
     <span>{{ .Delta }}</span>
   </div>
   {{- end -}}
-</{{ $tag }}>
+{{- if .Href -}}</a>{{- else -}}</section>{{- end -}}
 {{ end }}

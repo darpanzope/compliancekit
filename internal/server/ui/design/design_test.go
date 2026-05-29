@@ -128,6 +128,18 @@ func TestMetricCardCriticalTrend(t *testing.T) {
 			t.Errorf("critical+trend MetricCard missing %q\n--- output ---\n%s", want, out)
 		}
 	}
+	// v2.0.1 regression guard: the partial must emit a REAL <section>
+	// element, not an html/template-escaped `&lt;section …` text leak
+	// (the v1.18 dynamic-`<{{ $tag }}>` bug — the class substrings above
+	// match the escaped form too, which is why the original assertions
+	// missed it). Pin the unescaped open tag + the absence of the
+	// escaped form.
+	if !strings.Contains(out, "<section class=\"ck-metric-card") {
+		t.Errorf("MetricCard did not emit a real <section> element\n--- output ---\n%s", out)
+	}
+	if strings.Contains(out, "&lt;section") {
+		t.Errorf("MetricCard leaked an html-escaped <section> (autoescaper broke on a dynamic tag)\n--- output ---\n%s", out)
+	}
 }
 
 // TestMetricCardInfoIsFlat asserts the info variant does NOT render the
