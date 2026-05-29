@@ -31,4 +31,4 @@ patches:
 
 images:
   - name: ghcr.io/darpanzope/compliancekit
-    newTag: 1.19.1
+    newTag: 2.0.0
