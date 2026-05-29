@@ -68,6 +68,9 @@
 <script src="/assets/htmx.min.js" defer></script>
 <script src="/assets/preline.js" defer></script>
 <script src="/assets/alpine.min.js" defer></script>
+<!-- v1.19 phase 0 — feature-tour overlay engine. Deferred (it only
+     wires DOMContentLoaded + keydown listeners; no first-paint role). -->
+<script src="/assets/tour.js" defer></script>
 
 <style>
 /* ─── Legacy v1.3 content classes ───────────────────────────────────
@@ -107,7 +110,7 @@ table.list tbody tr:hover { background: var(--legacy-panel-2); }
 </style>
 
 </head>
-<body class="h-full bg-background text-foreground font-sans antialiased" {{ if .LoginPage }}data-login-page="1"{{ end }}>
+<body class="h-full bg-background text-foreground font-sans antialiased" {{ if .LoginPage }}data-login-page="1"{{ end }} data-ck-tours-dismissed="{{ .DismissedToursJSON }}">
 
 <!--
   v1.10 phase 0/1 — skip-to-content link + ARIA live announcer.
@@ -212,6 +215,7 @@ table.list tbody tr:hover { background: var(--legacy-panel-2); }
         <a href="{{ $nav.Href }}"
            class="group flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors"
            :class="sidebarOpen ? 'justify-start' : 'justify-center px-0'"
+           {{ if $nav.TourID }}data-ck-tour="{{ $nav.TourID }}" data-ck-tour-order="{{ $nav.TourOrder }}" data-ck-tour-title="{{ $nav.TourTitle }}" data-ck-tour-body="{{ $nav.TourBody }}"{{ end }}
            {{ if eq $active $nav.Key }}data-active="true" aria-current="page"{{ end }}
            {{ if eq $active $nav.Key }}style="background-color: hsl(var(--sidebar-accent)); color: hsl(var(--sidebar-foreground));"{{ else }}style="color: hsl(var(--muted-foreground));"{{ end }}>
           <span class="inline-flex h-5 w-5 shrink-0 items-center justify-center" aria-hidden="true">{{ $nav.Icon }}</span>

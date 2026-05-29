@@ -1,0 +1,28 @@
+{{define "content"}}
+<div class="max-w-3xl mx-auto">
+  {{ template "ck-page-header" (pageHeaderTip "Onboarding" "Replay any guided tour, or reset them so they auto-prompt on your next visit." "Tours spotlight the features on each page. Press . on any page to start the tour for that page.") }}
+
+  <div class="ck-card ck-card-flat ck-card-pad-md">
+    <ul class="divide-y divide-border">
+      {{ range .Tours }}
+      <li class="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="text-sm font-medium text-foreground">{{ .Title }}</span>
+            {{ if index $.Dismissed .ID }}<span class="ck-pill ck-status-pill ck-status-completed">seen</span>{{ end }}
+          </div>
+          <p class="text-sm text-muted-foreground mt-0.5">{{ .Description }}</p>
+        </div>
+        {{ template "ck-button" (mkButtonLink "Replay" .Href "secondary") }}
+      </li>
+      {{ end }}
+    </ul>
+  </div>
+
+  <form action="/onboarding/reset" method="post" class="mt-4 flex items-center justify-end"
+        onsubmit="return confirm('Reset all tours so they auto-prompt again?');">
+    <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
+    <button type="submit" class="ck-btn ck-btn-ghost ck-btn-sm text-destructive">Reset all tours</button>
+  </form>
+</div>
+{{end}}

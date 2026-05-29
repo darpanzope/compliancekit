@@ -55,6 +55,11 @@ var tmplFS embed.FS
 type navItem struct {
 	Href, Key, Label string
 	Icon             template.HTML
+	// v1.19 phase 0 — feature-tour anchor. When TourID is set, base.html
+	// stamps data-ck-tour="<TourID>" + the step metadata so tour.js can
+	// spotlight this nav item as part of a guided walkthrough.
+	TourID, TourTitle, TourBody string
+	TourOrder                   int
 }
 
 // defaultNav lists the v1.4 nav surface. v1.5+ extends with explorer,
@@ -67,17 +72,36 @@ type navItem struct {
 // route stays as a 302 → /settings/providers so any bookmarks survive.
 var defaultNav = []navItem{
 	{Href: "/scans", Key: "scans", Label: "Scans",
-		Icon: template.HTML(`<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>`)},
+		Icon:      template.HTML(`<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>`),
+		TourID:    "welcome",
+		TourOrder: 1,
+		TourTitle: "Scans",
+		TourBody:  "Every scan run lives here. A scan collects your cloud + infra state and evaluates it against the active checks. Start with \"Run scan\".",
+	},
 	{Href: "/findings", Key: "findings", Label: "Findings",
-		Icon: template.HTML(`<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`)},
+		Icon:      template.HTML(`<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`),
+		TourID:    "welcome",
+		TourOrder: 2,
+		TourTitle: "Findings",
+		TourBody:  "Every policy violation from your scans, filtered live. Fix critical and high first — they map to exploitable misconfigurations.",
+	},
 	{Href: "/checks", Key: "checks", Label: "Checks",
-		Icon: template.HTML(`<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`)},
+		Icon:      template.HTML(`<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`),
+		TourID:    "welcome",
+		TourOrder: 3,
+		TourTitle: "Checks",
+		TourBody:  "The full catalog compliancekit runs. Each check maps to a control in one or more compliance frameworks; tailor or disable per your policy.",
+	},
 	{Href: "/rules", Key: "rules", Label: "Rules",
 		Icon: template.HTML(`<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>`)},
 	{Href: "/dashboards", Key: "dashboards", Label: "Dashboards",
 		Icon: template.HTML(`<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>`)},
 	{Href: "/settings/providers", Key: "settings", Label: "Settings",
-		Icon: template.HTML(`<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`)},
+		TourID:    "welcome",
+		TourOrder: 4,
+		TourTitle: "Settings",
+		TourBody:  "Connect providers, tailor frameworks, manage users + tokens, and set notification sinks. The \"Test connection\" button validates credentials before your first scan.",
+		Icon:      template.HTML(`<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`)},
 }
 
 // templateFuncs are exposed to base.html + every content template.
@@ -137,6 +161,16 @@ var templateFuncs = template.FuncMap{
 	// just a tooltip string. v1.18 phase 3.
 	"mkInfoTooltip": func(text string) design.InfoTooltipArgs {
 		return design.InfoTooltipArgs{Text: text}
+	},
+	// pageHeaderTip builds a design.PageHeaderArgs with a title-tooltip.
+	// v1.19 — lets pages render the canonical header with one call.
+	"pageHeaderTip": func(title, subtitle, tooltip string) design.PageHeaderArgs {
+		return design.PageHeaderArgs{Title: title, Subtitle: subtitle, Tooltip: tooltip}
+	},
+	// mkButtonLink builds a link-style design.ButtonArgs (renders <a>).
+	// v1.19.
+	"mkButtonLink": func(label, href, variant string) design.ButtonArgs {
+		return design.ButtonArgs{Label: label, Href: href, Variant: variant}
 	},
 	// illustration returns the named empty-state SVG (v1.18 phase 10).
 	"illustration": design.Illustration,
@@ -402,6 +436,13 @@ type View struct {
 	// (HSL triple). When set, base.html injects a --primary override.
 	BrandPrimary template.CSS
 
+	// DismissedToursJSON is the v1.19 phase 0 JSON array of tour IDs the
+	// session user has dismissed. base.html stamps it on <body> as
+	// data-ck-tours-dismissed (HTML-attribute context — html/template
+	// escapes the quotes, the browser's dataset API decodes them back to
+	// valid JSON) so tour.js skips already-seen tours.
+	DismissedToursJSON string
+
 	// Page-specific
 	Items any
 	Total int
@@ -492,6 +533,9 @@ func (u *UI) Mount(r chi.Router) {
 		u.mountSearchRoutes(r)
 		u.mountNotificationsRoutes(r)
 		u.mountQuickScanRoutes(r)
+		// v1.19 phase 0 — feature-tour overlay: /onboarding replay page
+		// + per-user dismiss/reset endpoints.
+		u.mountOnboardingRoutes(r)
 		// v1.18 phase 7 — /design live component zoo. Auth-gated like
 		// every other UI route but uses canned data (no DB). Unlinked
 		// from defaultNav by design — it's a contributor + visual-
@@ -753,11 +797,13 @@ func (u *UI) viewFor(r *http.Request, title, active string, v View) View {
 	v.Title = title
 	v.Active = active
 	v.BrandPrimary = u.brandPrimary
+	v.DismissedToursJSON = "[]"
 	if sess := auth.FromContext(r.Context()); sess != nil {
 		v.CSRFToken = sess.CSRFToken
 		if usr, err := u.users.ByID(r.Context(), sess.UserID); err == nil {
 			v.User = usr
 		}
+		v.DismissedToursJSON = u.dismissedToursJSON(r.Context(), sess.UserID)
 	}
 	return v
 }

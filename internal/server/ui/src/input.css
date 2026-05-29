@@ -589,6 +589,46 @@
     100% { transform: translateY(105vh) translateX(var(--ck-drift, 0)) rotate(var(--ck-rot, 360deg)); opacity: 0; }
   }
 
+  /* =====================================================================
+     v1.19 phase 0 — feature-tour overlay. The spotlight is a transparent
+     box with a huge box-shadow that dims everything outside it; the
+     popover floats next to the spotlit element. Driven by tour.js.
+     ===================================================================== */
+  .ck-tour-overlay {
+    position: fixed; inset: 0; z-index: 90; pointer-events: none;
+    opacity: 0; visibility: hidden;
+    transition: opacity var(--motion-250) var(--ease-out-quad);
+  }
+  .ck-tour-overlay.ck-tour-active { opacity: 1; visibility: visible; }
+  .ck-tour-spotlight {
+    position: absolute; border-radius: 8px;
+    box-shadow: 0 0 0 9999px hsl(0 0% 0% / 0.55);
+    transition: all var(--motion-250) var(--ease-out-quad);
+    outline: 2px solid hsl(var(--primary));
+  }
+  .ck-tour-popover {
+    position: fixed; z-index: 91; width: 300px; max-width: calc(100vw - 24px);
+    opacity: 0; visibility: hidden;
+    border-radius: var(--radius); padding: 16px;
+    background-color: hsl(var(--popover)); color: hsl(var(--popover-foreground));
+    border: 1px solid hsl(var(--border)); box-shadow: var(--shadow-floating);
+    transition: opacity var(--motion-150) var(--ease-out-quad);
+  }
+  .ck-tour-popover.ck-tour-active { opacity: 1; visibility: visible; }
+  .ck-tour-step { @apply text-2xs uppercase tracking-wide text-muted-foreground font-medium; }
+  .ck-tour-title { @apply text-base font-semibold text-foreground mt-1; }
+  .ck-tour-body { @apply text-sm text-muted-foreground mt-1.5; }
+  .ck-tour-actions { @apply flex items-center justify-between gap-2 mt-4; }
+  .ck-tour-nav { @apply flex items-center gap-2; }
+  .ck-tour-prompt {
+    position: fixed; left: 1rem; bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+    z-index: 60;
+    @apply px-3 py-2 rounded-full text-xs font-medium shadow-floating;
+    background-color: hsl(var(--primary)); color: hsl(var(--primary-foreground));
+    transition: opacity var(--motion-250) var(--ease-out-quad);
+  }
+  .ck-tour-prompt-fade { opacity: 0.55; }
+
   /* v1.18 phase 12 — chart rich tooltip. Positioned by the ckChartTip
      Alpine factory (left/top in px relative to the chart card); the
      transform lifts it above + centers it over the hovered point. */
