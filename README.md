@@ -547,6 +547,16 @@ real contract for the first time at v1.0; see
 [ADR-014](DECISIONS.md#adr-014--v10-api-freeze-pkgcompliancekit-is-the-semver-surface)
 for the full rationale.
 
+> **Library vs. binary version.** The `compliancekit` *binary* opened
+> its v2.x line at `v2.0.0`, but the embeddable *library* deliberately
+> stays on the v1 module path — import
+> `github.com/darpanzope/compliancekit/pkg/compliancekit` and pin a
+> `v1.x` library version (`go get …/pkg/compliancekit@latest` resolves
+> the v1 line). The v2.0 retro found no breaking change, so there is no
+> `/v2` module; the two version namespaces are intentionally decoupled
+> until a real API break triggers a `/v2` cut. See
+> [ADR-020](DECISIONS.md#adr-020--v20-contract-retro-no-abi-break-tag-v200-as-the-binary-line-opener-library-module-stays-at-v1).
+
 ```go
 import (
     "context"
