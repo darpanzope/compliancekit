@@ -68,6 +68,10 @@ type findingRow struct {
 	// queryFindings and loadFindingByID.
 	Fingerprint  string
 	CommentCount int
+	// v1.19 phase 8 — operator triage state + inline note. Loaded by
+	// loadFindingByID (the detail panel); empty on the list rows.
+	TriageStatus string
+	Note         string
 }
 
 // findingFilters mirrors the query-string shape. Zero values mean

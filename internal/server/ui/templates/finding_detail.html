@@ -11,6 +11,11 @@
           {{ else if eq .Row.Status "error" }}<span class="text-[10px] uppercase tracking-wider text-warning font-medium">error</span>
           {{ end }}
           {{ if .WaiverActive }}<span class="text-[10px] uppercase tracking-wider text-muted-foreground bg-muted px-1.5 py-0.5 rounded">waived</span>{{ end }}
+          <!-- v1.19 phase 8 — triage state (open by default; flipped by the
+               bulk-actions bar). -->
+          {{ if and .Row.TriageStatus (ne .Row.TriageStatus "open") }}
+          <span class="ck-pill ck-status-pill ck-status-{{ if eq .Row.TriageStatus "acknowledged" }}acknowledged{{ else if eq .Row.TriageStatus "resolved" }}resolved{{ else }}false-positive{{ end }}">{{ .Row.TriageStatus }}</span>
+          {{ end }}
         </div>
         <h2 class="text-base font-semibold leading-snug">{{ if .CheckTitle }}{{ .CheckTitle }}{{ else }}{{ .Row.CheckID }}{{ end }}</h2>
         <div class="text-xs font-mono text-muted-foreground mt-1">{{ .Row.CheckID }}</div>
@@ -97,6 +102,22 @@
         </div>
       </div>
       {{ end }}
+
+      <!-- v1.19 phase 8 — inline-edit triage note. Saves on blur (when
+           changed) via htmx; the status span reconciles optimistically.
+           CSRF rides hx-headers per the daemon convention. -->
+      <div class="mt-5 pt-4 border-t border-border">
+        <label class="text-[11px] uppercase tracking-wider text-muted-foreground mb-1 block" for="ck-note-{{ .Row.ID }}">Triage note</label>
+        <textarea id="ck-note-{{ .Row.ID }}" name="note" rows="2"
+                  class="ck-textarea text-sm"
+                  placeholder="Add a triage note… (saves on blur)"
+                  hx-post="/findings/{{ .Row.ID }}/note"
+                  hx-trigger="blur changed"
+                  hx-swap="none"
+                  hx-headers='{"X-CSRF-Token": "{{ .CSRFToken }}"}'
+                  hx-on::after-request="this.nextElementSibling.textContent = event.detail.successful ? 'Saved ✓' : 'Save failed'">{{ .Row.Note }}</textarea>
+        <div class="text-[11px] text-muted-foreground mt-1 h-4"></div>
+      </div>
     </div>
 
     <!-- Comments tab — lazy-loads /findings/{id}/comments -->

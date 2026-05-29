@@ -37,6 +37,9 @@ values as repeated name=value pairs natively. v1.5 Phase 1.
     @click="window.dispatchEvent(new CustomEvent('open-detail'))"
     @ck:swipe-left="window.dispatchEvent(new CustomEvent('ck-finding-action', { detail: { id: $el.dataset.findingId, action: 'ack' } }))"
     @ck:swipe-right="window.dispatchEvent(new CustomEvent('ck-finding-action', { detail: { id: $el.dataset.findingId, action: 'waive' } }))">
+  <td data-col="_select" data-label-hide class="pl-4 pr-1 py-3 w-8" @click.stop>
+    <input type="checkbox" class="ck-row-select ck-checkbox" value="{{ .ID }}" aria-label="Select finding" @click.stop>
+  </td>
   <td data-label="Severity" class="px-4 py-3">{{ template "severity_pill" .Severity }}</td>
   <td data-label="Status" class="px-4 py-3">
     {{ if eq .Status "fail" }}<span class="text-xs text-destructive font-medium">fail</span>

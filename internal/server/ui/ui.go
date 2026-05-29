@@ -554,6 +554,8 @@ func (u *UI) Mount(r chi.Router) {
 		u.mountFeedbackRoutes(r)
 		// v1.19 phase 7 — Table 2.0 per-user column-layout persistence.
 		u.mountTablesRoutes(r)
+		// v1.19 phase 8 — bulk triage actions + inline note edit.
+		u.mountFindingsBulkRoutes(r)
 		// v1.18 phase 7 — /design live component zoo. Auth-gated like
 		// every other UI route but uses canned data (no DB). Unlinked
 		// from defaultNav by design — it's a contributor + visual-

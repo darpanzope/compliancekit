@@ -687,6 +687,11 @@
   .ck-table2-pin-on { color: hsl(var(--primary)); }
   .ck-table2-move:disabled { opacity: 0.3; cursor: default; }
 
+  /* v1.19 phase 8 — bulk-actions bar. .hidden toggles to .flex via the
+     selection controller. */
+  .ck-bulk-bar { display: none; }
+  .ck-bulk-bar.flex { display: flex; flex-wrap: wrap; }
+
   .ck-feedback-fab:hover { transform: translateY(-2px); }
   .ck-feedback-fab:active { transform: translateY(0); }
   /* Nudge the FAB above the mobile bottom action bar (sm:hidden bar). */

@@ -120,11 +120,13 @@ func (u *UI) loadFindingByID(ctx context.Context, id string) (findingRow, error)
 		`SELECT id, scan_id, check_id, severity, status, provider,
 		        resource_id, resource_name, resource_type, COALESCE(message,''),
 		        COALESCE(framework_ids,'[]'),
-		        first_seen_at, last_seen_at, fingerprint
+		        first_seen_at, last_seen_at, fingerprint,
+		        COALESCE(triage_status,'open'), COALESCE(note,'')
 		 FROM findings WHERE id = `+ph(u.store, 1),
 		id).Scan(&r.ID, &r.ScanID, &r.CheckID, &r.Severity, &r.Status, &r.Provider,
 		&r.ResourceID, &r.ResourceName, &r.ResourceType, &r.Message,
-		&fwJSON, &r.FirstSeen, &r.LastSeen, &r.Fingerprint)
+		&fwJSON, &r.FirstSeen, &r.LastSeen, &r.Fingerprint,
+		&r.TriageStatus, &r.Note)
 	if err != nil {
 		return r, err
 	}

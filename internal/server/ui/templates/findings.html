@@ -49,6 +49,25 @@
     </div>
   </div>
 
+  <!-- v1.19 phase 8 — bulk-actions bar. Hidden until rows are selected;
+       the ckFindingsSelection controller (app.js) reveals it, keeps the
+       (N) counts live, and injects the selected ids into the form on
+       submit. Each button sets the action + submits to /findings/bulk
+       (export streams a CSV; the rest redirect back). -->
+  <form id="ck-bulk-form" method="post" action="/findings/bulk"
+        class="ck-bulk-bar mb-4 hidden items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2">
+    <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
+    <input type="hidden" name="action" id="ck-bulk-action">
+    <span class="text-sm font-medium"><span id="ck-bulk-count">0</span> selected</span>
+    <span class="text-border">·</span>
+    <button type="button" data-bulk-action="acknowledge" class="ck-btn ck-btn-secondary ck-btn-sm">Acknowledge (<span data-bulk-count>0</span>)</button>
+    <button type="button" data-bulk-action="resolve" class="ck-btn ck-btn-secondary ck-btn-sm">Resolve (<span data-bulk-count>0</span>)</button>
+    <button type="button" data-bulk-action="waive" class="ck-btn ck-btn-secondary ck-btn-sm">Waive (<span data-bulk-count>0</span>)</button>
+    <button type="button" data-bulk-action="assign" class="ck-btn ck-btn-secondary ck-btn-sm">Assign (<span data-bulk-count>0</span>)</button>
+    <button type="button" data-bulk-action="export" class="ck-btn ck-btn-secondary ck-btn-sm">Export (<span data-bulk-count>0</span>)</button>
+    <button type="button" id="ck-bulk-clear" class="ck-btn ck-btn-ghost ck-btn-sm ml-auto">Clear</button>
+  </form>
+
   <!-- Severity stats — v1.18 phase 4 hero MetricCards (gradient
        variants for actionable severities, flat info card). -->
   <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
@@ -133,6 +152,7 @@
       <table class="ck-table-cards w-full text-sm" data-ck-table2="findings">
         <thead class="bg-muted/50 sticky top-0 z-10">
           <tr class="text-left">
+            <th data-col="_select" class="pl-4 pr-1 py-3 w-8"><input type="checkbox" id="ck-select-all" class="ck-checkbox" aria-label="Select all findings"></th>
             <th data-col="severity" class="px-4 py-3 text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Severity</th>
             <th data-col="status" class="px-4 py-3 text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Status</th>
             <th data-col="check" class="px-4 py-3 text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Check</th>

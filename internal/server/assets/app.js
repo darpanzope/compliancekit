@@ -511,6 +511,74 @@ function logsTail() {
   };
 }
 
+// v1.19 phase 8 — findings bulk-selection controller. Vanilla + event-
+// delegated so it survives htmx infinite-scroll swaps of #findings-body.
+// Tracks the selected finding ids, reveals the bulk-actions bar with
+// live (N) counts, and injects the ids into the bulk form on submit.
+document.addEventListener('DOMContentLoaded', function () {
+  var form = document.getElementById('ck-bulk-form');
+  var body = document.getElementById('findings-body');
+  if (!form || !body) return;
+  var selected = new Set();
+  var bar = form;
+  var countEl = document.getElementById('ck-bulk-count');
+  var actionEl = document.getElementById('ck-bulk-action');
+  var selectAll = document.getElementById('ck-select-all');
+
+  function refresh() {
+    var n = selected.size;
+    if (countEl) countEl.textContent = n;
+    form.querySelectorAll('[data-bulk-count]').forEach(function (el) { el.textContent = n; });
+    bar.classList.toggle('hidden', n === 0);
+    bar.classList.toggle('flex', n > 0);
+  }
+  function syncCheckbox(cb) { cb.checked = selected.has(cb.value); }
+
+  // Delegated: a row checkbox toggled (works for htmx-appended rows).
+  document.addEventListener('change', function (e) {
+    var cb = e.target;
+    if (!cb.classList || !cb.classList.contains('ck-row-select')) return;
+    if (cb.checked) selected.add(cb.value); else selected.delete(cb.value);
+    refresh();
+  });
+  // Re-tick boxes after an htmx swap so the selection survives scroll.
+  document.body.addEventListener('htmx:afterSwap', function (e) {
+    if (!body.contains(e.target) && e.target !== body) return;
+    body.querySelectorAll('.ck-row-select').forEach(syncCheckbox);
+  });
+  if (selectAll) {
+    selectAll.addEventListener('change', function () {
+      body.querySelectorAll('.ck-row-select').forEach(function (cb) {
+        cb.checked = selectAll.checked;
+        if (selectAll.checked) selected.add(cb.value); else selected.delete(cb.value);
+      });
+      refresh();
+    });
+  }
+  var clear = document.getElementById('ck-bulk-clear');
+  if (clear) clear.addEventListener('click', function () {
+    selected.clear();
+    if (selectAll) selectAll.checked = false;
+    body.querySelectorAll('.ck-row-select').forEach(function (cb) { cb.checked = false; });
+    refresh();
+  });
+  // Each action button sets the action + injects the ids, then submits.
+  form.querySelectorAll('[data-bulk-action]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      if (selected.size === 0) return;
+      if (actionEl) actionEl.value = btn.dataset.bulkAction;
+      form.querySelectorAll('input[name="id"]').forEach(function (i) { i.remove(); });
+      selected.forEach(function (id) {
+        var inp = document.createElement('input');
+        inp.type = 'hidden'; inp.name = 'id'; inp.value = id;
+        form.appendChild(inp);
+      });
+      form.submit();
+    });
+  });
+  refresh();
+});
+
 // v1.19 phase 6 — "/" opens the global search palette from anywhere,
 // the way GitHub + Linear do. Guarded so it only fires when the user
 // isn't typing into a field (otherwise "/" would hijack every text
