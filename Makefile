@@ -106,6 +106,7 @@ ui: ## compile internal/server/assets/ from src/input.css + vendor/ (requires ui
 	@cp internal/server/ui/src/a11y.js                             internal/server/assets/a11y.js
 	@cp internal/server/ui/src/sprite.svg                          internal/server/assets/sprite.svg
 	@cp internal/server/ui/src/tour.js                             internal/server/assets/tour.js
+	@cp internal/server/ui/src/table2.js                           internal/server/assets/table2.js
 	@echo "ui assets compiled → internal/server/assets/"
 
 ui-check: ## fail if internal/server/assets/ is stale (CI gate)

@@ -648,6 +648,45 @@
     box-shadow: var(--shadow-floating);
     transition: transform var(--motion-150) var(--ease-out-quad);
   }
+  /* =====================================================================
+     v1.19 phase 7 — Table 2.0 (resize / reorder / pin / column menu).
+     ===================================================================== */
+  .ck-th2 { position: relative; }
+  .ck-col-resizer {
+    position: absolute; top: 0; right: 0; width: 6px; height: 100%;
+    cursor: col-resize; user-select: none;
+  }
+  .ck-col-resizer:hover { background: hsl(var(--primary) / 0.4); }
+  body.ck-col-resizing { cursor: col-resize; user-select: none; }
+  .ck-th2-dragging { opacity: 0.4; }
+  .ck-th2-over { box-shadow: inset 2px 0 0 hsl(var(--primary)); }
+  /* Pinned-left cells stick to the scroll container's left edge. */
+  .ck-col-pin {
+    position: sticky; z-index: 5;
+    background: hsl(var(--card));
+    box-shadow: 1px 0 0 hsl(var(--border));
+  }
+  thead .ck-col-pin { background: hsl(var(--muted)); }
+  /* Columns control + dropdown. */
+  .ck-table2-cols { position: relative; display: inline-block; }
+  .ck-table2-menu {
+    position: absolute; right: 0; top: 100%; margin-top: 4px; z-index: 40;
+    min-width: 220px; max-height: 360px; overflow-y: auto;
+    border: 1px solid hsl(var(--border)); border-radius: var(--radius);
+    background: hsl(var(--popover)); color: hsl(var(--popover-foreground));
+    box-shadow: var(--shadow-elevated); padding: 4px;
+  }
+  .ck-table2-menu-row { display: flex; align-items: center; gap: 8px; padding: 5px 8px; border-radius: 4px; }
+  .ck-table2-menu-row:hover { background: hsl(var(--muted)); }
+  .ck-table2-menu-label { flex: 1; font-size: 0.8125rem; }
+  .ck-table2-pin, .ck-table2-move {
+    @apply inline-flex items-center justify-center w-6 h-6 rounded text-xs;
+    color: hsl(var(--muted-foreground));
+  }
+  .ck-table2-pin:hover, .ck-table2-move:hover { background: hsl(var(--border)); }
+  .ck-table2-pin-on { color: hsl(var(--primary)); }
+  .ck-table2-move:disabled { opacity: 0.3; cursor: default; }
+
   .ck-feedback-fab:hover { transform: translateY(-2px); }
   .ck-feedback-fab:active { transform: translateY(0); }
   /* Nudge the FAB above the mobile bottom action bar (sm:hidden bar). */
