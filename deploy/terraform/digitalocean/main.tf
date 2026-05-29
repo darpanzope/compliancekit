@@ -54,7 +54,7 @@ variable "standby" {
 variable "compliancekit_version" {
   description = "Tag of the compliancekit release to install."
   type        = string
-  default     = "v1.15.0"
+  default     = "v1.19.1"
 }
 
 variable "ssh_key_ids" {

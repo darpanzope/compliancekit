@@ -10,13 +10,15 @@ type: application
 # a release cuts a new tag.
 #
 # appVersion has NO `v` prefix because goreleaser publishes the OCI
-# image as `ghcr.io/darpanzope/compliancekit:1.15.1` (Go module
+# image as `ghcr.io/darpanzope/compliancekit:1.19.1` (Go module
 # convention — `.Version` template strips the `v`). The Helm helper
 # `compliancekit.image` defaults the image tag to `appVersion`, so a
 # `v` here pulls a non-existent tag. Audit caught this against
-# v1.15.0 — see v1.15.1 phase 0.
-version: 1.15.1
-appVersion: "1.15.1"
+# v1.15.0 — see v1.15.1 phase 0; v1.19.1 audit re-synced the whole
+# deploy/ tree (it had drifted to 1.15.x across v1.16–v1.19) +
+# added deploy/scripts/version-check.sh as the recurrence guard.
+version: 1.19.1
+appVersion: "1.19.1"
 
 home: https://github.com/darpanzope/compliancekit
 sources:

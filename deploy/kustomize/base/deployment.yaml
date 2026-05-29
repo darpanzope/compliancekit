@@ -31,7 +31,7 @@ spec:
           # field; the registry path stays in sync with the Helm chart.
           # Tag has NO `v` prefix because goreleaser publishes as
           # `1.15.1` (Go module convention). v1.15.1 phase 0 fix.
-          image: ghcr.io/darpanzope/compliancekit:1.15.1
+          image: ghcr.io/darpanzope/compliancekit:1.19.1
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false

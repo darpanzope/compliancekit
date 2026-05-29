@@ -66,14 +66,11 @@ func newServeUsersCreateCmd() *cobra.Command {
 				displayName = email
 			}
 			ctx := cmd.Context()
-			st, err := openStore(ctx, dbPath)
+			st, err := openMigratedStore(ctx, dbPath)
 			if err != nil {
 				return fmt.Errorf("open store: %w", err)
 			}
 			defer func() { _ = st.Close() }()
-			if err := st.MigrateUp(ctx); err != nil {
-				return fmt.Errorf("migrate: %w", err)
-			}
 			users := auth.NewUsers(st)
 			u, err := users.Create(ctx, email, displayName, password, admin)
 			if err != nil {
@@ -99,7 +96,7 @@ func newServeUsersListCmd() *cobra.Command {
 		Short: "List local users",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			ctx := cmd.Context()
-			st, err := openStore(ctx, dbPath)
+			st, err := openMigratedStore(ctx, dbPath)
 			if err != nil {
 				return fmt.Errorf("open store: %w", err)
 			}
@@ -143,7 +140,7 @@ func newServeUsersDeleteCmd() *cobra.Command {
 				return fmt.Errorf("--email is required")
 			}
 			ctx := cmd.Context()
-			st, err := openStore(ctx, dbPath)
+			st, err := openMigratedStore(ctx, dbPath)
 			if err != nil {
 				return fmt.Errorf("open store: %w", err)
 			}
@@ -197,7 +194,7 @@ v1.3 contract: scans:read, findings:read, settings:write, etc.
 				return fmt.Errorf("--scope is required (comma-separated, e.g. scans:read,findings:read)")
 			}
 			ctx := cmd.Context()
-			st, err := openStore(ctx, dbPath)
+			st, err := openMigratedStore(ctx, dbPath)
 			if err != nil {
 				return fmt.Errorf("open store: %w", err)
 			}
@@ -240,7 +237,7 @@ func newServeTokensListCmd() *cobra.Command {
 		Short: "List API tokens",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			ctx := cmd.Context()
-			st, err := openStore(ctx, dbPath)
+			st, err := openMigratedStore(ctx, dbPath)
 			if err != nil {
 				return fmt.Errorf("open store: %w", err)
 			}
@@ -284,7 +281,7 @@ func newServeTokensRevokeCmd() *cobra.Command {
 				return fmt.Errorf("--id is required")
 			}
 			ctx := cmd.Context()
-			st, err := openStore(ctx, dbPath)
+			st, err := openMigratedStore(ctx, dbPath)
 			if err != nil {
 				return fmt.Errorf("open store: %w", err)
 			}

@@ -67,7 +67,7 @@ variable "dns_zone_id" {
 variable "compliancekit_version" {
   description = "Tag of the compliancekit release to install."
   type        = string
-  default     = "v1.15.0"
+  default     = "v1.19.1"
 }
 
 # ─── Server + cloud-init ───────────────────────────────────────

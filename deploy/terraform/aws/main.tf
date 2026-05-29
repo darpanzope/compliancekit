@@ -78,7 +78,7 @@ variable "multi_az" {
 variable "compliancekit_version" {
   description = "Tag of the compliancekit release to install (e.g. v1.15.0)."
   type        = string
-  default     = "v1.15.0"
+  default     = "v1.19.1"
 }
 
 variable "operator_cidrs" {

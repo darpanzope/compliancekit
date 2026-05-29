@@ -121,6 +121,15 @@ jobs:
           # stable verify-blob contract.
           cosign-release: 'v2.6.3'
 
+      # v1.19.1 (AUDIT-2): fail fast — before the ~20-min build — if any
+      # deploy/ manifest (Helm / Kustomize / operator / Terraform) wasn't
+      # bumped to the tag being released. The deploy tree silently
+      # drifted to 1.15.x across v1.16–v1.19 because nothing checked it.
+      - name: Deploy manifest version check
+        env:
+          VERSION: ${{ github.ref_name }}   # v-prefixed; the script strips the v
+        run: ./deploy/scripts/version-check.sh
+
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v7
         with:

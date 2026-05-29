@@ -310,6 +310,25 @@ func openStore(ctx context.Context, dbPath string) (*store.Store, error) {
 	return store.OpenSQLite(ctx, dbPath)
 }
 
+// openMigratedStore opens the store + brings the schema up. v1.19.1
+// (AUDIT-1): the `serve users list/delete` + `serve tokens issue/list/
+// revoke` bootstrap subcommands previously opened the store without
+// migrating, so running any of them first against a fresh DB failed
+// with "no such table: users". MigrateUp is idempotent + cheap, so
+// every bootstrap subcommand routes through here (matching what the
+// daemon itself + `serve users create` already did).
+func openMigratedStore(ctx context.Context, dbPath string) (*store.Store, error) {
+	st, err := openStore(ctx, dbPath)
+	if err != nil {
+		return nil, err
+	}
+	if err := st.MigrateUp(ctx); err != nil {
+		_ = st.Close()
+		return nil, fmt.Errorf("migrate: %w", err)
+	}
+	return st, nil
+}
+
 // backupDSN returns the DSN for pg_dump when the daemon's store is
 // Postgres-backed; empty for SQLite (the backup manager uses VACUUM
 // INTO directly in that case).
