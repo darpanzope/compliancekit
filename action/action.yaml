@@ -1,11 +1,20 @@
 # compliancekit GitHub Action -- composite.
 #
-# This file is the source-of-truth for the `darpanzope/compliancekit-action@v1`
-# Action. At v0.5.0 release time, the contents of this directory are
-# copied into a separate public repo (darpanzope/compliancekit-action),
-# tagged v1.0.0 there, and the major-version mutable tag `v1` is moved
-# to point at it. The dedicated repo is what users reference; the
-# canonical source lives here so changes happen alongside the binary.
+# This file is the source-of-truth for the `darpanzope/compliancekit-action`
+# Action. At release time the contents of this directory are copied into
+# a separate public repo (darpanzope/compliancekit-action), tagged
+# `vX.Y.Z` there, and the mutable major tag is moved to point at it. The
+# dedicated repo is what users reference; the canonical source lives here
+# so changes happen alongside the binary.
+#
+# v2 line (2026-05-29): the Action tracks the compliancekit v2.x product
+# line — pin `@v2`. There is NO breaking change to the inputs/outputs vs
+# `@v1`; the `version` input still defaults to `latest` (so `@v1` users
+# already run the newest binary). `@v1` is retained for back-compat; new
+# workflows should use `@v2`. The major bump mirrors the binary's v1.x →
+# v2.0.0 line-opener (see compliancekit DECISIONS.md ADR-020) — the
+# Action is a binary wrapper, so it is unaffected by the Go-module
+# versioning that kept the embeddable library at its v1 import path.
 #
 # Composite (not Docker container, not JavaScript) because:
 #

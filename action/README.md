@@ -19,7 +19,7 @@ request, maps every finding to a compliance framework, and emits an
 auditor-ready evidence pack — without leaving your CI.
 
 ```yaml
-- uses: darpanzope/compliancekit-action@v1
+- uses: darpanzope/compliancekit-action@v2
   with:
     providers: digitalocean
     fail-on: high
@@ -120,7 +120,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: darpanzope/compliancekit-action@v1
+      - uses: darpanzope/compliancekit-action@v2
         with:
           providers: digitalocean
           fail-on: high
@@ -132,7 +132,7 @@ A fuller version with a configuration file, several providers, and an
 evidence pack uploaded as an artifact:
 
 ```yaml
-- uses: darpanzope/compliancekit-action@v1
+- uses: darpanzope/compliancekit-action@v2
   id: scan
   with:
     config-file: compliancekit.yaml
@@ -183,7 +183,7 @@ evidence pack uploaded as an artifact:
 Use them like:
 
 ```yaml
-- uses: darpanzope/compliancekit-action@v1
+- uses: darpanzope/compliancekit-action@v2
   id: scan
   with:
     evidence: true
@@ -313,7 +313,7 @@ Per-provider quickstarts live in
 Pick which frameworks render in your report with the `frameworks:` input:
 
 ```yaml
-- uses: darpanzope/compliancekit-action@v1
+- uses: darpanzope/compliancekit-action@v2
   with:
     frameworks: soc2,iso27001,nist-800-53-r5
 ```
@@ -373,7 +373,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: darpanzope/compliancekit-action@v1
+      - uses: darpanzope/compliancekit-action@v2
         id: scan
         with:
           providers: aws,kubernetes
@@ -421,7 +421,7 @@ jobs:
           role-to-assume: arn:aws:iam::123456789012:role/compliancekit-readonly
           aws-region: us-east-1
 
-      - uses: darpanzope/compliancekit-action@v1
+      - uses: darpanzope/compliancekit-action@v2
         with:
           providers: aws
           fail-on: high
@@ -451,7 +451,7 @@ jobs:
           workload_identity_provider: projects/123/locations/global/workloadIdentityPools/github/providers/repo
           service_account: compliancekit-readonly@my-project.iam.gserviceaccount.com
 
-      - uses: darpanzope/compliancekit-action@v1
+      - uses: darpanzope/compliancekit-action@v2
         with:
           providers: gcp
           fail-on: high
@@ -482,7 +482,7 @@ jobs:
 
       - run: aws eks update-kubeconfig --name prod --region us-east-1
 
-      - uses: darpanzope/compliancekit-action@v1
+      - uses: darpanzope/compliancekit-action@v2
         with:
           providers: aws,kubernetes
           fail-on: high
@@ -517,7 +517,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: darpanzope/compliancekit-action@v1
+      - uses: darpanzope/compliancekit-action@v2
         id: scan
         with:
           config-file: compliancekit.yaml
@@ -540,7 +540,7 @@ jobs:
 <summary><strong>6. Slack alert on critical findings only</strong></summary>
 
 ```yaml
-- uses: darpanzope/compliancekit-action@v1
+- uses: darpanzope/compliancekit-action@v2
   id: scan
   with:
     providers: aws
@@ -603,7 +603,7 @@ jobs:
           role-to-assume: arn:aws:iam::123456789012:role/${{ matrix.env.aws_role }}
           aws-region: us-east-1
 
-      - uses: darpanzope/compliancekit-action@v1
+      - uses: darpanzope/compliancekit-action@v2
         with:
           providers: aws,digitalocean
           out-dir: ./out-${{ matrix.env.name }}
@@ -636,7 +636,7 @@ version and verify the release signature in a preceding step.
       --signature checksums.txt.sig \
       checksums.txt
 
-- uses: darpanzope/compliancekit-action@v1
+- uses: darpanzope/compliancekit-action@v2
   with:
     version: 0.12.0
     fail-on: high
