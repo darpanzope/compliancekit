@@ -36,12 +36,12 @@ jobs:
 
       # Cache the golangci-lint analysis cache only. setup-go@v5 with
       # cache:true already owns ~/.cache/go-build + ~/go/pkg/mod;
-      # overlapping those paths in a second actions/cache@v5 step
+      # overlapping those paths in a second actions/cache@v6 step
       # causes tar restore conflicts ("Cannot open: File exists") and
       # silently disables the cache. v0.12's original belt-and-
       # suspenders cache learned this the hard way.
       - name: Cache golangci-lint analysis
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ~/.cache/golangci-lint
           key: golangci-${{ runner.os }}-go${{ env.GO_VERSION }}-${{ hashFiles('go.sum', '.golangci.yaml') }}
